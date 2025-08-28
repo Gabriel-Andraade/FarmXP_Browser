@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm XP</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="main.js" type="module"></script>
+</head>
+<body>
+    <div class="theGame">
+        <div class="game">
+            <!-- Canvas of game -->
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        <div class="inventory">
+            <h2>Inventário</h2>
+            <p>🌱 Sementes: 5</p>
+            <p>🥕 Colheita: 0</p>
+        </div>
+        <div class="playerInfo">
+            <h2>👤 Jogador</h2>
+            <p>Level: <span id="playerLevel">1</span></p>
+            <p>XP: <span id="playerXP">0</span>/<span id="playerXPMax">100</span></p>
+            <p>[<span id="playerXPBar">|||||</span>]</p>
+            <p>🍗 Fome: <span id="playerHunger">100</span>%</p>
+            <p>💧 Sede: <span id="playerThirst">100</span>%</p>
+            <p>⚡ Energia: <span id="playerEnergy">100</span>%</p>
+            <p>💰 Dinheiro: $<span id="playerMoney">0</span></p>
+        </div>
+        <div class="config">
+            <h2>Configurações</h2>
+            <button>Salvar Jogo</button>
+            <button>Carregar Jogo</button>
+        </div>
+    </div>
+</body>
+</html>
