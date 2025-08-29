@@ -1,4 +1,3 @@
-// scripts/cameraSystem.js
 export class CameraSystem {
     constructor(canvas, worldWidth, worldHeight) {
         this.canvas = canvas;
@@ -92,7 +91,7 @@ export class CameraSystem {
 
     // Reset the camera to the center of the world
     resetCamera() {
-        this.zoom = 0.4;
+        this.zoom = 0.8;
         this.centerOn(this.worldWidth / 2, this.worldHeight / 2);
         this.update();
     }

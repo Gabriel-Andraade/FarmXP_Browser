@@ -1,3 +1,68 @@
+/* InfoCorner styles */
+.info-corner {
+  grid-area: infoCorner;
+  width: 300px;
+  height: 659.09px;
+  background-color: rgba(0, 128, 0, 0.85);
+  border-radius: 15px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.info-corner-tabs-nav {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 15px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: 10px;
+}
+
+.info-corner-tab-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.info-corner-tab-btn.active,
+.info-corner-tab-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+#inventory-content,
+#store-content,
+#items-content {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.info-corner-category {
+  margin-bottom: 10px;
+}
+
+.category-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}
+
+.item-slot {
+  width: 70px;
+  height: 70px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+}
 body {
   font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
   margin: 0;
@@ -8,8 +73,8 @@ body {
   display: grid;
   grid-template-areas: 
     "playerInfo config"
-    "game inventory";
-  grid-template-columns: 2fr 300px; /* are do jogo maior que inventário e configurações */
+    "game infoCorner";
+  grid-template-columns: 2fr 300px;
   gap: 10px;
   padding: 10px;
   box-sizing: border-box;
@@ -39,11 +104,9 @@ body {
 
 
 
-.inventory {
-  grid-area: inventory;
-  background: rgba(0, 128, 0, 0.85);
-  border-radius: 15px;
-  padding: 10px;
+
+.info-corner {
+  grid-area: infoCorner;
 }
 
 

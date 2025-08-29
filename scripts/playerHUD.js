@@ -1,4 +1,4 @@
-// scripts/playerHUD.js
+
 // Player HUD system
 import { player } from "./playerSystem.js";
 import { decayStats } from "./playerSystem.js";

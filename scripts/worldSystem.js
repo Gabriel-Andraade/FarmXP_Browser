@@ -1,5 +1,6 @@
 import { createHitbox, isColliding, drawHitbox } from "./collisionSystem.js";
 import { CameraSystem } from "./cameraSystem.js";
+import { Sheep, animals, updateAnimals } from "./animalsSystem.js";
 
 // scripts/worldSystem.js
 export const WorldSystem = (function() {
@@ -36,6 +37,10 @@ export const WorldSystem = (function() {
         thicket1: new Image(),
         house: new Image()
     };
+
+    // Sheep sprite
+    const sheepSprite = new Image();
+    sheepSprite.src = 'assets/Animals/Sheep_animation_with_shadow.png';
     
     let imagesToLoad = Object.keys(assets).length;
     let imagesLoaded = 0;
@@ -61,7 +66,12 @@ export const WorldSystem = (function() {
             assets[key].onload = () => {
                 imagesLoaded++;
                 if (imagesLoaded === imagesToLoad) {
-                    generateWorld();
+                    // Wait for sheep sprite to load too
+                    if (sheepSprite.complete && sheepSprite.naturalWidth > 0) {
+                        generateWorld();
+                    } else {
+                        sheepSprite.onload = () => generateWorld();
+                    }
                 }
             };
             assets[key].onerror = () => {
@@ -84,12 +94,20 @@ export const WorldSystem = (function() {
         rocks = [];
         thickets = [];
         groundTiles = [];
+        animals.length = 0;
         
         // Generate terrain tiles
         for (let x = 0; x < WORLD_WIDTH; x += TILE_SIZE) {
             for (let y = 0; y < WORLD_HEIGHT; y += TILE_SIZE) {
                 groundTiles.push({ x, y, type: 'grass' });
             }
+        }
+
+        // Spawn sheep randomly in the world
+        for (let i = 0; i < 10; i++) {
+            const x = Math.random() * (WORLD_WIDTH - 32);
+            const y = Math.random() * (WORLD_HEIGHT - 32);
+            animals.push(new Sheep(x, y, sheepSprite));
         }
 
         // Generate random position for player house
@@ -269,31 +287,29 @@ export const WorldSystem = (function() {
     }
     
     // Render the world
-    function draw() {
+    function draw(deltaTime = 16) {
         // Check if all assets are loaded
-        if (imagesLoaded < imagesToLoad) {
+        if (imagesLoaded < imagesToLoad || !sheepSprite.complete || sheepSprite.naturalWidth === 0) {
             // Draw loading screen
+            ctx.imageSmoothingEnabled = false; // Always keep pixel art sharp, even on loading
             ctx.fillStyle = '#87a878';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
             ctx.fillStyle = 'white';
             ctx.font = '20px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('Loading assets...', canvas.width / 2, canvas.height / 2);
             return;
         }
-        
+
+        // Always keep pixel art sharp
+        ctx.imageSmoothingEnabled = false;
+
         // Clear the canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Keep pixel art sharp
-        ctx.imageSmoothingEnabled = false;
-        
-        // Apply camera transformations
-        ctx.save();
-        ctx.translate(cameraSystem.x, cameraSystem.y);
-        ctx.scale(cameraSystem.zoom, cameraSystem.zoom);
-        
+
+        // Apply camera transformation using CameraSystem
+        if (cameraSystem) cameraSystem.applyTransform(ctx);
+
         // Draw terrain tiles
         for (const tile of groundTiles) {
             const screenX = tile.x;
@@ -345,7 +361,10 @@ export const WorldSystem = (function() {
                 ctx.drawImage(assets.house, playerHouse.x, playerHouse.y, houseDrawWidth, houseDrawHeight);
             }
         }
-        
+
+        // Draw and update animals (sheep)
+        updateAnimals(deltaTime, ctx);
+
         ctx.restore();
     }
     

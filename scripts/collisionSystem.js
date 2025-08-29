@@ -1,8 +1,4 @@
 
-// ======================
-// HITBOX AND COLLISION SYSTEM
-// ======================
-
 // Creates a rectangular hitbox object
 export function createHitbox(x, y, w, h) {
 	return { x, y, w, h };

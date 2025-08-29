@@ -1,6 +1,4 @@
 
-// scripts/playerSystem.js
-
 export const player = {
   level: 1,
   xp: 0,
