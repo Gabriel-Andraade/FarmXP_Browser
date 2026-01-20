@@ -1,0 +1,78 @@
+/* ===== HOUSE SYSTEM (COM PREFIXOS hse-) ===== */
+
+/* ===== Modal Principal da Casa ===== */
+.hse-house-modal .modal-content {
+    background: linear-gradient(180deg, #8b5a2b, #6b4513);
+    border-radius: 16px;
+    width: 320px;
+    max-width: 90%;
+    border: 3px solid #c9a463;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+
+/* ===== Seção de Opções da Casa ===== */
+.hse-house-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+}
+
+/* ===== Opção Individual da Casa ===== */
+.hse-house-option {
+    background: linear-gradient(90deg, #c9a463, #e0bc87);
+    color: #2e1c0f;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+}
+
+.hse-house-option:hover {
+    background: linear-gradient(90deg, #e0bc87, #f5e9d3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* ===== Ícone da Opção ===== */
+.hse-option-icon {
+    font-size: 20px;
+    width: 30px;
+    text-align: center;
+}
+
+/* ===== Texto da Opção ===== */
+.hse-option-text {
+    flex: 1;
+    font-size: 14px;
+}
+
+/* ===== Rodapé do Modal da Casa ===== */
+.hse-house-footer {
+    padding: 15px 20px;
+    border-top: 2px solid #c9a463;
+    text-align: center;
+}
+
+/* ===== Botão de Fechar do Modal da Casa ===== */
+.hse-house-close-btn {
+    background: rgba(201, 164, 99, 0.8);
+    color: #2e1c0f;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: bold;
+}
+
+.hse-house-close-btn:hover {
+    background: #e0bc87;
+    transform: scale(1.05);
+}

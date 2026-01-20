@@ -1,0 +1,319 @@
+/* ===== CHARACTER SELECTION (COM PREFIXOS chs-) ===== */
+
+/* ===== Container Principal da Seleção de Personagens ===== */
+.chs-character-selection {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #2c5530 0%, #5a9367 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+    font-family: "Georgia", serif;
+}
+
+/* ===== Cabeçalho da Seleção de Personagens ===== */
+.chs-character-selection-header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeInDown 0.8s ease;
+}
+
+.chs-character-selection-header h1 {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: white;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+    letter-spacing: 1px;
+}
+
+.chs-character-selection-header p {
+    font-size: 1.3rem;
+    color: rgba(255,255,255,0.9);
+    font-style: italic;
+}
+
+/* ===== Grid de Personagens ===== */
+.chs-characters-grid {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 40px;
+}
+
+/* ===== Card de Personagem ===== */
+.chs-character-card {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 25px 20px;
+    width: 220px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 3px solid transparent;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+}
+
+.chs-character-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #ffd166, #ff9a3c);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.chs-character-card:hover {
+    transform: translateY(-8px);
+    background: rgba(255,255,255,0.15);
+    border-color: #ffd166;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.chs-character-card:hover::before {
+    transform: scaleX(1);
+}
+
+.chs-character-card.selected {
+    background: rgba(255,209,102,0.25);
+    border-color: #ffd166;
+    box-shadow: 0 0 20px rgba(255,209,102,0.4);
+}
+
+.chs-character-card.selected::before {
+    transform: scaleX(1);
+}
+
+/* ===== Retrato do Personagem no Card ===== */
+.chs-character-portrait {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+}
+
+.chs-character-card:hover .chs-character-portrait {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.chs-character-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===== Texto do Card do Personagem ===== */
+.chs-character-card h3 {
+    color: white;
+    margin-bottom: 8px;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.chs-character-card p {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin: 0;
+    font-style: italic;
+}
+
+/* ===== Aviso "Em Desenvolvimento" ===== */
+.chs-character-warning {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 193, 7, 0.9);
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+/* ===== Sessão de Detalhes do Personagem ===== */
+.chs-character-details {
+    background: rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 25px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255,255,255,0.2);
+    animation: fadeIn 0.5s ease;
+}
+
+/* ===== Retrato Grande do Personagem ===== */
+.chs-character-portrait-large {
+    width: 160px;
+    height: 160px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+.chs-character-portrait-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===== Texto dos Detalhes do Personagem ===== */
+.chs-character-details h2 {
+    color: white;
+    font-size: 2rem;
+    margin-bottom: 15px;
+    text-shadow: 1px 1px 4px rgba(0,0,0,0.3);
+}
+
+.chs-character-details p {
+    color: rgba(255,255,255,0.9);
+    font-size: 1.1rem;
+    line-height: 1.5;
+    margin-bottom: 25px;
+}
+
+/* ===== Botão "Iniciar Jogo" ===== */
+.chs-start-game-btn {
+    background: linear-gradient(90deg, #4ecca3, #3da58a);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.chs-start-game-btn:hover {
+    background: linear-gradient(90deg, #3da58a, #2d8c72);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+}
+
+/* ===== Seção de Carregar Jogo ===== */
+.chs-load-game-section {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    animation: fadeInUp 0.8s ease;
+}
+
+.chs-load-game-section h2 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 1.3rem;
+}
+
+/* ===== Botão "Carregar Jogo Salvo" ===== */
+.chs-load-game-btn {
+    background: linear-gradient(90deg, #ff9a3c, #ff6b6b);
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chs-load-game-btn:hover {
+    background: linear-gradient(90deg, #ff8a2c, #ff5b5b);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* ===== Mensagem de Aviso ===== */
+.chs-character-warning-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 87, 87, 0.95);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 10001;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    animation: slideInDown 0.3s ease;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -20px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+/* ===== SCROLLBAR ===== */
+.chs-character-selection::-webkit-scrollbar { 
+    width: 8px; 
+}
+
+.chs-character-selection::-webkit-scrollbar-thumb { 
+    background: #4ecca3; 
+    border-radius: 4px; 
+}
+
+.chs-character-selection::-webkit-scrollbar-track { 
+    background: rgba(255,255,255,0.05); 
+    border-radius: 4px;
+}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Farm XP</title>
+  <!-- CSSs individuais da pasta style/ -->
+  <link rel="stylesheet" href="./style/base.css">
+  <link rel="stylesheet" href="./style/modals.css">
+  <link rel="stylesheet" href="./style/hud.css">
+  <link rel="stylesheet" href="./style/player-panel.css">
+  <link rel="stylesheet" href="./style/game.css">
+  <link rel="stylesheet" href="./style/character-select.css">
+  <link rel="stylesheet" href="./style/house.css">
+  <link rel="stylesheet" href="./style/commerce.css">
+  <link rel="stylesheet" href="./style/config.css">
+  <!-- Ícones do Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Script principal -->
+  <script src="scripts/main.js" type="module" defer></script>
+</head>
+<body>
+    <div class="theGame">
+        <div class="game">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+        <!-- CONFIGURAÇÕES -->
+        <div class="modal" id="configModal">
+            <div class="store-container">
+                <div class="modal-header">
+                    <h2>⚙️ Configurações</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div id="config-content">
+                    <p>Configurações do jogo em desenvolvimento...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Lista de Mercadores -->
+    <div id="merchantsListModal" class="mch-merchant-commerce-system">
+        <div class="mch-merchants-list-screen">
+            <div class="mch-commerce-header">
+                <div class="mch-commerce-title">🏪 Mercadores da Região</div>
+            </div>
+            
+            <div class="mch-merchants-grid" id="merchantsGrid">
+                <!-- Mercadores serão inseridos via JavaScript -->
+            </div>
+            
+            <div class="mch-commerce-controls">
+               <button class="mch-close-button" onclick="closeCommerceSystem()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela de Comércio com Mercador Específico -->
+    <div id="commerceModal" class="mch-merchant-commerce-system">
+        <div class="mch-commerce-container">
+            <div class="mch-commerce-header">
+                <div class="mch-commerce-title">💼 Comércio</div>
+            </div>
+            
+            <div class="mch-commerce-layout">
+                <!-- Painel do Jogador -->
+                <div class="mch-commerce-player-panel">
+                    <div class="mch-player-panel-header">
+                        <div class="mch-storage-toggle-buttons">
+                            <button class="mch-storage-toggle-btn active" data-storage="inventory">🎒 Inventário</button>
+                            <button class="mch-storage-toggle-btn" data-storage="storage">📦 Armazém</button>
+                        </div>
+                        <div class="mch-player-categories" id="playerCategories">
+                            <!-- Categorias serão inseridas via JavaScript -->
+                        </div>
+                    </div>
+                    <div class="mch-player-items-grid" id="playerItemsGrid">
+                        <!-- Itens do jogador inseridos via JS -->
+                    </div>
+                </div>
+                
+                <!-- Painel Central de Ação -->
+                <div class="mch-action-panel">
+                    <div class="mch-action-indicator" id="actionIndicator">💸 Vendendo</div>
+                    <div class="mch-arrow-container">
+                        <div class="mch-trade-arrow mch-sell-arrow" onclick="setTradeMode('sell')">🢂</div>
+                        <div class="mch-trade-arrow mch-buy-arrow" onclick="setTradeMode('buy')">🢀</div>
+                    </div>
+                    <div class="mch-action-indicator" id="tradeValue">$0</div>
+                </div>
+                
+                <!-- Painel do Mercador -->
+                <div class="mch-merchant-panel">
+                    <div class="mch-merchant-header">
+                        <img src="" alt="Mercador" class="mch-merchant-avatar" id="merchantAvatar">
+                        <div class="mch-merchant-info">
+                            <div class="mch-merchant-name" id="merchantName">Nome do Mercador</div>
+                            <div class="mch-merchant-profession" id="merchantProfession">Profissão</div>
+                            <div class="mch-merchant-specialty" id="merchantSpecialty">Especialidade</div>
+                        </div>
+                    </div>
+                    <div class="mch-merchant-categories" id="merchantCategories">
+                        <!-- Categorias do mercador -->
+                    </div>
+                    <div class="mch-merchant-items-grid" id="merchantItemsGrid">
+                        <!-- Itens do mercador inseridos via JS -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mch-commerce-controls">
+                <button class="mch-back-button" onclick="backToMerchantsList()">← Voltar aos Mercadores</button>
+                <button class="mch-close-button" onclick="closeCommerceSystem()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Transação -->
+    <div class="mch-trade-confirm-modal" id="tradeConfirmModal">
+        <div class="mch-confirm-content">
+            <!-- Mensagem da Transação -->
+            <div class="mch-confirm-message" id="confirmMessage">Confirmar transação?</div>
+            
+            <!-- Controles de Quantidade -->
+            <div class="mch-quantity-controls">
+                <button class="mch-quantity-btn mch-quantity-decrease" id="quantityDecreaseBtn" onclick="decreaseQuantity()">
+                    <span>−</span>
+                </button>
+                <div class="mch-quantity-display">
+                    <span>Quantidade:</span>
+                    <span id="tradeQuantityDisplay" class="mch-quantity-value">1</span>
+                </div>
+                <button class="mch-quantity-btn mch-quantity-increase" id="quantityIncreaseBtn" onclick="increaseQuantity()">
+                    <span>+</span>
+                </button>
+            </div>
+            
+            <!-- Botões de Confirmação -->
+            <div class="mch-confirm-buttons">
+                <button class="mch-confirm-btn mch-confirm-yes" onclick="confirmTrade()">✓ Confirmar</button>
+                <button class="mch-confirm-btn mch-confirm-no" onclick="cancelTrade()">✕ Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+</body>
+</html>

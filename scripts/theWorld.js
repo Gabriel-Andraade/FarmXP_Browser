@@ -1,0 +1,947 @@
+import { assets } from "./assetManager.js";
+import { worldGenerator, WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
+import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
+import { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from "./worldConstants.js";
+import { collisionSystem } from "./collisionSystem.js";
+import { AnimalEntity } from "./animal/animalAI.js";
+import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
+
+/* listas do mundo */
+export const trees = [];
+export const rocks = [];
+export const thickets = [];
+export const houses = [];
+export const animals = [];
+export const placedBuildings = [];
+export const placedWells = [];
+
+export let worldInitialized = false;
+export { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT };
+
+/* cache e variáveis de otimização */
+let sortedWorldObjectsCache = [];
+let cacheValid = false;
+let lastPlayerY = -1;
+let lastPlayerHeight = -1;
+const CULLING_BUFFER = 200;
+
+export function markWorldChanged() {
+  cacheValid = false;
+}
+
+/* função para colocar poço */
+export function placeWell(a, b, c) {
+  let id = null, x = 0, y = 0, opts = {};
+  if (typeof a === "string" && typeof b === "number" && typeof c === "number") {
+    id = a; x = b; y = c;
+  } else {
+    x = Number(a) || 0;
+    y = Number(b) || 0;
+    opts = c || {};
+  }
+
+  let wellObject = null;
+  try {
+    if (window.wellSystem && typeof window.wellSystem.placeWell === "function") {
+      if (id) wellObject = window.wellSystem.placeWell(id, x, y);
+      else wellObject = window.wellSystem.placeWell(x, y, opts);
+    }
+  } catch (err) { /* ignore */ }
+
+  if (!wellObject) {
+    const wid = id || `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    wellObject = {
+      id: wid,
+      x,
+      y,
+      width: (opts.width || WORLD_GENERATOR_CONFIG?.TREES?.WIDTH || 64),
+      height: (opts.height || WORLD_GENERATOR_CONFIG?.TREES?.HEIGHT || 64),
+      originalType: "well",
+      name: opts.name || "Poço",
+      draw: (ctx) => { drawBuilding(ctx, Object.assign({}, { originalType: "well" }, wellObject)); }
+    };
+  }
+
+  wellObject.id = wellObject.id || wellObject.objectId || `well_${Date.now()}`;
+  wellObject.originalType = (wellObject.originalType || "well").toLowerCase();
+  wellObject.type = wellObject.type || "WELL";
+
+  if (!placedWells.find(w => w.id === wellObject.id)) {
+    placedWells.push(wellObject);
+  }
+
+  try {
+    const exists = (typeof collisionSystem.getAnyObjectById === "function") ? collisionSystem.getAnyObjectById(wellObject.id) : null;
+    if (!exists && typeof collisionSystem.addHitbox === "function") {
+      collisionSystem.addHitbox(
+        wellObject.id,
+        "WELL",
+        wellObject.x,
+        wellObject.y,
+        wellObject.width,
+        wellObject.height,
+        wellObject
+      );
+    }
+  } catch (err) { /* ignore */ }
+
+  markWorldChanged();
+  return wellObject;
+}
+
+/* adiciona animal ao mundo */
+export function addAnimal(assetName, img, x, y) {
+  if (!worldInitialized) {
+    initializeWorld();
+  }
+
+  const animal = new AnimalEntity(assetName, img, x, y);
+
+  if (!animal.id) {
+    animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  animals.push(animal);
+
+  try {
+    if (typeof collisionSystem.addHitbox === "function") {
+      const hb = animal.getHitbox();
+      collisionSystem.addHitbox(
+        animal.id,
+        "ANIMAL",
+        hb.x,
+        hb.y,
+        hb.width,
+        hb.height,
+        animal
+      );
+    }
+  } catch (e) { /* ignore */ }
+
+  markWorldChanged();
+  return animal;
+}
+
+/* atualiza todos os animais (lógica do AI) */
+export function updateAnimals() {
+  animals.forEach(animal => {
+    if (animal && typeof animal.update === "function") {
+      animal.update();
+      try {
+        if (animal.id) {
+          const hb = animal.getHitbox();
+          if (typeof collisionSystem.updateHitboxPosition === "function") {
+            collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
+          }
+        }
+      } catch (err) { /* ignore */ }
+    }
+  });
+}
+
+/* verificação de visibilidade com buffer */
+function isInViewportWithBuffer(x, y, width, height) {
+  const camX = camera.x;
+  const camY = camera.y;
+  const camW = camera.width;
+  const camH = camera.height;
+
+  return (x + width + CULLING_BUFFER) > camX &&
+         x < (camX + camW + CULLING_BUFFER) &&
+         (y + height + CULLING_BUFFER) > camY &&
+         y < (camY + camH + CULLING_BUFFER);
+}
+
+/* constrói lista ordenada de objetos para render */
+export function getSortedWorldObjects(player) {
+  const playerChanged = player && (player.y !== lastPlayerY || player.height !== lastPlayerHeight);
+
+  if (cacheValid && !playerChanged) {
+    if (typeof perfLog === "function") perfLog("using world objects cache");
+    return sortedWorldObjectsCache;
+  }
+
+  if (typeof perfLog === "function") perfLog("recalculating world objects cache");
+  const allObjects = [];
+
+  for (const tree of trees) {
+    const tid = tree.id || `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!tree.id) tree.id = tid;
+
+    allObjects.push({
+      id: tid,
+      type: "TREE",
+      originalType: "tree",
+      x: tree.x || 0,
+      y: tree.y || 0,
+      width: tree.width || 64,
+      height: tree.height || 96,
+      hp: tree.hp || 6,
+      maxHealth: tree.hp || 6,
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(tree.x, tree.y, tree.width || 64, tree.height || 96)) {
+          drawSingleObject(ctx, tree, "trees", drawTreeFallback);
+        }
+      }
+    });
+  }
+
+  for (const rock of rocks) {
+    const rid = rock.id || `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!rock.id) rock.id = rid;
+
+    allObjects.push({
+      id: rid,
+      type: "ROCK",
+      originalType: "rock",
+      x: rock.x || 0,
+      y: rock.y || 0,
+      width: rock.width || 48,
+      height: rock.height || 48,
+      hp: rock.hp || 3,
+      maxHealth: rock.hp || 3,
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(rock.x, rock.y, rock.width || 48, rock.height || 48)) {
+          drawSingleObject(ctx, rock, "rocks", drawRockFallback);
+        }
+      }
+    });
+  }
+
+  for (const thicket of thickets) {
+    const thid = thicket.id || `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!thicket.id) thicket.id = thid;
+
+    allObjects.push({
+      id: thid,
+      type: "THICKET",
+      originalType: "thicket",
+      x: thicket.x || 0,
+      y: thicket.y || 0,
+      width: thicket.width || 32,
+      height: thicket.height || 32,
+      hp: thicket.hp || 1,
+      maxHealth: thicket.hp || 1,
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(thicket.x, thicket.y, thicket.width || 32, thicket.height || 32)) {
+          drawSingleObject(ctx, thicket, "thickets", drawThicketFallback);
+        }
+      }
+    });
+  }
+
+  for (const building of placedBuildings) {
+    allObjects.push({
+      ...building,
+      type: building.type || "CONSTRUCTION",
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(building.x, building.y, building.width || 32, building.height || 32)) {
+          if (building.draw) building.draw(ctx);
+          else drawBuilding(ctx, building);
+        }
+      }
+    });
+  }
+
+  for (const well of placedWells) {
+    allObjects.push({
+      ...well,
+      type: "WELL",
+      originalType: "well",
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(well.x, well.y, well.width || 64, well.height || 64)) {
+          if (well.draw) well.draw(ctx);
+          else drawBuilding(ctx, Object.assign({}, well, { originalType: "well" }));
+        }
+      }
+    });
+  }
+
+  for (const house of houses) {
+    const hid = house.id || `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (!house.id) house.id = hid;
+
+    allObjects.push({
+      id: hid,
+      type: house.type,
+      originalType: "house",
+      x: house.x || 0,
+      y: house.y || 0,
+      width: house.width || 128,
+      height: house.height || 128,
+      interactable: house.type === "HOUSE_WALLS",
+      draw: (ctx) => {
+        if (isInViewportWithBuffer(house.x, house.y, house.width || 128, house.height || 128)) {
+          if (house.type === "HOUSE_WALLS") drawHouseWalls(ctx, house);
+          else drawHouseRoof(ctx, house);
+        }
+      }
+    });
+  }
+
+  for (const animal of animals) {
+    const aid = animal.id || (`animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    if (!animal.id) animal.id = aid;
+
+    allObjects.push({
+      type: "ANIMAL",
+      id: aid,
+      x: animal.x || 0,
+      y: animal.y || 0,
+      width: animal.width || 32,
+      height: animal.height || 32,
+      assetName: animal.assetName,
+      draw: (ctx) => {
+        try {
+          animal.draw(ctx, camera);
+        } catch (e) { /* ignore */ }
+      }
+    });
+  }
+
+  if (player) {
+    allObjects.push({
+      type: "PLAYER",
+      id: "player",
+      x: player.x,
+      y: player.y,
+      width: player.width,
+      height: player.height,
+      draw: (ctx) => player.draw(ctx)
+    });
+    lastPlayerY = player.y;
+    lastPlayerHeight = player.height;
+  }
+
+  sortedWorldObjectsCache = allObjects.sort((a, b) => {
+    const ay = (a.y || 0) + (a.height || 0);
+    const by = (b.y || 0) + (b.height || 0);
+    return ay - by;
+  });
+
+  if (player) cacheValid = true;
+
+  return sortedWorldObjectsCache;
+}
+
+/* registra objetos por eventos para outros sistemas */
+export function registerWorldObjects() {
+  trees.forEach(tree => {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", {
+      detail: {
+        object: {
+          id: tree.id || generateId(),
+          type: "tree",
+          subType: tree.subType || "Árvore",
+          x: tree.x || 0, y: tree.y || 0,
+          width: tree.width || 64, height: tree.height || 96,
+          radius: 50
+        }
+      }
+    }));
+  });
+
+  rocks.forEach(rock => {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", {
+      detail: {
+        object: {
+          id: rock.id || generateId(),
+          type: "rock",
+          subType: rock.subType || "Pedra",
+          x: rock.x || 0, y: rock.y || 0,
+          width: rock.width || 48, height: rock.height || 48,
+          radius: 50
+        }
+      }
+    }));
+  });
+
+  thickets.forEach(thicket => {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", {
+      detail: {
+        object: {
+          id: thicket.id || generateId(),
+          type: "thicket",
+          subType: thicket.subType || "Thicket",
+          x: thicket.x || 0, y: thicket.y || 0,
+          width: thicket.width || 32, height: thicket.height || 32,
+          radius: 50
+        }
+      }
+    }));
+  });
+
+  placedBuildings.forEach(building => {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", { detail: { object: building } }));
+  });
+
+  placedWells.forEach(well => {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", {
+      detail: {
+        object: {
+          id: well.id || generateId(),
+          type: "well",
+          originalType: well.originalType || "well",
+          name: well.name || "Poço",
+          x: well.x || 0, y: well.y || 0,
+          width: well.width || 64, height: well.height || 64,
+          radius: well.radius || 32
+        }
+      }
+    }));
+  });
+}
+
+function generateId() {
+  return "obj_" + Math.random().toString(36).substr(2, 9);
+}
+
+/* função genérica para desenhar objetos da natureza */
+function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
+  const objWidth = obj.width || 64;
+  const objHeight = obj.height || 96;
+
+  try {
+    if (camera?.isInViewport && !camera.isInViewport(obj.x || 0, obj.y || 0, objWidth, objHeight)) return;
+  } catch (e) { /* ignore */ }
+
+  let actualWidth, actualHeight;
+  if (assetCategory === "trees") {
+    actualWidth = WORLD_GENERATOR_CONFIG.TREES.WIDTH;
+    actualHeight = WORLD_GENERATOR_CONFIG.TREES.HEIGHT;
+  } else if (assetCategory === "rocks") {
+    actualWidth = WORLD_GENERATOR_CONFIG.ROCKS.WIDTH;
+    actualHeight = WORLD_GENERATOR_CONFIG.ROCKS.HEIGHT;
+  } else if (assetCategory === "thickets") {
+    actualWidth = WORLD_GENERATOR_CONFIG.THICKETS.WIDTH;
+    actualHeight = WORLD_GENERATOR_CONFIG.THICKETS.HEIGHT;
+  }
+
+  const zoom = CAMERA_ZOOM;
+  const zoomedWidth = actualWidth * zoom;
+  const zoomedHeight = actualHeight * zoom;
+
+  let screenPos;
+  try {
+    screenPos = camera.worldToScreen(obj.x || 0, obj.y || 0);
+  } catch (e) {
+    screenPos = { x: obj.x || 0, y: obj.y || 0 };
+  }
+
+  const drawX = Math.floor(screenPos.x);
+  const drawY = Math.floor(screenPos.y);
+  const drawW = Math.floor(zoomedWidth);
+  const drawH = Math.floor(zoomedHeight);
+
+  const adjustedX = drawX - (drawW - objWidth * zoom) / 2;
+  const adjustedY = drawY - (drawH - objHeight * zoom) / 2;
+
+  let img = null;
+  try {
+    const cat = assets.nature?.[assetCategory];
+    if (Array.isArray(cat)) {
+      const idx = typeof obj.type === "number" ? obj.type : 0;
+      img = cat[idx]?.img || cat[0]?.img;
+    } else {
+      img = cat?.[obj.type]?.img;
+    }
+  } catch (err) { img = null; }
+
+  if (img && img.complete) {
+    try {
+      ctx.drawImage(img, adjustedX, adjustedY, drawW, drawH);
+      return;
+    } catch (err) { /* ignore and fallback */ }
+  }
+
+  if (typeof drawFallback === "function") {
+    drawFallback(ctx, adjustedX, adjustedY, drawW, drawH);
+  }
+}
+
+/* desenho simples de construções e variações */
+function drawSimpleChest(ctx, x, y, width, height) {
+  ctx.save();
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(x, y, width, height);
+  ctx.strokeStyle = "#654321";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, width, height);
+  ctx.fillStyle = "#A0522D";
+  ctx.fillRect(x + 3, y, width - 6, height * 0.15);
+  ctx.fillStyle = "#DAA520";
+  ctx.beginPath();
+  ctx.arc(x + width / 2, y + height / 2, width * 0.08, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawBuilding(ctx, building) {
+  const bWidth = building.width || 32;
+  const bHeight = building.height || 32;
+
+  try {
+    if (camera?.isInViewport && !camera.isInViewport(building.x || 0, building.y || 0, bWidth, bHeight)) return;
+  } catch (e) { /* ignore */ }
+
+  let screenPos;
+  try {
+    screenPos = camera.worldToScreen(building.x || 0, building.y || 0);
+  } catch (e) {
+    screenPos = { x: building.x || 0, y: building.y || 0 };
+  }
+
+  const zoom = CAMERA_ZOOM;
+  const drawX = Math.floor(screenPos.x);
+  const drawY = Math.floor(screenPos.y);
+  const drawW = Math.floor(bWidth * zoom);
+  const drawH = Math.floor(bHeight * zoom);
+
+  if (building.originalType === "chest") {
+    const chestImg = assets.furniture?.chest?.img;
+    if (chestImg && chestImg.src && !chestImg.src.includes("data:,")) {
+      try { ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); return; } catch (e) { /* ignore */ }
+    }
+    drawSimpleChest(ctx, drawX, drawY, drawW, drawH);
+    return;
+  }
+
+  if (building.originalType === "well") {
+    const wellImg = assets.furniture?.well?.img;
+    if (wellImg && wellImg.complete && wellImg.naturalWidth > 0) {
+      try {
+        ctx.drawImage(wellImg, drawX, drawY, drawW, drawH);
+      } catch (err) {
+        ctx.fillStyle = "#4a6b8a";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+        ctx.strokeStyle = "#2d4052";
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+      }
+    } else {
+      ctx.fillStyle = "#4a6b8a";
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+      ctx.strokeStyle = "#2d4052";
+      ctx.strokeRect(drawX, drawY, drawW, drawH);
+    }
+    return;
+  }
+
+  if (building.variant && assets.furniture?.fences?.[building.variant]?.img) {
+    const fenceImg = assets.furniture.fences[building.variant].img;
+    if (fenceImg && fenceImg.complete && fenceImg.naturalWidth > 0) {
+      ctx.drawImage(fenceImg, drawX, drawY, drawW, drawH);
+    } else {
+      ctx.fillStyle = "#8B4513";
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+    }
+  } else {
+    ctx.fillStyle = "rgba(139, 69, 19, 0.9)";
+    ctx.fillRect(drawX, drawY, drawW, drawH);
+    ctx.strokeStyle = "#8b4513";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(drawX, drawY, drawW, drawH);
+
+    if (building.icon) {
+      ctx.font = `${Math.max(16, drawH * 0.4)}px Arial`;
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(building.icon, drawX + drawW / 2, drawY + drawH / 2);
+    }
+  }
+
+  if (window.DEBUG_HITBOXES && building.originalType !== "chest") {
+    ctx.fillStyle = "#fff";
+    ctx.font = "10px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(building.name || "Objeto", drawX + drawW / 2, drawY - 8);
+    ctx.strokeStyle = "cyan";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 2]);
+    ctx.strokeRect(drawX, drawY, drawW, drawH);
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#ff0000";
+    ctx.font = "8px Arial";
+    ctx.fillText(`Tipo: ${building.originalType || "construction"}`, drawX + 5, drawY + 12);
+  }
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+}
+
+/* desenha preview de construção se ativo */
+export function drawBuildPreview(ctx) {
+  if (window.BuildSystem && window.BuildSystem.active) {
+    window.BuildSystem.drawPreview(ctx);
+  }
+}
+
+/* casas: telhado */
+function drawHouseRoof(ctx, house) {
+  const hWidth = house.width || 128;
+  const hHeight = house.height || 128;
+
+  try {
+    if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
+  } catch (e) { /* ignore */ }
+
+  const img = assets.buildings?.house?.[0]?.img;
+  const zoom = CAMERA_ZOOM;
+
+  let screenPos;
+  try {
+    screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
+  } catch (e) {
+    screenPos = { x: house.x || 0, y: house.y || 0 };
+  }
+
+  const drawX = Math.floor(screenPos.x);
+  const drawY = Math.floor(screenPos.y);
+  const drawW = Math.floor(hWidth * zoom);
+  const drawH = Math.floor(hHeight * zoom);
+
+  if (!img) { drawHouseRoofFallback(ctx, drawX, drawY, drawW, drawH); return; }
+
+  const roofSrcHeight = Math.round(img.height * (hHeight / WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT));
+  ctx.drawImage(img, 0, 0, img.width, roofSrcHeight, drawX, drawY, drawW, drawH);
+}
+
+/* casas: paredes */
+function drawHouseWalls(ctx, house) {
+  const hWidth = house.width || 128;
+  const hHeight = house.height || 128;
+
+  try {
+    if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
+  } catch (e) { /* ignore */ }
+
+  const img = assets.buildings?.house?.[0]?.img;
+  const zoom = CAMERA_ZOOM;
+
+  let screenPos;
+  try {
+    screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
+  } catch (e) {
+    screenPos = { x: house.x || 0, y: house.y || 0 };
+  }
+
+  const drawX = Math.floor(screenPos.x);
+  const drawY = Math.floor(screenPos.y);
+  const drawW = Math.floor(hWidth * zoom);
+  const drawH = Math.floor(hHeight * zoom);
+
+  if (!img) { drawHouseWallsFallback(ctx, drawX, drawY, drawW, drawH); return; }
+
+  const totalRef = WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT;
+  const wallRatio = hHeight / totalRef;
+  const roofPortion = 1 - wallRatio;
+  const srcRoofHeight = Math.round(img.height * roofPortion);
+  const srcH = Math.round(img.height * wallRatio);
+
+  ctx.drawImage(img, 0, srcRoofHeight, img.width, srcH, drawX, drawY, drawW, drawH);
+}
+
+function drawHouseWallsFallback(ctx, x, y, width, height) {
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(x, y, width, height);
+  ctx.fillStyle = "#654321";
+  ctx.fillRect(x + width * 0.4, y + height * 0.4, width * 0.2, height * 0.6);
+}
+function drawHouseRoofFallback(ctx, x, y, width, height) {
+  ctx.fillStyle = "#FF0000";
+  ctx.beginPath();
+  ctx.moveTo(x, y + height);
+  ctx.lineTo(x + width / 2, y);
+  ctx.lineTo(x + width, y + height);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* inicializa o mundo (gera e registra hitboxes) */
+export function initializeWorld() {
+  collisionSystem.clear();
+
+  trees.length = 0;
+  rocks.length = 0;
+  thickets.length = 0;
+  houses.length = 0;
+  placedBuildings.length = 0;
+  placedWells.length = 0;
+  animals.length = 0;
+
+  cacheValid = false;
+
+  const worldObjects = (worldGenerator && typeof worldGenerator.generateWorld === "function")
+    ? worldGenerator.generateWorld()
+    : { trees: [], rocks: [], thickets: [], houses: [] };
+
+  trees.push(...(worldObjects.trees || []));
+  rocks.push(...(worldObjects.rocks || []));
+  thickets.push(...(worldObjects.thickets || []));
+  houses.push(...(worldObjects.houses || []));
+
+  for (const tree of trees) { try { collisionSystem.addHitbox(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height); } catch (e) {} }
+  for (const rock of rocks) { try { collisionSystem.addHitbox(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height); } catch (e) {} }
+  for (const thicket of thickets) { try { collisionSystem.addHitbox(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height); } catch (e) {} }
+
+  for (const house of houses) {
+    if (house.type === "HOUSE_WALLS") {
+      try { collisionSystem.addHitbox(house.id, "HOUSE_WALLS", house.x, house.y, house.width, house.height); } catch (e) {}
+    }
+  }
+
+  if (Array.isArray(worldObjects.wells) && worldObjects.wells.length) {
+    for (const w of worldObjects.wells) {
+      const id = w.id || generateId();
+      const wellObj = {
+        id,
+        x: w.x, y: w.y,
+        width: w.width || (w.w || 64),
+        height: w.height || (w.h || 64),
+        originalType: "well",
+        name: w.name || "Poço"
+      };
+      placedWells.push(wellObj);
+      try { collisionSystem.addHitbox(wellObj.id, "WELL", wellObj.x, wellObj.y, wellObj.width, wellObj.height); } catch (e) {}
+    }
+  }
+
+  registerWorldObjects();
+  worldInitialized = true;
+}
+
+/* remover objeto do mundo */
+export function objectDestroyed(objOrId) {
+  if (!objOrId) return;
+
+  const id = (typeof objOrId === "string") ? objOrId : (objOrId.id || objOrId.objectId || null);
+  const type = (typeof objOrId === "object") ? (objOrId.type || objOrId.originalType || null) : null;
+
+  if (!id) {
+    return;
+  }
+
+  function removeFromArray(arr) {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const entry = arr[i];
+      if (!entry) continue;
+      if (entry.id === id || entry.objectId === id) {
+        arr.splice(i, 1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  let removed = false;
+  removed = removeFromArray(trees) || removed;
+  removed = removeFromArray(rocks) || removed;
+  removed = removeFromArray(thickets) || removed;
+  removed = removeFromArray(placedBuildings) || removed;
+  removed = removeFromArray(houses) || removed;
+  removed = removeFromArray(placedWells) || removed;
+  removed = removeFromArray(animals) || removed;
+
+  try { collisionSystem.removeHitbox(id); } catch (err) { /* ignore */ }
+
+  markWorldChanged();
+
+  document.dispatchEvent(new CustomEvent("objectDestroyed", { detail: { id, type } }));
+}
+
+/* posição inicial do jogador */
+export function getInitialPlayerPosition() {
+  if (houses.length > 0) {
+    const houseWalls = houses.find(h => h.type === "HOUSE_WALLS");
+    if (houseWalls) {
+      return {
+        x: houseWalls.x + houseWalls.width / 2 - 20,
+        y: houseWalls.y + houseWalls.height - 50
+      };
+    }
+  }
+  return { x: WORLD_WIDTH / 2 - 20, y: WORLD_HEIGHT / 2 - 25 };
+}
+
+/* desenha fundo e grass */
+export function drawBackground(ctx) {
+  try {
+    ctx.fillStyle = "#5a9367";
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+  } catch (e) {
+    return;
+  }
+
+  try {
+    drawGrass(ctx);
+  } catch (e) { /* ignore */ }
+}
+
+function drawGrass(ctx) {
+  const camX = camera?.x ?? 0;
+  const camY = camera?.y ?? 0;
+  const camW = camera?.width ?? GAME_WIDTH;
+  const camH = camera?.height ?? GAME_HEIGHT;
+
+  const startCol = Math.max(0, Math.floor((camX - CULLING_BUFFER) / TILE_SIZE));
+  const endCol = Math.min(Math.ceil(WORLD_WIDTH / TILE_SIZE),
+    Math.ceil((camX + camW + CULLING_BUFFER) / TILE_SIZE));
+  const startRow = Math.max(0, Math.floor((camY - CULLING_BUFFER) / TILE_SIZE));
+  const endRow = Math.min(Math.ceil(WORLD_HEIGHT / TILE_SIZE),
+    Math.ceil((camY + camH + CULLING_BUFFER) / TILE_SIZE));
+
+  const toScreen = (typeof worldToScreenFast === "function")
+    ? worldToScreenFast
+    : (x, y) => (camera?.worldToScreen ? camera.worldToScreen(x, y) : { x, y });
+
+  for (let y = startRow; y < endRow; y++) {
+    for (let x = startCol; x < endCol; x++) {
+      const worldX = x * TILE_SIZE;
+      const worldY = y * TILE_SIZE;
+
+      const screenPos = toScreen(worldX, worldY);
+      const drawX = Math.floor(screenPos.x);
+      const drawY = Math.floor(screenPos.y);
+
+      if (assets.nature?.floor?.length > 0) {
+        const grassType = (x + y) % assets.nature.floor.length;
+        const grassAsset = assets.nature.floor[grassType];
+        if (grassAsset?.img?.complete) {
+          ctx.drawImage(grassAsset.img, drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+          continue;
+        }
+      }
+
+      ctx.fillStyle = (x + y) % 2 === 0 ? "#5a9367" : "#528a5e";
+      ctx.fillRect(drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+    }
+  }
+}
+
+/* fallbacks simples para natureza */
+function drawTreeFallback(ctx, x, y, width, height) {
+  ctx.fillStyle = "#8B4513";
+  ctx.fillRect(x + width * 0.35, y + height * 0.5, width * 0.3, height * 0.5);
+  ctx.fillStyle = "#228B22";
+  ctx.beginPath();
+  ctx.arc(x + width * 0.5, y + height * 0.3, width * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+}
+function drawRockFallback(ctx, x, y, width, height) {
+  ctx.fillStyle = "#696969";
+  ctx.beginPath();
+  ctx.ellipse(x + width / 2, y + height / 2, width / 2.5, height / 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+function drawThicketFallback(ctx, x, y, width, height) {
+  ctx.fillStyle = "#006400";
+  ctx.beginPath();
+  ctx.ellipse(x + width / 2, y + height / 2, width / 2.5, height / 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/* função global útil para adicionar objetos dinâmicos */
+window.addWorldObject = function(objectData) {
+  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  let collisionType = (objectData.originalType || objectData.type || "construction").toString().toUpperCase();
+
+  if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
+  else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
+  else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
+  else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
+  else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
+  else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
+  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+
+  const building = {
+    id: objectId,
+    type: objectData.type || "construction",
+    originalType: objectData.originalType || objectData.type || "construction",
+    itemId: objectData.itemId,
+    name: objectData.name || "Objeto",
+    x: objectData.x || 0,
+    y: objectData.y || 0,
+    width: objectData.width || 32,
+    height: objectData.height || 32,
+    icon: objectData.icon,
+    variant: objectData.variant,
+    interactable: objectData.interactable || false,
+    storageId: objectData.storageId,
+    draw: objectData.draw || function(ctx) {
+      if (isInViewportWithBuffer(this.x, this.y, this.width, this.height)) {
+        drawBuilding(ctx, this);
+      }
+    },
+    onInteract: objectData.onInteract || null,
+    getHitbox: objectData.getHitbox || null
+  };
+
+  placedBuildings.push(building);
+
+  try {
+    collisionSystem.addHitbox(building.id, collisionType, building.x, building.y, building.width, building.height, building);
+  } catch (err) { /* ignore */ }
+
+  markWorldChanged();
+
+  if (building.originalType !== "chest" && building.originalType !== "well") {
+    document.dispatchEvent(new CustomEvent("worldObjectAdded", { detail: { object: building } }));
+  }
+
+  return building;
+};
+
+/* sobrescreve salvamento para excluir baús se BuildSystem existir */
+if (window.BuildSystem && window.BuildSystem.saveBuildings) {
+  const originalSaveBuildings = window.BuildSystem.saveBuildings;
+  window.BuildSystem.saveBuildings = function(buildings) {
+    const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
+    return originalSaveBuildings.call(this, buildingsToSave);
+  };
+}
+
+/* função principal de renderização do mundo */
+export function renderWorld(ctx, player) {
+  if (window.BuildSystem) {
+    window.BuildSystem._gridDrawnThisFrame = false;
+  }
+
+  drawBackground(ctx);
+
+  const objects = getSortedWorldObjects(player);
+  objects.forEach(obj => {
+    try {
+      obj.draw(ctx);
+    } catch (err) { /* ignore drawing errors */ }
+  });
+
+  drawBuildPreview(ctx);
+}
+
+/* export público do world para outros módulos */
+window.theWorld = {
+  addWorldObject: window.addWorldObject || null,
+  placedBuildings,
+  placedWells,
+  objectDestroyed,
+  getSortedWorldObjects,
+  drawBackground,
+  drawBuildPreview,
+  renderWorld,
+  initializeWorld,
+  getInitialPlayerPosition,
+  markWorldChanged,
+  placeWell,
+  addAnimal,
+  updateAnimals,
+  animals,
+  worldInitialized,
+  trees,
+  rocks,
+  thickets,
+  houses,
+  WORLD_WIDTH,
+  WORLD_HEIGHT,
+  GAME_WIDTH,
+  GAME_HEIGHT
+};

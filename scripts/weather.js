@@ -1,0 +1,598 @@
+import { camera } from "./thePlayer/cameraSystem.js";
+import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
+
+const WEATHER_UI_STYLE_ID = "weather-ui-style";
+const WEATHER_UI_ID = "weather-ui-panel";
+
+function ensureWeatherUIPanel() {
+  if (typeof document === "undefined") return null;
+
+  if (!document.getElementById(WEATHER_UI_STYLE_ID)) {
+    const style = document.createElement("style");
+    style.id = WEATHER_UI_STYLE_ID;
+    style.textContent = `
+      #${WEATHER_UI_ID}{
+        position: fixed;
+        z-index: 2600;
+        left: 0;
+        top: 0;
+        padding: 10px 12px;
+        min-width: 180px;
+        color: #ffffff;
+        background: rgba(0,0,0,0.6);
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.25;
+        border-radius: 6px;
+        pointer-events: none;
+        user-select: none;
+        transform: translateZ(0);
+      }
+      #${WEATHER_UI_ID} .wui-time{
+        font-weight: 800;
+        font-size: 20px;
+        margin-bottom: 2px;
+      }
+      #${WEATHER_UI_ID} .wui-weekday{
+        color: #ffd700;
+        font-weight: 800;
+        font-size: 16px;
+        margin-bottom: 6px;
+      }
+      #${WEATHER_UI_ID} .wui-row{
+        display: flex;
+        gap: 6px;
+        white-space: nowrap;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  let el = document.getElementById(WEATHER_UI_ID);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = WEATHER_UI_ID;
+    el.innerHTML = `
+      <div class="wui-time" data-role="time">00:00</div>
+      <div class="wui-weekday" data-role="weekday">-</div>
+      <div class="wui-row"><span>dia:</span><span data-role="day">1</span></div>
+      <div class="wui-row"><span>estação:</span><span data-role="season">-</span></div>
+      <div class="wui-row"><span>clima:</span><span data-role="weather">-</span></div>
+    `;
+    document.body.appendChild(el);
+  }
+
+  return el;
+}
+
+function updateWeatherUIPanelPosition() {
+  const panel = ensureWeatherUIPanel();
+  if (!panel) return;
+
+  const canvas = document.getElementById("gameCanvas");
+  if (!canvas) return;
+
+  const rect = canvas.getBoundingClientRect();
+
+  const pad = 16;
+  const left = Math.round(rect.left + pad);
+  const top = Math.round(rect.top + pad);
+
+  panel.style.left = `${left}px`;
+  panel.style.top = `${top}px`;
+}
+
+function updateWeatherUIPanelContent() {
+  const panel = ensureWeatherUIPanel();
+  if (!panel) return;
+
+  const timeEl = panel.querySelector('[data-role="time"]');
+  const weekdayEl = panel.querySelector('[data-role="weekday"]');
+  const dayEl = panel.querySelector('[data-role="day"]');
+  const seasonEl = panel.querySelector('[data-role="season"]');
+  const weatherEl = panel.querySelector('[data-role="weather"]');
+
+  if (timeEl) timeEl.textContent = WeatherSystem.getTimeString();
+  if (weekdayEl) weekdayEl.textContent = WeatherSystem.getWeekday();
+  if (dayEl) dayEl.textContent = String(WeatherSystem.day);
+  if (seasonEl) seasonEl.textContent = WeatherSystem.season;
+
+  let icon = "☀️";
+  if (WeatherSystem.weatherType === "rain") icon = "🌧️";
+  if (WeatherSystem.weatherType === "storm") icon = "⛈️";
+  if (WeatherSystem.weatherType === "fog") icon = "🌫️";
+  if (WeatherSystem.weatherType === "blizzard") icon = "❄️";
+  if (weatherEl) weatherEl.textContent = icon;
+}
+
+export const WeatherSystem = {
+  currentTime: 6 * 60,
+  day: 1,
+
+  daysOfWeek: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
+
+  month: 1,
+  year: 1,
+  season: "Primavera",
+
+  timeSpeed: (24 * 60) / (2 * 60),
+  ambientDarkness: 1,
+
+  weatherType: "clear",
+  weatherTimer: 0,
+  nextWeatherChange: 60 * 2,
+
+  isSleeping: false,
+  sleepTransitionProgress: 0,
+
+  sleepPhase: null,
+  sleepTimerAcc: 0,
+  sleepTargetDay: null,
+  sleepMessage: "",
+
+  sleepDurations: {
+    fadeOut: 1500,
+    hold: 5000,
+    fadeIn: 1500
+  },
+
+  rainParticles: [],
+  fogLayers: [],
+  snowParticles: [],
+  lightningFlashes: [],
+  lastParticleUpdate: 0,
+
+  init() {
+    this.randomizeWeather();
+
+    if (typeof window !== "undefined") {
+      ensureWeatherUIPanel();
+      updateWeatherUIPanelPosition();
+      updateWeatherUIPanelContent();
+
+      window.addEventListener("resize", () => {
+        updateWeatherUIPanelPosition();
+      });
+
+      document.addEventListener("timeChanged", () => {
+        updateWeatherUIPanelContent();
+      });
+
+      document.addEventListener("dayChanged", () => {
+        updateWeatherUIPanelContent();
+      });
+    }
+  },
+
+  getWeekday() {
+    const index = (this.day - 1) % 7;
+    return this.daysOfWeek[index];
+  },
+
+  update(deltaTime) {
+    if (this.isSleeping) {
+      this._updateSleepTransition(deltaTime * 1000);
+      return;
+    }
+
+    const oldTime = this.currentTime;
+    this.currentTime += deltaTime * this.timeSpeed;
+
+    if (Math.floor(oldTime) !== Math.floor(this.currentTime)) {
+      document.dispatchEvent(
+        new CustomEvent("timeChanged", {
+          detail: { day: this.day, time: this.currentTime, weekday: this.getWeekday() }
+        })
+      );
+    }
+
+    if (this.currentTime >= 24 * 60) {
+      this.currentTime -= 24 * 60;
+      this.advanceDate();
+    }
+
+    this.updateAmbientLight();
+
+    this.weatherTimer += deltaTime;
+    if (this.weatherTimer >= this.nextWeatherChange) {
+      this.weatherTimer = 0;
+      this.randomizeWeather();
+      this.nextWeatherChange = 60 * (Math.random() * 4 + 3);
+    }
+
+    this.lastParticleUpdate += deltaTime;
+    if (this.lastParticleUpdate > 0.016) {
+      const steps = Math.floor(this.lastParticleUpdate / 0.016);
+      for (let i = 0; i < steps; i++) {
+        this.updateRainParticles();
+        this.updateFogLayers();
+        this.updateSnowParticles();
+        this.updateLightningFlashes(0.016);
+      }
+      this.lastParticleUpdate -= steps * 0.016;
+    }
+
+    if (this.weatherType === "storm" && Math.random() < 0.008) {
+      this.addLightningFlash();
+    }
+  },
+
+  _updateSleepTransition(dtMs) {
+    this.sleepTimerAcc += dtMs;
+
+    if (this.sleepPhase === "fadingOut") {
+      const p = Math.min(1, this.sleepTimerAcc / this.sleepDurations.fadeOut);
+      this.sleepTransitionProgress = p;
+
+      if (p >= 1) {
+        this.sleepPhase = "holding";
+        this.sleepTimerAcc = 0;
+
+        this.currentTime = 6 * 60;
+        this.advanceDate();
+        this.randomizeWeather();
+
+        this.sleepMessage = `Dormindo profundamente: Dia ${this.day - 1} → Dia ${this.day} (${this.getWeekday()})`;
+
+        document.dispatchEvent(new CustomEvent("dayChanged", { detail: { day: this.day } }));
+      }
+      return;
+    }
+
+    if (this.sleepPhase === "holding") {
+      this.sleepTransitionProgress = 1;
+      if (this.sleepTimerAcc >= this.sleepDurations.hold) {
+        this.sleepPhase = "fadingIn";
+        this.sleepTimerAcc = 0;
+        return;
+      }
+      return;
+    }
+
+    if (this.sleepPhase === "fadingIn") {
+      const p = Math.min(1, this.sleepTimerAcc / this.sleepDurations.fadeIn);
+      this.sleepTransitionProgress = 1 - p;
+      this.updateAmbientLight();
+
+      if (p >= 1) {
+        this.sleepPhase = null;
+        this.sleepTimerAcc = 0;
+        this.isSleeping = false;
+        this.sleepTransitionProgress = 0;
+        this.sleepMessage = "";
+      }
+      return;
+    }
+  },
+
+  sleep() {
+    if (this.isSleeping) return;
+    this.isSleeping = true;
+    this.sleepPhase = "fadingOut";
+    this.sleepTimerAcc = 0;
+    this.sleepTransitionProgress = 0;
+  },
+
+  updateAmbientLight() {
+    const cyclePoints = [
+      { hour: 0, darkness: 1.0 },
+      { hour: 4, darkness: 1.0 },
+      { hour: 5, darkness: 0.95 },
+      { hour: 6, darkness: 0.85 },
+      { hour: 7, darkness: 0.6 },
+      { hour: 8, darkness: 0.0 },
+      { hour: 16, darkness: 0.0 },
+      { hour: 17, darkness: 0.5 },
+      { hour: 18, darkness: 0.8 },
+      { hour: 19, darkness: 0.95 },
+      { hour: 20, darkness: 1.0 },
+      { hour: 24, darkness: 1.0 }
+    ];
+
+    const currentHour = this.currentTime / 60;
+
+    for (let i = 0; i < cyclePoints.length - 1; i++) {
+      const start = cyclePoints[i];
+      const end = cyclePoints[i + 1];
+
+      if (currentHour >= start.hour && currentHour < end.hour) {
+        const range = end.hour - start.hour;
+        const progress = (currentHour - start.hour) / range;
+        this.ambientDarkness = start.darkness + (end.darkness - start.darkness) * progress;
+        return;
+      }
+    }
+  },
+
+  advanceDate() {
+    const oldDay = this.day;
+    this.day++;
+
+    if (this.day > 30) {
+      this.day = 1;
+      this.month++;
+      if (this.month > 12) {
+        this.month = 1;
+        this.year++;
+      }
+    }
+
+    this.updateSeason();
+    this.sleepTargetDay = this.day;
+
+    document.dispatchEvent(
+      new CustomEvent("timeChanged", {
+        detail: { day: this.day, time: this.currentTime, weekday: this.getWeekday() }
+      })
+    );
+  },
+
+  updateSeason() {
+    if (this.month >= 3 && this.month <= 5) this.season = "Primavera";
+    else if (this.month >= 6 && this.month <= 8) this.season = "Verão";
+    else if (this.month >= 9 && this.month <= 11) this.season = "Outono";
+    else this.season = "Inverno";
+  },
+
+  randomizeWeather() {
+    const rand = Math.random();
+
+    if (this.season === "Inverno") {
+      this.weatherType = rand < 0.4 ? "clear" : "blizzard";
+    } else {
+      if (rand < 0.30) this.weatherType = "clear";
+      else if (rand < 0.70) this.weatherType = "rain";
+      else if (rand < 0.90) this.weatherType = "storm";
+      else this.weatherType = "fog";
+    }
+
+    this.rainParticles = [];
+    this.fogLayers = [];
+    this.snowParticles = [];
+    this.lightningFlashes = [];
+
+    if (this.weatherType === "rain" || this.weatherType === "storm") this.generateRainParticles();
+    if (this.weatherType === "fog") this.generateFogLayers();
+    if (this.weatherType === "blizzard") this.generateSnowParticles();
+
+    updateWeatherUIPanelContent();
+  },
+
+  generateRainParticles() {
+    const total = this.weatherType === "storm" ? 1600 : 900;
+    const wind = this.weatherType === "storm" ? 12 : 5;
+    const angle = Math.PI * 0.45;
+
+    for (let i = 0; i < total; i++) {
+      const depth = Math.random();
+      this.rainParticles.push({
+        x: Math.random() * 2500 - 500,
+        y: Math.random() * 1500 - 500,
+        depth,
+        speed: 1500 + depth * 500,
+        wind,
+        angle,
+        length: 30 + depth * 20,
+        opacity: 0.2 + depth * 0.4
+      });
+    }
+  },
+
+  generateFogLayers() {
+    for (let i = 0; i < 6; i++) {
+      this.fogLayers.push({
+        x: Math.random() * 200,
+        y: Math.random() * 200,
+        speed: 0.2 + Math.random() * 0.3,
+        density: 0.3 + Math.random() * 0.2,
+        time: Math.random() * 100
+      });
+    }
+  },
+
+  generateSnowParticles() {
+    for (let i = 0; i < 500; i++) {
+      this.snowParticles.push({
+        x: Math.random() * 2500 - 500,
+        y: Math.random() * 1500 - 500,
+        size: Math.random() * 3 + 1,
+        speedY: Math.random() * 100 + 50,
+        speedX: Math.random() * 40 - 20,
+        opacity: Math.random() * 0.8 + 0.2
+      });
+    }
+  },
+
+  addLightningFlash() {
+    this.lightningFlashes.push({
+      opacity: 0,
+      maxOpacity: 0.6 + Math.random() * 0.4,
+      duration: 0.1 + Math.random() * 0.2,
+      phase: "in",
+      timer: 0
+    });
+  },
+
+  updateRainParticles() {
+    const viewW = 1920 / camera.zoom;
+    const viewH = 1080 / camera.zoom;
+    const pad = 300;
+
+    this.rainParticles.forEach((p) => {
+      p.x -= p.wind * (1 + p.depth);
+      p.y += p.speed * 0.016;
+
+      if (p.y > camera.y + viewH + pad) {
+        p.y = camera.y - pad;
+        p.x = camera.x - pad + Math.random() * (viewW + pad * 2);
+      }
+
+      if (p.x < camera.x - pad) {
+        p.x += viewW + pad * 2;
+      }
+    });
+  },
+
+  updateFogLayers() {
+    this.fogLayers.forEach((l) => {
+      l.time += 0.01;
+    });
+  },
+
+  updateSnowParticles() {
+    const viewH = 1080 / camera.zoom;
+
+    this.snowParticles.forEach((p) => {
+      p.y += p.speedY * 0.016;
+      p.x += p.speedX * 0.016 + Math.sin(this.currentTime * 0.05) * 0.5;
+
+      if (p.y > camera.y + viewH + 100) {
+        p.y = camera.y - 100;
+        p.x = camera.x - 500 + Math.random() * 2500;
+      }
+    });
+  },
+
+  updateLightningFlashes(dt) {
+    for (let i = this.lightningFlashes.length - 1; i >= 0; i--) {
+      const f = this.lightningFlashes[i];
+      f.timer += dt;
+
+      if (f.phase === "in") {
+        f.opacity = (f.timer / (f.duration * 0.2)) * f.maxOpacity;
+        if (f.timer >= f.duration * 0.2) {
+          f.phase = "hold";
+          f.opacity = f.maxOpacity;
+        }
+      } else if (f.phase === "hold") {
+        if (f.timer >= f.duration * 0.4) f.phase = "out";
+      } else if (f.phase === "out") {
+        const remaining = f.duration - f.timer;
+        f.opacity = (remaining / (f.duration * 0.6)) * f.maxOpacity;
+        if (f.timer >= f.duration) {
+          this.lightningFlashes.splice(i, 1);
+        }
+      }
+    }
+  },
+
+  getTimeString() {
+    const h = Math.floor(this.currentTime / 60);
+    const m = Math.floor(this.currentTime % 60);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+};
+
+export function drawWeatherEffects(ctx, player, canvas) {
+  if (!player) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  if (WeatherSystem.ambientDarkness > 0) {
+    ctx.save();
+    const playerScreen = camera.worldToScreen(player.x, player.y);
+    const px = Math.max(-2000, Math.min(width + 2000, playerScreen.x));
+    const py = Math.max(-2000, Math.min(height + 2000, playerScreen.y));
+
+    const gradient = ctx.createRadialGradient(px, py, 1 * camera.zoom, px, py, 80 * camera.zoom);
+    const d = WeatherSystem.ambientDarkness;
+
+    gradient.addColorStop(0, `rgba(10, 10, 25, ${d * 0.3})`);
+    gradient.addColorStop(1, `rgba(5, 5, 15, ${d * 0.95})`);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    ctx.restore();
+  }
+
+  WeatherSystem.lightningFlashes.forEach((f) => {
+    ctx.fillStyle = `rgba(255, 255, 230, ${f.opacity})`;
+    ctx.fillRect(0, 0, width, height);
+  });
+
+  if (WeatherSystem.rainParticles.length > 0) {
+    ctx.save();
+    ctx.strokeStyle = "rgba(180, 200, 255, 0.5)";
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+
+    WeatherSystem.rainParticles.forEach((p) => {
+      const screenX = p.x - camera.x;
+      const screenY = p.y - camera.y;
+
+      if (screenX > -100 && screenX < width + 100 && screenY > -100 && screenY < height + 100) {
+        ctx.moveTo(screenX, screenY);
+        ctx.lineTo(screenX - Math.cos(p.angle) * p.length, screenY + Math.sin(p.angle) * p.length);
+      }
+    });
+
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (WeatherSystem.snowParticles.length > 0) {
+    ctx.fillStyle = "white";
+    ctx.beginPath();
+
+    WeatherSystem.snowParticles.forEach((p) => {
+      const screenX = p.x - camera.x;
+      const screenY = p.y - camera.y;
+      ctx.moveTo(screenX, screenY);
+      ctx.arc(screenX, screenY, p.size, 0, Math.PI * 2);
+    });
+
+    ctx.fill();
+  }
+
+  if (WeatherSystem.weatherType === "fog") {
+    ctx.fillStyle = `rgba(200, 210, 220, 0.2)`;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  if (WeatherSystem.sleepTransitionProgress > 0) {
+    ctx.fillStyle = `rgba(0,0,0,${WeatherSystem.sleepTransitionProgress})`;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  if (WeatherSystem.sleepPhase === "holding" && WeatherSystem.sleepMessage) {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    const boxW = 520;
+    const boxH = 120;
+    const bx = (width - boxW) / 2;
+    const by = (height - boxH) / 2;
+
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(bx, by, boxW, boxH);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "20px 'Courier New', monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(WeatherSystem.sleepMessage, width / 2, height / 2 - 10);
+
+    ctx.font = "14px 'Courier New', monospace";
+    ctx.fillText("Aguarde...", width / 2, height / 2 + 28);
+
+    ctx.restore();
+  }
+
+  if (WeatherSystem.sleepTransitionProgress > 0.8 && WeatherSystem.sleepPhase !== "holding") {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "white";
+    ctx.font = "30px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("Zzz...", width / 2, height / 2);
+    ctx.restore();
+  }
+}
+
+export function drawWeatherUI(ctx) {
+  // o painel agora é overlay html ancorado no canto do canvas
+  updateWeatherUIPanelPosition();
+  updateWeatherUIPanelContent();
+}

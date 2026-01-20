@@ -1,0 +1,149 @@
+/* ===== PLAYER PANEL ANIMADO (TOP RIGHT) ===== */
+.player-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 190px;
+    background: linear-gradient(135deg, rgba(43, 26, 12, 0.97) 0%, rgba(59, 38, 18, 0.93) 100%);
+    border-bottom-left-radius: 17px;
+    border-left: 2px solid #8b5a2b;
+    border-bottom: 2px solid #8b5a2b;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    z-index: 101;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    height: 82px; /* Altura recolhida: só avatar e nome */
+    transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player-panel:hover {
+    height: 420px; /* Altura expandida: mostra todas as estatísticas */
+}
+
+.player-panel:not(:hover) {
+    height: 130px;
+}
+
+/* Indicador visual de que é interativo */
+.player-panel::after {
+    content: "ⓘ";
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    color: #c9a463;
+    font-size: 12px;
+    opacity: 0.7;
+    transition: all 0.3s ease;
+}
+
+.player-panel:hover::after {
+    opacity: 0;
+}
+
+/* ===== AVATAR DO JOGADOR ===== */
+.player-portrait {
+    width: 50px;
+    height: 50px;
+    margin: 12px auto 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(201, 164, 99, 0.3);
+    background: #2e1c0f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.player-panel:hover .player-portrait {
+    width: 60px;
+    height: 60px;
+    margin: 15px auto 10px;
+    box-shadow: 0 0 15px rgba(201, 164, 99, 0.5);
+}
+
+.player-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* ===== INFORMAÇÕES DO JOGADOR ===== */
+.player-info {
+    padding: 0 15px;
+    opacity: 0;
+    max-height: 0;
+    transition: opacity 0.3s ease 0.1s, max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.player-panel:hover .player-info {
+    opacity: 1;
+    max-height: 900px;
+    pointer-events: auto;
+}
+
+.player-info h3 {
+    color: #f5e9d3;
+    margin: 6px 0 8px 0;
+    font-size: 15px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    text-align: center;
+}
+
+.player-info-grid {
+    display: grid;
+    gap: 8px;
+    font-size: 11px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a463 rgba(46, 28, 15, 0.3);
+}
+
+/* Scrollbar personalizada */
+.player-info-grid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.player-info-grid::-webkit-scrollbar-track {
+    background: rgba(46, 28, 15, 0.3);
+    border-radius: 3px;
+}
+
+.player-info-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #c9a463, #e0bc87);
+    border-radius: 3px;
+}
+
+.player-info-grid::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #e0bc87, #f5e9d3);
+}
+
+.player-stat {
+    background: rgba(201, 164, 99, 0.1);
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid rgba(201, 164, 99, 0.2);
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.player-stat .label {
+    font-size: 9px;
+    color: #c9a463;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.player-stat .value {
+    font-size: 11px;
+    color: #f5e9d3;
+    font-weight: bold;
+    display: block;
+}

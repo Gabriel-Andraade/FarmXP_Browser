@@ -1,0 +1,717 @@
+
+import { items } from '../item.js';
+import { consumeItem, equipItem, discardItem } from './playerInventory.js';
+import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
+import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+
+export const allItems = items;
+
+export class InventorySystem {
+    constructor() {
+        this.uiUpdateTimer = null;
+        this.UI_UPDATE_DELAY = 50;
+        this.lastUIUpdate = 0;
+        
+        // 🔧 Inicializar categorias da configuração centralizada
+        this.categories = {
+            tools: { limit: INVENTORY_CATEGORIES.tools.limit, stackLimit: INVENTORY_CATEGORIES.tools.stackLimit, items: [] },
+            seeds: { limit: INVENTORY_CATEGORIES.seeds.limit, stackLimit: INVENTORY_CATEGORIES.seeds.stackLimit, items: [] },
+            construction: { limit: INVENTORY_CATEGORIES.construction.limit, stackLimit: INVENTORY_CATEGORIES.construction.stackLimit, items: [] },
+            animal_food: { limit: INVENTORY_CATEGORIES.animal_food.limit, stackLimit: INVENTORY_CATEGORIES.animal_food.stackLimit, items: [] },
+            food: { limit: INVENTORY_CATEGORIES.food.limit, stackLimit: INVENTORY_CATEGORIES.food.stackLimit, items: [] },
+            resources: { limit: INVENTORY_CATEGORIES.resources.limit, stackLimit: INVENTORY_CATEGORIES.resources.stackLimit, items: [] }
+        };
+        
+        this.equipped = {
+            tool: null,
+            food: null
+        };
+        
+        this.selectedItem = null;
+        
+        this.init();
+        this.setupGlobalListeners();
+        
+        window.inventorySystem = this;
+        console.log('🎒 InventorySystem inicializado com categorias centralizadas');
+    }
+    
+    scheduleUIUpdate() {
+        if (this.uiUpdateTimer) {
+            clearTimeout(this.uiUpdateTimer);
+        }
+        
+        this.uiUpdateTimer = setTimeout(() => {
+            this.triggerUIUpdate();
+        }, this.UI_UPDATE_DELAY);
+    }
+    
+    triggerUIUpdate() {
+        const now = Date.now();
+        
+        if (now - this.lastUIUpdate < 30) {
+            return;
+        }
+        
+        this.lastUIUpdate = now;
+        this.uiUpdateTimer = null;
+        
+        document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+            detail: { inventory: this.getInventory() }
+        }));
+    }
+    
+    setSelectedItem(itemId) {
+        for (const [category, data] of Object.entries(this.categories)) {
+            const item = data.items.find(item => item.id === itemId);
+            if (item) {
+                // ✅ Enriquecer item com dados completos do banco de dados
+                const fullItemData = getItem(itemId);
+                if (!fullItemData) {
+                    console.error(`❌ Item ID ${itemId} não encontrado em item.js`);
+                    return false;
+                }
+                
+                // Mesclar dados do inventário com dados completos
+                this.selectedItem = {
+                    ...item,                    // Dados do inventário (quantidade, etc)
+                    ...fullItemData,            // Dados completos (buildWidth, variants, etc)
+                    category,                   // Categoria
+                    placeable: isPlaceable(itemId)  // ✅ Validar se é construível
+                };
+                
+                console.log(`🎯 Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
+                this.scheduleUIUpdate();
+                return true;
+            }
+        }
+        console.warn(`❌ Item ID ${itemId} não encontrado no inventário`);
+        this.selectedItem = null;
+        this.scheduleUIUpdate();
+        return false;
+    }
+
+    getSelectedItem() {
+        return this.selectedItem;
+    }
+
+    clearSelectedItem() {
+        this.selectedItem = null;
+        this.scheduleUIUpdate();
+    }
+
+    setupGlobalListeners() {
+        document.addEventListener('itemEquipped', (e) => {
+            const item = e.detail.item;
+            if (item.type === 'tool') {
+                this.equipped.tool = item.id;
+            } else if (item.type === 'food') {
+                this.equipped.food = item.id;
+            }
+            this.scheduleUIUpdate();
+        });
+
+        document.addEventListener('itemUnequipped', () => {
+            this.equipped.tool = null;
+            this.equipped.food = null;
+            this.scheduleUIUpdate();
+        });
+        
+        document.addEventListener('removeItemAfterConsumption', (e) => {
+            const { category, itemId, quantity } = e.detail;
+            if (category && itemId) {
+                this.removeItem(category, itemId, quantity || 1);
+            }
+        });
+    }
+
+    init() {
+        setTimeout(() => {
+            this.triggerUIUpdate();
+        }, 100);
+        console.log('🎒 Sistema de inventário pronto para uso');
+    }
+
+    addItem(categoryOrId, itemIdOrQty, quantity = 1, _recursionDepth = 0) {
+        // ✅ Proteção contra recursão infinita
+        if (_recursionDepth > 100) {
+            console.error('❌ Limite de recursão excedido ao adicionar itens');
+            return false;
+        }
+
+        let category = categoryOrId;
+        let id = itemIdOrQty;
+        let qty = quantity;
+
+        if (typeof categoryOrId === 'number') {
+            id = categoryOrId;
+            qty = itemIdOrQty || 1;
+
+            // 🔧 Usar getItem() centralizado
+            const itemData = getItem(id);
+            if (!itemData) {
+                console.error(`❌ Erro: Item ID ${id} não existe no banco de dados`);
+                return false;
+            }
+            
+            // 🔧 Usar mapeamento centralizado
+            category = mapTypeToCategory(itemData.type);
+            console.log(`📦 Adicionando: ${itemData.name} (Tipo: ${itemData.type}) → ${category}`);
+        }
+
+        if (!this.categories[category]) {
+            console.error(`❌ Categoria '${category}' não definida`);
+            return false;
+        }
+
+        const categoryData = this.categories[category];
+        const existingItem = categoryData.items.find(item => item.id === id);
+        
+        // 🔧 Usar stack limit centralizado
+        const stackLimit = getStackLimit(id);
+
+        if (existingItem) {
+            const newTotal = existingItem.quantity + qty;
+            if (newTotal > stackLimit) {
+                // Adicionar nova stack se houver espaço
+                if (categoryData.items.length >= categoryData.limit) {
+                    console.warn(`🎒 Inventário de ${category} cheio!`);
+                    return false;
+                }
+                
+                // Limitar stack atual ao máximo permitido
+                const overflow = newTotal - stackLimit;
+                existingItem.quantity = stackLimit;
+                
+                // Criar nova stack com o overflow
+                const itemData = getItem(id);
+                categoryData.items.push({
+                    id: itemData.id,
+                    name: itemData.name,
+                    icon: itemData.icon,
+                    type: itemData.type,
+                    quantity: overflow,
+                    placeable: itemData.placeable || false,
+                    variants: itemData.variants || null,
+                    toolType: itemData.toolType || null,
+                    fillUp: itemData.fillUp || null
+                });
+                
+                console.log(`📚 Stack dividida: ${itemData.name} - Principal: ${stackLimit}, Nova: ${overflow}`);
+            } else {
+                existingItem.quantity = newTotal;
+            }
+        } else {
+            if (categoryData.items.length >= categoryData.limit) {
+                console.warn(`🎒 Inventário de ${category} cheio!`);
+                return false;
+            }
+
+            const itemData = getItem(id);
+            if (!itemData) {
+                console.error(`❌ Erro ao buscar dados do item ${id}`);
+                return false;
+            }
+
+            // Criar nova stack respeitando stack limit
+            const stackLimit = getStackLimit(id);
+            const itemClone = {
+                id: itemData.id,
+                name: itemData.name,
+                icon: itemData.icon,
+                type: itemData.type,
+                quantity: Math.min(qty, stackLimit),
+                placeable: itemData.placeable || false,
+                variants: itemData.variants || null,
+                toolType: itemData.toolType || null,
+                fillUp: itemData.fillUp || null
+            };
+            categoryData.items.push(itemClone);
+            
+            // Se houver overflow, chamar recursivamente
+            if (qty > stackLimit) {
+                const overflow = qty - stackLimit;
+                console.log(`📚 Item split: criando nova stack com ${overflow} itens`);
+                return this.addItem(category, id, overflow);
+            }
+        }
+
+        this.saveToStorage();
+        this.scheduleUIUpdate();
+        return true;
+    }
+
+    autoMapCategoryByItemType(itemType) {
+        // 🔧 Usar mapeamento centralizado em vez de replicado
+        return mapTypeToCategory(itemType);
+    }
+
+    findItemData(itemId) {
+        // 🔧 Usar getItem() centralizado em vez de items.find()
+        return getItem(itemId);
+    }
+
+    removeItem(categoryOrId, itemIdOrQty, quantity = 1) {
+        let category = categoryOrId;
+        let id = itemIdOrQty;
+        let qty = quantity;
+
+        if (typeof categoryOrId === 'number') {
+            id = categoryOrId;
+            qty = itemIdOrQty || 1;
+
+            category = this.findItemCategory(id);
+            if (!category) {
+                console.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
+                return false;
+            }
+        }
+
+        if (!this.categories[category]) return false;
+
+        const categoryData = this.categories[category];
+        const itemIndex = categoryData.items.findIndex(item => item.id === id);
+
+        if (itemIndex === -1) return false;
+
+        const item = categoryData.items[itemIndex];
+
+        // ✅ Validação crítica: quantidade suficiente?
+        if (item.quantity < qty) {
+            console.warn(`❌ Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
+            return false;
+        }
+
+        if (item.quantity > qty) {
+            item.quantity -= qty;
+        } else {
+            categoryData.items.splice(itemIndex, 1);
+        }
+
+        if (this.equipped.tool === id) this.equipped.tool = null;
+        if (this.equipped.food === id) this.equipped.food = null;
+
+        this.saveToStorage();
+        this.scheduleUIUpdate();
+        return true;
+    }
+
+    findItemCategory(itemId) {
+        for (const [category, data] of Object.entries(this.categories)) {
+            if (data.items.some(item => item.id === itemId)) {
+                return category;
+            }
+        }
+        return null;
+    }
+
+    equipItem(category, itemId) {
+        if (!this.categories[category]) return false;
+
+        const item = this.categories[category].items.find(item => item.id === itemId);
+        if (!item) return false;
+
+        // ✅ Validação de tipo
+        if (category === 'tools') {
+            if (item.type !== 'tool') {
+                console.warn(`❌ Tentativa de equipar não-ferramenta: ${item.name}`);
+                return false;
+            }
+            this.equipped.tool = itemId;
+        } else if (category === 'food') {
+            if (!item.fillUp) {
+                console.warn(`❌ Tentativa de equipar comida não-consumível: ${item.name}`);
+                return false;
+            }
+            this.equipped.food = itemId;
+        } else {
+            console.warn(`❌ Categoria '${category}' não pode ser equipada`);
+            return false;
+        }
+
+        this.saveToStorage();
+        this.scheduleUIUpdate();
+        return true;
+    }
+
+    useItem(category, itemId) {
+        if (category === 'food' || category === 'animals') {
+            return this.removeItem(category, itemId, 1);
+        }
+        return false;
+    }
+
+    getAvailableSpace(category) {
+        if (!this.categories[category]) return 0;
+        const categoryData = this.categories[category];
+        return categoryData.limit - categoryData.items.length;
+    }
+
+    getItemQuantity(categoryOrId, itemId = null) {
+        if (typeof categoryOrId === 'number') {
+            const id = categoryOrId;
+            let total = 0;
+            for (const catData of Object.values(this.categories)) {
+                const item = catData.items.find(i => i.id === id);
+                if (item) total += item.quantity;
+            }
+            return total;
+        }
+
+        if (!this.categories[categoryOrId]) return 0;
+        const item = this.categories[categoryOrId].items.find(i => i.id === itemId);
+        return item ? item.quantity : 0;
+    }
+
+    getInventory() {
+        return this.categories;
+    }
+
+    getEquippedItems() {
+        return this.equipped;
+    }
+
+    saveToStorage() {
+        const saveData = {
+            categories: {},
+            equipped: this.equipped,
+            timestamp: Date.now()
+        };
+        
+        for (const [catName, catData] of Object.entries(this.categories)) {
+            saveData.categories[catName] = {
+                items: catData.items.map(item => ({
+                    id: item.id,
+                    quantity: item.quantity
+                })),
+                limit: catData.limit
+            };
+        }
+        
+        if (window.DEBUG_MODE) {
+            console.log('💾 (Simulado) Salvando inventário:', saveData);
+        }
+        
+        // Em produção, você usaria localStorage ou um servidor
+        // try {
+        //     localStorage.setItem('farmingxp_inventory', JSON.stringify(saveData));
+        // } catch (e) {
+        //     console.warn('⚠️ Não foi possível salvar inventário:', e);
+        // }
+    }
+
+    loadFromStorage() {
+        console.log('💾 Carregamento de inventário (simulado)');
+        
+        // Em produção, você carregaria de localStorage
+        // try {
+        //     const saved = localStorage.getItem('farmingxp_inventory');
+        //     if (saved) {
+        //         const saveData = JSON.parse(saved);
+        //         // Implementar carregamento
+        //     }
+        // } catch (e) {
+        //     console.warn('⚠️ Não foi possível carregar inventário:', e);
+        // }
+        
+        // Para testes, adicionar alguns itens padrão
+        if (window.DEBUG_MODE || window.TEST_MODE) {
+            console.log('🧪 Adicionando itens de teste...');
+            
+            // Ferramentas
+            this.addItem(0, 1);  // Tesoura
+            this.addItem(1, 1);  // Enxada
+            
+            // Sementes
+            this.addItem(3, 5);  // Semente de Milho
+            this.addItem(4, 3);  // Semente de Trigo
+            
+            // Comida
+            this.addItem(5, 3);  // Maçã
+            this.addItem(6, 2);  // Pão
+            
+            // Recursos
+            this.addItem(9, 10); // Madeira
+            this.addItem(10, 8); // Pedra
+            
+            // Construção
+            this.addItem(43, 2); // Cerca de Madeira
+        }
+    }
+
+    clear() {
+        Object.keys(this.categories).forEach(category => {
+            this.categories[category].items = [];
+        });
+        this.equipped = { tool: null, food: null };
+        this.saveToStorage();
+        this.triggerUIUpdate();
+        console.log('🗑️ Inventário limpo');
+    }
+
+    updateUI() {
+        console.warn('⚠️ updateUI() chamado diretamente - use scheduleUIUpdate()');
+        this.triggerUIUpdate();
+    }
+
+    debug() {
+        console.log('🎒 INVENTÁRIO (Sistema Corrigido):');
+        console.log('='.repeat(60));
+        
+        Object.entries(this.categories).forEach(([category, data]) => {
+            console.log(`📁 ${category.toUpperCase()} (${data.items.length}/${data.limit}):`);
+            if (data.items.length === 0) {
+                console.log('   🚫 Vazio');
+            } else {
+                data.items.forEach(item => {
+                    const equipped = (this.equipped.tool === item.id || this.equipped.food === item.id) ? ' ⚡' : '';
+                    const consumable = item.fillUp ? ' 🍽️' : '';
+                    const placeable = item.placeable ? ' 🏗️' : '';
+                    console.log(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
+                });
+            }
+            console.log('');
+        });
+        
+        console.log('⚡ EQUIPADO:');
+        console.log(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
+        console.log(`   Comida: ${this.equipped.food ? this.findItemData(this.equipped.food)?.name : 'Nenhuma'}`);
+        console.log('');
+        
+        const totalItems = Object.values(this.categories).reduce((total, cat) => 
+            total + cat.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+        console.log(`📊 TOTAL DE ITENS: ${totalItems}`);
+        console.log('='.repeat(60));
+    }
+    
+    forceImmediateUpdate() {
+        if (this.uiUpdateTimer) {
+            clearTimeout(this.uiUpdateTimer);
+            this.uiUpdateTimer = null;
+        }
+        this.triggerUIUpdate();
+    }
+    
+    setUpdateDelay(delayMs) {
+        this.UI_UPDATE_DELAY = Math.max(16, delayMs);
+        console.log(`🎯 Delay do inventário ajustado para ${this.UI_UPDATE_DELAY}ms`);
+    }
+
+    isConsumable(itemId) {
+        const item = this.findItemData(itemId);
+        return item && item.fillUp;
+    }
+
+    getConsumptionData(itemId) {
+        const item = this.findItemData(itemId);
+        if (!item || !item.fillUp) return null;
+        
+        return {
+            name: item.name,
+            icon: item.icon,
+            hunger: item.fillUp.hunger || 0,
+            thirst: item.fillUp.thirst || 0,
+            energy: item.fillUp.energy || 0
+        };
+    }
+}
+
+export const inventorySystem = new InventorySystem();
+
+// ====================================================================
+// FUNÇÕES DE EXPORTAÇÃO (Interface pública)
+// ====================================================================
+
+export function getInventory() {
+    return inventorySystem.getInventory();
+}
+
+export function addItemToInventory(category, itemId, quantity = 1) {
+    return inventorySystem.addItem(category, itemId, quantity);
+}
+
+export function removeItemFromInventory(category, itemId, quantity = 1) {
+    return inventorySystem.removeItem(category, itemId, quantity);
+}
+
+export function isConsumable(itemId) {
+    const item = items.find(i => i.id === itemId);
+    return item && item.fillUp;
+}
+
+export function getConsumptionData(itemId) {
+    const item = items.find(i => i.id === itemId);
+    if (!item || !item.fillUp) return null;
+    
+    return {
+        name: item.name,
+        icon: item.icon,
+        hunger: item.fillUp.hunger || 0,
+        thirst: item.fillUp.thirst || 0,
+        energy: item.fillUp.energy || 0
+    };
+}
+
+export function startConsuming(itemId, player) {
+    const item = items.find(i => i.id === itemId);
+    if (!item || !item.fillUp) return false;
+    
+    document.dispatchEvent(new CustomEvent('startConsumptionBar', {
+        detail: {
+            item,
+            player,
+            duration: 2000
+        }
+    }));
+    
+    return true;
+}
+
+export function forceInventoryUpdate() {
+    return inventorySystem.forceImmediateUpdate();
+}
+
+export function setInventoryUpdateDelay(delayMs) {
+    return inventorySystem.setUpdateDelay(delayMs);
+}
+
+export function addItemActionButtons(itemElement, item, category, itemId) {
+    const existingButtons = itemElement.querySelectorAll('.item-action-btn');
+    existingButtons.forEach(btn => btn.remove());
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'item-actions';
+    buttonContainer.style.cssText = `
+        display: flex;
+        gap: 5px;
+        margin-top: 5px;
+        justify-content: center;
+    `;
+    
+    if (item.fillUp) {
+        const consumeBtn = document.createElement('button');
+        consumeBtn.className = 'item-action-btn consume-btn';
+        consumeBtn.textContent = '🍽️ Consumir';
+        consumeBtn.style.cssText = `
+            background: linear-gradient(135deg, #27ae60, #1e8449);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        `;
+        consumeBtn.onmouseover = () => consumeBtn.style.transform = 'scale(1.05)';
+        consumeBtn.onmouseout = () => consumeBtn.style.transform = 'scale(1)';
+        consumeBtn.onclick = (e) => {
+            e.stopPropagation();
+            consumeItem(category, itemId, 1);
+        };
+        buttonContainer.appendChild(consumeBtn);
+    }
+    
+    if (item.type === 'tool') {
+        const equipBtn = document.createElement('button');
+        equipBtn.className = 'item-action-btn equip-btn';
+        equipBtn.textContent = '⚔️ Equipar';
+        equipBtn.style.cssText = `
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        `;
+        equipBtn.onmouseover = () => equipBtn.style.transform = 'scale(1.05)';
+        equipBtn.onmouseout = () => equipBtn.style.transform = 'scale(1)';
+        equipBtn.onclick = (e) => {
+            e.stopPropagation();
+            equipItem(category, itemId);
+        };
+        buttonContainer.appendChild(equipBtn);
+    }
+    
+    const discardBtn = document.createElement('button');
+    discardBtn.className = 'item-action-btn discard-btn';
+    discardBtn.textContent = '🗑️ Descartar';
+    discardBtn.style.cssText = `
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 11px;
+        transition: all 0.2s;
+    `;
+    discardBtn.onmouseover = () => discardBtn.style.transform = 'scale(1.05)';
+    discardBtn.onmouseout = () => discardBtn.style.transform = 'scale(1)';
+    discardBtn.onclick = (e) => {
+        e.stopPropagation();
+        discardItem(category, itemId, 1);
+    };
+    buttonContainer.appendChild(discardBtn);
+    
+    itemElement.appendChild(buttonContainer);
+}
+
+// ====================================================================
+// FUNÇÕES GLOBAIS DE DEBUG/TESTE
+// ====================================================================
+
+window.testInventoryCategorization = () => {
+    console.log('🧪 TESTANDO CATEGORIZAÇÃO DE ITENS');
+    console.log('='.repeat(60));
+    
+    // Limpar inventário primeiro
+    inventorySystem.clear();
+    
+    // Testar diferentes tipos de itens
+    const testCases = [
+        { id: 0, expected: 'tools', name: 'Tesoura (ferramenta)' },
+        { id: 1, expected: 'tools', name: 'Enxada (ferramenta)' },
+        { id: 3, expected: 'seeds', name: 'Semente de Milho (seed)' },
+        { id: 5, expected: 'food', name: 'Maçã (comida)' },
+        { id: 7, expected: 'animals', name: 'Ração para Galinha (animal_food)' },
+        { id: 9, expected: 'resources', name: 'Madeira Bruta (resource)' },
+        { id: 43, expected: 'construction', name: 'Cerca (construction)' },
+        { id: 63, expected: 'resources', name: 'Milho (crop)' }
+    ];
+    
+    testCases.forEach(test => {
+        console.log(`📦 Adicionando: ${test.name}`);
+        const success = inventorySystem.addItem(test.id, 1);
+        console.log(`   ✅ Sucesso: ${success}, Esperado: ${test.expected}`);
+    });
+    
+    // Mostrar resultado
+    setTimeout(() => {
+        inventorySystem.debug();
+    }, 100);
+};
+
+window.addTestItems = () => {
+    // Adiciona um de cada tipo para teste
+    inventorySystem.addItem(0, 1);  // Tesoura (tools)
+    inventorySystem.addItem(3, 5);  // Semente (seeds)
+    inventorySystem.addItem(5, 3);  // Maçã (food)
+    inventorySystem.addItem(7, 2);  // Ração (animals)
+    inventorySystem.addItem(9, 10); // Madeira (resources)
+    inventorySystem.addItem(43, 3); // Cerca (construction)
+    
+    console.log('✅ Itens de teste adicionados!');
+    inventorySystem.debug();
+};
+
+// Inicializar quando carregado
+if (typeof window !== 'undefined') {
+    window.inventorySystem = inventorySystem;
+    window.getInventory = getInventory;
+    window.addItemToInventory = addItemToInventory;
+    window.removeItemFromInventory = removeItemFromInventory;
+    
+    console.log('🎒 InventorySystem carregado e pronto!');
+}

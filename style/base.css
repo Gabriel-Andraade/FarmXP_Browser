@@ -1,0 +1,44 @@
+/* ===== RESET ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ===== BASE ===== */
+body {
+    font-family: "Georgia", "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #2f3e1e 0%, #1a1a0e 100%);
+    color: #f5f0e1;
+    overflow: hidden;
+}
+
+.theGame {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+}
+
+/* SCROLLBAR GLOBAL (se aplicável) */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(46, 28, 15, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #c9a463, #e0bc87);
+    border-radius: 4px;
+    border: 1px solid rgba(46, 28, 15, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #e0bc87, #f5e9d3);
+}

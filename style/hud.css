@@ -1,0 +1,147 @@
+/* ===== CORREÇÕES DO HUD (COM PREFIXOS hud-) ===== */
+
+/* ===== Header Superior ===== */
+.hud-top-bar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0 10px;
+}
+
+/* ===== Botão de Alternar HUD ===== */
+.hud-toggle-hud-btn {
+    background: #c9a463;
+    border: none;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    color: #2e1c0f;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.hud-toggle-hud-btn:hover {
+    background: #e0bc87;
+    transform: scale(1.1);
+}
+
+/* ===== Barra Superior ===== */
+.hud-top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(180deg, #5a3b1f, #2e1c0f);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 1000 !important;
+    border-bottom: 2px solid #c9a463;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+/* ===== Botão Central de Alternar ===== */
+.hud-center-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #c9a463;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    z-index: 102;
+}
+
+.hud-center-toggle:hover {
+    background: #e0bc87;
+    transform: translateX(-50%) scale(1.1);
+}
+
+.hud-center-toggle::after {
+    content: '▼';
+    color: #2e1c0f;
+    font-size: 16px;
+    transition: transform 0.3s ease;
+}
+
+.hud-center-toggle.active::after {
+    transform: rotate(180deg);
+}
+
+/* ===== Botões do Topo Direito ===== */
+.hud-top-right-buttons {
+    display: flex;
+    gap: 10px;
+    margin-left: 70%;
+}
+
+.hud-top-btn {
+    background: #c9a463;
+    border: none;
+    border-radius: 6px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 18px;
+    color: #2e1c0f;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+
+.hud-top-btn:hover {
+    background: #e0bc87;
+    transform: scale(1.1);
+}
+
+/* ===== Botões Específicos ===== */
+.hud-store-btn::after {
+    content: '🛒';
+}
+
+.hud-config-btn::after {
+    content: '⚙️';
+}
+
+/* ===== FEEDBACK MENSAGENS DE NECESSIDADES ===== */
+.hud-need-feedback {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 200, 0, 0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 24px;
+    z-index: 10000;
+    animation: fadeUp 1.5s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes fadeUp {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -150%);
+    }
+}

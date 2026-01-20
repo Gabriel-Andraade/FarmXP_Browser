@@ -1,0 +1,780 @@
+/* ==========================================================================
+   RESPONSIVE.CSS 
+   ========================================================================== */
+
+/* 1. RESET E BASE SEGURA */
+html, body {
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+/* ==========================================================================
+   2. MOBILE (Smartphones Portrait ≤ 480px) - INVENTORY OVERHAUL
+   ========================================================================== */
+@media screen and (max-width: 480px) {
+    
+    /* --- FUNDAMENTAL: REMOVER TODOS OS ESTILOS PC DO INVENTORY --- */
+    #inventory-screen .modal-content,
+    #inventory-content,
+    .inventory-category,
+    .inventory-grid,
+    .inventory-slot {
+        all: initial !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* --- CONTAINER PRINCIPAL DO INVENTÁRIO --- */
+    #inventory-screen .modal-content {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        background: rgba(20, 15, 5, 0.98) !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* Header do inventário mobile */
+    #inventory-screen .modal-header {
+        background: linear-gradient(135deg, #8b5a2b, #6b4513) !important;
+        padding: 15px 20px !important;
+        border-bottom: 3px solid #c9a463 !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        z-index: 10 !important;
+    }
+    
+    #inventory-screen .modal-header h2 {
+        font-size: 18px !important;
+        color: #f5e9d3 !important;
+        margin: 0 !important;
+        text-align: center !important;
+        flex: 1 !important;
+    }
+    
+    #inventory-screen .modal-close {
+        position: static !important;
+        width: 36px !important;
+        height: 36px !important;
+        background: #c9a463 !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 20px !important;
+    }
+    
+    /* --- CONTENT AREA --- */
+    #inventory-content {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 10px !important;
+        overflow: hidden !important;
+        gap: 10px !important;
+    }
+    
+    /* CATEGORIAS HORIZONTAIS (abas) */
+    .inventory-categories-tabs {
+        display: flex !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        padding: 10px 5px !important;
+        background: rgba(46, 28, 15, 0.8) !important;
+        border-radius: 12px !important;
+        flex-shrink: 0 !important;
+        scrollbar-width: none !important;
+    }
+    
+    .inventory-categories-tabs::-webkit-scrollbar {
+        display: none !important;
+    }
+    
+    .category-tab {
+        background: rgba(90, 58, 31, 0.8) !important;
+        border: 2px solid #8b5a2b !important;
+        border-radius: 20px !important;
+        padding: 8px 15px !important;
+        color: #f5e9d3 !important;
+        white-space: nowrap !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .category-tab.active {
+        background: #c9a463 !important;
+        color: #2e1c0f !important;
+        border-color: #c9a463 !important;
+        box-shadow: 0 0 10px rgba(201, 164, 99, 0.4) !important;
+    }
+    
+    /* CONTEÚDO DA CATEGORIA ATIVA */
+    .inventory-category.active {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(46, 28, 15, 0.6) !important;
+        border-radius: 12px !important;
+        padding: 10px !important;
+        overflow: hidden !important;
+    }
+    
+    /* HEADER DA CATEGORIA (nova versão) */
+    .category-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 10px !important;
+        background: rgba(70, 45, 20, 0.8) !important;
+        border-radius: 8px !important;
+        margin-bottom: 10px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .category-title {
+        color: #f5e9d3 !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+    }
+    
+    .category-limit {
+        background: linear-gradient(135deg, #c9a463, #e0bc87) !important;
+        color: #2e1c0f !important;
+        padding: 4px 10px !important;
+        border-radius: 12px !important;
+        font-size: 11px !important;
+        font-weight: bold !important;
+    }
+    
+    /* GRID DE ITENS COMPACTO - NOVO DESIGN */
+    .inventory-grid {
+        flex: 1 !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        padding: 5px !important;
+        overflow-y: auto !important;
+        align-content: start !important;
+    }
+    
+    /* SLOT DE ITEM - REDESENHADO COMPLETAMENTE */
+    .inventory-slot {
+        background: linear-gradient(145deg, #3b2612, #2c1e12) !important;
+        border: 2px solid #5a3b1f !important;
+        border-radius: 10px !important;
+        padding: 8px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        height: 110px !important;
+        position: relative !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.3) !important;
+        cursor: pointer !important;
+    }
+    
+    .inventory-slot:hover {
+        border-color: #c9a463 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 12px rgba(0,0,0,0.4) !important;
+    }
+    
+    /* SLOT VAZIO */
+    .inventory-slot.empty {
+        background: rgba(30, 20, 10, 0.3) !important;
+        border: 2px dashed #462d15 !important;
+        justify-content: center !important;
+        align-items: center !important;
+        box-shadow: none !important;
+    }
+    
+    .empty-slot-text {
+        color: #5a3b1f !important;
+        font-size: 20px !important;
+        opacity: 0.5 !important;
+    }
+    
+    /* ÍCONE DO ITEM */
+    .item-icon {
+        font-size: 28px !important;
+        margin: 5px 0 !important;
+        text-align: center !important;
+        filter: drop-shadow(1px 2px 3px rgba(0,0,0,0.5)) !important;
+    }
+    
+    /* NOME DO ITEM */
+    .item-name {
+        font-size: 10px !important;
+        color: #f5e9d3 !important;
+        text-align: center !important;
+        margin: 2px 0 !important;
+        line-height: 1.2 !important;
+        height: 24px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        font-weight: bold !important;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;
+    }
+    
+    /* QUANTIDADE */
+    .item-quantity {
+        position: absolute !important;
+        top: -6px !important;
+        right: -6px !important;
+        background: linear-gradient(135deg, #4ecca3, #3da58a) !important;
+        color: #0f2e22 !important;
+        min-width: 22px !important;
+        height: 22px !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 10px !important;
+        font-weight: 900 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+        border: 1px solid #8effd6 !important;
+        z-index: 2 !important;
+    }
+    
+    /* AÇÕES DO ITEM */
+    .item-actions {
+        display: flex !important;
+        gap: 4px !important;
+        width: 100% !important;
+        margin-top: auto !important;
+        padding-top: 6px !important;
+        border-top: 1px solid rgba(139, 90, 43, 0.3) !important;
+    }
+    
+    .item-actions button {
+        flex: 1 !important;
+        height: 26px !important;
+        border: none !important;
+        border-radius: 6px !important;
+        font-size: 11px !important;
+        font-weight: bold !important;
+        cursor: pointer !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+        color: white !important;
+    }
+    
+    .consume-btn {
+        background: linear-gradient(135deg, #27ae60, #1e8449) !important;
+    }
+    
+    .build-btn {
+        background: linear-gradient(135deg, #e67e22, #d35400) !important;
+    }
+    
+    .equip-btn {
+        background: linear-gradient(135deg, #3498db, #2980b9) !important;
+    }
+    
+    .discard-btn {
+        background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
+    }
+    
+    .item-actions button:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    }
+    
+    .item-actions button:active {
+        transform: translateY(0) !important;
+    }
+    
+    /* ITEM EQUIPADO */
+    .inventory-slot.equipped {
+        border-color: #ffd166 !important;
+        box-shadow: 0 0 10px rgba(255, 209, 102, 0.3) !important;
+        background: linear-gradient(145deg, #4a2e15, #3b2612) !important;
+    }
+    
+    .equipped-badge {
+        position: absolute !important;
+        top: -8px !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        background: linear-gradient(90deg, #ffd166, #ff9a3c) !important;
+        color: #2e1c0f !important;
+        padding: 2px 8px !important;
+        border-radius: 8px !important;
+        font-size: 9px !important;
+        font-weight: 800 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.4) !important;
+        z-index: 3 !important;
+        white-space: nowrap !important;
+        border: 1px solid #fff !important;
+    }
+    
+    /* ==========================================================================
+       3. SISTEMA DE MERCADOR 
+       ========================================================================== */
+    
+    /* Container do comércio */
+    .merchant-commerce-system {
+        padding: 5px !important;
+    }
+    
+    .commerce-container {
+        width: 100% !important;
+        height: 95vh !important;
+        max-width: 100% !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    /* Layout simplificado - uma coluna apenas */
+    .commerce-layout {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+        gap: 10px !important;
+    }
+    
+    /* Painel do jogador no comércio */
+    .merchant-commerce-system .player-panel {
+        height: 180px !important;
+        min-height: 180px !important;
+        max-height: 180px !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(43, 26, 12, 0.9) !important;
+        border: 2px solid #8b5a2b !important;
+    }
+    
+    /* Painel do mercador */
+    .merchant-panel {
+        height: 280px !important;
+        min-height: 280px !important;
+        max-height: 280px !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+        background: rgba(43, 26, 12, 0.9) !important;
+        border: 2px solid #8b5a2b !important;
+    }
+    
+    /* Header do mercador compacto */
+    .merchant-header {
+        padding: 10px 15px !important;
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 8px !important;
+    }
+    
+    .merchant-avatar {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .merchant-name {
+        font-size: 16px !important;
+    }
+    
+    .merchant-profession {
+        font-size: 12px !important;
+    }
+    
+    .merchant-specialty {
+        font-size: 11px !important;
+        padding: 3px 8px !important;
+    }
+    
+    /* Categorias horizontais */
+    .merchant-categories {
+        padding: 8px 10px !important;
+        gap: 6px !important;
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .merchant-category-btn {
+        padding: 6px 12px !important;
+        font-size: 11px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+    }
+    
+    /* Grade de itens do mercador - VISÍVEL */
+    .merchant-items-grid {
+        flex: 1 !important;
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px !important;
+        padding: 10px !important;
+        overflow-y: auto !important;
+        align-content: start !important;
+    }
+    
+    /* Item do mercador visível */
+    .merchant-hexagon {
+        width: 100% !important;
+        height: 100px !important;
+        border-radius: 10px !important;
+        padding: 8px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: linear-gradient(145deg, #3b2612, #2c1e12) !important;
+        border: 2px solid #5a3b1f !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        position: relative !important;
+    }
+    
+    .merchant-hexagon:hover {
+        border-color: #c9a463 !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    .merchant-hexagon-price {
+        position: absolute !important;
+        bottom: 5px !important;
+        background: linear-gradient(135deg, #4ecca3, #3da58a) !important;
+        color: #0f2e22 !important;
+        padding: 3px 8px !important;
+        border-radius: 10px !important;
+        font-size: 10px !important;
+        font-weight: bold !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
+    }
+    
+    /* Painel de ação central VISÍVEL */
+    .action-panel {
+        height: auto !important;
+        min-height: 100px !important;
+        padding: 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        background: rgba(43, 26, 12, 0.9) !important;
+        border: 2px solid #8b5a2b !important;
+        border-radius: 8px !important;
+        margin: 5px 0 !important;
+    }
+    
+    /* Botões de compra/venda VISÍVEIS */
+    .trade-button {
+        width: 100% !important;
+        max-width: 200px !important;
+        padding: 10px 15px !important;
+        font-size: 14px !important;
+        margin: 5px 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+    
+    /* Setas de troca */
+    .arrow-container {
+        display: flex !important;
+        gap: 15px !important;
+        margin: 10px 0 !important;
+    }
+    
+    .trade-arrow {
+        font-size: 30px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        color: #c9a463 !important;
+    }
+    
+    /* ==========================================================================
+       4. BOTÕES DE CONTROLE E INTERFACE GERAL
+       ========================================================================== */
+    
+    /* Barra de botões mobile */
+    .mobile-button-strip {
+        top: calc(10px + env(safe-area-inset-top));
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(60, 45, 30, 0.95);
+        border: 2px solid #8b5a2b;
+        border-radius: 16px;
+        padding: 8px 20px;
+        gap: 12px;
+        height: 64px;
+        min-width: 300px;
+        max-width: 90%;
+        z-index: 1000;
+    }
+    
+    .mobile-button-strip button {
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 14px !important;
+        background: linear-gradient(135deg, #8b5a2b, #6b4513) !important;
+        border: 2px solid #c9a463 !important;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.4) !important;
+    }
+    
+    .mobile-button-strip button:active {
+        transform: scale(0.95) !important;
+        background: linear-gradient(135deg, #6b4513, #8b5a2b) !important;
+    }
+    
+    .mobile-button-strip img {
+        width: 32px;
+        height: 32px;
+    }
+    
+    /* Player panel compacto */
+    .player-panel {
+        top: calc(10px + env(safe-area-inset-top)) !important;
+        right: 10px !important;
+        width: auto !important;
+        height: 60px !important;
+        min-width: 140px !important;
+        padding: 8px 12px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+    }
+    
+    .player-panel .player-portrait {
+        width: 44px !important;
+        height: 44px !important;
+        margin: 0 !important;
+        margin-right: 10px !important;
+    }
+    
+    .player-info {
+        padding: 0 !important;
+        opacity: 1 !important;
+        max-height: none !important;
+    }
+    
+    .player-info h3 {
+        font-size: 13px !important;
+        margin: 0 !important;
+        color: #f5e9d3 !important;
+    }
+    
+    /* ==========================================================================
+       5. SCROLLBARS E OTIMIZAÇÕES
+       ========================================================================== */
+    
+    /* Scrollbars visíveis para toque */
+    ::-webkit-scrollbar {
+        width: 8px !important;
+        height: 8px !important;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(46, 28, 15, 0.3) !important;
+        border-radius: 4px !important;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: rgba(201, 164, 99, 0.7) !important;
+        border-radius: 4px !important;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(201, 164, 99, 0.9) !important;
+    }
+    
+    /* Remove todos os hover effects que atrapalham no mobile */
+    *:hover {
+        transform: none !important;
+    }
+    
+    /* Ajusta transições para toque */
+    button, .inventory-slot, .merchant-hexagon {
+        transition: all 0.15s ease !important;
+    }
+    
+    /* ==========================================================================
+       6. CORREÇÕES ESPECÍFICAS PARA DISPOSITIVOS PEQUENOS
+       ========================================================================== */
+    
+    @media screen and (max-height: 600px) {
+        #inventory-screen .modal-content {
+            height: 100vh !important;
+        }
+        
+        .inventory-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        
+        .inventory-slot {
+            height: 95px !important;
+            padding: 6px !important;
+        }
+        
+        .item-icon {
+            font-size: 24px !important;
+        }
+        
+        .item-name {
+            font-size: 9px !important;
+            height: 20px !important;
+        }
+        
+        .item-actions button {
+            height: 22px !important;
+            font-size: 10px !important;
+        }
+    }
+    
+    /* ==========================================================================
+       7. MODO PAISAGEM (LANDSCAPE)
+       ========================================================================== */
+    
+    @media screen and (max-width: 480px) and (orientation: landscape) {
+        #inventory-screen .modal-content {
+            flex-direction: row !important;
+        }
+        
+        .inventory-categories-tabs {
+            flex-direction: column !important;
+            width: 120px !important;
+            height: 100% !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+        }
+        
+        #inventory-content {
+            flex-direction: row !important;
+        }
+        
+        .inventory-grid {
+            grid-template-columns: repeat(4, 1fr) !important;
+        }
+        
+        /* Comércio em paisagem */
+        .commerce-layout {
+            flex-direction: row !important;
+            flex-wrap: wrap !important;
+        }
+        
+        .merchant-commerce-system .player-panel,
+        .merchant-panel {
+            flex: 1 !important;
+            min-height: 250px !important;
+            max-height: none !important;
+        }
+        
+        .action-panel {
+            width: 100% !important;
+            flex-direction: row !important;
+            justify-content: space-around !important;
+        }
+    }
+}
+
+/* ==========================================================================
+   8. TABLET (481px - 768px)
+   ========================================================================== */
+@media screen and (min-width: 481px) and (max-width: 768px) {
+    /* Inventário tablet */
+    .inventory-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    .inventory-slot {
+        height: 120px !important;
+    }
+    
+    /* Comércio tablet */
+    .commerce-layout {
+        grid-template-columns: 1fr 200px 1fr !important;
+    }
+    
+    .merchant-commerce-system .player-panel,
+    .merchant-panel {
+        min-height: 350px !important;
+    }
+}
+
+/* ==========================================================================
+   9. ANIMAÇÕES E FEEDBACK
+   ========================================================================== */
+@keyframes itemPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.inventory-slot.new-item {
+    animation: itemPulse 0.5s ease-in-out 2;
+}
+
+@keyframes merchantItemAppear {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.merchant-hexagon {
+    animation: merchantItemAppear 0.3s ease-out;
+}
+
+/* ==========================================================================
+   10. ESTADOS DE ERRO/FALTA DE ITENS
+   ========================================================================== */
+.inventory-empty-state,
+.merchant-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #8b5a2b;
+    font-style: italic;
+    font-size: 16px;
+}
+
+.inventory-empty-state::before,
+.merchant-empty-state::before {
+    content: '📦';
+    font-size: 48px;
+    display: block;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
