@@ -1,4 +1,4 @@
-//secure static server
+// server.ts - secure static server
 import { serve } from "bun";
 import * as path from "path";
 
@@ -18,61 +18,79 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
 };
 
+function safeDecode(s: string) {
+  try {
+    return decodeURIComponent(s);
+  } catch {
+    return s;
+  }
+}
+
 serve({
   port,
   async fetch(req) {
-  const url = new URL(req.url);
+    const url = new URL(req.url);
 
-const rawReqUrl = req.url.toLowerCase();
-if (rawReqUrl.includes("%2e%2e") || rawReqUrl.includes("%2f") || rawReqUrl.includes("%5c")) {
-  return new Response("Forbidden", { status: 403 });
-}
+    const rawUrlLower = req.url.toLowerCase();
+    const pathnameRaw = url.pathname || "/";
+    const pathnameDecoded = safeDecode(pathnameRaw);
 
-const rawPathname = (url.pathname || "/");
-const rawLower = rawPathname.toLowerCase();
-
-if (rawLower.includes("..")) {
-  return new Response("Forbidden", { status: 403 });
-}
-
-
-  const rawPath = rawPathname.replace(/\\/g, "/");
-  const requestPath = rawPath === "/" ? "/index.html" : rawPath;
-
-  if (requestPath.endsWith("/")) {
-    return new Response("Directory access not allowed", { status: 403 });
-  }
-
-  const rel = requestPath.replace(/^\/+/, "");
-  const fullPath = path.resolve(ROOT_DIR, rel);
-  const rootPrefix = ROOT_DIR + path.sep;
-
-  if (!fullPath.startsWith(rootPrefix)) {
-    return new Response("Forbidden", { status: 403 });
-  }
-
-  try {
-    const file = Bun.file(fullPath);
-    if (!(await file.exists())) {
-      return new Response("Not found", { status: 404 });
+    // detecta traversal (normal + encoded + backslash)
+    if (
+      rawUrlLower.includes("%2e%2e") ||
+      rawUrlLower.includes("%5c") ||
+      pathnameDecoded.includes("..") ||
+      pathnameDecoded.includes("\\") ||
+      pathnameDecoded.includes("\0")
+    ) {
+      return new Response("Forbidden", { status: 403 });
     }
 
-    const ext = path.extname(fullPath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || "application/octet-stream";
+    const normalized = pathnameDecoded.replace(/\\/g, "/");
+    const requestPath = normalized === "/" ? "/index.html" : normalized;
 
-    return new Response(file, {
-      headers: {
-        "Content-Type": contentType,
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-        "X-XSS-Protection": "1; mode=block",
-      },
-    });
-  } catch {
-    return new Response("Internal Server Error", { status: 500 });
-  }
-}
+    if (requestPath.endsWith("/")) {
+      return new Response("Directory access not allowed", { status: 403 });
+    }
 
+    const rel = requestPath.replace(/^\/+/, "");
+    const fullPath = path.resolve(ROOT_DIR, rel);
+
+    if (!fullPath.startsWith(ROOT_PREFIX)) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    try {
+      const file = Bun.file(fullPath);
+      if (!(await file.exists())) {
+        return new Response("Not found", { status: 404 });
+      }
+
+      const ext = path.extname(fullPath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+      return new Response(file, {
+        headers: {
+          "Content-Type": contentType,
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": [
+            "default-src 'self'",
+            "base-uri 'self'",
+            "frame-ancestors 'none'",
+            "object-src 'none'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+            "font-src 'self' https://cdnjs.cloudflare.com data:",
+            "img-src 'self' data: blob:",
+            "connect-src 'self'",
+          ].join("; "),
+        },
+      });
+    } catch {
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  },
 });
 
 console.log(`server running on http://localhost:${port}/`);
