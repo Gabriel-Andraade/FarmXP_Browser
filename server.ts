@@ -70,9 +70,13 @@ serve({
     }
 
     const rel = requestPath.replace(/^\/+/, "");
+    const normalizedRel = path.posix.normalize(rel);
+    if (normalizedRel.startsWith("..") || normalizedRel.includes("/..")) {
+      return new Response("Forbidden", { status: 403 });
+    }
 
     // allowlist do primeiro segmento
-    const first = rel.split("/")[0] || "";
+    const first = normalizedRel.split("/")[0] || "";
     const isAllowed =
       ALLOWED_TOP_FILES.has(first) || ALLOWED_TOP_DIRS.has(first);
 
@@ -81,7 +85,7 @@ serve({
     }
 
     // resolve e garante containment
-    const fullPath = path.resolve(BASE_DIR, rel);
+    const fullPath = path.resolve(BASE_DIR, normalizedRel);
     if (!fullPath.startsWith(BASE_PREFIX)) {
       return new Response("Forbidden", { status: 403 });
     }
