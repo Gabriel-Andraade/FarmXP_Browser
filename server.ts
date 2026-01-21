@@ -1,95 +1,97 @@
-// server.ts - secure static server
 import { serve } from "bun";
 import * as path from "path";
 
 const port = Number(process.env.PORT) || 3000;
-const ROOT_DIR = path.resolve(process.cwd());
-const ROOT_PREFIX = ROOT_DIR + path.sep;
 
-const MIME_TYPES: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "application/javascript",
-  ".css": "text/css",
-  ".json": "application/json",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".gif": "image/gif",
-  ".svg": "image/svg+xml",
-  ".ico": "image/x-icon",
-};
+// serve apenas arquivos publicos daqui
+const BASE_DIR = path.resolve(import.meta.dir);
+const BASE_PREFIX = BASE_DIR + path.sep;
 
-function safeDecode(s: string) {
+// allowlist do que pode ser servido
+const ALLOWED_TOP_FILES = new Set([
+  "index.html",
+  "style.css",
+  "responsive.css",
+  "favicon.ico",
+]);
+
+const ALLOWED_TOP_DIRS = new Set([
+  "assets",
+  "scripts",
+  "style",
+  "sounds",
+]);
+
+function safeDecode(value: string) {
   try {
-    return decodeURIComponent(s);
+    return decodeURIComponent(value);
   } catch {
-    return s;
+    return null;
   }
+}
+
+function hasEncodedTraversal(rawLower: string) {
+  // bloqueia ../ e ..\ em forma encoded
+  return (
+    rawLower.includes("%2e%2e") || // ..
+    rawLower.includes("%2f") ||    // /
+    rawLower.includes("%5c")       // \
+  );
 }
 
 serve({
   port,
-  async fetch(req) {
+  fetch(req) {
     const url = new URL(req.url);
+    const rawPath = url.pathname || "/";
+    const rawLower = rawPath.toLowerCase();
 
-    const rawUrlLower = req.url.toLowerCase();
-    const pathnameRaw = url.pathname || "/";
-    const pathnameDecoded = safeDecode(pathnameRaw);
-
-    // detecta traversal (normal + encoded + backslash)
-    if (
-      rawUrlLower.includes("%2e%2e") ||
-      rawUrlLower.includes("%5c") ||
-      pathnameDecoded.includes("..") ||
-      pathnameDecoded.includes("\\") ||
-      pathnameDecoded.includes("\0")
-    ) {
+    // bloqueia tentativa encoded de traversal
+    if (hasEncodedTraversal(rawLower)) {
       return new Response("Forbidden", { status: 403 });
     }
 
-    const normalized = pathnameDecoded.replace(/\\/g, "/");
+    const decoded = safeDecode(rawPath);
+    if (decoded === null) {
+      return new Response("Bad request", { status: 400 });
+    }
+
+    const normalized = decoded.replace(/\\/g, "/");
     const requestPath = normalized === "/" ? "/index.html" : normalized;
 
+    // bloqueia null byte
+    if (requestPath.includes("\0")) {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    // bloqueia diretorio (nao tem listing)
     if (requestPath.endsWith("/")) {
       return new Response("Directory access not allowed", { status: 403 });
     }
 
     const rel = requestPath.replace(/^\/+/, "");
-    const fullPath = path.resolve(ROOT_DIR, rel);
 
-    if (!fullPath.startsWith(ROOT_PREFIX)) {
+    // allowlist do primeiro segmento
+    const first = rel.split("/")[0] || "";
+    const isAllowed =
+      ALLOWED_TOP_FILES.has(first) || ALLOWED_TOP_DIRS.has(first);
+
+    if (!isAllowed) {
       return new Response("Forbidden", { status: 403 });
     }
 
-    try {
-      const file = Bun.file(fullPath);
-      if (!(await file.exists())) {
-        return new Response("Not found", { status: 404 });
-      }
-
-      const ext = path.extname(fullPath).toLowerCase();
-      const contentType = MIME_TYPES[ext] || "application/octet-stream";
-
-      return new Response(file, {
-        headers: {
-          "Content-Type": contentType,
-          "X-Content-Type-Options": "nosniff",
-          "X-Frame-Options": "DENY",
-          "Content-Security-Policy": [
-            "default-src 'self'",
-            "base-uri 'self'",
-            "frame-ancestors 'none'",
-            "object-src 'none'",
-            "script-src 'self'",
-            "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
-            "font-src 'self' https://cdnjs.cloudflare.com data:",
-            "img-src 'self' data: blob:",
-            "connect-src 'self'",
-          ].join("; "),
-        },
-      });
-    } catch {
-      return new Response("Internal Server Error", { status: 500 });
+    // resolve e garante containment
+    const fullPath = path.resolve(BASE_DIR, rel);
+    if (!fullPath.startsWith(BASE_PREFIX)) {
+      return new Response("Forbidden", { status: 403 });
     }
+
+    // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
+    if (path.basename(fullPath).toLowerCase() === "server.ts") {
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    return new Response(Bun.file(fullPath));
   },
 });
 
