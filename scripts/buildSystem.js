@@ -1,3 +1,10 @@
+/**
+ * @file buildSystem.js - Sistema de construção e posicionamento de objetos
+ * @description Gerencia o modo de construção permitindo posicionar cercas, baús, poços e outras estruturas no mundo.
+ * Inclui sistema de grid avançado, alinhamento de subposições e preview visual.
+ * @module BuildSystem
+ */
+
 import { assets } from "./assetManager.js";
 import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
@@ -5,6 +12,17 @@ import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
 import { wellSystem } from "./wellSystem.js";
 
+/**
+ * Sistema de construção e posicionamento de objetos no mundo
+ * Gerencia modo de construção, preview, grid e colocação de estruturas
+ * @type {Object}
+ * @property {boolean} active - Se o modo de construção está ativo
+ * @property {Object|null} selectedItem - Item selecionado para construção
+ * @property {string|null} currentVariant - Variante atual do item (ex: fenceX, fenceY)
+ * @property {HTMLImageElement|null} previewImg - Imagem de preview do item
+ * @property {number} gridSize - Tamanho do tile do grid
+ * @property {Object} mouseTile - Posição do tile sob o cursor
+ */
 export const BuildSystem = {
     active: false,
     selectedItem: null,

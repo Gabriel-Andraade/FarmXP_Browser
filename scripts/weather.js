@@ -1,6 +1,14 @@
+/**
+ * @file weather.js - Sistema de clima e tempo do jogo
+ * @description Gerencia ciclo dia/noite, clima (chuva, neve, neblina, tempestade),
+ * estações do ano, sistema de dormir e iluminação ambiente.
+ * @module WeatherSystem
+ */
+
 import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
 
+/** @constant {string} ID do elemento de estilo da UI de clima */
 const WEATHER_UI_STYLE_ID = "weather-ui-style";
 const WEATHER_UI_ID = "weather-ui-panel";
 
@@ -105,10 +113,27 @@ function updateWeatherUIPanelContent() {
   if (weatherEl) weatherEl.textContent = icon;
 }
 
+/**
+ * Sistema principal de clima e tempo
+ * Controla ciclo dia/noite, estações, clima e efeitos visuais
+ * @type {Object}
+ * @property {number} currentTime - Tempo atual em minutos (0-1439)
+ * @property {number} day - Dia atual do mês
+ * @property {string[]} daysOfWeek - Nomes dos dias da semana
+ * @property {number} month - Mês atual (1-12)
+ * @property {number} year - Ano atual
+ * @property {string} season - Estação atual (Primavera, Verão, Outono, Inverno)
+ * @property {number} timeSpeed - Velocidade de passagem do tempo
+ * @property {number} ambientDarkness - Nível de escuridão ambiente (0-1)
+ * @property {string} weatherType - Tipo de clima atual (clear, rain, storm, fog, blizzard)
+ */
 export const WeatherSystem = {
+  /** Tempo atual em minutos desde meia-noite (6*60 = 06:00) */
   currentTime: 6 * 60,
+  /** Dia atual do mês */
   day: 1,
 
+  /** Nomes dos dias da semana em português */
   daysOfWeek: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
 
   month: 1,
@@ -483,6 +508,14 @@ export const WeatherSystem = {
   }
 };
 
+/**
+ * Renderiza efeitos visuais de clima no canvas
+ * Inclui escuridão ambiente, chuva, neve, neblina, relâmpagos e transição de sono
+ * @param {CanvasRenderingContext2D} ctx - Contexto do canvas
+ * @param {Object} player - Objeto do jogador (necessário para posicionar luz)
+ * @param {HTMLCanvasElement} canvas - Elemento canvas do jogo
+ * @returns {void}
+ */
 export function drawWeatherEffects(ctx, player, canvas) {
   if (!player) return;
 
@@ -591,8 +624,14 @@ export function drawWeatherEffects(ctx, player, canvas) {
   }
 }
 
+/**
+ * Atualiza o painel de UI de clima (posição e conteúdo)
+ * O painel é um elemento HTML overlay ancorado no canto do canvas
+ * @param {CanvasRenderingContext2D} ctx - Contexto do canvas (não utilizado, mantido por compatibilidade)
+ * @returns {void}
+ */
 export function drawWeatherUI(ctx) {
-  // o painel agora é overlay html ancorado no canto do canvas
+  // O painel agora é overlay HTML ancorado no canto do canvas
   updateWeatherUIPanelPosition();
   updateWeatherUIPanelContent();
 }

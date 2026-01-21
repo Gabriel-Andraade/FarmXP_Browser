@@ -1,10 +1,36 @@
+/**
+ * @file worldUI.js - World User Interface Manager
+ * @description Manages in-world UI elements rendered on the game canvas.
+ * Handles health bars, interaction prompts, consumption progress bars,
+ * and visual feedback for player interactions with world objects.
+ *
+ * @module WorldUI
+ * @author FarmXP Team
+ *
+ * @example
+ * // Render world UI elements each frame
+ * import { worldUI } from './worldUI.js';
+ * worldUI.render(ctx, interactiveObjects, player);
+ */
 
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { assets } from "./assetManager.js";
 
+/**
+ * Manages in-world user interface elements
+ * Renders health bars, interaction prompts, and consumption progress
+ * @class WorldUIManager
+ */
 class WorldUIManager {
+    /**
+     * Creates a WorldUIManager instance
+     * Initializes style configurations, cache, and consumption state
+     */
     constructor() {
-        // estilos usados na interface do mundo
+        /**
+         * Style configurations for UI elements
+         * @type {Object}
+         */
         this.styles = {
             hpBar: {
                 width: 50,
@@ -48,7 +74,15 @@ class WorldUIManager {
         this.setupConsumptionListeners();
     }
 
-    // renderiza elementos de interface no mundo
+    /**
+     * Renders all world UI elements for the current frame
+     * Processes interactive objects and draws health bars, prompts, and effects
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Map} interactiveObjects - Map of interactive world objects
+     * @param {Object} player - Player object with position and dimensions
+     * @returns {void}
+     */
     render(ctx, interactiveObjects, player) {
         if (!interactiveObjects || !player) return;
 
@@ -88,7 +122,20 @@ class WorldUIManager {
         this.drawConsumptionBar(ctx);
     }
 
-    // desenha barra de vida de objetos
+    /**
+     * Draws a health bar above an object
+     * Uses gradient colors based on health percentage (green > yellow > red)
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Object} obj - World object with health properties
+     * @param {number} obj.x - Object X position
+     * @param {number} obj.y - Object Y position
+     * @param {number} obj.width - Object width
+     * @param {number} obj.height - Object height
+     * @param {number} obj.health - Current health value
+     * @param {number} obj.maxHealth - Maximum health value
+     * @returns {void}
+     */
     drawHealthBar(ctx, obj) {
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
@@ -147,7 +194,15 @@ class WorldUIManager {
         }
     }
 
-    // verifica distância e desenha prompt de interação
+    /**
+     * Checks distance between player and object, draws interaction prompt if in range
+     * Draws "E" key prompt when within 70 units, adds glow effect when closer
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Object} obj - World object to check interaction with
+     * @param {Object} player - Player object with position
+     * @returns {void}
+     */
     checkAndDrawInteractionPrompt(ctx, obj, player) {
         const centerObjX = obj.x + obj.width / 2;
         const centerObjY = obj.y + obj.height / 2;
@@ -170,7 +225,15 @@ class WorldUIManager {
         }
     }
 
-    // desenha tecla de interação
+    /**
+     * Draws a key prompt (e.g., "E") above an object
+     * Styled as a rounded square with gradient background
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Object} obj - World object to draw prompt above
+     * @param {string} key - Key character to display (e.g., "E")
+     * @returns {void}
+     */
     drawKeyPrompt(ctx, obj, key) {
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
@@ -220,7 +283,14 @@ class WorldUIManager {
         ctx.fillText(key, x, y + 1);
     }
 
-    // efeito visual ao aproximar do objeto
+    /**
+     * Draws a pulsing glow effect around an object when player is very close
+     * Creates radial gradient that pulses using sine wave animation
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {Object} obj - World object to draw glow around
+     * @returns {void}
+     */
     drawInteractionGlow(ctx, obj) {
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
@@ -249,7 +319,14 @@ class WorldUIManager {
         ctx.restore();
     }
 
-    // registra eventos de consumo
+    /**
+     * Sets up event listeners for item consumption events
+     * Listens to startConsumption and consumptionCancelled events
+     *
+     * @returns {void}
+     * @listens startConsumption - When player starts consuming an item
+     * @listens consumptionCancelled - When consumption is interrupted
+     */
     setupConsumptionListeners() {
         document.addEventListener("startConsumption", (e) => {
             const { item, player, duration } = e.detail;
@@ -268,7 +345,13 @@ class WorldUIManager {
         });
     }
 
-    // atualiza progresso de consumo
+    /**
+     * Updates the consumption progress based on elapsed time
+     * Dispatches consumptionCompleted event when progress reaches 100%
+     *
+     * @returns {void}
+     * @fires consumptionCompleted - When consumption finishes successfully
+     */
     updateConsumptionBar() {
         if (!this.consumption.isActive) return;
 
@@ -291,7 +374,13 @@ class WorldUIManager {
         }
     }
 
-    // desenha barra de consumo do jogador
+    /**
+     * Draws the consumption progress bar above the player
+     * Shows progress while player is eating/drinking items
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @returns {void}
+     */
     drawConsumptionBar(ctx) {
         if (!this.consumption.isActive || !this.consumption.player) return;
 
@@ -313,7 +402,19 @@ class WorldUIManager {
         ctx.fillRect(x, y, width * this.consumption.progress, height);
     }
 
-    // utilitário para retângulos arredondados
+    /**
+     * Utility function to draw a rounded rectangle
+     * Automatically adjusts radius if larger than dimensions allow
+     *
+     * @param {CanvasRenderingContext2D} ctx - Canvas 2D rendering context
+     * @param {number} x - X position of rectangle
+     * @param {number} y - Y position of rectangle
+     * @param {number} width - Width of rectangle
+     * @param {number} height - Height of rectangle
+     * @param {number} radius - Corner radius
+     * @param {string|CanvasGradient} [fillStyle] - Optional fill color or gradient
+     * @returns {void}
+     */
     drawRoundedRect(ctx, x, y, width, height, radius, fillStyle) {
         if (width < 2 * radius) radius = width / 2;
         if (height < 2 * radius) radius = height / 2;
@@ -342,4 +443,9 @@ class WorldUIManager {
     }
 }
 
+/**
+ * Singleton instance of the WorldUIManager
+ * @type {WorldUIManager}
+ * @exports worldUI
+ */
 export const worldUI = new WorldUIManager();
