@@ -1,9 +1,21 @@
+/**
+ * @file wellSystem.js - Sistema de poços de água
+ * @description Gerencia a criação, interação e mecânicas de poços no mundo do jogo.
+ * Permite ao jogador coletar água, encher garrafas e beber para restaurar sede.
+ * @module WellSystem
+ */
+
 import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { PlayerSystem } from "./thePlayer/playerSystem.js";
 import { assets } from "./assetManager.js";
 import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
 
+/**
+ * Configurações do sistema de poços
+ * Define IDs de itens, valores de recursos e dimensões
+ * @constant {Object}
+ */
 const WELL_CONFIG = {
     ITEM_ID_IN_HAND: 93,
     BUCKET_EMPTY_ID: 16,
