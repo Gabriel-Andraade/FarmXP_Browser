@@ -140,7 +140,7 @@ export const WeatherSystem = {
   year: 1,
   season: "Primavera",
 
-  timeSpeed: (24 * 60) / (2 * 60),
+  timeSpeed: (24 * 60) / (12 * 60),
   ambientDarkness: 1,
 
   weatherType: "clear",
