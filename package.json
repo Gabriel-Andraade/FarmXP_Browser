@@ -1,0 +1,19 @@
+{
+  "name": "farmxp-browser",
+  "version": "1.0.0",
+  "description": "A browser-based farming simulation game built with vanilla JavaScript and HTML5 Canvas.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch run server.ts"
+  },
+  "dependencies": {
+    "react-icons": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.23",
+    "typescript": "^5.9.3"
+  },
+  "license": "ISC"
+}
