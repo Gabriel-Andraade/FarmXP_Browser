@@ -18,7 +18,7 @@
 
 import { serve } from "bun";
 import * as path from "path";
-import { statSync } from "fs";
+import { stat } from "fs/promises";
 
 /**
  * Server port number
@@ -46,6 +46,37 @@ const ALLOWED_TOP_DIRS = new Set([
   "sounds",
 ]);
 
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+};
+
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  // ajuste a CSP conforme seu app (se usar cdn/inline, libere aqui)
+  // "Content-Security-Policy": "default-src 'self'",
+};
+
+type BodyLike = ConstructorParameters<typeof Response>[0];
+function respond(body: BodyLike, status: number) {
+  return new Response(body, {
+    status,
+    headers: SECURITY_HEADERS,
+  });
+}
+
+
 function safeDecode(value: string) {
   try {
     return decodeURIComponent(value);
@@ -65,19 +96,21 @@ function hasEncodedTraversal(rawLower: string) {
 
 serve({
   port,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
     const rawPath = url.pathname || "/";
-    const rawLower = rawPath.toLowerCase();
+
+    // usa a url crua pra detectar tentativa encoded
+    const rawLower = req.url.toLowerCase();
 
     // bloqueia tentativa encoded de traversal
     if (hasEncodedTraversal(rawLower)) {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
     const decoded = safeDecode(rawPath);
     if (decoded === null) {
-      return new Response("Bad request", { status: 400 });
+      return respond("Bad request", 400);
     }
 
     const normalized = decoded.replace(/\\/g, "/");
@@ -85,18 +118,18 @@ serve({
 
     // bloqueia null byte
     if (requestPath.includes("\0")) {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
     // bloqueia diretorio com trailing slash
     if (requestPath.endsWith("/")) {
-      return new Response("Directory access not allowed", { status: 403 });
+      return respond("Directory access not allowed", 403);
     }
 
     const rel = requestPath.replace(/^\/+/, "");
     const normalizedRel = path.posix.normalize(rel);
     if (normalizedRel.startsWith("..") || normalizedRel.includes("/..")) {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
     // allowlist do primeiro segmento
@@ -105,32 +138,40 @@ serve({
       ALLOWED_TOP_FILES.has(first) || ALLOWED_TOP_DIRS.has(first);
 
     if (!isAllowed) {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
     // resolve e garante containment
     const fullPath = path.resolve(BASE_DIR, normalizedRel);
     if (!fullPath.startsWith(BASE_PREFIX)) {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
-    // verifica se arquivo existe e bloqueia diretorios
-    let stat;
+    // verifica se arquivo existe e bloqueia diretorios (async)
+    let info;
     try {
-      stat = statSync(fullPath);
+      info = await stat(fullPath);
     } catch {
-      return new Response("Not Found", { status: 404 });
+      return respond("Not Found", 404);
     }
-    if (stat.isDirectory()) {
-      return new Response("Directory access not allowed", { status: 403 });
+    if (info.isDirectory()) {
+      return respond("Directory access not allowed", 403);
     }
 
     // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
     if (path.basename(fullPath).toLowerCase() === "server.ts") {
-      return new Response("Forbidden", { status: 403 });
+      return respond("Forbidden", 403);
     }
 
-    return new Response(Bun.file(fullPath));
+    const ext = path.extname(fullPath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+    return new Response(Bun.file(fullPath), {
+      headers: {
+        ...SECURITY_HEADERS,
+        "Content-Type": contentType,
+      },
+    });
   },
 });
 
