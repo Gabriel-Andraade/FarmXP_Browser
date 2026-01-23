@@ -85,9 +85,11 @@ function safeDecode(value: string) {
 }
 
 function hasEncodedTraversal(rawLower: string) {
-  // bloqueia ../ e ..\ em forma encoded
+  // bloqueia traversal patterns em forma encoded ou mista
   return (
     rawLower.includes("%2e%2e") || // ..
+    rawLower.includes("%2e.") ||   // mixed: %2e followed by literal 
+    rawLower.includes(".%2e") ||   // mixed: literal . followed by %2e
     rawLower.includes("%2f") ||    // /
     rawLower.includes("%5c")       // \
   );
@@ -141,7 +143,7 @@ serve({
     }
  
     if (ALLOWED_TOP_DIRS.has(normalizedRel)) {
-    return respond("Directory access not allowed", 403);
+      return respond("Directory access not allowed", 403);
     }
 
     // resolve e garante containment
