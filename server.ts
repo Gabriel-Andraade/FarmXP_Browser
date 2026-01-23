@@ -1,10 +1,11 @@
 import { serve } from "bun";
 import * as path from "path";
+import { statSync } from "fs";
 
 const port = Number(process.env.PORT) || 3000;
 
 // serve apenas arquivos publicos daqui
-const BASE_DIR = path.resolve(import.meta.dir);
+const BASE_DIR = path.resolve(import.meta.dir, "public");
 const BASE_PREFIX = BASE_DIR + path.sep;
 
 // allowlist do que pode ser servido
@@ -64,7 +65,7 @@ serve({
       return new Response("Forbidden", { status: 403 });
     }
 
-    // bloqueia diretorio (nao tem listing)
+    // bloqueia diretorio com trailing slash
     if (requestPath.endsWith("/")) {
       return new Response("Directory access not allowed", { status: 403 });
     }
@@ -88,6 +89,17 @@ serve({
     const fullPath = path.resolve(BASE_DIR, normalizedRel);
     if (!fullPath.startsWith(BASE_PREFIX)) {
       return new Response("Forbidden", { status: 403 });
+    }
+
+    // verifica se arquivo existe e bloqueia diretorios
+    let stat;
+    try {
+      stat = statSync(fullPath);
+    } catch {
+      return new Response("Not Found", { status: 404 });
+    }
+    if (stat.isDirectory()) {
+      return new Response("Directory access not allowed", { status: 403 });
     }
 
     // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
