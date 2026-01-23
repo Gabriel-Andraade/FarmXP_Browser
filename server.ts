@@ -18,7 +18,6 @@
 
 import { serve } from "bun";
 import * as path from "path";
-import { stat } from "fs/promises";
 
 /**
  * Server port number
@@ -140,6 +139,10 @@ serve({
     if (!isAllowed) {
       return respond("Forbidden", 403);
     }
+ 
+    if (ALLOWED_TOP_DIRS.has(normalizedRel)) {
+    return respond("Directory access not allowed", 403);
+    }
 
     // resolve e garante containment
     const fullPath = path.resolve(BASE_DIR, normalizedRel);
@@ -147,16 +150,6 @@ serve({
       return respond("Forbidden", 403);
     }
 
-    // verifica se arquivo existe e bloqueia diretorios (async)
-    let info;
-    try {
-      info = await stat(fullPath);
-    } catch {
-      return respond("Not Found", 404);
-    }
-    if (info.isDirectory()) {
-      return respond("Directory access not allowed", 403);
-    }
 
     // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
     if (path.basename(fullPath).toLowerCase() === "server.ts") {
