@@ -68,24 +68,56 @@ function applyMobileOptimizations() {
   }
 
   // limita FPS no mobile substituindo requestAnimationFrame
+  // Preserva o contrato da API (retorna ID e suporta cancelamento)
   let lastFrameTime = 0;
   const mobileFPS = 30;
   const frameInterval = 1000 / mobileFPS;
+
   const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  
+  // Mapa para rastrear callbacks e timeouts: ID -> { type: 'raf'|'timeout', id: innerId }
+  const rafMap = new Map();
+  let rafSeq = 1;
 
   window.requestAnimationFrame = function (callback) {
+    const id = rafSeq++;
     const currentTime = performance.now();
     const timeSinceLast = currentTime - lastFrameTime;
 
     if (timeSinceLast >= frameInterval) {
       lastFrameTime = currentTime - (timeSinceLast % frameInterval);
-      originalRequestAnimationFrame(callback);
-      return;
+      
+      const innerId = originalRequestAnimationFrame((ts) => {
+        rafMap.delete(id);
+        callback(ts);
+      });
+      rafMap.set(id, { type: "raf", id: innerId });
+      return id;
     }
 
-    setTimeout(() => {
-      window.requestAnimationFrame(callback);
+    const timeoutId = setTimeout(() => {
+      const innerId = originalRequestAnimationFrame((ts) => {
+        rafMap.delete(id);
+        callback(ts);
+      });
+      rafMap.set(id, { type: "raf", id: innerId });
     }, frameInterval - timeSinceLast);
+
+    rafMap.set(id, { type: "timeout", id: timeoutId });
+    return id;
+  };
+
+  window.cancelAnimationFrame = function (id) {
+    const entry = rafMap.get(id);
+    if (!entry) return;
+    
+    if (entry.type === "timeout") {
+      clearTimeout(entry.id);
+    } else {
+      originalCancelAnimationFrame(entry.id);
+    }
+    rafMap.delete(id);
   };
 }
 
@@ -523,7 +555,14 @@ async function startFullGameLoad() {
     interactionEnabled = true;
     lastTime = performance.now();
   } catch (error) {
-    handleError(error, "main:startFullGameLoad", "erro ao carregar o jogo"); 
+    handleError(error, "main:startFullGameLoad", "erro ao carregar o jogo");
+    
+    // Recuperação de falha: Remove UI de loading e libera controles para tentar novamente
+    hideLoadingScreen();
+    updateLoadingProgress(0, "falha");
+    simulationPaused = false;
+    interactionEnabled = true;
+    gameStarted = false;
   } finally {
     gameStartInProgress = false;
   }
@@ -640,10 +679,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   ctx = canvas.getContext("2d", { alpha: false });
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // otimizações mobile precisam do ctx inicializado
+     // otimizações mobile precisam do ctx inicializado
   if (IS_MOBILE) {
     applyMobileOptimizations();
   }
+
 
 
   try {
