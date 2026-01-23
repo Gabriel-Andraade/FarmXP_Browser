@@ -39,6 +39,7 @@ let WeatherSystem, drawWeatherEffects, drawWeatherUI;
  * @type {HTMLCanvasElement}
  */
 let canvas;
+let ctx;
 
 /**
  * Contexto 2D do canvas (alpha desabilitado para performance)
@@ -521,6 +522,8 @@ async function startFullGameLoad() {
     simulationPaused = false;
     interactionEnabled = true;
     lastTime = performance.now();
+  } catch (error) {
+    handleError(error, "main:startFullGameLoad", "erro ao carregar o jogo"); 
   } finally {
     gameStartInProgress = false;
   }
