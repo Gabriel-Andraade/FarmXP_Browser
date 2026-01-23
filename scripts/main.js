@@ -44,7 +44,50 @@ let canvas;
  * Contexto 2D do canvas (alpha desabilitado para performance)
  * @type {CanvasRenderingContext2D}
  */
-let ctx;
+
+/**
+ * Detecta se o usuário está em dispositivo mobile.
+ * Esse valor é calculado no load do módulo e usado depois no DOMContentLoaded.
+ * @type {boolean}
+ */
+const IS_MOBILE =
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+/**
+ * Aplica otimizações específicas para mobile.
+ * Deve ser chamado somente depois do canvas e ctx existirem (ex.: dentro do DOMContentLoaded).
+ * @returns {void}
+ */
+function applyMobileOptimizations() {
+  console.log("Mobile detectado: Aplicando otimizações");
+
+  // reduz custo de render em alguns dispositivos
+  if (ctx && ctx.imageSmoothingEnabled !== undefined) {
+    ctx.imageSmoothingEnabled = false;
+  }
+
+  // limita FPS no mobile substituindo requestAnimationFrame
+  let lastFrameTime = 0;
+  const mobileFPS = 30;
+  const frameInterval = 1000 / mobileFPS;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+
+  window.requestAnimationFrame = function (callback) {
+    const currentTime = performance.now();
+    const timeSinceLast = currentTime - lastFrameTime;
+
+    if (timeSinceLast >= frameInterval) {
+      lastFrameTime = currentTime - (timeSinceLast % frameInterval);
+      originalRequestAnimationFrame(callback);
+      return;
+    }
+
+    setTimeout(() => {
+      window.requestAnimationFrame(callback);
+    }, frameInterval - timeSinceLast);
+  };
+}
+
 
 /**
  * Largura interna do jogo em pixels
@@ -594,6 +637,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   ctx = canvas.getContext("2d", { alpha: false });
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // otimizações mobile precisam do ctx inicializado
+  if (IS_MOBILE) {
+    applyMobileOptimizations();
+  }
+
 
   try {
     console.log("Carregando estilos CSS...");
@@ -759,36 +807,6 @@ function drawLoadingIndicator() {
   ctx.restore();
 }
 
-// =============================================================================
-// OTIMIZAÇÕES MOBILE
-// =============================================================================
-
-if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
-  console.log("Mobile detectado: Aplicando otimizações");
-
-  // ctx só existe depois do DOMContentLoaded, então precisa guardar
-  if (ctx && ctx.imageSmoothingEnabled !== undefined) {
-    ctx.imageSmoothingEnabled = false;
-  }
-
-  let lastFrameTime = 0;
-  const mobileFPS = 30;
-  const frameInterval = 1000 / mobileFPS;
-  const originalRequestAnimationFrame = window.requestAnimationFrame;
-
-  window.requestAnimationFrame = function (callback) {
-    const currentTime = performance.now();
-    const timeSinceLast = currentTime - lastFrameTime;
-    if (timeSinceLast >= frameInterval) {
-      lastFrameTime = currentTime - (timeSinceLast % frameInterval);
-      originalRequestAnimationFrame(callback);
-    } else {
-      setTimeout(() => {
-        window.requestAnimationFrame(callback);
-      }, frameInterval - timeSinceLast);
-    }
-  };
-}
 
 // =============================================================================
 // DEBUG EXPORTS

@@ -167,7 +167,7 @@ export class ItemSystem {
 
             this.applyDamage(id, damage);
         } catch (err) {
-            handleError(err, "itemSystem:handleInteraction", { target: objectIdOrObj });
+            handleError(err, "itemSystem:handleInteraction", `target: ${typeof objectIdOrObj === 'string' ? objectIdOrObj : objectIdOrObj?.id}`);
         }
     }
 
@@ -220,7 +220,7 @@ export class ItemSystem {
         try {
             this.collectDrops(obj);
         } catch (err) {
-            handleError(err, "itemSystem:destroyObject:collectDrops", { id: obj.id });
+            handleError(err, "itemSystem:destroyObject:collectDrops", `id=${obj?.id ?? 'unknown'}`);
         }
 
         try { 
@@ -239,7 +239,7 @@ export class ItemSystem {
                 height: obj.height
             });
         } catch (err) {
-            handleError(err, "itemSystem:destroyObject:worldUpdate", { id: obj.id });
+            handleError(err, "itemSystem:destroyObject:worldUpdate", `id=${obj?.id ?? 'unknown'}`);
         }
 
         this.interactiveObjects.delete(obj.id);
@@ -258,25 +258,27 @@ export class ItemSystem {
         const collected = [];
 
         for (const drop of obj.drops) {
-            try {
-                if (Math.random() > (drop.chance ?? 1)) continue;
+  try {
+    if (Math.random() > (drop.chance ?? 1)) continue;
 
-                const min = drop.minQty ?? 1;
-                const max = drop.maxQty ?? min;
-                const qty = Math.floor(Math.random() * (max - min + 1)) + min;
+    const min = drop.minQty ?? 1;
+    const max = drop.maxQty ?? min;
+    const qty = Math.floor(Math.random() * (max - min + 1)) + min;
 
-                const itemData = this.getItemData(drop.id);
-                if (!itemData) {
-                    handleWarn(`Item ID ${drop.id} não encontrado na base de dados`, "itemSystem:collectDrops");
-                    continue;
-                }
+    const itemData = this.getItemData(drop.id);
+    if (!itemData) {
+      handleWarn(`Item ID ${drop.id} não encontrado na base de dados`, "itemSystem:collectDrops");
+      continue;
+    }
 
-                inventorySystem.addItem(drop.id, qty);
-                collected.push({ id: drop.id, quantity: qty });
-            } catch (err) {
-                handleError(err, "itemSystem:collectDrops:individualItem", { drop });
-            }
-        }
+    inventorySystem.addItem(drop.id, qty);
+    collected.push({ id: drop.id, quantity: qty });
+  } catch (err) {
+    const dropId = drop?.id ?? "unknown";
+    handleError(err, "itemSystem:collectDrops:individualItem", `dropId=${dropId}`);
+  }
+}
+
 
         if (collected.length) {
             this.showCollectionMessage(collected, obj.type);
@@ -375,7 +377,7 @@ export class ItemSystem {
                 drops: obj.drops || this.getDropsFromAssetManager(type)
             });
         } catch (err) {
-            handleError(err, "itemSystem:registerInteractiveObject", { obj });
+            handleError(err, "itemSystem:registerInteractiveObject", `obj id: ${obj?.id || obj?.objectId || 'unknown'}`);
         }
     }
 
@@ -414,7 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 } catch (err) {
-                    handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init");
+                    handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
                 }
             };
             registerWorldObjects();
