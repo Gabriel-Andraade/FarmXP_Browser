@@ -35,14 +35,12 @@ const ALLOWED_TOP_FILES = new Set([
   "index.html",
   "style.css",
   "responsive.css",
-  "favicon.ico",
 ]);
 
 const ALLOWED_TOP_DIRS = new Set([
   "assets",
   "scripts",
   "style",
-  "sounds",
 ]);
 
 const MIME_TYPES: Record<string, string> = {
