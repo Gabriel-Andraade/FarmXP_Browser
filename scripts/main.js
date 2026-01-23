@@ -646,7 +646,7 @@ document.addEventListener("playerReady", async (e) => {
   try {
     if (!playerSystem) await initializePlayerSystem();
   } catch (e) {
-    handleWarn("falha ao inicializar player system", "main:playerReady:playerSystem", e);
+    handleWarn("falha ao inicializar player system", "main:playerReady:playerSystem", err);
   }
 
   console.log("Jogador spawnado e pronto!");
