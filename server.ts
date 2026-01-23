@@ -73,34 +73,51 @@ function respond(body: BodyLike, status: number) {
   });
 }
 
-
 function safeDecode(value: string) {
   try {
-    return decodeURIComponent(value);
+    let current = value;
+
+    // decode recursivo com limite para evitar bypass por double-encoding
+    for (let i = 0; i < 4; i++) {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    }
+
+    return current;
   } catch {
     return null;
   }
 }
 
 function hasEncodedTraversal(rawLower: string) {
-  // bloqueia traversal patterns em forma encoded ou mista
+  // bloqueia traversal patterns em forma encoded, mista ou duplamente encoded
   return (
     rawLower.includes("%2e%2e") || // ..
-    rawLower.includes("%2e.") ||   // mixed: %2e followed by literal 
+    rawLower.includes("%2e.") ||   // mixed: %2e followed by literal .
     rawLower.includes(".%2e") ||   // mixed: literal . followed by %2e
+    rawLower.includes("%252e") ||  // double-encoded %2e
+    rawLower.includes("%252f") ||  // double-encoded %2f
+    rawLower.includes("%255c") ||  // double-encoded %5c
     rawLower.includes("%2f") ||    // /
     rawLower.includes("%5c")       // \
   );
 }
-
+/**
+ * Start the Bun HTTP server
+ * Handles static file serving with directory access protection
+ *
+ * @security Blocks directory listing by rejecting paths ending with '/'
+ * @security TODO: Add path traversal protection (see Issue #1)
+ */
 serve({
   port,
   async fetch(req) {
     const url = new URL(req.url);
     const rawPath = url.pathname || "/";
 
-    // usa a url crua pra detectar tentativa encoded
-    const rawLower = req.url.toLowerCase();
+    // usa o pathname cru pra detectar tentativa encoded
+    const rawLower = rawPath.toLowerCase();
 
     // bloqueia tentativa encoded de traversal
     if (hasEncodedTraversal(rawLower)) {
@@ -139,7 +156,7 @@ serve({
     if (!isAllowed) {
       return respond("Forbidden", 403);
     }
- 
+
     if (ALLOWED_TOP_DIRS.has(normalizedRel)) {
       return respond("Directory access not allowed", 403);
     }
@@ -149,7 +166,6 @@ serve({
     if (!fullPath.startsWith(BASE_PREFIX)) {
       return respond("Forbidden", 403);
     }
-
 
     // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
     if (path.basename(fullPath).toLowerCase() === "server.ts") {
