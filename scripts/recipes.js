@@ -1,3 +1,23 @@
+/**
+ * @file recipes.js - Definições de receitas de crafting
+ * @description Contém todas as receitas de crafting disponíveis no jogo.
+ * Cada receita define os materiais necessários, o resultado produzido,
+ * tempo de craft, categoria e ícone visual.
+ * @module Recipes
+ */
+
+/**
+ * Array de receitas de crafting do jogo
+ * Organizado em categorias: material, tools, construction, food, animal_food
+ * @constant {Array<Object>}
+ * @property {string} id - Identificador único da receita
+ * @property {string} name - Nome exibido da receita
+ * @property {Array<Object>} requiredItems - Itens necessários [{itemId, qty}]
+ * @property {Object} result - Item produzido {itemId, qty}
+ * @property {string} category - Categoria da receita
+ * @property {number} craftTime - Tempo de crafting em segundos
+ * @property {string} icon - Emoji/ícone da receita
+ */
 export const recipes = [
     /* materiais básicos e processamento */
     {

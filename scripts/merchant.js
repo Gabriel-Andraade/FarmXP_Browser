@@ -1,9 +1,21 @@
+/**
+ * @file merchant.js - Sistema de comércio com mercadores NPC
+ * @description Gerencia a interface de compra e venda de itens com mercadores do jogo.
+ * Inclui sistema de horários de funcionamento, categorias de itens e transações.
+ * @module MerchantSystem
+ */
+
 import { currencyManager } from "./currencyManager.js";
 import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
 import { getItem, getSellPrice } from "./itemUtils.js";
 
+/**
+ * Sistema de comércio com mercadores NPC
+ * Gerencia lista de mercadores, inventários, transações de compra/venda e UI
+ * @class MerchantSystem
+ */
 class MerchantSystem {
     constructor() {
         this.merchants = [];

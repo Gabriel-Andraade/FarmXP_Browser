@@ -1,3 +1,11 @@
+/**
+ * @file theWorld.js - World management and rendering system
+ * @description Manages the game world including terrain, objects, animals, buildings,
+ * and all rendering operations. Handles world initialization, object placement,
+ * culling optimization, and Y-sorting for proper depth rendering.
+ * @module TheWorld
+ */
+
 import { assets } from "./assetManager.js";
 import { worldGenerator, WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
@@ -6,30 +14,78 @@ import { collisionSystem } from "./collisionSystem.js";
 import { AnimalEntity } from "./animal/animalAI.js";
 import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
 
-/* listas do mundo */
+// =============================================================================
+// WORLD OBJECT ARRAYS
+// Arrays that store all objects in the game world
+// =============================================================================
+
+/** @type {Array<Object>} Array of tree objects in the world */
 export const trees = [];
+
+/** @type {Array<Object>} Array of rock objects in the world */
 export const rocks = [];
+
+/** @type {Array<Object>} Array of thicket/bush objects in the world */
 export const thickets = [];
+
+/** @type {Array<Object>} Array of house structures in the world */
 export const houses = [];
+
+/** @type {Array<AnimalEntity>} Array of animal entities in the world */
 export const animals = [];
+
+/** @type {Array<Object>} Array of player-placed buildings */
 export const placedBuildings = [];
+
+/** @type {Array<Object>} Array of well structures in the world */
 export const placedWells = [];
 
+/** @type {boolean} Flag indicating if world has been initialized */
 export let worldInitialized = false;
+
 export { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT };
 
-/* cache e variáveis de otimização */
+// =============================================================================
+// OPTIMIZATION CACHE VARIABLES
+// Cache system for sorted world objects to improve rendering performance
+// =============================================================================
+
+/** @type {Array<Object>} Cached array of sorted world objects */
 let sortedWorldObjectsCache = [];
+
+/** @type {boolean} Flag indicating if cache is still valid */
 let cacheValid = false;
+
+/** @type {number} Last known player Y position for cache invalidation */
 let lastPlayerY = -1;
+
+/** @type {number} Last known player height for cache invalidation */
 let lastPlayerHeight = -1;
+
+/**
+ * Buffer zone around viewport for culling calculations
+ * Objects within this buffer are still rendered to prevent pop-in
+ * @constant {number}
+ */
 const CULLING_BUFFER = 200;
 
+/**
+ * Invalidates the world object cache, forcing recalculation on next render
+ * Call this when any world object is added, removed, or modified
+ * @returns {void}
+ */
 export function markWorldChanged() {
   cacheValid = false;
 }
 
-/* função para colocar poço */
+/**
+ * Places a well object in the world
+ * Supports multiple call signatures for flexibility
+ * @param {string|number} a - Well ID (string) or X position (number)
+ * @param {number} b - X position (if a is string) or Y position (if a is number)
+ * @param {number|Object} c - Y position (if a is string) or options object (if a is number)
+ * @returns {Object} The created well object
+ */
 export function placeWell(a, b, c) {
   let id = null, x = 0, y = 0, opts = {};
   if (typeof a === "string" && typeof b === "number" && typeof c === "number") {
@@ -89,7 +145,15 @@ export function placeWell(a, b, c) {
   return wellObject;
 }
 
-/* adiciona animal ao mundo */
+/**
+ * Adds a new animal entity to the world
+ * Creates AnimalEntity instance and registers with collision system
+ * @param {string} assetName - Name of the animal asset (e.g., "Bull", "Turkey")
+ * @param {HTMLImageElement} img - Sprite image for the animal
+ * @param {number} x - Initial X position in world coordinates
+ * @param {number} y - Initial Y position in world coordinates
+ * @returns {AnimalEntity} The created animal entity
+ */
 export function addAnimal(assetName, img, x, y) {
   if (!worldInitialized) {
     initializeWorld();
@@ -122,7 +186,11 @@ export function addAnimal(assetName, img, x, y) {
   return animal;
 }
 
-/* atualiza todos os animais (lógica do AI) */
+/**
+ * Updates all animals in the world (AI logic and collision positions)
+ * Called each frame to process animal behavior and sync hitboxes
+ * @returns {void}
+ */
 export function updateAnimals() {
   animals.forEach(animal => {
     if (animal && typeof animal.update === "function") {
@@ -139,7 +207,15 @@ export function updateAnimals() {
   });
 }
 
-/* verificação de visibilidade com buffer */
+/**
+ * Checks if an object is within the viewport plus culling buffer
+ * Used for frustum culling optimization to skip rendering off-screen objects
+ * @param {number} x - Object X position in world coordinates
+ * @param {number} y - Object Y position in world coordinates
+ * @param {number} width - Object width in pixels
+ * @param {number} height - Object height in pixels
+ * @returns {boolean} True if object is visible or within buffer zone
+ */
 function isInViewportWithBuffer(x, y, width, height) {
   const camX = camera.x;
   const camY = camera.y;
@@ -152,7 +228,13 @@ function isInViewportWithBuffer(x, y, width, height) {
          y < (camY + camH + CULLING_BUFFER);
 }
 
-/* constrói lista ordenada de objetos para render */
+/**
+ * Builds and returns a Y-sorted list of all world objects for rendering
+ * Uses caching to optimize performance when player position hasn't changed
+ * Objects are sorted by their bottom Y coordinate for proper depth ordering
+ * @param {Object} player - Player object with x, y, width, height properties
+ * @returns {Array<Object>} Sorted array of world objects with draw functions
+ */
 export function getSortedWorldObjects(player) {
   const playerChanged = player && (player.y !== lastPlayerY || player.height !== lastPlayerHeight);
 
@@ -324,7 +406,11 @@ export function getSortedWorldObjects(player) {
   return sortedWorldObjectsCache;
 }
 
-/* registra objetos por eventos para outros sistemas */
+/**
+ * Dispatches events for all world objects to register with other systems
+ * Used for interaction system and other systems that need object references
+ * @returns {void}
+ */
 export function registerWorldObjects() {
   trees.forEach(tree => {
     document.dispatchEvent(new CustomEvent("worldObjectAdded", {
@@ -392,11 +478,23 @@ export function registerWorldObjects() {
   });
 }
 
+/**
+ * Generates a unique ID for world objects
+ * @returns {string} Unique identifier string
+ */
 function generateId() {
   return "obj_" + Math.random().toString(36).substr(2, 9);
 }
 
-/* função genérica para desenhar objetos da natureza */
+/**
+ * Draws a single nature object (tree, rock, thicket) with proper scaling
+ * Handles viewport culling, asset loading, and fallback rendering
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {Object} obj - Object to draw with position and type info
+ * @param {string} assetCategory - Asset category key ("trees", "rocks", "thickets")
+ * @param {Function} drawFallback - Fallback drawing function if asset unavailable
+ * @returns {void}
+ */
 function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   const objWidth = obj.width || 64;
   const objHeight = obj.height || 96;
@@ -459,7 +557,15 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   }
 }
 
-/* desenho simples de construções e variações */
+/**
+ * Draws a simple chest fallback when asset is not available
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {number} x - Screen X position
+ * @param {number} y - Screen Y position
+ * @param {number} width - Draw width in pixels
+ * @param {number} height - Draw height in pixels
+ * @returns {void}
+ */
 function drawSimpleChest(ctx, x, y, width, height) {
   ctx.save();
   ctx.fillStyle = "#8B4513";
@@ -476,6 +582,13 @@ function drawSimpleChest(ctx, x, y, width, height) {
   ctx.restore();
 }
 
+/**
+ * Draws a building or construction object (chest, well, fence, etc.)
+ * Handles multiple building types with appropriate assets or fallbacks
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {Object} building - Building object with position and type info
+ * @returns {void}
+ */
 function drawBuilding(ctx, building) {
   const bWidth = building.width || 32;
   const bHeight = building.height || 32;
@@ -569,14 +682,25 @@ function drawBuilding(ctx, building) {
   ctx.textBaseline = "alphabetic";
 }
 
-/* desenha preview de construção se ativo */
+/**
+ * Draws the build system preview if build mode is active
+ * Shows placement preview before confirming building placement
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @returns {void}
+ */
 export function drawBuildPreview(ctx) {
   if (window.BuildSystem && window.BuildSystem.active) {
     window.BuildSystem.drawPreview(ctx);
   }
 }
 
-/* casas: telhado */
+/**
+ * Draws the roof portion of a house structure
+ * Houses are split into roof and walls for proper depth sorting
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {Object} house - House object with position and dimensions
+ * @returns {void}
+ */
 function drawHouseRoof(ctx, house) {
   const hWidth = house.width || 128;
   const hHeight = house.height || 128;
@@ -606,7 +730,13 @@ function drawHouseRoof(ctx, house) {
   ctx.drawImage(img, 0, 0, img.width, roofSrcHeight, drawX, drawY, drawW, drawH);
 }
 
-/* casas: paredes */
+/**
+ * Draws the walls portion of a house structure
+ * Walls are the interactable part where player can enter
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {Object} house - House object with position and dimensions
+ * @returns {void}
+ */
 function drawHouseWalls(ctx, house) {
   const hWidth = house.width || 128;
   const hHeight = house.height || 128;
@@ -657,7 +787,11 @@ function drawHouseRoofFallback(ctx, x, y, width, height) {
   ctx.fill();
 }
 
-/* inicializa o mundo (gera e registra hitboxes) */
+/**
+ * Initializes the game world by generating terrain and registering hitboxes
+ * Clears all existing objects and collision data before regenerating
+ * @returns {void}
+ */
 export function initializeWorld() {
   collisionSystem.clear();
 
@@ -710,7 +844,11 @@ export function initializeWorld() {
   worldInitialized = true;
 }
 
-/* remover objeto do mundo */
+/**
+ * Removes a destroyed object from the world and collision system
+ * @param {string|Object} objOrId - Object ID string or object with id property
+ * @returns {void}
+ */
 export function objectDestroyed(objOrId) {
   if (!objOrId) return;
 
@@ -749,7 +887,11 @@ export function objectDestroyed(objOrId) {
   document.dispatchEvent(new CustomEvent("objectDestroyed", { detail: { id, type } }));
 }
 
-/* posição inicial do jogador */
+/**
+ * Returns the initial spawn position for the player
+ * Spawns near the house if available, otherwise at world center
+ * @returns {{x: number, y: number}} Player spawn coordinates
+ */
 export function getInitialPlayerPosition() {
   if (houses.length > 0) {
     const houseWalls = houses.find(h => h.type === "HOUSE_WALLS");
@@ -763,7 +905,11 @@ export function getInitialPlayerPosition() {
   return { x: WORLD_WIDTH / 2 - 20, y: WORLD_HEIGHT / 2 - 25 };
 }
 
-/* desenha fundo e grass */
+/**
+ * Draws the world background including sky fill and grass tiles
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @returns {void}
+ */
 export function drawBackground(ctx) {
   try {
     ctx.fillStyle = "#5a9367";

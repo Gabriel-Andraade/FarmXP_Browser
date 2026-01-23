@@ -1,3 +1,13 @@
+/**
+ * @file houseSystem.js - Sistema de interação com a casa do jogador
+ * @description Gerencia todas as funcionalidades da casa do jogador incluindo:
+ * - Detecção de proximidade com a porta
+ * - Menu de opções da casa (dormir, crafting, armazém, customização)
+ * - Interface de armazenamento com depósito/retirada de itens
+ * - Integração com sistemas de clima, crafting e storage
+ * @module HouseSystem
+ */
+
 import { collisionSystem } from './collisionSystem.js';
 import { storageSystem } from './storageSystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
@@ -5,6 +15,11 @@ import { WeatherSystem } from './weather.js';
 import { items } from './item.js';
 import { craftingSystem } from './craftingSystem.js';
 
+/**
+ * Sistema de interação com a casa do jogador
+ * Gerencia menu da casa, armazenamento e funcionalidades domésticas
+ * @class HouseSystem
+ */
 export class HouseSystem {
     constructor() {
         this.houseInteractionHitbox = null;

@@ -1,7 +1,30 @@
+/**
+ * @file server.ts - Development Static File Server
+ * @description Simple Bun-based static file server for local development.
+ * Serves files from the project root directory with basic security measures.
+ *
+ * @module Server
+ * @author FarmXP Team
+ * @requires bun
+ *
+ * @example
+ * // Start the server
+ * bun run server.ts
+ *
+ * @example
+ * // Start with custom port
+ * PORT=8080 bun run server.ts
+ */
+
 import { serve } from "bun";
 import * as path from "path";
 import { statSync } from "fs";
 
+/**
+ * Server port number
+ * Uses PORT environment variable or defaults to 3000
+ * @type {number}
+ */
 const port = Number(process.env.PORT) || 3000;
 
 // serve apenas arquivos publicos daqui

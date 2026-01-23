@@ -1,7 +1,22 @@
-// scripts/storageSystem.js
+/**
+ * @file storageSystem.js - Sistema de armazenamento em baús
+ * @description Gerencia o armazenamento de itens em baús/containers separados do inventário.
+ * Suporta múltiplas categorias de itens, stacking e transferência entre inventário e armazém.
+ * @module StorageSystem
+ */
+
 import { items } from './item.js';
 
+/**
+ * Sistema de armazenamento para baús e containers
+ * Permite guardar itens organizados por categoria com limite de stacks
+ * @class StorageSystem
+ */
 export class StorageSystem {
+  /**
+   * Construtor do sistema de armazenamento
+   * Inicializa categorias, limite de stack e estrutura de armazenamento vazia
+   */
   constructor() {
     this.categories = this.defineCategories();
     this.maxStack = 50;
@@ -9,6 +24,11 @@ export class StorageSystem {
     this.init();
   }
 
+  /**
+   * Define as categorias de armazenamento disponíveis
+   * Cada categoria tem nome, ícone, tipos de itens aceitos, limite de stacks e cor
+   * @returns {Object} Objeto com configuração de cada categoria
+   */
   defineCategories() {
     return {
       tools: {
@@ -49,16 +69,29 @@ export class StorageSystem {
     };
   }
 
+  /**
+   * Inicializa estrutura de armazenamento vazia para todas as categorias
+   * @returns {Object} Objeto com arrays vazios para cada categoria
+   */
   initializeEmptyStorage() {
     const initialStorage = {};
     Object.keys(this.categories).forEach(c => initialStorage[c] = []);
     return initialStorage;
   }
 
+  /**
+   * Inicializa o sistema e expõe globalmente
+   * @returns {void}
+   */
   init() {
     window.storageSystem = this;
   }
 
+  /**
+   * Mapeia tipo de item para categoria de armazenamento
+   * @param {string} itemType - Tipo do item (tool, food, seed, etc)
+   * @returns {string} Nome da categoria de armazenamento
+   */
   mapItemTypeToCategory(itemType) {
     const map = {
       tool: "tools",
@@ -74,6 +107,11 @@ export class StorageSystem {
     return map[itemType] || "resources";
   }
 
+  /**
+   * Mapeia tipo de item para categoria de inventário do jogador
+   * @param {string} itemType - Tipo do item
+   * @returns {string} Nome da categoria de inventário correspondente
+   */
   mapToInventoryCategory(itemType) {
     const map = {
       tool: "tools",
@@ -89,10 +127,25 @@ export class StorageSystem {
     return map[itemType] || "resources";
   }
 
+  /**
+   * Verifica se uma categoria existe no sistema de inventário
+   * @private
+   * @param {string} category - Nome da categoria
+   * @returns {boolean} True se a categoria existe
+   */
   _inventoryCategoryExists(category) {
     return !!(window.inventorySystem && window.inventorySystem.categories && window.inventorySystem.categories[category]);
   }
 
+  /**
+   * Adiciona itens a uma categoria específica do armazenamento
+   * Gerencia stacking automático e criação de novos stacks quando necessário
+   * @private
+   * @param {string} storageCategory - Categoria de destino
+   * @param {number} itemId - ID do item a adicionar
+   * @param {number} quantity - Quantidade a adicionar
+   * @returns {boolean} True se pelo menos um item foi adicionado
+   */
   _addToCategory(storageCategory, itemId, quantity) {
     const config = this.categories[storageCategory];
     if (!config) return false;
@@ -125,6 +178,14 @@ export class StorageSystem {
     return remaining !== quantity;
   }
 
+  /**
+   * Deposita itens do inventário para o armazenamento
+   * Suporta chamada com (category, itemId, quantity) ou (itemId, quantity)
+   * @param {string|number} categoryOrId - Categoria de inventário ou ID do item
+   * @param {number} itemIdOrQty - ID do item ou quantidade
+   * @param {number} [quantity=1] - Quantidade a depositar
+   * @returns {boolean} True se o depósito foi bem-sucedido
+   */
   depositFromInventory(categoryOrId, itemIdOrQty, quantity = 1) {
     if (!window.inventorySystem) return false;
 
@@ -209,6 +270,13 @@ export class StorageSystem {
     return true;
   }
 
+  /**
+   * Retira itens do armazenamento para o inventário do jogador
+   * @param {string} storageCategory - Categoria de armazenamento de origem
+   * @param {number} itemId - ID do item a retirar
+   * @param {number} [quantity=1] - Quantidade a retirar
+   * @returns {boolean} True se a retirada foi bem-sucedida
+   */
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
     if (!window.inventorySystem) return false;
 
@@ -232,6 +300,13 @@ export class StorageSystem {
     return false;
   }
 
+  /**
+   * Adiciona item diretamente ao armazenamento (sem passar pelo inventário)
+   * Determina automaticamente a categoria baseado no tipo do item
+   * @param {number} itemId - ID do item a adicionar
+   * @param {number} [quantity=1] - Quantidade a adicionar
+   * @returns {boolean} True se a adição foi bem-sucedida
+   */
   addItem(itemId, quantity = 1) {
     const itemData = items.find(i => i.id === itemId);
     if (!itemData) return false;
@@ -240,6 +315,15 @@ export class StorageSystem {
     return this._addToCategory(category, itemId, quantity);
   }
 
+  /**
+   * Remove item do armazenamento
+   * Suporta chamada com (category, itemId, quantity) ou (itemId, quantity)
+   * Remove dos stacks mais antigos primeiro (FIFO)
+   * @param {string|number} categoryOrId - Categoria ou ID do item
+   * @param {number} itemIdOrQty - ID do item ou quantidade
+   * @param {number} [quantity=1] - Quantidade a remover
+   * @returns {boolean} True se a remoção foi bem-sucedida
+   */
   removeItem(categoryOrId, itemIdOrQty, quantity = 1) {
     let category = categoryOrId;
     let id = itemIdOrQty;
@@ -274,6 +358,11 @@ export class StorageSystem {
     return remaining === 0;
   }
 
+  /**
+   * Localiza um item no armazenamento
+   * @param {number} itemId - ID do item a localizar
+   * @returns {Object|null} Objeto com categoria, stack e dados do item, ou null se não encontrado
+   */
   findItem(itemId) {
     for (const [category, stacks] of Object.entries(this.storage)) {
       const stack = stacks.find(s => s.itemId === itemId);
@@ -288,6 +377,11 @@ export class StorageSystem {
     return null;
   }
 
+  /**
+   * Obtém a quantidade total de um item no armazenamento (todas as categorias)
+   * @param {number} itemId - ID do item
+   * @returns {number} Quantidade total do item
+   */
   getItemQuantity(itemId) {
     let total = 0;
     for (const stacks of Object.values(this.storage)) {
@@ -298,6 +392,12 @@ export class StorageSystem {
     return total;
   }
 
+  /**
+   * Verifica se o jogador possui um item no inventário
+   * @param {string|number} categoryOrId - Categoria ou ID do item
+   * @param {number|null} [itemId=null] - ID do item (quando categoryOrId é string)
+   * @returns {boolean} True se o item existe no inventário
+   */
   hasItemInInventory(categoryOrId, itemId = null) {
     if (!window.inventorySystem) return false;
 
@@ -313,6 +413,11 @@ export class StorageSystem {
     return window.inventorySystem.getItemQuantity(itemId) > 0;
   }
 
+  /**
+   * Obtém informações detalhadas sobre o estado do armazenamento
+   * Inclui contagem total de itens, valor total e estatísticas por categoria
+   * @returns {Object} Objeto com estatísticas do armazenamento
+   */
   getStorageInfo() {
     const info = {
       totalItems: 0,
@@ -343,10 +448,20 @@ export class StorageSystem {
     return info;
   }
 
+  /**
+   * Reseta todo o armazenamento para estado inicial (vazio)
+   * @returns {void}
+   */
   resetStorage() {
     this.storage = this.initializeEmptyStorage();
   }
 
+  /**
+   * Exibe uma mensagem de feedback ao jogador
+   * Usa a função global showMessage se disponível
+   * @param {string} text - Texto da mensagem
+   * @returns {void}
+   */
   showMessage(text) {
     if (typeof window.showMessage === "function") window.showMessage(text);
   }

@@ -1,7 +1,23 @@
-// scripts/assetManager.js
+/**
+ * @file assetManager.js - Gerenciador de assets do jogo
+ * @description Sistema centralizado de carregamento e gerenciamento de assets.
+ * Implementa carregamento assíncrono por prioridade, chunks para performance,
+ * detecção de mobile, fallback com placeholders e cache de imagens.
+ * @module AssetManager
+ */
+
 import { WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
 
-/* performance config */
+/**
+ * Configurações de performance para carregamento de assets
+ * Ajustado automaticamente para dispositivos móveis
+ * @constant {Object}
+ * @property {boolean} ENABLE_RUNTIME_RESIZE - Habilita redimensionamento em runtime
+ * @property {Array<string>} PRIORITY_ORDER - Ordem de prioridade de carregamento
+ * @property {number} MAX_CONCURRENT_LOADS - Máximo de carregamentos simultâneos
+ * @property {number} MOBILE_MAX_LOAD - Limite para dispositivos móveis
+ * @property {number} LOAD_CHUNK_SIZE - Tamanho do chunk de carregamento
+ */
 const PERFORMANCE_CONFIG = {
     ENABLE_RUNTIME_RESIZE: false,
     PRIORITY_ORDER: ['CORE', 'WORLD', 'ANIMALS', 'UI', 'PORTRAITS'],
@@ -19,7 +35,12 @@ if (isMobile) {
     PERFORMANCE_CONFIG.LOAD_CHUNK_SIZE = 2;
 }
 
-/* carrega assets essenciais (core) */
+/**
+ * Carrega assets essenciais (core) necessários para iniciar o jogo
+ * Inclui floor e cercas básicas
+ * @async
+ * @returns {Promise<boolean>} True quando carregamento completar
+ */
 async function loadCoreAssets() {
     const coreAssets = [
         assets.nature.floor[0],
@@ -31,7 +52,12 @@ async function loadCoreAssets() {
     return true;
 }
 
-/* carrega assets do mundo */
+/**
+ * Carrega assets do ambiente do mundo
+ * Inclui árvores, pedras, arbustos, casa, baú e poço
+ * @async
+ * @returns {Promise<boolean>} True quando carregamento completar
+ */
 async function loadWorldAssets() {
     const worldAssets = [
         ...assets.nature.trees,
