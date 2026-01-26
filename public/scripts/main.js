@@ -178,7 +178,7 @@ let preSleepInteractionState = null;
  * @returns {void}
  */
 function resizeCanvasToDisplaySize() {
-  if (!canvas) return;
+  if (!canvas || !ctx) return;
 
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(INTERNAL_WIDTH * dpr);
@@ -412,9 +412,9 @@ function setupSleepListeners() {
     };
 
     interactionEnabled = false;
-    Object.keys(keys).forEach((key) => {
+    for (const key of Object.keys(keys)) {
       keys[key] = false;
-    });
+    }
 
     if (currentPlayer) {
       currentPlayer.isMoving = false;
@@ -504,9 +504,9 @@ async function startFullGameLoad() {
 
   simulationPaused = true;
   interactionEnabled = false;
-  Object.keys(keys).forEach((k) => {
+  for (const k of Object.keys(keys)) {
     keys[k] = false;
-  });
+  }
 
   showLoadingScreen();
   updateLoadingProgress(0.05, "carregando mundo...");
@@ -586,16 +586,25 @@ async function initGameBootstrap() {
     { name: "Sistemas críticos", action: initializeCriticalSystems },
   ];
 
-  for (const step of loadingSteps) {
+  for (const [idx, step] of loadingSteps.entries()) {
     try {
-      await step.action?.();
+      const result = await step.action?.();
+      if (result === false) {
+        handleWarn(
+          `${step.name} retornou false (falha crítica)`,
+          `main:bootstrap:${step.name}`,
+          new Error(`${step.name} falhou`)
+        );
+        return;
+      }
       console.log(`${step.name} concluído`);
       updateLoadingProgress(
-        ((loadingSteps.indexOf(step) + 1) / (loadingSteps.length + 1)) * 0.6,
+        ((idx + 1) / (loadingSteps.length + 1)) * 0.6,
         step.name
       );
     } catch (error) {
       handleWarn(`${step.name} falhou`, `main:bootstrap:${step.name}`, error);
+      return;
     }
   }
 
@@ -678,6 +687,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
 
   ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) {
+    handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
+    return;
+  }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
      // otimizações mobile precisam do ctx inicializado
   if (IS_MOBILE) {
@@ -775,13 +788,13 @@ function gameLoop(timestamp) {
       ? objects
       : objects.filter((obj) => obj.type === "PLAYER" || obj.type === "FLOOR" || obj.originalType === "chest");
 
-    objectsToDraw.forEach((o) => {
+    for (const o of objectsToDraw) {
       try {
         if (o && o.draw) o.draw(ctx);
       } catch (err) {
         handleWarn("falha ao desenhar objeto individual", "main:gameLoop:drawObject", { id: o?.id, err });
       }
-    });
+    }
   } catch (err) {
     handleWarn("falha ao desenhar objetos do mundo", "main:gameLoop:drawObjects", err);
   }
@@ -895,9 +908,11 @@ window.gameDebug = {
   listAnimals: function () {
     if (window.theWorld && window.theWorld.animals) {
       console.log(`Animais no mundo (${window.theWorld.animals.length}):`);
-      window.theWorld.animals.forEach((animal, index) => {
+      let index = 0;
+      for (const animal of window.theWorld.animals) {
         console.log(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
-      });
+        index++;
+      }
     }
   },
 };
