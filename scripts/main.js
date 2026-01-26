@@ -645,7 +645,7 @@ document.addEventListener("playerReady", async (e) => {
 
   try {
     if (!playerSystem) await initializePlayerSystem();
-  } catch (e) {
+  } catch (err) {
     handleWarn("falha ao inicializar player system", "main:playerReady:playerSystem", err);
   }
 
