@@ -6,10 +6,6 @@ node_modules/
 bun.lockb
 bun.lock
 
-# Project config files
-package.json
-jsconfig.json
-
 # Ignore favicon
 favicon.ico
 

@@ -17,6 +17,7 @@
  */
 
 import { serve } from "bun";
+import * as path from "path";
 
 /**
  * Server port number
@@ -25,55 +26,162 @@ import { serve } from "bun";
  */
 const port = Number(process.env.PORT) || 3000;
 
+// serve apenas arquivos publicos daqui
+const BASE_DIR = path.resolve(import.meta.dir, "public");
+const BASE_PREFIX = BASE_DIR + path.sep;
+
+// allowlist do que pode ser servido
+const ALLOWED_TOP_FILES = new Set([
+  "index.html",
+  "style.css",
+  "responsive.css",
+]);
+
+const ALLOWED_TOP_DIRS = new Set([
+  "assets",
+  "scripts",
+  "style",
+]);
+
+const MIME_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "application/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+  ".mp3": "audio/mpeg",
+  ".wav": "audio/wav",
+};
+
+const SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  // ajuste a CSP conforme seu app (se usar cdn/inline, libere aqui)
+  // "Content-Security-Policy": "default-src 'self'",
+};
+
+type BodyLike = ConstructorParameters<typeof Response>[0];
+function respond(body: BodyLike, status: number) {
+  return new Response(body, {
+    status,
+    headers: SECURITY_HEADERS,
+  });
+}
+
+function safeDecode(value: string) {
+  try {
+    let current = value;
+
+    // decode recursivo com limite para evitar bypass por double-encoding
+    for (let i = 0; i < 4; i++) {
+      const next = decodeURIComponent(current);
+      if (next === current) break;
+      current = next;
+    }
+
+    return current;
+  } catch {
+    return null;
+  }
+}
+
+function hasEncodedTraversal(rawLower: string) {
+  // bloqueia traversal patterns em forma encoded, mista ou duplamente encoded
+  return (
+    rawLower.includes("%2e%2e") || // ..
+    rawLower.includes("%2e.") ||   // mixed: %2e followed by literal .
+    rawLower.includes(".%2e") ||   // mixed: literal . followed by %2e
+    rawLower.includes("%252e") ||  // double-encoded %2e
+    rawLower.includes("%252f") ||  // double-encoded %2f
+    rawLower.includes("%255c") ||  // double-encoded %5c
+    rawLower.includes("%2f") ||    // /
+    rawLower.includes("%5c")       // \
+  );
+}
 /**
  * Start the Bun HTTP server
  * Handles static file serving with directory access protection
+ *
+ * @security Blocks directory listing by rejecting paths ending with '/'
+ * @security TODO: Add path traversal protection (see Issue #1)
  */
 serve({
   port,
-
-  /**
-   * Request handler function
-   * Serves static files from the project root directory
-   *
-   * @param {Request} req - The incoming HTTP request
-   * @returns {Promise<Response>} HTTP response with file content or error
-   *
-   * @security Blocks directory listing by rejecting paths ending with '/'
-   * @security TODO: Add path traversal protection (see Issue #1)
-   */
   async fetch(req) {
     const url = new URL(req.url);
+    const rawPath = url.pathname || "/";
 
-    // Map root path to index.html, otherwise use requested path
-    let path = url.pathname === "/" ? "/index.html" : url.pathname;
+    // usa o pathname cru pra detectar tentativa encoded
+    const rawLower = rawPath.toLowerCase();
 
-    console.log(`📁 Servindo: ${path}`);
-
-    // Security: Prevent directory listing by blocking trailing slashes
-    if (path.endsWith('/')) {
-      return new Response("Directory access not allowed", { status: 403 });
+    // bloqueia tentativa encoded de traversal
+    if (hasEncodedTraversal(rawLower)) {
+      return respond("Forbidden", 403);
     }
 
-    try {
-      // Attempt to read the requested file from project root
-      const file = Bun.file(`.${path}`);
-
-      if (await file.exists()) {
-        // File exists, return it with auto-detected content type
-        return new Response(file);
-      } else {
-        // File not found
-        console.log(`❌ Arquivo não encontrado: ${path}`);
-        return new Response("Not found", { status: 404 });
-      }
-    } catch (error) {
-      // Server error occurred
-      console.error(`💥 Erro 500 em: ${path}`, error);
-      return new Response("Internal Server Error", { status: 500 });
+    const decoded = safeDecode(rawPath);
+    if (decoded === null) {
+      return respond("Bad request", 400);
     }
+
+    const normalized = decoded.replace(/\\/g, "/");
+    const requestPath = normalized === "/" ? "/index.html" : normalized;
+
+    // bloqueia null byte
+    if (requestPath.includes("\0")) {
+      return respond("Forbidden", 403);
+    }
+
+    // bloqueia diretorio com trailing slash
+    if (requestPath.endsWith("/")) {
+      return respond("Directory access not allowed", 403);
+    }
+
+    const rel = requestPath.replace(/^\/+/, "");
+    const normalizedRel = path.posix.normalize(rel);
+    if (normalizedRel.startsWith("..") || normalizedRel.includes("/..")) {
+      return respond("Forbidden", 403);
+    }
+
+    // allowlist do primeiro segmento
+    const first = normalizedRel.split("/")[0] || "";
+    const isAllowed =
+      ALLOWED_TOP_FILES.has(first) || ALLOWED_TOP_DIRS.has(first);
+
+    if (!isAllowed) {
+      return respond("Forbidden", 403);
+    }
+
+    if (ALLOWED_TOP_DIRS.has(normalizedRel)) {
+      return respond("Directory access not allowed", 403);
+    }
+
+    // resolve e garante containment
+    const fullPath = path.resolve(BASE_DIR, normalizedRel);
+    if (!fullPath.startsWith(BASE_PREFIX)) {
+      return respond("Forbidden", 403);
+    }
+
+    // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
+    if (path.basename(fullPath).toLowerCase() === "server.ts") {
+      return respond("Forbidden", 403);
+    }
+
+    const ext = path.extname(fullPath).toLowerCase();
+    const contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+    return new Response(Bun.file(fullPath), {
+      headers: {
+        ...SECURITY_HEADERS,
+        "Content-Type": contentType,
+      },
+    });
   },
 });
 
-// Log server startup message
-console.log(`🚀 Servidor rodando em http://localhost:${port}/`);
+console.log(`server running on http://localhost:${port}/`);
