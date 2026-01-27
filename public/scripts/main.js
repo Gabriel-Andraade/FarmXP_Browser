@@ -550,67 +550,10 @@ async function startFullGameLoad() {
     updateLoadingProgress(0.8, "carregando interface...");
 
     try {
-<<<<<<< HEAD
       const ui = await import("./thePlayer/inventoryUI.js");
       ui.initInventoryUI();
     } catch (e) {
       handleWarn("falha ao carregar inventory ui", "main:startFullGameLoad:inventoryUI", e);
-=======
-        await assets.loadWorld();
-        worldAssetsLoaded = true;
-        updateLoadingProgress(0.35, "carregando animais...");
-
-        await assets.loadAnimals();
-        allAssetsLoaded = true;
-        updateLoadingProgress(0.55, "preparando mundo...");
-
-        spawnGameAnimals();
-        updateLoadingProgress(0.65, "carregando sistemas...");
-
-        // Carregar sistemas de casa e clima antes de expor globais
-        try {
-            const houseModule = await import("./houseSystem.js");
-            houseSystem = houseModule.houseSystem;
-
-            const weatherModule = await import("./weather.js");
-            WeatherSystem = weatherModule.WeatherSystem;
-            drawWeatherEffects = weatherModule.drawWeatherEffects;
-            drawWeatherUI = weatherModule.drawWeatherUI;
-
-            // Registrar sistema de clima imediatamente após importar
-            if (WeatherSystem) {
-                registerSystem('weather', WeatherSystem);
-                
-                // Expor funções globais de clima para compatibilidade
-                window.drawWeatherEffects = drawWeatherEffects;
-                window.drawWeatherUI = drawWeatherUI;
-            }
-
-            if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
-        } catch (e) {
-            console.warn("Erro ao carregar sistemas de casa/clima:", e);
-        }
-
-        await exposeGlobals();
-        updateLoadingProgress(0.80, "carregando interface...");
-
-        try {
-            const ui = await import("./thePlayer/inventoryUI.js");
-            ui.initInventoryUI();
-        } catch (e) {
-            console.warn("Erro ao carregar interface:", e);
-        }
-
-        updateLoadingProgress(1, "pronto");
-        hideLoadingScreen();
-
-        gameStarted = true;
-        simulationPaused = false;
-        interactionEnabled = true;
-        lastTime = performance.now();
-    } finally {
-        gameStartInProgress = false;
->>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     }
 
     try {
@@ -727,7 +670,6 @@ document.addEventListener("characterSelected", () => {
 });
 
 document.addEventListener("playerReady", async (e) => {
-<<<<<<< HEAD
   currentPlayer = e.detail.player;
   updatePlayer = e.detail.updateFunction;
 
@@ -753,33 +695,6 @@ document.addEventListener("playerReady", async (e) => {
   } catch (e) {
     handleWarn("falha ao expor globais no playerReady", "main:playerReady:exposeGlobals", e);
   }
-=======
-    currentPlayer = e.detail.player;
-    updatePlayer = e.detail.updateFunction;
-    
-    setupControls(currentPlayer);
-    
-    try {
-        if (!playerSystem) await initializePlayerSystem();
-    } catch (e) {
-        console.warn("Erro ao inicializar playerSystem:", e);
-    }
-    
-    console.log("Jogador spawnado e pronto!");
-    
-    if (itemSystem && window.theWorld) {
-        setTimeout(() => {
-            const worldObjects = window.theWorld.getSortedWorldObjects?.(currentPlayer) || [];
-            itemSystem.registerInteractiveObjects(worldObjects);
-        }, 100);
-    }
-    
-    try {
-        await exposeGlobals();
-    } catch (e) {
-        console.warn("Erro ao expor globais:", e);
-    }
->>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -834,88 +749,9 @@ function gameLoop(timestamp) {
     ctx.fillStyle = "#000";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-<<<<<<< HEAD
     if (WeatherSystem && WeatherSystem.update) {
       WeatherSystem.update(deltaTime);
       if (drawWeatherEffects) drawWeatherEffects(ctx, currentPlayer, canvas);
-=======
-    // 1. Fundo
-    try {
-        if (drawBackground) drawBackground(ctx);
-        else {
-            ctx.fillStyle = '#5a9367';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-    } catch (e) {
-        console.warn("Erro ao desenhar fundo:", e);
-    }
-
-    // 2. Objetos do Mundo
-    try {
-        const objects = getSortedWorldObjects?.(currentPlayer) || [];
-        const objectsToDraw = worldAssetsLoaded ? objects : 
-            objects.filter(obj => obj.type === 'PLAYER' || obj.type === 'FLOOR' || obj.originalType === 'chest');
-        
-        objectsToDraw.forEach(o => {
-            if (o && o.draw) o.draw(ctx);
-        });
-    } catch (err) {
-        console.warn("Erro ao desenhar objetos:", err);
-    }
-
-    // 3. Preview de Construção
-    try {
-        if (BuildSystem && drawBuildPreview) drawBuildPreview(ctx);
-    } catch (e) {
-        console.warn("Erro ao desenhar preview:", e);
-    }
-
-    // 4. Debug Hitboxes
-    if (window.DEBUG_HITBOXES && camera && allAssetsLoaded) {
-        try {
-            collisionSystem.drawHitboxes(ctx, camera);
-            playerInteractionSystem?.drawInteractionRange?.(ctx, camera);
-        } catch (e) {
-            console.warn("Erro ao desenhar debug hitboxes:", e);
-        }
-    }
-
-    // 5. Clima e Efeitos Visuais (somente se não estiver pausado)
-    if (!simulationPaused) {
-        try {
-            if (WeatherSystem && drawWeatherEffects) {
-                drawWeatherEffects(ctx, currentPlayer, canvas);
-                drawWeatherUI(ctx);
-            }
-        } catch (e) {
-            console.warn("Erro ao desenhar clima:", e);
-        }
-    }
-
-    // 6. UI do Mundo (somente se não estiver pausado)
-    if (!simulationPaused) {
-        try {
-            if (worldUI && itemSystem && currentPlayer && !sleepBlockedControls) {
-                worldUI.render(ctx, itemSystem.interactiveObjects, currentPlayer);
-            }
-        } catch (e) {
-            console.warn("Erro ao renderizar UI do mundo:", e);
-        }
-    }
-
-    // 7. HUD do Jogador
-    try {
-        if (window.playerHUD && currentPlayer) {
-            window.playerHUD.render();
-        }
-    } catch (e) {
-        console.warn("Erro ao renderizar HUD:", e);
-    }
-
-    // 8. Loading Indicator
-    if (!allAssetsLoaded) {
-        drawLoadingIndicator();
->>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     }
 
     requestAnimationFrame(gameLoop);
