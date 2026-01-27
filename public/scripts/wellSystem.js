@@ -129,20 +129,15 @@ export const wellSystem = {
       delete wellState.wells[id];
     }
 
-    // always perform hitbox cleanup
-    if (collisionSystem) {
-      try {
-        collisionSystem.removeHitbox?.(id);
-      } catch (err) {
-        handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:removeHitbox", { id, err });
-      }
+   // hitbox cleanup
+if (typeof collisionSystem?.removeHitbox === "function") {
+  try {
+    collisionSystem.removeHitbox(id);
+  } catch (err) {
+    handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:removeHitbox", { id, err });
+  }
+}
 
-      try {
-        collisionSystem.interactionHitboxes?.delete(id);
-      } catch (err) {
-        handleWarn("falha ao remover interaction hitbox do poço", "wellSystem:removeWell:deleteInteractionHitbox", { id, err });
-      }
-    }
 
     // notifica mudança no mundo sem try/catch
     (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
