@@ -91,31 +91,55 @@ export const wellSystem = {
 
         try {
             const world = getObject('world');
-            (world?.markWorldChanged || window.markWorldChanged)?.();
-        } catch {}
+            world?.markWorldChanged?.()
+        } catch (err) {
+            console.warn("Erro ao notificar mudança no mundo:", err);
+        }
 
         try {
             document.dispatchEvent(new CustomEvent("wellPlaced", { detail: { well: wellObject } }));
-        } catch {}
+        } catch (err) {
+            console.warn("Erro ao disparar evento wellPlaced:", err);
+        }
 
         return wellObject;
     },
 
     // remove um poço do mundo
     removeWell(id) {
-        if (!id) return false;
+        // Acesso seguro ao array do mundo
+        const wells = window.theWorld?.placedWells || [];
+        const index = wells.findIndex(w => w.id === id);
 
-        delete wellState.wells[id];
+        if (index > -1) {
+            wells.splice(index, 1);
 
-        try { collisionSystem.removeHitbox(id); } catch {}
-        try { collisionSystem.interactionHitboxes.delete(id); } catch {}
-        try {
-            const world = getObject('world');
-            (world?.markWorldChanged || window.markWorldChanged)?.();
-        } catch {}
+            // Remover hitboxes de colisão
+            if (collisionSystem) {
+                try {
+                    collisionSystem.removeHitbox?.(id);
+                } catch (err) {
+                    console.warn(`Erro ao remover hitbox do poço ${id}:`, err);
+                }
+                
+                try {
+                    collisionSystem.interactionHitboxes?.delete(id);
+                } catch (err) {
+                    console.warn(`Erro ao remover interaction hitbox do poço ${id}:`, err);
+                }
+            }
 
-        document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
-        return true;
+            // Notifica mudança no mundo de forma segura
+            try {
+                window.theWorld?.markWorldChanged?.();
+            } catch (err) {
+                console.warn("Erro ao notificar mudança no mundo:", err);
+            }
+
+            this.updateUI();
+            return true;
+        }
+        return false;
     },
 
     // desenha o poço no mundo
@@ -136,7 +160,12 @@ export const wellSystem = {
                     Math.floor(wellObject.height * zoom)
                 );
                 return;
-            } catch {}
+            } catch (err) {
+                console.warn("Falha ao desenhar sprite do poço", {
+                    id: wellObject?.id,
+                    err,
+                });
+            }
         }
 
         ctx.fillStyle = "#4a6b8a";

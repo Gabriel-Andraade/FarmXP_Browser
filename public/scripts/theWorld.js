@@ -105,7 +105,11 @@ export function placeWell(a, b, c) {
       else wellObject = wellSystem.placeWell(x, y, opts);
     }
   } catch (err) {
+<<<<<<< HEAD
     handleWarn("Failed to place well via wellSystem", "theWorld:placeWell", { id, x, y, err });
+=======
+    console.warn("Erro ao criar poço através do sistema:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   if (!wellObject) {
@@ -144,7 +148,11 @@ export function placeWell(a, b, c) {
       );
     }
   } catch (err) {
+<<<<<<< HEAD
     handleWarn("Failed to add hitbox for well", "theWorld:placeWell:addHitbox", { wellId: wellObject.id, err });
+=======
+    console.warn("Erro ao adicionar hitbox do poço:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   markWorldChanged();
@@ -187,7 +195,11 @@ export function addAnimal(assetName, img, x, y) {
       );
     }
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to add hitbox for animal", "theWorld:addAnimal", { animalId: animal.id, assetName, err: e });
+=======
+    console.warn("Erro ao adicionar hitbox do animal:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   markWorldChanged();
@@ -211,7 +223,11 @@ export function updateAnimals() {
           }
         }
       } catch (err) {
+<<<<<<< HEAD
         handleWarn("Failed to update hitbox for animal", "theWorld:updateAnimals", { animalId: animal.id, err });
+=======
+        console.warn("Erro ao atualizar hitbox do animal:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
       }
     }
   });
@@ -387,7 +403,11 @@ export function getSortedWorldObjects(player) {
         try {
           animal.draw(ctx, camera);
         } catch (e) {
+<<<<<<< HEAD
           handleWarn("Failed to draw animal", "theWorld:getSortedWorldObjects:animalDraw", { animalId: animal.id, err: e });
+=======
+          console.warn("Erro ao desenhar animal:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
         }
       }
     });
@@ -514,7 +534,11 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   try {
     if (camera?.isInViewport && !camera.isInViewport(obj.x || 0, obj.y || 0, objWidth, objHeight)) return;
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to check viewport for object", "theWorld:drawSingleObject:viewport", { err: e });
+=======
+    console.warn("Erro na verificação de viewport:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   let actualWidth, actualHeight;
@@ -537,7 +561,11 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   try {
     screenPos = camera.worldToScreen(obj.x || 0, obj.y || 0);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to convert world to screen for object", "theWorld:drawSingleObject:worldToScreen", { err: e });
+=======
+    console.warn("Erro na conversão worldToScreen:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     screenPos = { x: obj.x || 0, y: obj.y || 0 };
   }
 
@@ -558,14 +586,21 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
     } else {
       img = cat?.[obj.type]?.img;
     }
-  } catch (err) { img = null; }
+  } catch (err) {
+    console.warn("Erro ao obter imagem do asset:", err);
+    img = null;
+  }
 
   if (img && img.complete) {
     try {
       ctx.drawImage(img, adjustedX, adjustedY, drawW, drawH);
       return;
     } catch (err) {
+<<<<<<< HEAD
       handleWarn("Failed to draw object image", "theWorld:drawSingleObject:drawImage", { assetCategory, err });
+=======
+      console.warn("Erro ao desenhar imagem do objeto:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     }
   }
 
@@ -613,14 +648,22 @@ function drawBuilding(ctx, building) {
   try {
     if (camera?.isInViewport && !camera.isInViewport(building.x || 0, building.y || 0, bWidth, bHeight)) return;
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to check viewport for building", "theWorld:drawBuilding:viewport", { buildingId: building.id, err: e });
+=======
+    console.warn("Erro na verificação de viewport:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   let screenPos;
   try {
     screenPos = camera.worldToScreen(building.x || 0, building.y || 0);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to convert world to screen for building", "theWorld:drawBuilding:worldToScreen", { buildingId: building.id, err: e });
+=======
+    console.warn("Erro na conversão worldToScreen:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     screenPos = { x: building.x || 0, y: building.y || 0 };
   }
 
@@ -633,11 +676,19 @@ function drawBuilding(ctx, building) {
   if (building.originalType === "chest") {
     const chestImg = assets.furniture?.chest?.img;
     if (chestImg && chestImg.src && !chestImg.src.includes("data:,")) {
+<<<<<<< HEAD
       try { 
         ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); 
         return; 
       } catch (e) {
         handleWarn("Failed to draw chest image", "theWorld:drawBuilding:chestImage", { buildingId: building.id, err: e });
+=======
+      try {
+        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH);
+        return;
+      } catch (e) {
+        console.warn("Erro ao desenhar baú:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
       }
     }
     drawSimpleChest(ctx, drawX, drawY, drawW, drawH);
@@ -650,7 +701,11 @@ function drawBuilding(ctx, building) {
       try {
         ctx.drawImage(wellImg, drawX, drawY, drawW, drawH);
       } catch (err) {
+<<<<<<< HEAD
         handleWarn("Failed to draw well image", "theWorld:drawBuilding:wellImage", { buildingId: building.id, err });
+=======
+        console.warn("Erro ao desenhar poço:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
         ctx.fillStyle = "#4a6b8a";
         ctx.fillRect(drawX, drawY, drawW, drawH);
         ctx.strokeStyle = "#2d4052";
@@ -735,7 +790,11 @@ function drawHouseRoof(ctx, house) {
   try {
     if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to check viewport for house roof", "theWorld:drawHouseRoof:viewport", { houseId: house.id, err: e });
+=======
+    console.warn("Erro na verificação de viewport:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   const img = assets.buildings?.house?.[0]?.img;
@@ -745,7 +804,11 @@ function drawHouseRoof(ctx, house) {
   try {
     screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to convert world to screen for house roof", "theWorld:drawHouseRoof:worldToScreen", { houseId: house.id, err: e });
+=======
+    console.warn("Erro na conversão worldToScreen:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     screenPos = { x: house.x || 0, y: house.y || 0 };
   }
 
@@ -754,7 +817,10 @@ function drawHouseRoof(ctx, house) {
   const drawW = Math.floor(hWidth * zoom);
   const drawH = Math.floor(hHeight * zoom);
 
-  if (!img) { drawHouseRoofFallback(ctx, drawX, drawY, drawW, drawH); return; }
+  if (!img) {
+    drawHouseRoofFallback(ctx, drawX, drawY, drawW, drawH);
+    return;
+  }
 
   const roofSrcHeight = Math.round(img.height * (hHeight / WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT));
   ctx.drawImage(img, 0, 0, img.width, roofSrcHeight, drawX, drawY, drawW, drawH);
@@ -774,7 +840,11 @@ function drawHouseWalls(ctx, house) {
   try {
     if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to check viewport for house walls", "theWorld:drawHouseWalls:viewport", { houseId: house.id, err: e });
+=======
+    console.warn("Erro na verificação de viewport:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   const img = assets.buildings?.house?.[0]?.img;
@@ -784,7 +854,11 @@ function drawHouseWalls(ctx, house) {
   try {
     screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to convert world to screen for house walls", "theWorld:drawHouseWalls:worldToScreen", { houseId: house.id, err: e });
+=======
+    console.warn("Erro na conversão worldToScreen:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     screenPos = { x: house.x || 0, y: house.y || 0 };
   }
 
@@ -793,7 +867,10 @@ function drawHouseWalls(ctx, house) {
   const drawW = Math.floor(hWidth * zoom);
   const drawH = Math.floor(hHeight * zoom);
 
-  if (!img) { drawHouseWallsFallback(ctx, drawX, drawY, drawW, drawH); return; }
+  if (!img) {
+    drawHouseWallsFallback(ctx, drawX, drawY, drawW, drawH);
+    return;
+  }
 
   const totalRef = WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT;
   const wallRatio = hHeight / totalRef;
@@ -847,6 +924,7 @@ export function initializeWorld() {
   thickets.push(...(worldObjects.thickets || []));
   houses.push(...(worldObjects.houses || []));
 
+<<<<<<< HEAD
   for (const tree of trees) { 
     try { 
       collisionSystem.addHitbox(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height); 
@@ -866,15 +944,45 @@ export function initializeWorld() {
       collisionSystem.addHitbox(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height); 
     } catch (e) {
       handleWarn("Failed to add hitbox for thicket", "theWorld:initializeWorld:thicketHitbox", { thicketId: thicket.id, err: e });
+=======
+  for (const tree of trees) {
+    try {
+      collisionSystem.addHitbox(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height);
+    } catch (e) {
+      console.warn("Erro ao adicionar hitbox da árvore:", e);
+    }
+  }
+  
+  for (const rock of rocks) {
+    try {
+      collisionSystem.addHitbox(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height);
+    } catch (e) {
+      console.warn("Erro ao adicionar hitbox da pedra:", e);
+    }
+  }
+  
+  for (const thicket of thickets) {
+    try {
+      collisionSystem.addHitbox(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height);
+    } catch (e) {
+      console.warn("Erro ao adicionar hitbox do thicket:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     }
   }
 
   for (const house of houses) {
     if (house.type === "HOUSE_WALLS") {
+<<<<<<< HEAD
       try { 
         collisionSystem.addHitbox(house.id, "HOUSE_WALLS", house.x, house.y, house.width, house.height); 
       } catch (e) {
         handleWarn("Failed to add hitbox for house walls", "theWorld:initializeWorld:houseHitbox", { houseId: house.id, err: e });
+=======
+      try {
+        collisionSystem.addHitbox(house.id, "HOUSE_WALLS", house.x, house.y, house.width, house.height);
+      } catch (e) {
+        console.warn("Erro ao adicionar hitbox da casa:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
       }
     }
   }
@@ -891,10 +999,17 @@ export function initializeWorld() {
         name: w.name || "Poço"
       };
       placedWells.push(wellObj);
+<<<<<<< HEAD
       try { 
         collisionSystem.addHitbox(wellObj.id, "WELL", wellObj.x, wellObj.y, wellObj.width, wellObj.height); 
       } catch (e) {
         handleWarn("Failed to add hitbox for generated well", "theWorld:initializeWorld:wellHitbox", { wellId: wellObj.id, err: e });
+=======
+      try {
+        collisionSystem.addHitbox(wellObj.id, "WELL", wellObj.x, wellObj.y, wellObj.width, wellObj.height);
+      } catch (e) {
+        console.warn("Erro ao adicionar hitbox do poço:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
       }
     }
   }
@@ -939,10 +1054,17 @@ export function objectDestroyed(objOrId) {
   removed = removeFromArray(placedWells) || removed;
   removed = removeFromArray(animals) || removed;
 
+<<<<<<< HEAD
   try { 
     collisionSystem.removeHitbox(id); 
   } catch (err) {
     handleWarn("Failed to remove hitbox", "theWorld:objectDestroyed", { id, err });
+=======
+  try {
+    collisionSystem.removeHitbox(id);
+  } catch (err) {
+    console.warn("Erro ao remover hitbox do objeto:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   markWorldChanged();
@@ -978,14 +1100,22 @@ export function drawBackground(ctx) {
     ctx.fillStyle = "#5a9367";
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to draw background fill", "theWorld:drawBackground:fill", { err: e });
+=======
+    console.warn("Erro ao desenhar fundo sólido:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     return;
   }
 
   try {
     drawGrass(ctx);
   } catch (e) {
+<<<<<<< HEAD
     handleWarn("Failed to draw grass", "theWorld:drawBackground:grass", { err: e });
+=======
+    console.warn("Erro ao desenhar grama:", e);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 }
 
@@ -1093,7 +1223,11 @@ window.addWorldObject = function(objectData) {
   try {
     collisionSystem.addHitbox(building.id, collisionType, building.x, building.y, building.width, building.height, building);
   } catch (err) {
+<<<<<<< HEAD
     handleWarn("Failed to add hitbox for world object", "theWorld:addWorldObject", { objectId, collisionType, err });
+=======
+    console.warn("Erro ao adicionar hitbox do objeto:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
   }
 
   markWorldChanged();
@@ -1106,17 +1240,24 @@ window.addWorldObject = function(objectData) {
 };
 
 /* sobrescreve salvamento para excluir baús se BuildSystem existir */
-// Note: BuildSystem override será aplicado após main.js registrar o sistema
-setTimeout(() => {
+// Note: aplica override quando BuildSystem estiver registrado
+const tryApplyBuildSaveOverride = () => {
   const BuildSystem = getSystem('build');
-  if (BuildSystem && BuildSystem.saveBuildings) {
-    const originalSaveBuildings = BuildSystem.saveBuildings;
-    BuildSystem.saveBuildings = function(buildings) {
-      const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
-      return originalSaveBuildings.call(this, buildingsToSave);
-    };
+  if (!BuildSystem || typeof BuildSystem.saveBuildings !== "function" || BuildSystem.__saveOverrideApplied) {
+    return false;
   }
-}, 0);
+  const originalSaveBuildings = BuildSystem.saveBuildings;
+  BuildSystem.saveBuildings = function(buildings) {
+    const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
+    return originalSaveBuildings.call(this, buildingsToSave);
+  };
+  BuildSystem.__saveOverrideApplied = true;
+  return true;
+};
+const waitForBuildSystem = () => {
+  if (!tryApplyBuildSaveOverride()) setTimeout(waitForBuildSystem, 50);
+};
+waitForBuildSystem();
 
 /* função principal de renderização do mundo */
 export function renderWorld(ctx, player) {
@@ -1132,7 +1273,11 @@ export function renderWorld(ctx, player) {
     try {
       obj.draw(ctx);
     } catch (err) {
+<<<<<<< HEAD
       handleWarn("Failed to draw world object", "theWorld:renderWorld", { objId: obj.id, objType: obj.type, err });
+=======
+      console.warn("Erro ao desenhar objeto:", err);
+>>>>>>> a4d2a67 (fix: weather timing + wellSystem markWorldChanged + catch)
     }
   });
 
