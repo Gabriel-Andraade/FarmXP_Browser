@@ -199,7 +199,10 @@ export class PlayerHUD {
         }
     }
 
-    // (opcional) função que controla encolher/expandir HUD — mantive a assinatura caso seu código use
+    render() {
+  this.updatePlayerInfo();
+}
+
     toggleHUD() {
         this.isExpanded = !this.isExpanded;
         const panel = document.getElementById('playerPanel');

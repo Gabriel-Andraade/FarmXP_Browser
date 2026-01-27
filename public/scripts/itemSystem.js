@@ -1,3 +1,4 @@
+import { handleError, handleWarn } from "./errorHandler.js";
 import { playerSystem } from './thePlayer/playerSystem.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { objectDestroyed, markWorldChanged } from './theWorld.js';
@@ -33,24 +34,32 @@ export class ItemSystem {
      */
     setupInteractions() {
         document.addEventListener('gameClick', (e) => {
-            const { screenX, screenY } = e.detail || {};
-            if (screenX == null || screenY == null) return;
+            try {
+                const { screenX, screenY } = e.detail || {};
+                if (screenX == null || screenY == null) return;
 
-            const objectData = collisionSystem.getObjectAtMouse(screenX, screenY, camera);
-            if (!objectData) return;
+                const objectData = collisionSystem.getObjectAtMouse(screenX, screenY, camera);
+                if (!objectData) return;
 
-            const hitbox = collisionSystem.getInteractionObject(objectData.objectId);
-            if (!hitbox) return;
+                const hitbox = collisionSystem.getInteractionObject(objectData.objectId);
+                if (!hitbox) return;
 
-            if (!collisionSystem.checkPlayerInteraction(hitbox)) return;
+                if (!collisionSystem.checkPlayerInteraction(hitbox)) return;
 
-            this.handleInteraction(objectData.object || objectData.objectId);
+                this.handleInteraction(objectData.object || objectData.objectId);
+            } catch (err) {
+                handleError(err, "itemSystem:gameClick");
+            }
         });
 
         document.addEventListener('playerInteract', (e) => {
-            const d = e.detail || {};
-            if (!d.object && !d.objectId && !d.id) return;
-            this.handleInteraction(d.object || d.objectId || d.id);
+            try {
+                const d = e.detail || {};
+                if (!d.object && !d.objectId && !d.id) return;
+                this.handleInteraction(d.object || d.objectId || d.id);
+            } catch (err) {
+                handleError(err, "itemSystem:playerInteract");
+            }
         });
     }
 
@@ -62,8 +71,12 @@ export class ItemSystem {
      */
     setupEventListeners() {
         document.addEventListener('worldLoaded', (e) => {
-            const objs = e?.detail?.objects;
-            if (Array.isArray(objs)) this.registerInteractiveObjects(objs);
+            try {
+                const objs = e?.detail?.objects;
+                if (Array.isArray(objs)) this.registerInteractiveObjects(objs);
+            } catch (err) {
+                handleError(err, "itemSystem:worldLoadedListener");
+            }
         });
 
         document.addEventListener('worldObjectAdded', (e) => {
@@ -91,67 +104,71 @@ export class ItemSystem {
      * @returns {void}
      */
     handleInteraction(objectIdOrObj) {
-        const id = typeof objectIdOrObj === 'string'
-            ? objectIdOrObj
-            : (objectIdOrObj?.id || objectIdOrObj?.objectId);
+        try {
+            const id = typeof objectIdOrObj === 'string'
+                ? objectIdOrObj
+                : (objectIdOrObj?.id || objectIdOrObj?.objectId);
 
-        if (!id) return;
+            if (!id) return;
 
-        let obj = this.interactiveObjects.get(id);
+            let obj = this.interactiveObjects.get(id);
 
-        if (!obj && typeof objectIdOrObj === 'object') {
-            this.registerInteractiveObject(objectIdOrObj);
-            obj = this.interactiveObjects.get(id);
-        }
-
-        if (!obj || obj.destroyed) return;
-
-        if (Date.now() - this.lastDamageTime < this.DAMAGE_COOLDOWN) return;
-
-        const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
-        const targetType = (obj.type || '').toLowerCase();
-
-        // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
-        const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
-        const isUtility = utilityTypes.includes(targetType);
-
-        const isDamagingTool =
-            equippedTool &&
-            equippedTool.type === 'tool' &&
-            (equippedTool.damage > 0 || equippedTool.toolType === 'hammer');
-
-        if (isUtility && !isDamagingTool) {
-            return;
-        }
-
-        // determina dano e se a ferramenta é a correta
-        let damage = 1;
-        let isCorrectTool = false;
-
-        if (equippedTool) {
-            if (targetType === 'tree' && equippedTool.toolType === 'axe') {
-                damage = equippedTool.damage || 2;
-                isCorrectTool = true;
-            } else if (targetType === 'rock' && equippedTool.toolType === 'pickaxe') {
-                damage = equippedTool.damage || 2;
-                isCorrectTool = true;
-            } else if (targetType === 'thicket' && equippedTool.toolType === 'machete') {
-                damage = equippedTool.damage || 1;
-                isCorrectTool = true;
+            if (!obj && typeof objectIdOrObj === 'object') {
+                this.registerInteractiveObject(objectIdOrObj);
+                obj = this.interactiveObjects.get(id);
             }
+
+            if (!obj || obj.destroyed) return;
+
+            if (Date.now() - this.lastDamageTime < this.DAMAGE_COOLDOWN) return;
+
+            const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
+            const targetType = (obj.type || '').toLowerCase();
+
+            // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
+            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
+            const isUtility = utilityTypes.includes(targetType);
+
+            const isDamagingTool =
+                equippedTool &&
+                equippedTool.type === 'tool' &&
+                (equippedTool.damage > 0 || equippedTool.toolType === 'hammer');
+
+            if (isUtility && !isDamagingTool) {
+                return;
+            }
+
+            // determina dano e se a ferramenta é a correta
+            let damage = 1;
+            let isCorrectTool = false;
+
+            if (equippedTool) {
+                if (targetType === 'tree' && equippedTool.toolType === 'axe') {
+                    damage = equippedTool.damage || 2;
+                    isCorrectTool = true;
+                } else if (targetType === 'rock' && equippedTool.toolType === 'pickaxe') {
+                    damage = equippedTool.damage || 2;
+                    isCorrectTool = true;
+                } else if (targetType === 'thicket' && equippedTool.toolType === 'machete') {
+                    damage = equippedTool.damage || 1;
+                    isCorrectTool = true;
+                }
+            }
+
+            const requiredTool = this.getRequiredTool(targetType);
+            if (requiredTool && !isCorrectTool) {
+                this.showActionMessage(`Você precisa de um(a) ${requiredTool}!`);
+                playerSystem.showEmote?.('question');
+                return;
+            }
+
+            this.lastDamageTime = Date.now();
+            document.dispatchEvent(new CustomEvent('playerAttack'));
+
+            this.applyDamage(id, damage);
+        } catch (err) {
+            handleError(err, "itemSystem:handleInteraction", `target: ${typeof objectIdOrObj === 'string' ? objectIdOrObj : objectIdOrObj?.id}`);
         }
-
-        const requiredTool = this.getRequiredTool(targetType);
-        if (requiredTool && !isCorrectTool) {
-            this.showActionMessage(`Você precisa de um(a) ${requiredTool}!`);
-            playerSystem.showEmote?.('question');
-            return;
-        }
-
-        this.lastDamageTime = Date.now();
-        document.dispatchEvent(new CustomEvent('playerAttack'));
-
-        this.applyDamage(id, damage);
     }
 
     /**
@@ -195,30 +212,35 @@ export class ItemSystem {
      * Destrói um objeto interativo
      * Coleta drops, remove hitboxes, dispara evento de destruição e marca mundo como alterado
      * @param {Object} obj - Objeto a ser destruído
-     * @param {string} obj.id - ID do objeto
-     * @param {string} obj.type - Tipo do objeto
-     * @param {number} obj.x - Posição X
-     * @param {number} obj.y - Posição Y
-     * @param {number} obj.width - Largura
-     * @param {number} obj.height - Altura
-     * @returns {void}
      */
     destroyObject(obj) {
         if (!obj || obj.destroyed) return;
         obj.destroyed = true;
 
-        this.collectDrops(obj);
+        try {
+            this.collectDrops(obj);
+        } catch (err) {
+            handleError(err, "itemSystem:destroyObject:collectDrops", `id=${obj?.id ?? 'unknown'}`);
+        }
 
-        try { collisionSystem.removeHitbox(obj.id); } catch {}
+        try { 
+            collisionSystem.removeHitbox(obj.id); 
+        } catch (err) {
+            handleWarn("Falha ao remover hitbox durante destruição (provavelmente já removida)", "itemSystem:destroyObject", { id: obj.id });
+        }
 
-        objectDestroyed({
-            id: obj.id,
-            type: (obj.type || '').toUpperCase(),
-            x: obj.x,
-            y: obj.y,
-            width: obj.width,
-            height: obj.height
-        });
+        try {
+            objectDestroyed({
+                id: obj.id,
+                type: (obj.type || '').toUpperCase(),
+                x: obj.x,
+                y: obj.y,
+                width: obj.width,
+                height: obj.height
+            });
+        } catch (err) {
+            handleError(err, "itemSystem:destroyObject:worldUpdate", `id=${obj?.id ?? 'unknown'}`);
+        }
 
         this.interactiveObjects.delete(obj.id);
         markWorldChanged();
@@ -229,12 +251,6 @@ export class ItemSystem {
      * Processa chance de drop, quantidade aleatória e adiciona itens ao inventário
      * Exibe mensagem de coleta ao jogador
      * @param {Object} obj - Objeto destruído
-     * @param {Array<Object>} [obj.drops] - Array de possíveis drops
-     * @param {number} obj.drops[].id - ID do item a ser dropado
-     * @param {number} [obj.drops[].chance=1] - Chance de drop (0-1)
-     * @param {number} [obj.drops[].minQty=1] - Quantidade mínima
-     * @param {number} [obj.drops[].maxQty=minQty] - Quantidade máxima
-     * @returns {void}
      */
     collectDrops(obj) {
         if (!obj.drops) return;
@@ -242,20 +258,27 @@ export class ItemSystem {
         const collected = [];
 
         for (const drop of obj.drops) {
-            if (Math.random() > (drop.chance ?? 1)) continue;
+  try {
+    if (Math.random() > (drop.chance ?? 1)) continue;
 
-            const min = drop.minQty ?? 1;
-            const max = drop.maxQty ?? min;
-            const qty = Math.floor(Math.random() * (max - min + 1)) + min;
+    const min = drop.minQty ?? 1;
+    const max = drop.maxQty ?? min;
+    const qty = Math.floor(Math.random() * (max - min + 1)) + min;
 
-            const itemData = this.getItemData(drop.id);
-            if (!itemData) continue;
+    const itemData = this.getItemData(drop.id);
+    if (!itemData) {
+      handleWarn(`Item ID ${drop.id} não encontrado na base de dados`, "itemSystem:collectDrops");
+      continue;
+    }
 
-            // Adiciona o drop ao inventário usando apenas o ID e a quantidade.
-            // O InventorySystem utiliza mapTypeToCategory() para classificar automaticamente.
-            inventorySystem.addItem(drop.id, qty);
-            collected.push({ id: drop.id, quantity: qty });
-        }
+    inventorySystem.addItem(drop.id, qty);
+    collected.push({ id: drop.id, quantity: qty });
+  } catch (err) {
+    const dropId = drop?.id ?? "unknown";
+    handleError(err, "itemSystem:collectDrops:individualItem", `dropId=${dropId}`);
+  }
+}
+
 
         if (collected.length) {
             this.showCollectionMessage(collected, obj.type);
@@ -300,8 +323,6 @@ export class ItemSystem {
      * Exibe mensagem de coleta de itens ao jogador
      * Formata lista de itens coletados com quantidades
      * @param {Array<Object>} itemsList - Lista de itens coletados
-     * @param {number} itemsList[].id - ID do item
-     * @param {number} itemsList[].quantity - Quantidade coletada
      * @param {string} type - Tipo do objeto destruído
      * @returns {void}
      */
@@ -332,37 +353,32 @@ export class ItemSystem {
      * Inicializa propriedades de vida, dano e drops se não especificadas
      * Previne registro duplicado
      * @param {Object} obj - Objeto a ser registrado
-     * @param {string} obj.id - ID único do objeto
-     * @param {string} [obj.type] - Tipo do objeto
-     * @param {number} [obj.x=0] - Posição X
-     * @param {number} [obj.y=0] - Posição Y
-     * @param {number} [obj.width=32] - Largura
-     * @param {number} [obj.height=32] - Altura
-     * @param {number} [obj.hp] - HP inicial
-     * @param {Array} [obj.drops] - Drops do objeto
-     * @returns {void}
      */
     registerInteractiveObject(obj) {
-        if (!obj) return;
+        try {
+            if (!obj) return;
 
-        const id = obj.id || obj.objectId;
-        if (!id || this.interactiveObjects.has(id)) return;
+            const id = obj.id || obj.objectId;
+            if (!id || this.interactiveObjects.has(id)) return;
 
-        const type = (obj.type || obj.originalType || '').toLowerCase();
-        const hp = obj.hp || obj.health || this.getHpFromAssetManager(type);
+            const type = (obj.type || obj.originalType || '').toLowerCase();
+            const hp = obj.hp || obj.health || this.getHpFromAssetManager(type);
 
-        this.interactiveObjects.set(id, {
-            id,
-            type,
-            x: obj.x ?? 0,
-            y: obj.y ?? 0,
-            width: obj.width ?? 32,
-            height: obj.height ?? 32,
-            destroyed: false,
-            health: hp,
-            maxHealth: obj.maxHealth || hp,
-            drops: obj.drops || this.getDropsFromAssetManager(type)
-        });
+            this.interactiveObjects.set(id, {
+                id,
+                type,
+                x: obj.x ?? 0,
+                y: obj.y ?? 0,
+                width: obj.width ?? 32,
+                height: obj.height ?? 32,
+                destroyed: false,
+                health: hp,
+                maxHealth: obj.maxHealth || hp,
+                drops: obj.drops || this.getDropsFromAssetManager(type)
+            });
+        } catch (err) {
+            handleError(err, "itemSystem:registerInteractiveObject", `obj id: ${obj?.id || obj?.objectId || 'unknown'}`);
+        }
     }
 
     /**
@@ -390,13 +406,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         if (window.theWorld) {
             const registerWorldObjects = () => {
-                if (window.currentPlayer) {
-                    const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-                    itemSystem.registerInteractiveObjects(objects);
+                try {
+                    if (window.currentPlayer) {
+                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                        itemSystem.registerInteractiveObjects(objects);
 
-                    if (itemSystem.interactiveObjects.size === 0) {
-                        setTimeout(registerWorldObjects, 500);
+                        if (itemSystem.interactiveObjects.size === 0) {
+                            setTimeout(registerWorldObjects, 500);
+                        }
                     }
+                } catch (err) {
+                    handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
                 }
             };
             registerWorldObjects();
@@ -411,9 +431,13 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 document.addEventListener('playerReady', () => {
     setTimeout(() => {
-        if (window.theWorld && window.currentPlayer) {
-            const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-            itemSystem.registerInteractiveObjects(objects);
+        try {
+            if (window.theWorld && window.currentPlayer) {
+                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                itemSystem.registerInteractiveObjects(objects);
+            }
+        } catch (err) {
+            handleError(err, "itemSystem:playerReady_Init");
         }
     }, 500);
 });
