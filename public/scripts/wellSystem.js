@@ -112,12 +112,24 @@ export const wellSystem = {
     const wells = world?.placedWells || [];
     const index = wells.findIndex((w) => w.id === id);
 
-    if (index === -1) return false;
+    // track both sources of truth
+    const hadWorld = index !== -1;
+    const hadLocal = Boolean(wellState.wells[id]);
 
-    wells.splice(index, 1);
-    delete wellState.wells[id];
+    // only return false if not found in either source
+    if (!hadWorld && !hadLocal) return false;
 
-    // remover hitboxes de colisão
+    // conditionally remove from world.placedWells
+    if (hadWorld) {
+      wells.splice(index, 1);
+    }
+
+    // always delete from local registry if it existed
+    if (hadLocal) {
+      delete wellState.wells[id];
+    }
+
+    // always perform hitbox cleanup
     if (collisionSystem) {
       try {
         collisionSystem.removeHitbox?.(id);
