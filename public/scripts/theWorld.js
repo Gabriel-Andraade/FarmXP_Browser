@@ -5,7 +5,7 @@
  * culling optimization, and Y-sorting for proper depth rendering.
  * @module TheWorld
  */
-
+import { handleError, handleWarn } from "./errorHandler.js";
 import { assets } from "./assetManager.js";
 import { worldGenerator, WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
@@ -102,7 +102,9 @@ export function placeWell(a, b, c) {
       if (id) wellObject = window.wellSystem.placeWell(id, x, y);
       else wellObject = window.wellSystem.placeWell(x, y, opts);
     }
-  } catch (err) { /* ignore */ }
+  } catch (err) {
+    handleWarn("Failed to place well via wellSystem", "theWorld:placeWell", { id, x, y, err });
+  }
 
   if (!wellObject) {
     const wid = id || `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -139,7 +141,9 @@ export function placeWell(a, b, c) {
         wellObject
       );
     }
-  } catch (err) { /* ignore */ }
+  } catch (err) {
+    handleWarn("Failed to add hitbox for well", "theWorld:placeWell:addHitbox", { wellId: wellObject.id, err });
+  }
 
   markWorldChanged();
   return wellObject;
@@ -180,7 +184,9 @@ export function addAnimal(assetName, img, x, y) {
         animal
       );
     }
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to add hitbox for animal", "theWorld:addAnimal", { animalId: animal.id, assetName, err: e });
+  }
 
   markWorldChanged();
   return animal;
@@ -202,7 +208,9 @@ export function updateAnimals() {
             collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
           }
         }
-      } catch (err) { /* ignore */ }
+      } catch (err) {
+        handleWarn("Failed to update hitbox for animal", "theWorld:updateAnimals", { animalId: animal.id, err });
+      }
     }
   });
 }
@@ -376,7 +384,9 @@ export function getSortedWorldObjects(player) {
       draw: (ctx) => {
         try {
           animal.draw(ctx, camera);
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+          handleWarn("Failed to draw animal", "theWorld:getSortedWorldObjects:animalDraw", { animalId: animal.id, err: e });
+        }
       }
     });
   }
@@ -501,7 +511,9 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
 
   try {
     if (camera?.isInViewport && !camera.isInViewport(obj.x || 0, obj.y || 0, objWidth, objHeight)) return;
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to check viewport for object", "theWorld:drawSingleObject:viewport", { err: e });
+  }
 
   let actualWidth, actualHeight;
   if (assetCategory === "trees") {
@@ -523,6 +535,7 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   try {
     screenPos = camera.worldToScreen(obj.x || 0, obj.y || 0);
   } catch (e) {
+    handleWarn("Failed to convert world to screen for object", "theWorld:drawSingleObject:worldToScreen", { err: e });
     screenPos = { x: obj.x || 0, y: obj.y || 0 };
   }
 
@@ -549,7 +562,9 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
     try {
       ctx.drawImage(img, adjustedX, adjustedY, drawW, drawH);
       return;
-    } catch (err) { /* ignore and fallback */ }
+    } catch (err) {
+      handleWarn("Failed to draw object image", "theWorld:drawSingleObject:drawImage", { assetCategory, err });
+    }
   }
 
   if (typeof drawFallback === "function") {
@@ -595,12 +610,15 @@ function drawBuilding(ctx, building) {
 
   try {
     if (camera?.isInViewport && !camera.isInViewport(building.x || 0, building.y || 0, bWidth, bHeight)) return;
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to check viewport for building", "theWorld:drawBuilding:viewport", { buildingId: building.id, err: e });
+  }
 
   let screenPos;
   try {
     screenPos = camera.worldToScreen(building.x || 0, building.y || 0);
   } catch (e) {
+    handleWarn("Failed to convert world to screen for building", "theWorld:drawBuilding:worldToScreen", { buildingId: building.id, err: e });
     screenPos = { x: building.x || 0, y: building.y || 0 };
   }
 
@@ -613,7 +631,12 @@ function drawBuilding(ctx, building) {
   if (building.originalType === "chest") {
     const chestImg = assets.furniture?.chest?.img;
     if (chestImg && chestImg.src && !chestImg.src.includes("data:,")) {
-      try { ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); return; } catch (e) { /* ignore */ }
+      try { 
+        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); 
+        return; 
+      } catch (e) {
+        handleWarn("Failed to draw chest image", "theWorld:drawBuilding:chestImage", { buildingId: building.id, err: e });
+      }
     }
     drawSimpleChest(ctx, drawX, drawY, drawW, drawH);
     return;
@@ -625,6 +648,7 @@ function drawBuilding(ctx, building) {
       try {
         ctx.drawImage(wellImg, drawX, drawY, drawW, drawH);
       } catch (err) {
+        handleWarn("Failed to draw well image", "theWorld:drawBuilding:wellImage", { buildingId: building.id, err });
         ctx.fillStyle = "#4a6b8a";
         ctx.fillRect(drawX, drawY, drawW, drawH);
         ctx.strokeStyle = "#2d4052";
@@ -707,7 +731,9 @@ function drawHouseRoof(ctx, house) {
 
   try {
     if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to check viewport for house roof", "theWorld:drawHouseRoof:viewport", { houseId: house.id, err: e });
+  }
 
   const img = assets.buildings?.house?.[0]?.img;
   const zoom = CAMERA_ZOOM;
@@ -716,6 +742,7 @@ function drawHouseRoof(ctx, house) {
   try {
     screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
   } catch (e) {
+    handleWarn("Failed to convert world to screen for house roof", "theWorld:drawHouseRoof:worldToScreen", { houseId: house.id, err: e });
     screenPos = { x: house.x || 0, y: house.y || 0 };
   }
 
@@ -743,7 +770,9 @@ function drawHouseWalls(ctx, house) {
 
   try {
     if (camera?.isInViewport && !camera.isInViewport(house.x || 0, house.y || 0, hWidth, hHeight)) return;
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to check viewport for house walls", "theWorld:drawHouseWalls:viewport", { houseId: house.id, err: e });
+  }
 
   const img = assets.buildings?.house?.[0]?.img;
   const zoom = CAMERA_ZOOM;
@@ -752,6 +781,7 @@ function drawHouseWalls(ctx, house) {
   try {
     screenPos = camera.worldToScreen(house.x || 0, house.y || 0);
   } catch (e) {
+    handleWarn("Failed to convert world to screen for house walls", "theWorld:drawHouseWalls:worldToScreen", { houseId: house.id, err: e });
     screenPos = { x: house.x || 0, y: house.y || 0 };
   }
 
@@ -814,13 +844,35 @@ export function initializeWorld() {
   thickets.push(...(worldObjects.thickets || []));
   houses.push(...(worldObjects.houses || []));
 
-  for (const tree of trees) { try { collisionSystem.addHitbox(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height); } catch (e) {} }
-  for (const rock of rocks) { try { collisionSystem.addHitbox(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height); } catch (e) {} }
-  for (const thicket of thickets) { try { collisionSystem.addHitbox(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height); } catch (e) {} }
+  for (const tree of trees) { 
+    try { 
+      collisionSystem.addHitbox(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height); 
+    } catch (e) {
+      handleWarn("Failed to add hitbox for tree", "theWorld:initializeWorld:treeHitbox", { treeId: tree.id, err: e });
+    }
+  }
+  for (const rock of rocks) { 
+    try { 
+      collisionSystem.addHitbox(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height); 
+    } catch (e) {
+      handleWarn("Failed to add hitbox for rock", "theWorld:initializeWorld:rockHitbox", { rockId: rock.id, err: e });
+    }
+  }
+  for (const thicket of thickets) { 
+    try { 
+      collisionSystem.addHitbox(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height); 
+    } catch (e) {
+      handleWarn("Failed to add hitbox for thicket", "theWorld:initializeWorld:thicketHitbox", { thicketId: thicket.id, err: e });
+    }
+  }
 
   for (const house of houses) {
     if (house.type === "HOUSE_WALLS") {
-      try { collisionSystem.addHitbox(house.id, "HOUSE_WALLS", house.x, house.y, house.width, house.height); } catch (e) {}
+      try { 
+        collisionSystem.addHitbox(house.id, "HOUSE_WALLS", house.x, house.y, house.width, house.height); 
+      } catch (e) {
+        handleWarn("Failed to add hitbox for house walls", "theWorld:initializeWorld:houseHitbox", { houseId: house.id, err: e });
+      }
     }
   }
 
@@ -836,7 +888,11 @@ export function initializeWorld() {
         name: w.name || "Poço"
       };
       placedWells.push(wellObj);
-      try { collisionSystem.addHitbox(wellObj.id, "WELL", wellObj.x, wellObj.y, wellObj.width, wellObj.height); } catch (e) {}
+      try { 
+        collisionSystem.addHitbox(wellObj.id, "WELL", wellObj.x, wellObj.y, wellObj.width, wellObj.height); 
+      } catch (e) {
+        handleWarn("Failed to add hitbox for generated well", "theWorld:initializeWorld:wellHitbox", { wellId: wellObj.id, err: e });
+      }
     }
   }
 
@@ -880,7 +936,11 @@ export function objectDestroyed(objOrId) {
   removed = removeFromArray(placedWells) || removed;
   removed = removeFromArray(animals) || removed;
 
-  try { collisionSystem.removeHitbox(id); } catch (err) { /* ignore */ }
+  try { 
+    collisionSystem.removeHitbox(id); 
+  } catch (err) {
+    handleWarn("Failed to remove hitbox", "theWorld:objectDestroyed", { id, err });
+  }
 
   markWorldChanged();
 
@@ -915,12 +975,15 @@ export function drawBackground(ctx) {
     ctx.fillStyle = "#5a9367";
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   } catch (e) {
+    handleWarn("Failed to draw background fill", "theWorld:drawBackground:fill", { err: e });
     return;
   }
 
   try {
     drawGrass(ctx);
-  } catch (e) { /* ignore */ }
+  } catch (e) {
+    handleWarn("Failed to draw grass", "theWorld:drawBackground:grass", { err: e });
+  }
 }
 
 function drawGrass(ctx) {
@@ -1026,7 +1089,9 @@ window.addWorldObject = function(objectData) {
 
   try {
     collisionSystem.addHitbox(building.id, collisionType, building.x, building.y, building.width, building.height, building);
-  } catch (err) { /* ignore */ }
+  } catch (err) {
+    handleWarn("Failed to add hitbox for world object", "theWorld:addWorldObject", { objectId, collisionType, err });
+  }
 
   markWorldChanged();
 
@@ -1058,7 +1123,9 @@ export function renderWorld(ctx, player) {
   objects.forEach(obj => {
     try {
       obj.draw(ctx);
-    } catch (err) { /* ignore drawing errors */ }
+    } catch (err) {
+      handleWarn("Failed to draw world object", "theWorld:renderWorld", { objId: obj.id, objType: obj.type, err });
+    }
   });
 
   drawBuildPreview(ctx);
