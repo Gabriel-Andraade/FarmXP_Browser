@@ -37,7 +37,9 @@ const gameState = {
  */
 export function registerSystem(systemName, systemInstance) {
   gameState.systems[systemName] = systemInstance;
-  console.log(`✅ Registered system: ${systemName}`);
+  if (getDebugFlag('debug')) {
+    console.log(`✅ Registered system: ${systemName}`);
+  }
   return systemInstance;
 }
 
@@ -64,10 +66,10 @@ export function setObject(name, value) {
 /**
  * Get a game object by name
  * @param {string} name - Object name
- * @returns {*} The object or undefined
+ * @returns {*} The object or null
  */
 export function getObject(name) {
-  return gameState.objects[name];
+  return gameState.objects[name] ?? null;
 }
 
 /**
@@ -94,7 +96,7 @@ export function getDebugFlag(flag) {
  * @param {boolean} value - Flag value
  */
 export function setGameFlag(flag, value) {
-  if (gameState.flags.hasOwnProperty(flag)) {
+  if (Object.prototype.hasOwnProperty.call(gameState.flags, flag)) {
     gameState.flags[flag] = value;
   }
 }
@@ -137,7 +139,7 @@ export function exposeDebug(extra = {}) {
     objects: gameState.objects,
     debugFlags: gameState.debug,
     flags: gameState.flags,
-    ...extra,
+    extra, // Namespaced to prevent override of core properties
   };
 }
 
@@ -148,7 +150,8 @@ export function exposeDebug(extra = {}) {
 export function installLegacyGlobals() {
   if (typeof window === "undefined") return;
 
-  const legacyMappings = {
+  // System mappings: window.XxxSystem -> gameState.systems['xxx']
+  const legacySystemMappings = {
     playerSystem: 'player',
     inventorySystem: 'inventory',
     currencyManager: 'currency',
@@ -161,9 +164,13 @@ export function installLegacyGlobals() {
     storageSystem: 'storage',
     wellSystem: 'well',
     houseSystem: 'house',
+    playerHUD: 'hud',
+    worldUI: 'worldUI',
+    animalUiPanel: 'animalUI',
+    animalUI: 'animalUI',
   };
 
-  for (const [windowKey, systemKey] of Object.entries(legacyMappings)) {
+  for (const [windowKey, systemKey] of Object.entries(legacySystemMappings)) {
     Object.defineProperty(window, windowKey, {
       get() {
         return gameState.systems[systemKey];
@@ -175,31 +182,32 @@ export function installLegacyGlobals() {
     });
   }
 
-  // Legacy object mappings
-  Object.defineProperty(window, 'theWorld', {
-    get() { return gameState.objects.world; },
-    set(value) { gameState.objects.world = value; },
-    configurable: true,
-  });
+  // Object mappings: window.xxx -> gameState.objects['xxx']
+  const legacyObjectMappings = {
+    theWorld: 'world',
+    currentPlayer: 'currentPlayer',
+    camera: 'camera',
+    canvas: 'canvas',
+    ctx: 'ctx',
+    keys: 'keys',
+  };
 
-  Object.defineProperty(window, 'currentPlayer', {
-    get() { return gameState.objects.currentPlayer; },
-    set(value) { gameState.objects.currentPlayer = value; },
-    configurable: true,
-  });
+  for (const [windowKey, objectKey] of Object.entries(legacyObjectMappings)) {
+    Object.defineProperty(window, windowKey, {
+      get() { return gameState.objects[objectKey]; },
+      set(value) { gameState.objects[objectKey] = value; },
+      configurable: true,
+    });
+  }
 
-  Object.defineProperty(window, 'camera', {
-    get() { return gameState.objects.camera; },
-    set(value) { gameState.objects.camera = value; },
-    configurable: true,
-  });
-
+  // Debug flag mappings
   Object.defineProperty(window, 'DEBUG_HITBOXES', {
     get() { return getDebugFlag('hitboxes'); },
     set(value) { setDebugFlag('hitboxes', value); },
     configurable: true,
   });
 
+  // Game state flag mappings
   Object.defineProperty(window, 'interactionsBlocked', {
     get() { return gameState.flags.interactionsBlocked; },
     set(value) { gameState.flags.interactionsBlocked = value; },
@@ -209,9 +217,12 @@ export function installLegacyGlobals() {
   console.log('🔗 Legacy globals bridge installed');
 }
 
-// Expose gameState for debugging in console (optional)
+// Expose gameState for debugging in console (lazy - only when ?debug=1)
 if (typeof window !== 'undefined') {
-  window.__gameState = gameState;
+  Object.defineProperty(window, '__gameState', {
+    get() { return getDebugFlag('debug') ? gameState : undefined; },
+    configurable: true,
+  });
 }
 
 export default gameState;

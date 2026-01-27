@@ -10,6 +10,7 @@ import { PlayerSystem } from "./thePlayer/playerSystem.js";
 import { assets } from "./assetManager.js";
 import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
+import { registerSystem, getObject } from "./gameState.js";
 
 /**
  * Configurações do sistema de poços
@@ -88,7 +89,8 @@ export const wellSystem = {
         wellState.wells[id] = wellObject;
 
         try {
-            window.markWorldChanged?.();
+            const world = getObject('world');
+            (world?.markWorldChanged || window.markWorldChanged)?.();
         } catch {}
 
         try {
@@ -106,7 +108,10 @@ export const wellSystem = {
 
         try { collisionSystem.removeHitbox(id); } catch {}
         try { collisionSystem.interactionHitboxes.delete(id); } catch {}
-        try { window.markWorldChanged?.(); } catch {}
+        try {
+            const world = getObject('world');
+            (world?.markWorldChanged || window.markWorldChanged)?.();
+        } catch {}
 
         document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
         return true;
@@ -315,5 +320,6 @@ export const wellSystem = {
     init() {}
 };
 
-window.wellSystem = wellSystem;
+// Registrar no gameState (legacy window.wellSystem tratado por installLegacyGlobals)
+registerSystem('well', wellSystem);
 wellSystem.init();

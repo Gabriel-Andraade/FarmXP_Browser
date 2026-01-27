@@ -13,6 +13,7 @@ import { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from ".
 import { collisionSystem } from "./collisionSystem.js";
 import { AnimalEntity } from "./animal/animalAI.js";
 import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
+import { setObject, getDebugFlag, getSystem } from "./gameState.js";
 
 // =============================================================================
 // WORLD OBJECT ARRAYS
@@ -98,9 +99,10 @@ export function placeWell(a, b, c) {
 
   let wellObject = null;
   try {
-    if (window.wellSystem && typeof window.wellSystem.placeWell === "function") {
-      if (id) wellObject = window.wellSystem.placeWell(id, x, y);
-      else wellObject = window.wellSystem.placeWell(x, y, opts);
+    const wellSystem = getSystem('well');
+    if (wellSystem && typeof wellSystem.placeWell === "function") {
+      if (id) wellObject = wellSystem.placeWell(id, x, y);
+      else wellObject = wellSystem.placeWell(x, y, opts);
     }
   } catch (err) { /* ignore */ }
 
@@ -663,7 +665,7 @@ function drawBuilding(ctx, building) {
     }
   }
 
-  if (window.DEBUG_HITBOXES && building.originalType !== "chest") {
+  if (getDebugFlag('hitboxes') && building.originalType !== "chest") {
     ctx.fillStyle = "#fff";
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
@@ -689,8 +691,9 @@ function drawBuilding(ctx, building) {
  * @returns {void}
  */
 export function drawBuildPreview(ctx) {
-  if (window.BuildSystem && window.BuildSystem.active) {
-    window.BuildSystem.drawPreview(ctx);
+  const BuildSystem = getSystem('build');
+  if (BuildSystem && BuildSystem.active) {
+    BuildSystem.drawPreview(ctx);
   }
 }
 
@@ -1038,18 +1041,23 @@ window.addWorldObject = function(objectData) {
 };
 
 /* sobrescreve salvamento para excluir baús se BuildSystem existir */
-if (window.BuildSystem && window.BuildSystem.saveBuildings) {
-  const originalSaveBuildings = window.BuildSystem.saveBuildings;
-  window.BuildSystem.saveBuildings = function(buildings) {
-    const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
-    return originalSaveBuildings.call(this, buildingsToSave);
-  };
-}
+// Note: BuildSystem override será aplicado após main.js registrar o sistema
+setTimeout(() => {
+  const BuildSystem = getSystem('build');
+  if (BuildSystem && BuildSystem.saveBuildings) {
+    const originalSaveBuildings = BuildSystem.saveBuildings;
+    BuildSystem.saveBuildings = function(buildings) {
+      const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
+      return originalSaveBuildings.call(this, buildingsToSave);
+    };
+  }
+}, 0);
 
 /* função principal de renderização do mundo */
 export function renderWorld(ctx, player) {
-  if (window.BuildSystem) {
-    window.BuildSystem._gridDrawnThisFrame = false;
+  const BuildSystem = getSystem('build');
+  if (BuildSystem) {
+    BuildSystem._gridDrawnThisFrame = false;
   }
 
   drawBackground(ctx);
@@ -1065,7 +1073,7 @@ export function renderWorld(ctx, player) {
 }
 
 /* export público do world para outros módulos */
-window.theWorld = {
+const theWorld = {
   addWorldObject: window.addWorldObject || null,
   placedBuildings,
   placedWells,
@@ -1091,3 +1099,6 @@ window.theWorld = {
   GAME_WIDTH,
   GAME_HEIGHT
 };
+
+// Registrar no gameState (legacy window.theWorld é tratado por installLegacyGlobals)
+setObject('world', theWorld);

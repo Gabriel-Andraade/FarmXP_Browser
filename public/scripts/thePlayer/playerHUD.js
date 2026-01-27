@@ -1,5 +1,6 @@
 
 import { currencyManager } from "../currencyManager.js";
+import { getSystem } from "../gameState.js";
 
 export class PlayerHUD {
     constructor() {
@@ -134,8 +135,9 @@ export class PlayerHUD {
 
     // TRECHO INSERIDO: atualiza valores no HUD pegando do playerSystem
     updateNeedsFromSystem() {
-        if (!window.playerSystem) return;
-        const needs = window.playerSystem.getNeeds();
+        const playerSystem = getSystem('player');
+        if (!playerSystem) return;
+        const needs = playerSystem.getNeeds();
         
         // 🛠️ CORREÇÃO AQUI: Não usar o operador OR (||) pois 0 é falsy.
         // Se usar `needs.hunger || 100`, quando for 0 ele exibe 100.
@@ -151,9 +153,10 @@ export class PlayerHUD {
         this.setHUDValue('hudPlayerName', this.currentPlayer.name || "Aventureiro");
         this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
         this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
-        
+
         // 🆕 USAR VALORES DO PLAYER SYSTEM
-        const needs = window.playerSystem?.getNeeds();
+        const playerSystem = getSystem('player');
+        const needs = playerSystem?.getNeeds();
 
         // 🛠️ CORREÇÃO PRINCIPAL AQUI (USANDO ??)
         // O operador ?? verifica se é null ou undefined. Se for 0, ele mantém o 0.
@@ -208,13 +211,15 @@ export class PlayerHUD {
 
 // 🧩 Listeners globais para equipar/desequipar
 document.addEventListener('itemEquipped', (e) => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(e.detail.item);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(e.detail.item);
     }
 });
 
 document.addEventListener('itemUnequipped', () => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(null);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(null);
     }
 });

@@ -6,6 +6,7 @@
  */
 
 import { items } from './item.js';
+import { registerSystem } from './gameState.js';
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -80,11 +81,11 @@ export class StorageSystem {
   }
 
   /**
-   * Inicializa o sistema e expõe globalmente
+   * Inicializa o sistema e registra no gameState
    * @returns {void}
    */
   init() {
-    window.storageSystem = this;
+    registerSystem('storage', this);
   }
 
   /**

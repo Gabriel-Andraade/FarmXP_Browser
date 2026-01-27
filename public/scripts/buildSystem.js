@@ -10,7 +10,6 @@ import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
-import { wellSystem } from "./wellSystem.js";
 import { getObject, getSystem } from "./gameState.js";
 
 /**
@@ -440,9 +439,12 @@ export const BuildSystem = {
                 };
 
                 try {
-                    const wellObject = typeof theWorld.placeWell === 'function'
-                        ? theWorld.placeWell(pos.x, pos.y, wellBuildingData)
-                        : (wellSystem ? wellSystem.placeWell(wellId, pos.x, pos.y) : null);
+                    let wellObject = null;
+                    if (typeof theWorld.placeWell === 'function') {
+                        wellObject = theWorld.placeWell(pos.x, pos.y, wellBuildingData);
+                    } else if (wellSystem) {
+                        wellObject = wellSystem.placeWell(wellId, pos.x, pos.y);
+                    }
 
                     if (wellObject) {
                         inventorySystem.removeItem(this.selectedItem.id, 1);
@@ -502,31 +504,28 @@ export const BuildSystem = {
     },
 
     saveBuildings(objects, key = this.STORAGE_KEY_BUILDINGS) {
-        const storageSystem = getSystem('storage');
-        if (storageSystem) {
-            try {
-                const dataToSave = objects.map(b => {
-                    const { draw, onInteract, getHitbox, ...rest } = b;
-                    return rest;
-                });
-                storageSystem.set(key, dataToSave);
-            } catch (e) {
-                console.error(`erro ao salvar ${key}:`, e);
-            }
+        try {
+            const dataToSave = objects.map(b => {
+                const { draw, onInteract, getHitbox, ...rest } = b;
+                return rest;
+            });
+            localStorage.setItem(key, JSON.stringify(dataToSave));
+        } catch (e) {
+            console.error(`erro ao salvar ${key}:`, e);
         }
     },
 
     loadBuildings(key = this.STORAGE_KEY_BUILDINGS) {
-        const storageSystem = getSystem('storage');
-        if (storageSystem) {
-            try {
-                const data = storageSystem.get(key);
-                if (data && Array.isArray(data)) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data)) {
                     return data;
                 }
-            } catch (e) {
-                console.error(`erro ao carregar ${key}:`, e);
             }
+        } catch (e) {
+            console.error(`erro ao carregar ${key}:`, e);
         }
         return [];
     },

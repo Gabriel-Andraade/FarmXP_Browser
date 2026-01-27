@@ -11,6 +11,7 @@
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
+import { registerSystem, setObject, getObject, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
@@ -412,37 +413,51 @@ function setupSleepListeners() {
 
 /**
  * Expõe sistemas ao escopo global (window) para acesso de outros módulos
- * Carrega sistemas essenciais imediatamente e secundários em background
+ * Usa gameState para registro centralizado e instala bridge de compatibilidade
  * Habilita interação global após conclusão
- * Cria função debug para adicionar itens
  * @async
  * @returns {Promise<void>}
  */
 async function exposeGlobals() {
-    console.log("Expondo globais...");
-    
+    console.log("Registrando sistemas no gameState...");
+
     try {
-        window.canvas = canvas;
-        window.ctx = ctx;
-        window.currentPlayer = currentPlayer;
-        window.keys = keys;
+        // Registrar objetos do jogo
+        setObject('canvas', canvas);
+        setObject('ctx', ctx);
+        setObject('currentPlayer', currentPlayer);
+        setObject('keys', keys);
 
-        window.currencyManager = currencyManager;
-        window.merchantSystem = merchantSystem;
-        window.inventorySystem = inventorySystem;
-        window.playerSystem = playerSystem;
+        // Registrar sistemas principais
+        if (currencyManager) registerSystem('currency', currencyManager);
+        if (merchantSystem) registerSystem('merchant', merchantSystem);
+        if (inventorySystem) registerSystem('inventory', inventorySystem);
+        if (playerSystem) registerSystem('player', playerSystem);
 
-        window.itemSystem = itemSystem;
-        window.worldUI = worldUI;
-        window.BuildSystem = BuildSystem;
+        // Registrar sistemas de interação
+        if (itemSystem) registerSystem('item', itemSystem);
+        if (worldUI) registerSystem('worldUI', worldUI);
+        if (BuildSystem) registerSystem('build', BuildSystem);
 
-        window.WeatherSystem = WeatherSystem;
+        // Registrar sistema de clima
+        if (WeatherSystem) registerSystem('weather', WeatherSystem);
+
+        // Funções de clima ainda precisam ser expostas globalmente para compatibilidade
         window.drawWeatherEffects = drawWeatherEffects;
         window.drawWeatherUI = drawWeatherUI;
 
-        console.log("Globais expostos");
-    } catch (error) { 
-        console.warn("Erro ao expor globais:", error); 
+        // Instalar bridge de compatibilidade para window.* acessos legados
+        installLegacyGlobals();
+
+        // Inicializar flags de debug via URL
+        initDebugFlagsFromUrl();
+
+        // Expor debug se flag estiver habilitada
+        exposeDebug();
+
+        console.log("Sistemas registrados no gameState");
+    } catch (error) {
+        console.warn("Erro ao registrar sistemas:", error);
     }
 
     interactionEnabled = true;
@@ -660,10 +675,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.log("Carregando estilos CSS...");
         await cssManager.loadAll();
         console.log("Todos os estilos CSS carregados");
-        
+
         console.log("Criando PlayerHUD...");
-        window.playerHUD = new PlayerHUD();
-        console.log("PlayerHUD criado");
+        const hud = new PlayerHUD();
+        registerSystem('hud', hud);
+        console.log("PlayerHUD criado e registrado");
         
         setupSleepListeners();
         
@@ -953,11 +969,6 @@ window.debugItem = async (id) => {
     console.log(`Debug: Adicionado ${item.name}`);
 };
 
-/**
- * Flag global para debug de hitboxes
- * Quando true, renderiza todas as hitboxes visualmente no jogo
- * @type {boolean}
- */
-window.DEBUG_HITBOXES = false;
+// DEBUG_HITBOXES agora é gerenciado via gameState.js (use ?hitboxes=1 na URL)
 
 console.log("main.js completo carregado!");
