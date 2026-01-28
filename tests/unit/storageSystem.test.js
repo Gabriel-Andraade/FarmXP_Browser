@@ -23,6 +23,12 @@ class TestStorageSystem {
         maxStacks: 20,
         color: "#118AB2"
       },
+      animals: {
+        name: "Comida Animal",
+        itemTypes: ["animal_food"],
+        maxStacks: 10,
+        color: "#FF9E64"
+      },
       food: {
         name: "Comida",
         itemTypes: ["food"],
@@ -48,6 +54,7 @@ class TestStorageSystem {
     const map = {
       tool: "tools",
       food: "food",
+      animal_food: "animals",
       seed: "construction",
       construction: "construction",
       decoration: "construction",
@@ -166,6 +173,7 @@ describe('StorageSystem', () => {
     test('should initialize with empty storage', () => {
       expect(storage.storage.tools).toEqual([]);
       expect(storage.storage.construction).toEqual([]);
+      expect(storage.storage.animals).toEqual([]);
       expect(storage.storage.food).toEqual([]);
       expect(storage.storage.resources).toEqual([]);
     });
@@ -196,6 +204,10 @@ describe('StorageSystem', () => {
 
     test('should map crop to resources category', () => {
       expect(storage.mapItemTypeToCategory('crop')).toBe('resources');
+    });
+
+    test('should map animal_food to animals category', () => {
+      expect(storage.mapItemTypeToCategory('animal_food')).toBe('animals');
     });
 
     test('should default unknown types to resources', () => {
