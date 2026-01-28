@@ -9,7 +9,7 @@ import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { assets } from "./assetManager.js";
 import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
-import { registerSystem, getObject } from "./gameState.js";
+import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 
 /**
@@ -87,8 +87,13 @@ export const wellSystem = {
 
     wellState.wells[id] = wellObject;
 
-    // notifica mudança no mundo sem try/catch 
+    // Register in world.placedWells if not already present
     const world = getObject("world");
+    if (world?.placedWells && !world.placedWells.find(w => w.id === id)) {
+      world.placedWells.push(wellObject);
+    }
+
+    // notifica mudança no mundo
     (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
 
     //  se algum listener quebrar
@@ -321,9 +326,13 @@ if (typeof collisionSystem?.removeHitbox === "function") {
   },
 
   drinkFromWell() {
-    if (wellState.waterLevel < 5) return;
+    if (wellState.waterLevel < 5) {
+      console.warn("⚠️ Água insuficiente no poço");
+      return;
+    }
 
-    window.playerSystem?.restoreNeeds?.(0, WELL_CONFIG.THIRST_RESTORE, 0);
+    const playerSystem = getSystem('player');
+    playerSystem?.restoreNeeds?.(0, WELL_CONFIG.THIRST_RESTORE, 0);
     wellState.waterLevel -= 5;
     this.updateUI();
   },
@@ -341,8 +350,15 @@ if (typeof collisionSystem?.removeHitbox === "function") {
       }
     }
 
-    if (!catFound) return;
-    if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) return;
+    if (!catFound) {
+      console.warn("⚠️ Nenhuma garrafa vazia no inventário");
+      return;
+    }
+
+    if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
+      console.warn("⚠️ Água insuficiente no poço");
+      return;
+    }
 
     inventorySystem.removeItem(catFound, WELL_CONFIG.BOTTLE_EMPTY_ID, 1);
     inventorySystem.addItem(catFound, WELL_CONFIG.BOTTLE_WATER_ID, 1);
