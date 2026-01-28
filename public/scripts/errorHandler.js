@@ -1,3 +1,5 @@
+import { logger } from './logger.js';
+
 const seen = new Set();
 
 /**
@@ -13,7 +15,7 @@ function isDebugEnabled() {
     if (url.searchParams.get("debug") === "1") return true;
   } catch (err) {
     if (globalThis.location?.hostname === "localhost") {
-      console.warn("[errorHandler:isDebugEnabled] falha ao ler location.href", err);
+      logger.warn("[errorHandler:isDebugEnabled] falha ao ler location.href", err);
     }
   }
 
@@ -38,8 +40,8 @@ function toPayload(extra) {
  */
 export function handleWarn(message, context = "unknown", extra) {
   if (!isDebugEnabled()) return;
-  if (extra !== undefined) console.warn(`[${context}] ${message}`, toPayload(extra));
-  else console.warn(`[${context}] ${message}`);
+  if (extra !== undefined) logger.warn(`[${context}] ${message}`, toPayload(extra));
+  else logger.warn(`[${context}] ${message}`);
 }
 
 /**
@@ -48,10 +50,10 @@ export function handleWarn(message, context = "unknown", extra) {
 export function handleError(error, context = "unknown", message) {
   if (!isDebugEnabled()) return;
 
-  if (message) console.error(`[${context}] ${message}`, error);
-  else console.error(`[${context}]`, error);
+  if (message) logger.error(`[${context}] ${message}`, error);
+  else logger.error(`[${context}]`, error);
 
-  if (error?.stack) console.error(error.stack);
+  if (error?.stack) logger.error(error.stack);
 }
 
 /**

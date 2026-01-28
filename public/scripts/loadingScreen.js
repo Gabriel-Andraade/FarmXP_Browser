@@ -1,3 +1,5 @@
+import { logger } from './logger.js';
+
 /**
  * Gerenciador de telas de carregamento do jogo
  * Controla loading inicial, tela de sono e otimizações
@@ -234,8 +236,8 @@ class LoadingScreenManager {
      * @returns {void}
      */
     performFinalOptimizations() {
-        console.log("Executando Garbage Collection simulado e Limpeza de Arrays...");
-        
+        logger.debug("Executando Garbage Collection simulado e Limpeza de Arrays...");
+
         // 1. Limpar arrays de partículas e efeitos
         if (window.WeatherSystem) {
             window.WeatherSystem.rainParticles = [];

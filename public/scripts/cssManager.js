@@ -17,6 +17,7 @@
  * await cssManager.loadOne('custom.css');
  */
 
+
 /**
  * CSS stylesheet loading manager object
  * @type {Object}

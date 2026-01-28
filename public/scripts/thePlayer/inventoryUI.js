@@ -1,4 +1,4 @@
-
+import { logger } from '../logger.js';
 import { inventorySystem } from "./inventorySystem.js";
 import { items } from "../item.js";
 
@@ -571,8 +571,8 @@ export function initInventoryUI() {
   // Expor globalmente
   window.openInventory = openInventoryModal;
   window.closeInventory = closeInventoryModal;
-  
-  console.log('✅ Inventory UI (Shadow DOM) Carregada');
+
+  logger.info('✅ Inventory UI (Shadow DOM) Carregada');
 }
 
 function isInputActive() {
@@ -754,7 +754,7 @@ function updateDetailsPanel(item, qty) {
     buildBtn.className = 'btn-action btn-build';
     buildBtn.innerHTML = '🔨 Construir';
     buildBtn.onclick = async () => {
-      console.log(`🔨 Iniciando construção: ${item.name}`);
+      logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
       
       // Tentar usar o global primeiro (carregado pelo main.js)
@@ -767,11 +767,11 @@ function updateDetailsPanel(item, qty) {
             if (typeof window.BuildSystem.startBuilding === 'function') {
               window.BuildSystem.startBuilding(item);
             } else {
-              console.error('❌ window.BuildSystem.startBuilding não disponível');
+              logger.error('❌ window.BuildSystem.startBuilding não disponível');
               alert('Função de construção não disponível.');
             }
           } catch (err) {
-            console.error('❌ Erro ao usar window.BuildSystem:', err);
+            logger.error('❌ Erro ao usar window.BuildSystem:', err);
             alert('Erro ao entrar no modo de construção. Verifique o console.');
           }
           return;
@@ -790,15 +790,15 @@ function updateDetailsPanel(item, qty) {
              if (typeof window.BuildSystem.startBuilding === 'function') {
                window.BuildSystem.startBuilding(item);
              } else {
-               console.error('❌ BuildSystem carregado mas startBuilding ausente');
+               logger.error('❌ BuildSystem carregado mas startBuilding ausente');
                alert('Função de construção não disponível após carregamento.');
              }
           } else {
-            console.error('❌ BuildSystem não foi exportado corretamente do módulo');
+            logger.error('❌ BuildSystem não foi exportado corretamente do módulo');
             alert('Erro ao entrar no modo de construção. Verifique o console.');
           }
       } catch (error) {
-          console.error('❌ Falha crítica ao iniciar BuildSystem:', error);
+          logger.error('❌ Falha crítica ao iniciar BuildSystem:', error);
           alert('Erro ao entrar no modo de construção. Verifique o console.');
       }
     };
@@ -845,15 +845,15 @@ function updateDetailsPanel(item, qty) {
 
 // Exportar funções de debug
 window.debugInventory = () => {
-  console.log('🔧 Debug Inventory UI:');
-  console.log('- Shadow Root:', shadowRoot ? 'OK' : 'NULL');
-  console.log('- Modal:', modalEl ? 'OK' : 'NULL');
-  console.log('- Active Category:', activeCategory);
-  console.log('- Items in category:', currentItems?.length || 0);
-  
+  logger.debug('🔧 Debug Inventory UI:');
+  logger.debug('- Shadow Root:', shadowRoot ? 'OK' : 'NULL');
+  logger.debug('- Modal:', modalEl ? 'OK' : 'NULL');
+  logger.debug('- Active Category:', activeCategory);
+  logger.debug('- Items in category:', currentItems?.length || 0);
+
   if (modalEl) {
     modalEl.classList.toggle('open');
-    console.log('Modal toggled:', modalEl.classList.contains('open'));
+    logger.debug('Modal toggled:', modalEl.classList.contains('open'));
   }
 };
 

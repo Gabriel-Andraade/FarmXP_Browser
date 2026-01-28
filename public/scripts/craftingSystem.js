@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import { recipes } from "./recipes.js";
 import { items } from "./item.js";
 
@@ -401,19 +402,19 @@ export class CraftingSystem {
      * @returns {void}
      */
     open() {
-        console.log("🎯 CraftingSystem.open() - INICIADO");
+        logger.debug("🎯 CraftingSystem.open() - INICIADO");
         if (this.isOpen) {
-            console.log("⚠️ Crafting já está aberto");
+            logger.debug("⚠️ Crafting já está aberto");
             return;
         }
-        
+
         this.isOpen = true;
-        console.log("🖼️ Criando UI do crafting...");
+        logger.debug("🖼️ Criando UI do crafting...");
 
         this.createCraftingUI();
         this.renderRecipeList();
-        
-        console.log("✅ Crafting aberto com sucesso");
+
+        logger.info("✅ Crafting aberto com sucesso");
     }
 
     /**

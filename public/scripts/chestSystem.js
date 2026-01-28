@@ -1,3 +1,4 @@
+import { logger } from './logger.js';
 import { storageSystem } from './storageSystem.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
@@ -22,7 +23,7 @@ export const chestSystem = {
     init() {
         this.injectStyles();
         this.loadChests();
-        console.log('📦 Sistema de baús inicializado');
+        logger.info('📦 Sistema de baús inicializado');
         return this;
     },
     
@@ -385,11 +386,11 @@ export const chestSystem = {
                 limit: this.slotsPerCategory
             };
         });
-        
+
         this.chests[chestId] = chest;
-        
-        console.log(`✅ Baú adicionado: ${chestId}`, chest);
-        
+
+        logger.debug(`✅ Baú adicionado: ${chestId}`, chest);
+
         // Adicionar ao mundo visual
         this.addChestToWorld(chest);
         
@@ -427,7 +428,7 @@ export const chestSystem = {
                 onInteract: () => this.openChest(chest.id)
             });
         } else {
-            console.warn('⚠️ addWorldObject não disponível');
+            logger.warn('⚠️ addWorldObject não disponível');
         }
     },
     
@@ -448,8 +449,8 @@ export const chestSystem = {
         
         // Criar interface
         this.createChestUI(chest);
-        
-        console.log(`📦 Baú aberto: ${chestId}`);
+
+        logger.debug(`📦 Baú aberto: ${chestId}`);
     },
 
     /**
@@ -985,11 +986,11 @@ export const chestSystem = {
                     originalType: chest.originalType
                 };
             }
-            
+
             localStorage.setItem('farmingXP_chests', JSON.stringify(chestsToSave));
-            console.log('💾 Baús salvos no localStorage');
+            logger.debug('💾 Baús salvos no localStorage');
         } catch (e) {
-            console.error('❌ Erro ao salvar baús:', e);
+            logger.error('❌ Erro ao salvar baús:', e);
         }
     },
     
@@ -1031,11 +1032,11 @@ export const chestSystem = {
                         });
                     }
                 }
-                
-                console.log('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
+
+                logger.info('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
             }
         } catch (e) {
-            console.error('❌ Erro ao carregar baús:', e);
+            logger.error('❌ Erro ao carregar baús:', e);
         }
     },
     
@@ -1051,10 +1052,10 @@ export const chestSystem = {
             if (window.removeWorldObject) {
                 window.removeWorldObject(chestId);
             }
-            
+
             delete this.chests[chestId];
             this.saveChests();
-            console.log(`🗑️ Baú removido: ${chestId}`);
+            logger.debug(`🗑️ Baú removido: ${chestId}`);
         }
     },
     

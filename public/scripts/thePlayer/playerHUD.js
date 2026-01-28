@@ -1,4 +1,4 @@
-
+import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
 
 export class PlayerHUD {
@@ -68,9 +68,9 @@ export class PlayerHUD {
         const gameContainer = document.querySelector('.theGame');
         if (gameContainer) {
             gameContainer.insertAdjacentHTML('afterbegin', hudHTML);
-            console.log('✅ HUD criado com sucesso!');
+            logger.info('✅ HUD criado com sucesso!');
         } else {
-            console.error('❌ Elemento .theGame não encontrado! Criando automaticamente...');
+            logger.error('❌ Elemento .theGame não encontrado! Criando automaticamente...');
             const body = document.body;
             const gameDiv = document.createElement('div');
             gameDiv.className = 'theGame';

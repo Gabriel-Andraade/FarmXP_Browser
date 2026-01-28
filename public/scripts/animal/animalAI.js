@@ -4,6 +4,7 @@
  * Gerencia colisões, animações e navegação pelo mundo
  */
 
+import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
 
 // =========================================================
@@ -140,7 +141,7 @@ export class AnimalEntity {
                 }
             }
         } catch (e) {
-            console.warn("AnimalEntity: erro ao carregar config de colisão", e);
+            logger.warn("AnimalEntity: erro ao carregar config de colisão", e);
         }
         return box;
     }
