@@ -264,13 +264,26 @@ describe('StorageSystem (Production Implementation)', () => {
       expect(info.categoryStats.resources.stackCount).toBe(10); // 500/50 = 10 stacks
     });
 
-    test('should maintain stack order by insertion time', () => {
-      storage.addItem(2, 50); // fills first stack
-      storage.addItem(2, 1);  // forces second stack
+   test('should remove from oldest stacks first (FIFO)', () => {
+      // Fill first stack to max (50) to ensure next add creates a new stack
+      storage.addItem(2, 50); 
+      // Add to second stack
+      storage.addItem(2, 30); 
 
-     const stacks = storage.storage.resources.filter(s => s.itemId === 2);
-      expect(stacks.length).toBe(2);
-      expect(stacks[0].addedAt).toBeLessThanOrEqual(stacks[1].addedAt);
+      // Verify we have 2 stacks before removal
+      const stacksBefore = storage.storage.resources.filter(s => s.itemId === 2);
+      expect(stacksBefore.length).toBe(2);
+
+      // Remove 10 items - should come from the first stack (FIFO)
+      storage.removeItem(2, 10); 
+
+      const stacksAfter = storage.storage.resources.filter(s => s.itemId === 2);
+      expect(stacksAfter.length).toBe(2);
+      
+      // Oldest stack (originally 50) should be reduced
+      expect(stacksAfter[0].quantity).toBe(40);
+      // Newer stack (30) should remain untouched
+      expect(stacksAfter[1].quantity).toBe(30);
     });
 
 
