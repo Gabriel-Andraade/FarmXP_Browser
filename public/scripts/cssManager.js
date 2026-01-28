@@ -17,7 +17,6 @@
  * await cssManager.loadOne('custom.css');
  */
 
-import { logger } from './logger.js';
 
 /**
  * CSS stylesheet loading manager object
