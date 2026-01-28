@@ -11,6 +11,7 @@ import { handleError, handleWarn } from "./errorHandler.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
+import { registerSystem, setObject, getObject, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
@@ -463,35 +464,57 @@ function setupSleepListeners() {
 // EXPOSIÇÃO DE GLOBAIS
 // =============================================================================
 
+/**
+ * Expõe sistemas ao escopo global (window) para acesso de outros módulos
+ * Usa gameState para registro centralizado e instala bridge de compatibilidade
+ * Habilita interação global após conclusão
+ * @async
+ * @returns {Promise<void>}
+ */
 async function exposeGlobals() {
-  console.log("Expondo globais...");
+    console.log("Registrando sistemas no gameState...");
 
-  try {
-    window.canvas = canvas;
-    window.ctx = ctx;
-    window.currentPlayer = currentPlayer;
-    window.keys = keys;
+    try {
+        // Registrar objetos do jogo
+        setObject('canvas', canvas);
+        setObject('ctx', ctx);
+        setObject('currentPlayer', currentPlayer);
+        setObject('keys', keys);
 
-    window.currencyManager = currencyManager;
-    window.merchantSystem = merchantSystem;
-    window.inventorySystem = inventorySystem;
-    window.playerSystem = playerSystem;
+        // Registrar sistemas principais
+        if (currencyManager) registerSystem('currency', currencyManager);
+        if (merchantSystem) registerSystem('merchant', merchantSystem);
+        if (inventorySystem) registerSystem('inventory', inventorySystem);
+        if (playerSystem) registerSystem('player', playerSystem);
 
-    window.itemSystem = itemSystem;
-    window.worldUI = worldUI;
-    window.BuildSystem = BuildSystem;
+        // Registrar sistemas de interação
+        if (itemSystem) registerSystem('item', itemSystem);
+        if (worldUI) registerSystem('worldUI', worldUI);
+        if (BuildSystem) registerSystem('build', BuildSystem);
 
-    window.WeatherSystem = WeatherSystem;
-    window.drawWeatherEffects = drawWeatherEffects;
-    window.drawWeatherUI = drawWeatherUI;
+        // Registrar sistema de clima
+        if (WeatherSystem) registerSystem('weather', WeatherSystem);
 
-    console.log("Globais expostos");
-  } catch (error) {
-    handleWarn("erro ao expor globais", "main:exposeGlobals", error);
-  }
+        // Funções de clima ainda precisam ser expostas globalmente para compatibilidade
+        window.drawWeatherEffects = drawWeatherEffects;
+        window.drawWeatherUI = drawWeatherUI;
 
-  interactionEnabled = true;
-  console.log("Interação Global habilitada");
+        // Instalar bridge de compatibilidade para window.* acessos legados
+        installLegacyGlobals();
+
+        // Inicializar flags de debug via URL
+        initDebugFlagsFromUrl();
+
+        // Expor debug se flag estiver habilitada
+        exposeDebug();
+
+        console.log("Sistemas registrados no gameState");
+    } catch (error) {
+        console.warn("Erro ao registrar sistemas:", error);
+    }
+
+    interactionEnabled = true;
+    console.log("Interação Global habilitada");
 }
 
 // =============================================================================
@@ -675,45 +698,37 @@ document.addEventListener("playerReady", async (e) => {
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
-  canvas = document.getElementById("gameCanvas");
-  if (!canvas) {
-    canvas = document.createElement("canvas");
-    canvas.id = "gameCanvas";
-    document.body.appendChild(canvas);
-  }
+    // Criar canvas se não existir
+    canvas = document.getElementById("gameCanvas");
+    if (!canvas) {
+        canvas = document.createElement("canvas");
+        canvas.id = "gameCanvas";
+        document.body.appendChild(canvas);
+    }
+    
+    // Configurar canvas
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(INTERNAL_WIDTH * dpr);
+    canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
+    ctx = canvas.getContext("2d", { alpha: false });
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    
+    try {
+        console.log("Carregando estilos CSS...");
+        await cssManager.loadAll();
+        console.log("Todos os estilos CSS carregados");
 
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(INTERNAL_WIDTH * dpr);
-  canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
-
-  ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx) {
-    handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
-    return;
-  }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-     // otimizações mobile precisam do ctx inicializado
-  if (IS_MOBILE) {
-    applyMobileOptimizations();
-  }
-
-
-
-  try {
-    console.log("Carregando estilos CSS...");
-    await cssManager.loadAll();
-    console.log("Todos os estilos CSS carregados");
-
-    console.log("Criando PlayerHUD...");
-    window.playerHUD = new PlayerHUD();
-    console.log("PlayerHUD criado");
-
-    setupSleepListeners();
-
-    await initGameBootstrap();
-  } catch (error) {
-    handleError(error, "main:DOMContentLoaded", "erro na inicialização do jogo");
-  }
+        console.log("Criando PlayerHUD...");
+        const hud = new PlayerHUD();
+        registerSystem('hud', hud);
+        console.log("PlayerHUD criado e registrado");
+        
+        setupSleepListeners();
+        
+        await initGameBootstrap();
+    } catch (error) {
+        console.error("Erro na inicialização do jogo:", error);
+    }
 });
 
 // =============================================================================
@@ -927,6 +942,6 @@ window.debugItem = async (id) => {
   console.log(`Debug: Adicionado ${item.name}`);
 };
 
-window.DEBUG_HITBOXES = false;
+// DEBUG_HITBOXES agora é gerenciado via gameState.js (use ?hitboxes=1 na URL)
 
 console.log("main.js completo carregado!");
