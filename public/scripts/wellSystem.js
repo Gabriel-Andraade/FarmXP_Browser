@@ -134,10 +134,11 @@ export const wellSystem = {
       delete wellState.wells[id];
     }
 
-   // hitbox cleanup
-if (typeof collisionSystem?.removeHitbox === "function") {
-  collisionSystem.removeHitbox(id);
-}
+    // hitbox cleanup
+    if (typeof collisionSystem?.removeHitbox === "function") {
+    collisionSystem.removeHitbox(id);
+    }
+    collisionSystem?.interactionHitboxes?.delete(id);
 
 
     // notifica mudança no mundo sem try/catch
@@ -332,8 +333,12 @@ if (typeof collisionSystem?.removeHitbox === "function") {
     }
 
     const playerSystem = getSystem('player');
-    playerSystem?.restoreNeeds?.(0, WELL_CONFIG.THIRST_RESTORE, 0);
-    wellState.waterLevel -= 5;
+    if (playerSystem?.restoreNeeds) {
+      playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
+      wellState.waterLevel -= 5;
+    } else {
+      console.warn("⚠️ Sistema do jogador não disponível");
+    }
     this.updateUI();
   },
 
