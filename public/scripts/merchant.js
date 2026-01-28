@@ -5,6 +5,7 @@
  * @module MerchantSystem
  */
 
+import { logger } from './logger.js';
 import { currencyManager } from "./currencyManager.js";
 import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
@@ -880,12 +881,12 @@ class MerchantSystem {
         if (this.playerStorage === 'inventory') {
             if (window.inventorySystem && window.inventorySystem.removeItem) {
                 if (window.inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
-                    
+
                     // FIX: Usar 'earn' conforme definido em currencyManager.js
                     if (typeof currencyManager.earn === 'function') {
                         currencyManager.earn(totalValue, "Venda ao Mercador");
                     } else {
-                        console.error("Erro: método earn() não encontrado no currencyManager");
+                        logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
                     
                     this.showMessage(`Venda realizada! +$${totalValue}`, 'success');
@@ -915,12 +916,12 @@ class MerchantSystem {
             if (window.inventorySystem && window.inventorySystem.addItem) {
                 // Tentar adicionar ao inventário (usando apenas ID e quantidade para mapeamento automático)
                 if (window.inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
-                    
+
                     // FIX: Usar 'spend' conforme definido em currencyManager.js
                     if (typeof currencyManager.spend === 'function') {
                         currencyManager.spend(totalValue, "Compra do Mercador");
                     } else {
-                        console.error("Erro: método spend() não encontrado no currencyManager");
+                        logger.error("Erro: método spend() não encontrado no currencyManager");
                     }
 
                     this.showMessage(`Compra realizada! -$${totalValue}`, 'success');

@@ -7,6 +7,7 @@
 // =============================================================================
 // IMPORTAÇÕES ESSENCIAIS (não bloqueantes)
 // =============================================================================
+import { logger } from "./logger.js";
 import { handleError, handleWarn } from "./errorHandler.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
@@ -60,7 +61,7 @@ const IS_MOBILE =
  * @returns {void}
  */
 function applyMobileOptimizations() {
-  console.log("Mobile detectado: Aplicando otimizações");
+  logger.info("Mobile detectado: Aplicando otimizações");
 
   // reduz custo de render em alguns dispositivos
   if (ctx && ctx.imageSmoothingEnabled !== undefined) {
@@ -244,7 +245,7 @@ async function loadCriticalSystems() {
  * @returns {Promise<boolean>} True se inicialização bem-sucedida, false caso contrário
  */
 async function initializeCriticalSystems() {
-  console.log("Inicializando sistemas críticos...");
+  logger.info("Inicializando sistemas críticos...");
 
   try {
     const ok = await loadCriticalSystems();
@@ -255,7 +256,7 @@ async function initializeCriticalSystems() {
     if (inventorySystem?.init) inventorySystem.init();
 
     await import("./animal/UiPanel.js");
-    console.log("animal UiPanel carregado");
+    logger.debug("animal UiPanel carregado");
 
     return true;
   } catch (error) {
@@ -279,7 +280,7 @@ async function initializeInventorySystem() {
     const module = await import("./thePlayer/inventorySystem.js");
     inventorySystem = module.inventorySystem;
   }
-  console.log("InventorySystem pronto");
+  logger.debug("InventorySystem pronto");
   return inventorySystem;
 }
 
@@ -381,7 +382,7 @@ function spawnGameAnimals() {
   const animalType = "Bull";
 
   if (assets.animals && assets.animals[animalType]) {
-    console.log(`Spawnando Animais (${animalType})...`);
+    logger.debug(`Spawnando Animais (${animalType})...`);
 
     for (let i = 0; i < 5; i++) {
       const x = 1800 + Math.random() * 400;
@@ -401,7 +402,7 @@ function spawnGameAnimals() {
 
 function setupSleepListeners() {
   document.addEventListener("sleepStarted", () => {
-    console.log("SONO INICIADO: Bloqueando interações e congelando lógica");
+    logger.info("SONO INICIADO: Bloqueando interações e congelando lógica");
     isSleeping = true;
     sleepBlockedControls = true;
 
@@ -426,7 +427,7 @@ function setupSleepListeners() {
   });
 
   document.addEventListener("sleepEnded", () => {
-    console.log("SONO TERMINADO: Restaurando interações");
+    logger.info("SONO TERMINADO: Restaurando interações");
     isSleeping = false;
 
     setTimeout(() => {
@@ -451,10 +452,10 @@ function setupSleepListeners() {
   });
 
   document.addEventListener("sleepOptimizationsComplete", () => {
-    console.log("Otimizações de sono concluídas");
+    logger.debug("Otimizações de sono concluídas");
     if (window.performance && window.performance.memory) {
       const mem = window.performance.memory;
-      console.log(`Memória Heap: ${Math.round(mem.usedJSHeapSize / 1024 / 1024)}MB`);
+      logger.debug(`Memória Heap: ${Math.round(mem.usedJSHeapSize / 1024 / 1024)}MB`);
     }
   });
 }
@@ -464,7 +465,7 @@ function setupSleepListeners() {
 // =============================================================================
 
 async function exposeGlobals() {
-  console.log("Expondo globais...");
+  logger.debug("Expondo globais...");
 
   try {
     window.canvas = canvas;
@@ -485,13 +486,13 @@ async function exposeGlobals() {
     window.drawWeatherEffects = drawWeatherEffects;
     window.drawWeatherUI = drawWeatherUI;
 
-    console.log("Globais expostos");
+    logger.debug("Globais expostos");
   } catch (error) {
     handleWarn("erro ao expor globais", "main:exposeGlobals", error);
   }
 
   interactionEnabled = true;
-  console.log("Interação Global habilitada");
+  logger.debug("Interação Global habilitada");
 }
 
 // =============================================================================
@@ -573,7 +574,7 @@ async function startFullGameLoad() {
 // =============================================================================
 
 async function initGameBootstrap() {
-  console.log("Bootstrapping FarmingXP...");
+  logger.info("Bootstrapping FarmingXP...");
 
   showLoadingScreen();
   updateLoadingProgress(0.02, "iniciando...");
@@ -597,7 +598,7 @@ async function initGameBootstrap() {
         );
         return;
       }
-      console.log(`${step.name} concluído`);
+      logger.debug(`${step.name} concluído`);
       updateLoadingProgress(
         ((idx + 1) / (loadingSteps.length + 1)) * 0.6,
         step.name
@@ -611,12 +612,12 @@ async function initGameBootstrap() {
   if (typeof collisionSystem.reapplyHitboxesForType === "function") {
     try {
       collisionSystem.reapplyHitboxesForType("TREE");
-      console.log("collisionSystem: reaplicadas hitboxes do tipo TREE");
+      logger.debug("collisionSystem: reaplicadas hitboxes do tipo TREE");
     } catch (err) {
       handleWarn("falha ao reaplicar hitboxes TREE", "main:bootstrap:hitboxes", err);
     }
   } else {
-    console.log("collisionSystem.reapplyHitboxesForType não disponível");
+    logger.debug("collisionSystem.reapplyHitboxesForType não disponível");
   }
 
   coreAssetsLoaded = true;
@@ -635,7 +636,7 @@ async function initGameBootstrap() {
   gameInitialized = true;
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
-  console.log("Game Loop iniciado!");
+  logger.info("Game Loop iniciado!");
 }
 
 // =============================================================================
@@ -658,7 +659,7 @@ document.addEventListener("playerReady", async (e) => {
     handleWarn("falha ao inicializar player system", "main:playerReady:playerSystem", err);
   }
 
-  console.log("Jogador spawnado e pronto!");
+  logger.info("Jogador spawnado e pronto!");
 
   if (itemSystem && window.theWorld) {
     setTimeout(() => {
@@ -700,13 +701,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   try {
-    console.log("Carregando estilos CSS...");
+    logger.debug("Carregando estilos CSS...");
     await cssManager.loadAll();
-    console.log("Todos os estilos CSS carregados");
+    logger.debug("Todos os estilos CSS carregados");
 
-    console.log("Criando PlayerHUD...");
+    logger.debug("Criando PlayerHUD...");
     window.playerHUD = new PlayerHUD();
-    console.log("PlayerHUD criado");
+    logger.debug("PlayerHUD criado");
 
     setupSleepListeners();
 
@@ -880,11 +881,11 @@ window.gameDebug = {
   wakeUp: () => document.dispatchEvent(new CustomEvent("sleepEnded")),
   spawnAnimals: function (count = 5, type = "Turkey") {
     if (!assets.animals || !assets.animals[type]) {
-      console.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
+      logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
       return;
     }
 
-    console.log(`Spawnando ${count} animais do tipo ${type}...`);
+    logger.debug(`Spawnando ${count} animais do tipo ${type}...`);
 
     const WORLD_BOUNDS = { minX: 100, maxX: 1200, minY: 100, maxY: 700 };
 
@@ -894,23 +895,23 @@ window.gameDebug = {
       addAnimal(type, assets.animals[type], x, y);
     }
 
-    console.log(`${count} animais do tipo ${type} spawnados!`);
+    logger.debug(`${count} animais do tipo ${type} spawnados!`);
     window.theWorld?.markWorldChanged?.();
   },
   clearAnimals: function () {
     if (window.theWorld && window.theWorld.animals) {
       const count = window.theWorld.animals.length;
       window.theWorld.animals.length = 0;
-      console.log(`${count} animais removidos do mundo`);
+      logger.debug(`${count} animais removidos do mundo`);
       window.theWorld.markWorldChanged?.();
     }
   },
   listAnimals: function () {
     if (window.theWorld && window.theWorld.animals) {
-      console.log(`Animais no mundo (${window.theWorld.animals.length}):`);
+      logger.debug(`Animais no mundo (${window.theWorld.animals.length}):`);
       let index = 0;
       for (const animal of window.theWorld.animals) {
-        console.log(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
+        logger.debug(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
         index++;
       }
     }
@@ -922,11 +923,11 @@ window.debugItem = async (id) => {
   const itemsModule = await import("./item.js");
   const items = itemsModule.items;
   const item = items.find((i) => i.id === Number(id));
-  if (!item) return console.error("Item não existe:", id);
+  if (!item) return logger.error("Item não existe:", id);
   inventorySystem.addItem(item.id, 1);
-  console.log(`Debug: Adicionado ${item.name}`);
+  logger.debug(`Debug: Adicionado ${item.name}`);
 };
 
 window.DEBUG_HITBOXES = false;
 
-console.log("main.js completo carregado!");
+logger.info("main.js completo carregado!");

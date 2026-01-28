@@ -5,6 +5,7 @@
  * @module BuildSystem
  */
 
+import { logger } from './logger.js';
 import { assets } from "./assetManager.js";
 import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
@@ -364,9 +365,9 @@ export const BuildSystem = {
 
     placeObject() {
         if (!this.selectedItem) return;
-        
+
         if (!window.theWorld) {
-            console.error("the world object not available");
+            logger.error("the world object not available");
             this.showDebugMessage("erro de sistema (theworld)", 2000);
             return;
         }
@@ -407,7 +408,7 @@ export const BuildSystem = {
                     this.showDebugMessage(`bau colocado! (${restante} restante)`, 1000);
                     if (restante <= 0) this.stopBuilding();
                 } catch (err) {
-                    console.error("erro ao adicionar bau:", err);
+                    logger.error("erro ao adicionar bau:", err);
                     this.showDebugMessage("falha ao colocar bau", 2000);
                 }
             } else {
@@ -449,7 +450,7 @@ export const BuildSystem = {
                         this.showDebugMessage("erro ao colocar poco", 2000);
                     }
                 } catch (err) {
-                    console.error("excecao ao tentar colocar poco:", err);
+                    logger.error("excecao ao tentar colocar poco:", err);
                     this.showDebugMessage("erro ao colocar poco", 2000);
                 }
             } else {
@@ -488,11 +489,11 @@ export const BuildSystem = {
 
                 if (restante <= 0) this.stopBuilding();
             } catch (err) {
-                console.error("erro ao adicionar objeto ao mundo:", err);
+                logger.error("erro ao adicionar objeto ao mundo:", err);
                 this.showDebugMessage("erro ao colocar objeto", 2000);
             }
         } else {
-            console.error("theworld.addworldobject nao disponivel");
+            logger.error("theworld.addworldobject nao disponivel");
             this.showDebugMessage("erro: theworld.addworldobject nao disponivel", 2000);
         }
     },
@@ -506,7 +507,7 @@ export const BuildSystem = {
                 });
                 window.storageSystem.set(key, dataToSave);
             } catch (e) {
-                console.error(`erro ao salvar ${key}:`, e);
+                logger.error(`erro ao salvar ${key}:`, e);
             }
         }
     },
@@ -519,7 +520,7 @@ export const BuildSystem = {
                     return data;
                 }
             } catch (e) {
-                console.error(`erro ao carregar ${key}:`, e);
+                logger.error(`erro ao carregar ${key}:`, e);
             }
         }
         return [];
@@ -694,5 +695,5 @@ window.BuildSystem = BuildSystem;
 try {
     BuildSystem.initAdvancedSystem();
 } catch (e) {
-    console.warn("buildsystem: initadvancedsystem falhou na inicializacao automatica.", e);
+    logger.warn("buildsystem: initadvancedsystem falhou na inicializacao automatica.", e);
 }
