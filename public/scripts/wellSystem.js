@@ -88,11 +88,13 @@ export const wellSystem = {
     wellState.wells[id] = wellObject;
 
     // Register in world.placedWells if not already present
-    const world = getObject("world");
-    if (world?.placedWells && !world.placedWells.find(w => w.id === id)) {
-      world.placedWells.push(wellObject);
+    const world = getObject("world") || window.theWorld;
+    if (world) {
+      if (!Array.isArray(world.placedWells)) world.placedWells = [];
+      if (!world.placedWells.find(w => w.id === id)) {
+        world.placedWells.push(wellObject);
+      }
     }
-
     // notifica mudança no mundo
     (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
 
