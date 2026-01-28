@@ -265,12 +265,14 @@ describe('StorageSystem (Production Implementation)', () => {
     });
 
     test('should maintain stack order by insertion time', () => {
-      storage.addItem(2, 10);
-      storage.addItem(3, 20);
+      storage.addItem(2, 50); // fills first stack
+      storage.addItem(2, 1);  // forces second stack
 
-      const stacks = storage.storage.resources;
-      expect(stacks.length).toBeGreaterThan(0);
+     const stacks = storage.storage.resources.filter(s => s.itemId === 2);
+      expect(stacks.length).toBe(2);
+      expect(stacks[0].addedAt).toBeLessThanOrEqual(stacks[1].addedAt);
     });
+
 
     test('should add timestamp to deposited items', () => {
       storage.addItem(2, 10);
