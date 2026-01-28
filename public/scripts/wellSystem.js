@@ -284,7 +284,7 @@ if (typeof collisionSystem?.removeHitbox === "function") {
     const bottleQty = inventorySystem.getItemQuantity?.("consumable", WELL_CONFIG.BOTTLE_EMPTY_ID) || 0;
 
     if (bucketQtyEl) bucketQtyEl.textContent = bucketQty ? "1" : "0";
-    if (bottleQtyEl) bottleQtyEl.textContent = toString(bottleQty);
+    if (bottleQtyEl) bottleQtyEl.textContent = bottleQty.toString();
 
     if (levelEl) {
       levelEl.style.height = `${wellState.waterLevel}%`;
