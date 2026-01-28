@@ -131,11 +131,7 @@ export const wellSystem = {
 
    // hitbox cleanup
 if (typeof collisionSystem?.removeHitbox === "function") {
-  try {
-    collisionSystem.removeHitbox(id);
-  } catch (err) {
-    handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:removeHitbox", { id, err });
-  }
+  collisionSystem.removeHitbox(id);
 }
 
 
