@@ -4,6 +4,11 @@
  * Run this in the browser console after loading the game
  */
 
+import { currencyManager } from './currencyManager.js';
+import { storageSystem } from './storageSystem.js';
+import { inventorySystem } from './thePlayer/inventorySystem.js';
+import { playerSystem } from './thePlayer/playerSystem.js';
+
 /**
  * Runs all validation tests
  * @returns {Object} Test results summary
