@@ -87,7 +87,7 @@ export class TouchMoveSystem {
 
             const worldPos = camera.screenToWorld(canvasX, canvasY);
             this.setDestination(worldPos.x, worldPos.y);
-        });
+        }, { signal: controlsAbortController.signal });
     }
 
     setDestination(x, y) {
@@ -273,7 +273,7 @@ export class PlayerInteractionSystem {
             }
 
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
-        });
+        }, { signal: controlsAbortController.signal });
 
         canvas.addEventListener("mousemove", (ev) => {
             if (isSleeping) return;
@@ -291,7 +291,7 @@ export class PlayerInteractionSystem {
             if (BuildSystem.active) {
                 BuildSystem.updateMousePosition(worldPos.x, worldPos.y);
             }
-        });
+        }, { signal: controlsAbortController.signal });
     }
 
     setupMobileControls() {
@@ -312,13 +312,13 @@ export class PlayerInteractionSystem {
             e.preventDefault();
             button.style.transform = 'scale(0.95)';
             this.handleInteraction();
-        });
+        }, { signal: controlsAbortController.signal });
 
         button.addEventListener('touchend', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             button.style.transform = 'scale(1)';
-        });
+        }, { signal: controlsAbortController.signal });
 
         document.body.appendChild(button);
 
@@ -363,19 +363,19 @@ export class PlayerInteractionSystem {
             startX = rect.left + rect.width / 2;
             startY = rect.top + rect.height / 2;
             this.updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY, joystick, maxDistance, startX, startY);
-        });
+        }, { signal: controlsAbortController.signal });
 
         area.addEventListener('touchmove', (e) => {
             if (isSleeping || !isTouching) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             this.updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY, joystick, maxDistance, startX, startY);
-        });
+        }, { signal: controlsAbortController.signal });
 
         area.addEventListener('touchend', (e) => {
             if (isSleeping || !isTouching) return;
             isTouching = false;
             this.resetJoystick(joystick);
-        });
+        }, { signal: controlsAbortController.signal });
     }
 
     updateJoystickPosition(touchX, touchY, joystick, maxDistance, startX, startY) {

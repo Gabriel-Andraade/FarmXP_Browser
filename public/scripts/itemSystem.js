@@ -330,7 +330,7 @@ export class ItemSystem {
      * Exibe mensagem de coleta de itens ao jogador
      * Formata lista de itens coletados com quantidades
      * @param {Array<Object>} itemsList - Lista de itens coletados
-     * @param {string} type - Tipo do objeto destruído
+     * @param {string} type - Tipo do objetodo
      * @returns {void}
      */
     showCollectionMessage(itemsList, type) {
@@ -398,19 +398,6 @@ export class ItemSystem {
         if (!Array.isArray(list)) return;
         list.forEach(o => this.registerInteractiveObject(o));
     }
-
-    /**
-     * Limpa todos os event listeners e recursos do sistema
-     * Remove todos os listeners registrados via AbortController
-     * @returns {void}
-     */
-    destroy() {
-        // Remove todos os event listeners
-        this.abortController.abort();
-
-        // Limpa objetos interativos
-        this.interactiveObjects.clear();
-    }
 }
 
 // Instancia e exporta o sistema de itens
@@ -442,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerWorldObjects();
         }
     }, 1000);
-}, { signal: itemSystem.abortController.signal });
+});
 
 /**
  * Registra objetos quando o jogador estiver pronto
@@ -460,4 +447,4 @@ document.addEventListener('playerReady', () => {
             handleError(err, "itemSystem:playerReady_Init");
         }
     }, 500);
-}, { signal: itemSystem.abortController.signal });
+});

@@ -325,13 +325,20 @@ export class PlayerSystem {
     startSleep() {
         this.currentPlayer.isSleeping = true;
         
-        const sleepInterval = setInterval(() => {
+        // Clear any existing sleep interval to avoid duplicates
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
+        this.sleepInterval = setInterval(() => {
             if (this.needs.energy < 100) {
                 this.needs.energy = Math.min(100, this.needs.energy + 10);
                 this.dispatchNeedsUpdate();
                 
                 if (this.needs.energy >= 100) {
-                    clearInterval(sleepInterval);
+                    clearInterval(this.sleepInterval);
+                    this.sleepInterval = null;
                     this.endSleep();
                 }
             }
@@ -343,6 +350,12 @@ export class PlayerSystem {
      * @returns {void}
      */
     endSleep() {
+        // Clear sleep interval if it exists
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
         this.currentPlayer.isSleeping = false;
         this.needs.energy = 100;
         this.dispatchNeedsUpdate();
@@ -650,7 +663,7 @@ export class PlayerSystem {
 
     /**
      * Limpa todos os event listeners e recursos do sistema
-     * Remove todos os listeners e para o interval de needs
+     * Remove todos os listeners e para os intervals de needs e sleep
      * @returns {void}
      */
     destroy() {
@@ -661,6 +674,12 @@ export class PlayerSystem {
         if (this.needsUpdateInterval) {
             clearInterval(this.needsUpdateInterval);
             this.needsUpdateInterval = null;
+        }
+
+        // Clear sleep interval se estiver ativo
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
         }
     }
 }

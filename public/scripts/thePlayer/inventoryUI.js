@@ -863,6 +863,13 @@ export function destroyInventoryUI() {
     inventoryAbortController = null;
   }
 
+  // Re-habilitar input do jogador se o modal estava aberto
+  if (modalEl && modalEl.classList.contains('open')) {
+    if (window.playerSystem) {
+      window.playerSystem.inputDisabled = false;
+    }
+  }
+
   // Limpar elementos DOM
   const host = document.getElementById('inventory-ui-host');
   if (host) {

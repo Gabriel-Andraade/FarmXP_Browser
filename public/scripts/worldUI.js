@@ -456,8 +456,10 @@ class WorldUIManager {
         // Remove todos os event listeners
         this.abortController.abort();
 
-        // Reset consumption state
+        // Reset consumption state e limpar referências para permitir GC
         this.consumption.isActive = false;
+        this.consumption.item = null;
+        this.consumption.player = null;
     }
 }
 
