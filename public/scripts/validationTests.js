@@ -64,17 +64,15 @@ export function runValidationTests() {
 
     // TEST 3: Currency Overflow Protection
     console.group('Test 3: Currency Overflow Protection');
+    let oldMoney;
     try {
-        const oldMoney = currencyManager.getMoney();
+        oldMoney = currencyManager.getMoney();
         currencyManager.currentMoney = Number.MAX_SAFE_INTEGER - 100;
         currencyManager.earn(1000);
         const newMoney = currencyManager.getMoney();
 
         const passed = newMoney === Number.MAX_SAFE_INTEGER;
         console.assert(passed, '✅ Capped at MAX_SAFE_INTEGER');
-
-        // Restore original money
-        currencyManager.currentMoney = oldMoney;
 
         results.tests.push({ name: 'Currency Overflow Protection', passed });
         if (passed) results.passed++;
@@ -83,15 +81,22 @@ export function runValidationTests() {
         console.error('❌ Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Currency Overflow Protection', passed: false, error: e.message });
+    } finally {
+        if (oldMoney !== undefined) {
+            currencyManager.currentMoney = oldMoney;
+        }
     }
     console.groupEnd();
 
     // TEST 4: Inventory Negative Quantity
     console.group('Test 4: Inventory Negative Quantity');
+    let initialCount;
+    let itemAdded = false;
     try {
         // Try to add item with negative quantity (should be sanitized to 1)
-        const initialCount = inventorySystem.getItemQuantity(1);
+        initialCount = inventorySystem.getItemQuantity(1);
         const result = inventorySystem.addItem(1, -999);
+        itemAdded = result;
 
         // If inventory was full, result might be false
         // If it succeeded, quantity should be +1 (sanitized from -999 to 1)
@@ -107,6 +112,11 @@ export function runValidationTests() {
         console.error('❌ Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Inventory Negative Quantity', passed: false, error: e.message });
+    } finally {
+        // Roll back item addition if it succeeded
+        if (itemAdded) {
+            inventorySystem.removeItem(1, 1);
+        }
     }
     console.groupEnd();
 
@@ -155,16 +165,14 @@ export function runValidationTests() {
 
     // TEST 7: Player Needs Range Clamping (Max)
     console.group('Test 7: Player Needs Clamping (Max)');
+    let oldHunger;
     try {
-        const oldHunger = playerSystem.needs.hunger;
+        oldHunger = playerSystem.needs.hunger;
         playerSystem.restoreNeeds(9999, 0, 0);
         const newHunger = playerSystem.needs.hunger;
 
         const passed = newHunger === 100;
         console.assert(passed, '✅ Capped at 100');
-
-        // Restore
-        playerSystem.needs.hunger = oldHunger;
 
         results.tests.push({ name: 'Needs Clamping Max', passed });
         if (passed) results.passed++;
@@ -173,22 +181,24 @@ export function runValidationTests() {
         console.error('❌ Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Needs Clamping Max', passed: false, error: e.message });
+    } finally {
+        if (oldHunger !== undefined) {
+            playerSystem.needs.hunger = oldHunger;
+        }
     }
     console.groupEnd();
 
     // TEST 8: Player Needs Range Clamping (Min)
     console.group('Test 8: Player Needs Clamping (Min)');
+    let oldThirst;
     try {
-        const oldThirst = playerSystem.needs.thirst;
+        oldThirst = playerSystem.needs.thirst;
         playerSystem.needs.thirst = 50;
         playerSystem.consumeNeeds('moving', 9999);
         const newThirst = playerSystem.needs.thirst;
 
         const passed = newThirst === 0;
         console.assert(passed, '✅ Floored at 0');
-
-        // Restore
-        playerSystem.needs.thirst = oldThirst;
 
         results.tests.push({ name: 'Needs Clamping Min', passed });
         if (passed) results.passed++;
@@ -197,14 +207,20 @@ export function runValidationTests() {
         console.error('❌ Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Needs Clamping Min', passed: false, error: e.message });
+    } finally {
+        if (oldThirst !== undefined) {
+            playerSystem.needs.thirst = oldThirst;
+        }
     }
     console.groupEnd();
 
     // TEST 9: Currency setInitialAmount Validation
     console.group('Test 9: Currency setInitialAmount Validation');
+    let originalInitial;
+    let originalCurrent;
     try {
-        const originalInitial = currencyManager.initialMoney;
-        const originalCurrent = currencyManager.currentMoney;
+        originalInitial = currencyManager.initialMoney;
+        originalCurrent = currencyManager.currentMoney;
 
         // Test NaN
         currencyManager.setInitialAmount(NaN);
@@ -224,9 +240,6 @@ export function runValidationTests() {
         const passed = passedNaN && passedInf && passedNeg;
         console.assert(passed, '✅ setInitialAmount blocks invalid values');
 
-        // Restore
-        currencyManager.setInitialAmount(originalInitial);
-
         results.tests.push({ name: 'setInitialAmount Validation', passed });
         if (passed) results.passed++;
         else results.failed++;
@@ -234,6 +247,9 @@ export function runValidationTests() {
         console.error('❌ Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'setInitialAmount Validation', passed: false, error: e.message });
+    } finally {
+        if (originalInitial !== undefined) currencyManager.setInitialAmount(originalInitial);
+        if (originalCurrent !== undefined) currencyManager.currentMoney = originalCurrent;
     }
     console.groupEnd();
 
