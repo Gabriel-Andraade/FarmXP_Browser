@@ -135,14 +135,19 @@ export class PlayerHUD {
     // TRECHO INSERIDO: atualiza valores no HUD pegando do playerSystem
     updateNeedsFromSystem() {
         if (!window.playerSystem) return;
-        const needs = window.playerSystem.getNeeds();
+        const needs = window.playerSystem.getNeeds?.();
+        if (!needs) return;
+
+        const hunger = needs.hunger ?? this.currentPlayer.hunger ?? 100;
+        const thirst = needs.thirst ?? this.currentPlayer.thirst ?? 100;
+        const energy = needs.energy ?? this.currentPlayer.energy ?? 100;
 
         // 🛠️ CORREÇÃO AQUI: Não usar o operador OR (||) pois 0 é falsy.
         // Se usar `needs.hunger || 100`, quando for 0 ele exibe 100.
         // A lógica abaixo garante que ele usa o valor do sistema, mesmo que seja 0.
-        this.setHUDValue('hudPlayerHunger', `${needs.hunger}%`);
-        this.setHUDValue('hudPlayerThirst', `${needs.thirst}%`);
-        this.setHUDValue('hudPlayerEnergy', `${needs.energy}%`);
+         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
+         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
+         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
     }
 
     updatePlayerInfo() {
