@@ -126,11 +126,16 @@ export function runValidationTests() {
     // TEST 6: Storage NaN Handling
     console.group('Test 6: Storage NaN Handling');
     try {
+        // Get storage state before
+        const storageBefore = JSON.stringify(storageSystem.storage);
+
         // Try to deposit with NaN quantity (should be sanitized or rejected)
         const result = storageSystem.depositFromInventory(1, NaN);
 
-        // Should either reject (false) or sanitize to 1
-        const passed = result === false || result === true;
+        // Should reject (false) since NaN quantity is invalid
+        // Also verify storage wasn't corrupted
+        const storageAfter = JSON.stringify(storageSystem.storage);
+        const passed = result === false || storageBefore === storageAfter;
         console.assert(passed, '✅ NaN handled safely');
 
         results.tests.push({ name: 'Storage NaN Handling', passed });

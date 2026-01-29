@@ -128,6 +128,9 @@ export function validateRange(value, min, max) {
  * isValidItemId(-1, items)     // false (not positive)
  */
 export function isValidItemId(id, items) {
+    if (!Array.isArray(items)) {
+        return false;
+    }
     return isValidPositiveInteger(id) &&
            items.some(item => item.id === id);
 }
@@ -148,6 +151,10 @@ export function isValidItemId(id, items) {
 export function validateTradeInput(amount, maxAvailable) {
     if (!isValidPositiveInteger(amount)) {
         return { valid: false, error: 'Invalid amount' };
+    }
+
+    if (!Number.isInteger(maxAvailable) || maxAvailable < 0) {
+        return { valid: false, error: 'Invalid available quantity' };
     }
 
     if (amount > maxAvailable) {

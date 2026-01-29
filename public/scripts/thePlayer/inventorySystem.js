@@ -249,7 +249,7 @@ export class InventorySystem {
             if (qty > stackLimit) {
                 const overflow = qty - stackLimit;
                 logger.debug(`📚 Item split: criando nova stack com ${overflow} itens`);
-                return this.addItem(category, id, overflow);
+                return this.addItem(category, id, overflow, _recursionDepth + 1);
             }
         }
 
