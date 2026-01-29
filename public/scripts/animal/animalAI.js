@@ -6,6 +6,7 @@
 
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
+import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 
 // =========================================================
 // CONFIGURAÇÃO DA IA
@@ -16,14 +17,14 @@ import { collisionSystem } from "../collisionSystem.js";
  * @constant {Object}
  */
 const ANIMAL_CONFIG = {
-    IDLE_MIN: 1000,
-    IDLE_MAX: 3000,
-    MOVE_MIN: 500,
-    MOVE_MAX: 2000,
-    SPEED: 0.5,
-    FRAME_RATE_IDLE: 500,
-    FRAME_RATE_MOVE: 150,
-    SIGHT_RADIUS: 128
+    IDLE_MIN: IDLE_STATE_MIN_MS,
+    IDLE_MAX: IDLE_STATE_MAX_MS,
+    MOVE_MIN: MOVE_STATE_MIN_MS,
+    MOVE_MAX: MOVE_STATE_MAX_MS,
+    SPEED: MOVEMENT.ANIMAL_SPEED,
+    FRAME_RATE_IDLE: ANIMATION.FRAME_RATE_IDLE_MS,
+    FRAME_RATE_MOVE: ANIMATION.FRAME_RATE_MOVE_MS,
+    SIGHT_RADIUS: RANGES.ANIMAL_SIGHT_RADIUS
 };
 
 /**

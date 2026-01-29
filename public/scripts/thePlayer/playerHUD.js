@@ -136,7 +136,7 @@ export class PlayerHUD {
     updateNeedsFromSystem() {
         if (!window.playerSystem) return;
         const needs = window.playerSystem.getNeeds();
-        
+
         // 🛠️ CORREÇÃO AQUI: Não usar o operador OR (||) pois 0 é falsy.
         // Se usar `needs.hunger || 100`, quando for 0 ele exibe 100.
         // A lógica abaixo garante que ele usa o valor do sistema, mesmo que seja 0.

@@ -1,3 +1,5 @@
+import { HITBOX_CONFIGS, MOVEMENT } from './constants.js';
+
 /**
  * Verifica colisão entre duas caixas delimitadoras usando o algoritmo AABB (Axis-Aligned Bounding Box)
  * @param {Object} boxA - Primeira caixa delimitadora
@@ -86,51 +88,7 @@ export class CollisionSystem {
      * @static
      * @type {Object}
      */
-    static CONFIG_SIZES = {
-        TREE: {
-            width: 38,
-            height: 40,
-            offsetY: 38,
-            offsetX: 16
-        },
-        ROCK: {
-            width: 32,
-            height: 27
-        },
-        THICKET: {
-            width: 30,
-            height: 18,
-            offsetY: 7,
-            offsetX: 7
-        },
-        CHEST: {
-            width: 31,
-            height: 31
-        },
-        HOUSE_WALLS: {
-            width: 1,
-            height: 1,
-            offsetX: 0.0,
-            offsetY: 0.0
-        },
-        WELL: {
-            width: 63,
-            height: 30,
-            offsetY: 56
-        },
-        FENCEX: {
-            width: 28,
-            height: 5,
-            offsetX: 0,
-            offsetY: 24
-        },
-        FENCEY: {
-            width: 4,
-            height: 63,
-            offsetX: 0,
-            offsetY: 0
-        }
-    };
+    static CONFIG_SIZES = HITBOX_CONFIGS.STATIC_OBJECTS;
 
     /**
      * Configurações de hitboxes para animais usando proporções relativas
@@ -138,33 +96,7 @@ export class CollisionSystem {
      * @static
      * @type {Object}
      */
-    static ANIMAL_CONFIGS = {
-        BULL: {
-            widthRatio: 0.3,
-            heightRatio: 0.3,
-            offsetXRatio: 0.3,
-            offsetYRatio: 0.5
-        },
-        TURKEY: {
-            widthRatio: 0.4,
-            heightRatio: 0.3,
-            offsetXRatio: 0.3,
-            offsetYRatio: 0.7
-        },
-        CHICK: {
-            widthRatio: 0.4,
-            heightRatio: 0.3,
-            offsetXRatio: 0.3,
-            offsetYRatio: 0.7
-        },
-
-        DEFAULT: {
-            widthRatio: 0.4,
-            heightRatio: 0.3,
-            offsetXRatio: 0.3,
-            offsetYRatio: 0.7
-        }
-    };
+    static ANIMAL_CONFIGS = HITBOX_CONFIGS.ANIMALS;
 
     /**
      * Configurações das zonas de interação (hitboxes laranjas/verdes)
@@ -470,10 +402,10 @@ export class CollisionSystem {
     }
 
     createPlayerHitbox(x, y, width, height) {
-        const widthRatio = 0.7;
-        const heightRatio = 0.3;
-        const offsetX = 0.15;
-        const offsetY = 0.7;
+        const widthRatio = HITBOX_CONFIGS.PLAYER.WIDTH_RATIO;
+        const heightRatio = HITBOX_CONFIGS.PLAYER.HEIGHT_RATIO;
+        const offsetX = HITBOX_CONFIGS.PLAYER.OFFSET_X_RATIO;
+        const offsetY = HITBOX_CONFIGS.PLAYER.OFFSET_Y_RATIO;
 
         return {
             x: x + (width * offsetX),
@@ -541,7 +473,7 @@ export class CollisionSystem {
     /**
      * resolve sobreposicao empurrando 'rect' para fora das hitboxes fisicas
      */
-    resolveOverlap(rect, ignoreId = null, { maxIters = 6 } = {}) {
+    resolveOverlap(rect, ignoreId = null, { maxIters = MOVEMENT.MAX_COLLISION_ITERATIONS } = {}) {
         let r = _rect(rect.x, rect.y, rect.width, rect.height);
 
         for (let i = 0; i < maxIters; i++) {
@@ -562,7 +494,7 @@ export class CollisionSystem {
      * move um retangulo com colisao por eixo (x depois y), travando o eixo que colidir
      * stepPx reduz tunelamento quando dx/dy sao altos
      */
-    moveRectWithCollisions(rect, dx, dy, ignoreId = null, { stepPx = 4 } = {}) {
+    moveRectWithCollisions(rect, dx, dy, ignoreId = null, { stepPx = MOVEMENT.COLLISION_STEP_PX } = {}) {
         let r = _rect(rect.x, rect.y, rect.width, rect.height);
 
         let blockedX = false;

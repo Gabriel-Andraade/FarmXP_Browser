@@ -12,6 +12,7 @@ import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
 import { wellSystem } from "./wellSystem.js";
+import { MOUSE_UPDATE_INTERVAL_MS, DEBUG_UPDATE_INTERVAL_MS, VISUAL } from './constants.js';
 
 /**
  * Sistema de construção e posicionamento de objetos no mundo
@@ -32,18 +33,18 @@ export const BuildSystem = {
     gridSize: TILE_SIZE,
     zoomedGridSize: TILE_SIZE * CAMERA_ZOOM,
     mouseTile: { x: 0, y: 0 },
-    
+
     lastMouseUpdate: 0,
-    mouseUpdateInterval: 25,
+    mouseUpdateInterval: MOUSE_UPDATE_INTERVAL_MS,
     mouseUpdatePending: false,
     pendingMouseX: 0,
     pendingMouseY: 0,
-    
-    currentSubPosX: 0, 
-    currentSubPosY: 0, 
+
+    currentSubPosX: 0,
+    currentSubPosY: 0,
 
     showAdvancedGrid: true,
-    gridAlpha: 0.4,
+    gridAlpha: VISUAL.GRID.ALPHA,
     
     subPositionColors: {
         '-1': 'rgba(0, 100, 255, 0.6)',
@@ -54,10 +55,10 @@ export const BuildSystem = {
     STORAGE_KEY_BUILDINGS: 'placedBuildings',
     STORAGE_KEY_WELLS: 'placedWells',
 
-    debugMode: false, 
+    debugMode: false,
     debugElement: null,
     lastDebugUpdate: 0,
-    debugUpdateInterval: 200,
+    debugUpdateInterval: DEBUG_UPDATE_INTERVAL_MS,
     
     _gridDrawnThisFrame: false,
     
