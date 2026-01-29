@@ -1,4 +1,4 @@
-
+import { logger } from '../logger.js';
 import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
@@ -33,7 +33,7 @@ export class InventorySystem {
         this.setupGlobalListeners();
         
         window.inventorySystem = this;
-        console.log('🎒 InventorySystem inicializado com categorias centralizadas');
+        logger.info('🎒 InventorySystem inicializado com categorias centralizadas');
     }
     
     scheduleUIUpdate() {
@@ -68,7 +68,7 @@ export class InventorySystem {
                 // ✅ Enriquecer item com dados completos do banco de dados
                 const fullItemData = getItem(itemId);
                 if (!fullItemData) {
-                    console.error(`❌ Item ID ${itemId} não encontrado em item.js`);
+                    logger.error(`❌ Item ID ${itemId} não encontrado em item.js`);
                     return false;
                 }
                 
@@ -80,12 +80,12 @@ export class InventorySystem {
                     placeable: isPlaceable(itemId)  // ✅ Validar se é construível
                 };
                 
-                console.log(`🎯 Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
+                logger.debug(`🎯 Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
                 this.scheduleUIUpdate();
                 return true;
             }
         }
-        console.warn(`❌ Item ID ${itemId} não encontrado no inventário`);
+        logger.warn(`❌ Item ID ${itemId} não encontrado no inventário`);
         this.selectedItem = null;
         this.scheduleUIUpdate();
         return false;
@@ -129,13 +129,13 @@ export class InventorySystem {
         setTimeout(() => {
             this.triggerUIUpdate();
         }, 100);
-        console.log('🎒 Sistema de inventário pronto para uso');
+        logger.info('🎒 Sistema de inventário pronto para uso');
     }
 
     addItem(categoryOrId, itemIdOrQty, quantity = 1, _recursionDepth = 0) {
         // ✅ Proteção contra recursão infinita
         if (_recursionDepth > 100) {
-            console.error('❌ Limite de recursão excedido ao adicionar itens');
+            logger.error('❌ Limite de recursão excedido ao adicionar itens');
             return false;
         }
 
@@ -150,17 +150,17 @@ export class InventorySystem {
             // 🔧 Usar getItem() centralizado
             const itemData = getItem(id);
             if (!itemData) {
-                console.error(`❌ Erro: Item ID ${id} não existe no banco de dados`);
+                logger.error(`❌ Erro: Item ID ${id} não existe no banco de dados`);
                 return false;
             }
-            
+
             // 🔧 Usar mapeamento centralizado
             category = mapTypeToCategory(itemData.type);
-            console.log(`📦 Adicionando: ${itemData.name} (Tipo: ${itemData.type}) → ${category}`);
+            logger.debug(`📦 Adicionando: ${itemData.name} (Tipo: ${itemData.type}) → ${category}`);
         }
 
         if (!this.categories[category]) {
-            console.error(`❌ Categoria '${category}' não definida`);
+            logger.error(`❌ Categoria '${category}' não definida`);
             return false;
         }
 
@@ -175,14 +175,14 @@ export class InventorySystem {
             if (newTotal > stackLimit) {
                 // Adicionar nova stack se houver espaço
                 if (categoryData.items.length >= categoryData.limit) {
-                    console.warn(`🎒 Inventário de ${category} cheio!`);
+                    logger.warn(`🎒 Inventário de ${category} cheio!`);
                     return false;
                 }
-                
+
                 // Limitar stack atual ao máximo permitido
                 const overflow = newTotal - stackLimit;
                 existingItem.quantity = stackLimit;
-                
+
                 // Criar nova stack com o overflow
                 const itemData = getItem(id);
                 categoryData.items.push({
@@ -196,20 +196,20 @@ export class InventorySystem {
                     toolType: itemData.toolType || null,
                     fillUp: itemData.fillUp || null
                 });
-                
-                console.log(`📚 Stack dividida: ${itemData.name} - Principal: ${stackLimit}, Nova: ${overflow}`);
+
+                logger.debug(`📚 Stack dividida: ${itemData.name} - Principal: ${stackLimit}, Nova: ${overflow}`);
             } else {
                 existingItem.quantity = newTotal;
             }
         } else {
             if (categoryData.items.length >= categoryData.limit) {
-                console.warn(`🎒 Inventário de ${category} cheio!`);
+                logger.warn(`🎒 Inventário de ${category} cheio!`);
                 return false;
             }
 
             const itemData = getItem(id);
             if (!itemData) {
-                console.error(`❌ Erro ao buscar dados do item ${id}`);
+                logger.error(`❌ Erro ao buscar dados do item ${id}`);
                 return false;
             }
 
@@ -231,7 +231,7 @@ export class InventorySystem {
             // Se houver overflow, chamar recursivamente
             if (qty > stackLimit) {
                 const overflow = qty - stackLimit;
-                console.log(`📚 Item split: criando nova stack com ${overflow} itens`);
+                logger.debug(`📚 Item split: criando nova stack com ${overflow} itens`);
                 return this.addItem(category, id, overflow);
             }
         }
@@ -262,7 +262,7 @@ export class InventorySystem {
 
             category = this.findItemCategory(id);
             if (!category) {
-                console.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
+                logger.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
                 return false;
             }
         }
@@ -278,7 +278,7 @@ export class InventorySystem {
 
         // ✅ Validação crítica: quantidade suficiente?
         if (item.quantity < qty) {
-            console.warn(`❌ Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
+            logger.warn(`❌ Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
             return false;
         }
 
@@ -314,18 +314,18 @@ export class InventorySystem {
         // ✅ Validação de tipo
         if (category === 'tools') {
             if (item.type !== 'tool') {
-                console.warn(`❌ Tentativa de equipar não-ferramenta: ${item.name}`);
+                logger.warn(`❌ Tentativa de equipar não-ferramenta: ${item.name}`);
                 return false;
             }
             this.equipped.tool = itemId;
         } else if (category === 'food') {
             if (!item.fillUp) {
-                console.warn(`❌ Tentativa de equipar comida não-consumível: ${item.name}`);
+                logger.warn(`❌ Tentativa de equipar comida não-consumível: ${item.name}`);
                 return false;
             }
             this.equipped.food = itemId;
         } else {
-            console.warn(`❌ Categoria '${category}' não pode ser equipada`);
+            logger.warn(`❌ Categoria '${category}' não pode ser equipada`);
             return false;
         }
 
@@ -389,7 +389,7 @@ export class InventorySystem {
         }
         
         if (window.DEBUG_MODE) {
-            console.log('💾 (Simulado) Salvando inventário:', saveData);
+            logger.debug('💾 (Simulado) Salvando inventário:', saveData);
         }
         
         // Em produção, você usaria localStorage ou um servidor
@@ -401,7 +401,7 @@ export class InventorySystem {
     }
 
     loadFromStorage() {
-        console.log('💾 Carregamento de inventário (simulado)');
+        logger.debug('💾 Carregamento de inventário (simulado)');
         
         // Em produção, você carregaria de localStorage
         // try {
@@ -416,7 +416,7 @@ export class InventorySystem {
         
         // Para testes, adicionar alguns itens padrão
         if (window.DEBUG_MODE || window.TEST_MODE) {
-            console.log('🧪 Adicionando itens de teste...');
+            logger.debug('🧪 Adicionando itens de teste...');
             
             // Ferramentas
             this.addItem(0, 1);  // Tesoura
@@ -446,42 +446,42 @@ export class InventorySystem {
         this.equipped = { tool: null, food: null };
         this.saveToStorage();
         this.triggerUIUpdate();
-        console.log('🗑️ Inventário limpo');
+        logger.debug('🗑️ Inventário limpo');
     }
 
     updateUI() {
-        console.warn('⚠️ updateUI() chamado diretamente - use scheduleUIUpdate()');
+        logger.warn('⚠️ updateUI() chamado diretamente - use scheduleUIUpdate()');
         this.triggerUIUpdate();
     }
 
     debug() {
-        console.log('🎒 INVENTÁRIO (Sistema Corrigido):');
-        console.log('='.repeat(60));
-        
+        logger.debug('🎒 INVENTÁRIO (Sistema Corrigido):');
+        logger.debug('='.repeat(60));
+
         Object.entries(this.categories).forEach(([category, data]) => {
-            console.log(`📁 ${category.toUpperCase()} (${data.items.length}/${data.limit}):`);
+            logger.debug(`📁 ${category.toUpperCase()} (${data.items.length}/${data.limit}):`);
             if (data.items.length === 0) {
-                console.log('   🚫 Vazio');
+                logger.debug('   🚫 Vazio');
             } else {
                 data.items.forEach(item => {
                     const equipped = (this.equipped.tool === item.id || this.equipped.food === item.id) ? ' ⚡' : '';
                     const consumable = item.fillUp ? ' 🍽️' : '';
                     const placeable = item.placeable ? ' 🏗️' : '';
-                    console.log(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
+                    logger.debug(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
                 });
             }
-            console.log('');
+            logger.debug('');
         });
-        
-        console.log('⚡ EQUIPADO:');
-        console.log(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
-        console.log(`   Comida: ${this.equipped.food ? this.findItemData(this.equipped.food)?.name : 'Nenhuma'}`);
-        console.log('');
-        
-        const totalItems = Object.values(this.categories).reduce((total, cat) => 
+
+        logger.debug('⚡ EQUIPADO:');
+        logger.debug(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
+        logger.debug(`   Comida: ${this.equipped.food ? this.findItemData(this.equipped.food)?.name : 'Nenhuma'}`);
+        logger.debug('');
+
+        const totalItems = Object.values(this.categories).reduce((total, cat) =>
             total + cat.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-        console.log(`📊 TOTAL DE ITENS: ${totalItems}`);
-        console.log('='.repeat(60));
+        logger.debug(`📊 TOTAL DE ITENS: ${totalItems}`);
+        logger.debug('='.repeat(60));
     }
     
     forceImmediateUpdate() {
@@ -494,7 +494,7 @@ export class InventorySystem {
     
     setUpdateDelay(delayMs) {
         this.UI_UPDATE_DELAY = Math.max(16, delayMs);
-        console.log(`🎯 Delay do inventário ajustado para ${this.UI_UPDATE_DELAY}ms`);
+        logger.debug(`🎯 Delay do inventário ajustado para ${this.UI_UPDATE_DELAY}ms`);
     }
 
     isConsumable(itemId) {
@@ -663,12 +663,12 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 // ====================================================================
 
 window.testInventoryCategorization = () => {
-    console.log('🧪 TESTANDO CATEGORIZAÇÃO DE ITENS');
-    console.log('='.repeat(60));
-    
+    logger.debug('🧪 TESTANDO CATEGORIZAÇÃO DE ITENS');
+    logger.debug('='.repeat(60));
+
     // Limpar inventário primeiro
     inventorySystem.clear();
-    
+
     // Testar diferentes tipos de itens
     const testCases = [
         { id: 0, expected: 'tools', name: 'Tesoura (ferramenta)' },
@@ -680,13 +680,13 @@ window.testInventoryCategorization = () => {
         { id: 43, expected: 'construction', name: 'Cerca (construction)' },
         { id: 63, expected: 'resources', name: 'Milho (crop)' }
     ];
-    
+
     testCases.forEach(test => {
-        console.log(`📦 Adicionando: ${test.name}`);
+        logger.debug(`📦 Adicionando: ${test.name}`);
         const success = inventorySystem.addItem(test.id, 1);
-        console.log(`   ✅ Sucesso: ${success}, Esperado: ${test.expected}`);
+        logger.debug(`   ✅ Sucesso: ${success}, Esperado: ${test.expected}`);
     });
-    
+
     // Mostrar resultado
     setTimeout(() => {
         inventorySystem.debug();
@@ -701,8 +701,8 @@ window.addTestItems = () => {
     inventorySystem.addItem(7, 2);  // Ração (animals)
     inventorySystem.addItem(9, 10); // Madeira (resources)
     inventorySystem.addItem(43, 3); // Cerca (construction)
-    
-    console.log('✅ Itens de teste adicionados!');
+
+    logger.debug('✅ Itens de teste adicionados!');
     inventorySystem.debug();
 };
 
@@ -712,6 +712,6 @@ if (typeof window !== 'undefined') {
     window.getInventory = getInventory;
     window.addItemToInventory = addItemToInventory;
     window.removeItemFromInventory = removeItemFromInventory;
-    
-    console.log('🎒 InventorySystem carregado e pronto!');
+
+    logger.info('🎒 InventorySystem carregado e pronto!');
 }

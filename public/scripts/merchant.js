@@ -5,6 +5,7 @@
  * @module MerchantSystem
  */
 
+import { logger } from './logger.js';
 import { currencyManager } from "./currencyManager.js";
 import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
@@ -889,7 +890,7 @@ class MerchantSystem {
                     if (typeof currencyManager.earn === 'function') {
                         currencyManager.earn(totalValue, "Venda ao Mercador");
                     } else {
-                        console.error("Erro: método earn() não encontrado no currencyManager");
+                        logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
 
                     this.showMessage(`Venda realizada! +$${totalValue}`, 'success');
@@ -925,7 +926,7 @@ class MerchantSystem {
                     if (typeof currencyManager.spend === 'function') {
                         currencyManager.spend(totalValue, "Compra do Mercador");
                     } else {
-                        console.error("Erro: método spend() não encontrado no currencyManager");
+                        logger.error("Erro: método spend() não encontrado no currencyManager");
                     }
 
                     this.showMessage(`Compra realizada! -$${totalValue}`, 'success');
