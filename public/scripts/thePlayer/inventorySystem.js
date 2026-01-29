@@ -3,6 +3,7 @@ import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { sanitizeQuantity, isValidPositiveInteger } from '../validation.js';
 
 export const allItems = items;
 
@@ -159,6 +160,22 @@ export class InventorySystem {
             logger.debug(`📦 Adicionando: ${itemData.name} (Tipo: ${itemData.type}) → ${category}`);
         }
 
+        // ✅ CRÍTICO: Sanitizar quantidade (bloqueia NaN, negativo, Infinity)
+        qty = sanitizeQuantity(qty, 1, 9999);
+
+        // ✅ Validar que o itemId é um número positivo válido
+        if (!isValidPositiveInteger(id)) {
+            logger.error(`❌ Item ID inválido: ${id}`);
+            return false;
+        }
+
+        // ✅ Validar que o item existe no banco de dados
+        const itemData = getItem(id);
+        if (!itemData) {
+            logger.error(`❌ Item ID ${id} não encontrado no banco de dados`);
+            return false;
+        }
+
         if (!this.categories[category]) {
             logger.error(`❌ Categoria '${category}' não definida`);
             return false;
@@ -265,6 +282,15 @@ export class InventorySystem {
                 logger.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
                 return false;
             }
+        }
+
+        // ✅ CRÍTICO: Sanitizar quantidade (bloqueia NaN, negativo, Infinity)
+        qty = sanitizeQuantity(qty, 1, 9999);
+
+        // ✅ Validar que o itemId é um número positivo válido
+        if (!isValidPositiveInteger(id)) {
+            logger.error(`❌ Item ID inválido: ${id}`);
+            return false;
         }
 
         if (!this.categories[category]) return false;

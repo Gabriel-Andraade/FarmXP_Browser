@@ -6,6 +6,15 @@
  * @module PlayerSystem
  */
 
+import { validateRange } from '../validation.js';
+
+/**
+ * Minimum and maximum values for player needs
+ * @constant {number}
+ */
+const MIN_NEED = 0;
+const MAX_NEED = 100;
+
 /**
  * Core player management class handling needs, equipment, and character state
  * @class PlayerSystem
@@ -178,16 +187,35 @@ export class PlayerSystem {
      * @returns {void}
      */
     consumeNeeds(actionType, multiplier = 1) {
-        if (!this.needs.consumptionRates[actionType]) return;
+        if (!this.needs.consumptionRates[actionType]) {
+            console.warn('[PlayerSystem] Unknown action type:', actionType);
+            return;
+        }
+
+        // ✅ Validar multiplier (0-10 é range razoável)
+        const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
-        
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * multiplier));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * multiplier));
-        
-        this.needs.energy = Math.max(0, Math.min(100, 
-            this.needs.energy - (rates.energy * multiplier)));
-        
+
+        // ✅ Aplicar com validação (clamps to 0-100)
+        this.needs.hunger = validateRange(
+            this.needs.hunger - (rates.hunger * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
+        this.needs.thirst = validateRange(
+            this.needs.thirst - (rates.thirst * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
+        this.needs.energy = validateRange(
+            this.needs.energy - (rates.energy * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
     }
@@ -199,13 +227,34 @@ export class PlayerSystem {
      * @param {number} energy - Amount of energy to restore
      * @returns {void}
      */
-    restoreNeeds(hunger, thirst, energy) {
-        this.needs.hunger = Math.min(100, this.needs.hunger + hunger);
-        this.needs.thirst = Math.min(100, this.needs.thirst + thirst);
-        this.needs.energy = Math.min(100, this.needs.energy + energy);
-        
+    restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
+        // ✅ Aplicar com validação (clamps to 0-100)
+        if (hunger !== undefined && hunger !== 0) {
+            this.needs.hunger = validateRange(
+                this.needs.hunger + hunger,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
+        if (thirst !== undefined && thirst !== 0) {
+            this.needs.thirst = validateRange(
+                this.needs.thirst + thirst,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
+        if (energy !== undefined && energy !== 0) {
+            this.needs.energy = validateRange(
+                this.needs.energy + energy,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
         this.dispatchNeedsUpdate();
-        
+
         if (hunger > 0 || thirst > 0 || energy > 0) {
             this.showNeedRestoredFeedback(hunger, thirst, energy);
         }

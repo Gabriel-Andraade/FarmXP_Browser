@@ -6,6 +6,7 @@
  */
 
 import { items } from './item.js';
+import { sanitizeQuantity, isValidPositiveInteger } from './validation.js';
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -191,18 +192,28 @@ export class StorageSystem {
 
     let inventoryCategory = categoryOrId;
     let itemId = itemIdOrQty;
-    let qty = Math.floor(quantity); // Sanitização
+    let qty = quantity;
 
     if (typeof categoryOrId === "number") {
       itemId = categoryOrId;
-      qty = Math.floor(itemIdOrQty || 1);
+      qty = itemIdOrQty || 1;
       inventoryCategory = null;
     }
 
-    if (qty < 1) return false;
+    // ✅ CRÍTICO: Sanitizar quantidade ANTES de qualquer check (Math.floor(NaN) = NaN bypassa!)
+    qty = sanitizeQuantity(qty, 1, 9999);
+
+    // ✅ Validar que o itemId é um número positivo válido
+    if (!isValidPositiveInteger(itemId)) {
+      console.warn('[Storage] Item ID inválido:', itemId);
+      return false;
+    }
 
     const itemData = items.find(i => i.id === itemId);
-    if (!itemData) return false;
+    if (!itemData) {
+      console.warn('[Storage] Item não encontrado:', itemId);
+      return false;
+    }
 
     const invCatOk = inventoryCategory && this._inventoryCategoryExists(inventoryCategory);
 
@@ -280,22 +291,33 @@ export class StorageSystem {
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
     if (!window.inventorySystem) return false;
 
+    // ✅ Sanitizar quantidade
+    const qty = sanitizeQuantity(quantity, 1, 9999);
+
+    // ✅ Validar itemId
+    if (!isValidPositiveInteger(itemId)) {
+      console.warn('[Storage] Item ID inválido:', itemId);
+      return false;
+    }
+
     const itemData = items.find(i => i.id === itemId);
     if (!itemData) return false;
 
-    const removed = this.removeItem(storageCategory, itemId, quantity);
+    const removed = this.removeItem(storageCategory, itemId, qty);
     if (!removed) {
       this.showMessage("item não encontrado no armazém");
       return false;
     }
 
-    const added = window.inventorySystem.addItem(itemId, quantity);
+    // ✅ CRÍTICO: Usar qty (sanitizado) em TODAS as etapas
+    const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
-      this.showMessage(`retirado: ${quantity}x ${itemData.name}`);
+      this.showMessage(`retirado: ${qty}x ${itemData.name}`);
       return true;
     }
 
-    this._addToCategory(storageCategory, itemId, quantity);
+    // Rollback: usar qty
+    this._addToCategory(storageCategory, itemId, qty);
     this.showMessage("inventário cheio");
     return false;
   }
@@ -308,11 +330,20 @@ export class StorageSystem {
    * @returns {boolean} True se a adição foi bem-sucedida
    */
   addItem(itemId, quantity = 1) {
+    // ✅ Sanitizar quantidade
+    const qty = sanitizeQuantity(quantity, 1, 9999);
+
+    // ✅ Validar itemId
+    if (!isValidPositiveInteger(itemId)) {
+      console.warn('[Storage] Item ID inválido:', itemId);
+      return false;
+    }
+
     const itemData = items.find(i => i.id === itemId);
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
-    return this._addToCategory(category, itemId, quantity);
+    return this._addToCategory(category, itemId, qty);
   }
 
   /**
@@ -337,6 +368,15 @@ export class StorageSystem {
       if (!found) return false;
 
       category = found.category;
+    }
+
+    // ✅ Sanitizar quantidade
+    qty = sanitizeQuantity(qty, 1, 9999);
+
+    // ✅ Validar itemId
+    if (!isValidPositiveInteger(id)) {
+      console.warn('[Storage] Item ID inválido:', id);
+      return false;
     }
 
     if (!this.storage[category]) return false;
