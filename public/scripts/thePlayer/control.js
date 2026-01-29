@@ -4,6 +4,9 @@ import { collisionSystem } from "../collisionSystem.js";
 import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
 
+// AbortController global para cleanup de todos os listeners do módulo
+const controlsAbortController = new AbortController();
+
 // Key configuration
 export const keys = {
     ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false,
@@ -25,7 +28,7 @@ document.addEventListener("sleepStarted", () => {
     const joystickArea = document.getElementById('joystick-area');
     if (mobileBtn) mobileBtn.style.display = 'none';
     if (joystickArea) joystickArea.style.display = 'none';
-});
+}, { signal: controlsAbortController.signal });
 
 document.addEventListener("sleepEnded", () => {
     isSleeping = false;
@@ -35,7 +38,7 @@ document.addEventListener("sleepEnded", () => {
         const joystickArea = document.getElementById('joystick-area');
         if (joystickArea) joystickArea.style.display = 'block';
     }
-});
+}, { signal: controlsAbortController.signal });
 
 // Device detection
 export const isMobile = () => {
@@ -196,6 +199,7 @@ export class PlayerInteractionSystem {
 
     setupInteractionListeners() {
         const self = this;
+        const { signal } = controlsAbortController;
 
         document.addEventListener('keydown', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
@@ -235,14 +239,14 @@ export class PlayerInteractionSystem {
                     }
                 }
             }
-        });
+        }, { signal });
 
         document.addEventListener('keyup', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             if (e.key === 'e' || e.key === 'E') {
                 keys.KeyE = false;
             }
-        });
+        }, { signal });
 
         if (!this.mobile) {
             this.setupMouseInteraction();
@@ -569,6 +573,8 @@ export const PLAYER_INTERACTION_CONFIG = {
 
 // Main keyboard controls setup
 export function setupControls(player) {
+    const { signal } = controlsAbortController;
+
     document.addEventListener('keydown', (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
@@ -586,7 +592,7 @@ export function setupControls(player) {
                 player.frame = 0;
             }
         }
-    });
+    }, { signal });
 
     document.addEventListener('keyup', (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
@@ -600,11 +606,13 @@ export function setupControls(player) {
             player.isMoving = false;
             player.wasMoving = false;
         }
-    });
+    }, { signal });
 }
 
 // Inventory controls (i key)
 function setupInventoryControls() {
+    const { signal } = controlsAbortController;
+
     document.addEventListener("keydown", (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
@@ -625,11 +633,13 @@ function setupInventoryControls() {
             else window.openInventory?.();
             return;
         }
-    });
+    }, { signal });
 }
 
 // Ui shortcuts (u for commerce, o for config)
 function setupUIShortcuts() {
+    const { signal } = controlsAbortController;
+
     document.addEventListener("keydown", (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
@@ -730,11 +740,13 @@ function setupUIShortcuts() {
             if (modal.classList.contains('active')) modal.classList.remove('active');
             else modal.classList.add('active');
         }
-    });
+    }, { signal });
 }
 
 // Build mode controls (b, r, t, 1-6, esc)
 function setupBuildControls() {
+    const { signal } = controlsAbortController;
+
     document.addEventListener("keydown", (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
@@ -757,7 +769,7 @@ function setupBuildControls() {
                 if (e.key === '6') BuildSystem.setSubPosition('y', 1);
             }
         }
-    });
+    }, { signal });
 }
 
 // Global instance of the player interaction system
@@ -802,4 +814,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.style.display = 'none';
         });
     }
-});
+}, { signal: controlsAbortController.signal });
+
+/**
+ * Limpa todos os event listeners do sistema de controles
+ * Remove todos os listeners registrados via AbortController global
+ * @returns {void}
+ */
+export function destroyControls() {
+    controlsAbortController.abort();
+}

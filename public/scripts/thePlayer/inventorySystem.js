@@ -11,7 +11,10 @@ export class InventorySystem {
         this.uiUpdateTimer = null;
         this.UI_UPDATE_DELAY = 50;
         this.lastUIUpdate = 0;
-        
+
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
         // 🔧 Inicializar categorias da configuração centralizada
         this.categories = {
             tools: { limit: INVENTORY_CATEGORIES.tools.limit, stackLimit: INVENTORY_CATEGORIES.tools.stackLimit, items: [] },
@@ -101,6 +104,8 @@ export class InventorySystem {
     }
 
     setupGlobalListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('itemEquipped', (e) => {
             const item = e.detail.item;
             if (item.type === 'tool') {
@@ -109,20 +114,20 @@ export class InventorySystem {
                 this.equipped.food = item.id;
             }
             this.scheduleUIUpdate();
-        });
+        }, { signal });
 
         document.addEventListener('itemUnequipped', () => {
             this.equipped.tool = null;
             this.equipped.food = null;
             this.scheduleUIUpdate();
-        });
-        
+        }, { signal });
+
         document.addEventListener('removeItemAfterConsumption', (e) => {
             const { category, itemId, quantity } = e.detail;
             if (category && itemId) {
                 this.removeItem(category, itemId, quantity || 1);
             }
-        });
+        }, { signal });
     }
 
     init() {
@@ -505,7 +510,7 @@ export class InventorySystem {
     getConsumptionData(itemId) {
         const item = this.findItemData(itemId);
         if (!item || !item.fillUp) return null;
-        
+
         return {
             name: item.name,
             icon: item.icon,
@@ -513,6 +518,22 @@ export class InventorySystem {
             thirst: item.fillUp.thirst || 0,
             energy: item.fillUp.energy || 0
         };
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Clear timer de UI update
+        if (this.uiUpdateTimer) {
+            clearTimeout(this.uiUpdateTimer);
+            this.uiUpdateTimer = null;
+        }
     }
 }
 

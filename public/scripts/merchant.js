@@ -33,6 +33,12 @@ class MerchantSystem {
         this.lastMerchantOpenCheck = 0;
         this.merchantOpenCheckInterval = 5;
 
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
+        // Armazenar referência do handler do botão da loja
+        this.storeBtnHandler = null;
+
         this.initialize();
     }
 
@@ -64,13 +70,21 @@ class MerchantSystem {
             return;
         }
 
-        const newStoreBtn = storeBtn.cloneNode(true);
-        storeBtn.parentNode.replaceChild(newStoreBtn, storeBtn);
+        // Remove listener anterior se existir
+        if (this.storeBtnHandler) {
+            storeBtn.removeEventListener('click', this.storeBtnHandler);
+        }
 
-        newStoreBtn.addEventListener('click', (e) => {
+        // Criar e armazenar novo handler
+        this.storeBtnHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.openMerchantsList();
+        };
+
+        // Adicionar listener com signal para cleanup automático
+        storeBtn.addEventListener('click', this.storeBtnHandler, {
+            signal: this.abortController.signal
         });
 
         window.openStore = () => {
@@ -170,47 +184,49 @@ class MerchantSystem {
         if (this.listenersSetup) return;
         this.listenersSetup = true;
 
+        const { signal } = this.abortController;
+
         document.addEventListener('timeChanged', () => {
             this.checkAndCloseIfMerchantClosed();
             const merchantsListModal = document.getElementById('merchantsListModal');
             if (merchantsListModal && merchantsListModal.classList.contains('active')) {
                 this.updateMerchantsListStatus();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-close') ||
                 e.target.classList.contains('mch-close-button')) {
                 this.closeAllModals();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('mch-back-button')) {
                 this.backToMerchantsList();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const toggleBtn = e.target.closest('.mch-storage-toggle-btn');
             if (toggleBtn) {
                 this.setPlayerStorage(toggleBtn.dataset.storage);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const catBtn = e.target.closest('.mch-player-category-btn');
             if (catBtn) {
                 this.setPlayerCategory(catBtn.dataset.category);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const catBtn = e.target.closest('.mch-merchant-category-btn');
             if (catBtn) {
                 this.setMerchantCategory(catBtn.dataset.category);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const arrow = e.target.closest('.mch-trade-arrow');
@@ -221,7 +237,7 @@ class MerchantSystem {
                     this.setTradeMode('buy');
                 }
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const hexagon = e.target.closest('.mch-hexagon-slot');
@@ -229,7 +245,7 @@ class MerchantSystem {
                 const itemId = parseInt(hexagon.dataset.itemId);
                 this.selectPlayerItem(itemId);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const merchantHexagon = e.target.closest('.mch-merchant-hexagon');
@@ -237,7 +253,7 @@ class MerchantSystem {
                 const itemId = parseInt(merchantHexagon.dataset.itemId);
                 this.selectMerchantItem(itemId);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('mch-confirm-yes')) {
@@ -245,7 +261,7 @@ class MerchantSystem {
             } else if (e.target.classList.contains('mch-confirm-no')) {
                 this.cancelTrade();
             }
-        });
+        }, { signal });
     }
 
     // aumenta a quantidade de transação
@@ -1001,6 +1017,28 @@ class MerchantSystem {
             msg.classList.remove('show');
             setTimeout(() => msg.remove(), 300);
         }, 3000);
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Remove listener manual do botão da loja
+        const storeBtn = document.getElementById('storeBtn');
+        if (storeBtn && this.storeBtnHandler) {
+            storeBtn.removeEventListener('click', this.storeBtnHandler);
+            this.storeBtnHandler = null;
+        }
+
+        // Clear referências
+        this.currentMerchant = null;
+        this.selectedPlayerItem = null;
+        this.selectedMerchantItem = null;
     }
 }
 

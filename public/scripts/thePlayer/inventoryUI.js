@@ -528,6 +528,9 @@ let activeCategory = 'resources';
 let selectedSlotIndex = -1;
 let currentItems = [];
 
+// AbortController para cleanup de event listeners
+let inventoryAbortController = null;
+
 // Mapeamento de Categorias
 const CATEGORY_MAP = {
   resources: { label: 'Recursos', icon: '🪵' },
@@ -543,34 +546,39 @@ let modalEl, contentEl, tabsEl, detailsEl;
 
 export function initInventoryUI() {
   if (document.getElementById('inventory-ui-host')) return;
-  
+
+  // Criar AbortController para cleanup de listeners
+  inventoryAbortController = new AbortController();
+  const { signal } = inventoryAbortController;
+
   // Criar interface com Shadow DOM
   shadowRoot = createInventoryUI();
-  
+
   // Bind dos elementos
   modalEl = shadowRoot.getElementById('inventoryModal');
   contentEl = shadowRoot.getElementById('invGrid');
   tabsEl = shadowRoot.getElementById('invTabs');
   detailsEl = shadowRoot.getElementById('invDetails');
-  
-  // Event Listeners
-  shadowRoot.getElementById('closeInvBtn').addEventListener('click', closeInventoryModal);
-  
+
+  // Event Listeners com signal para cleanup automático
+  shadowRoot.getElementById('closeInvBtn').addEventListener('click', closeInventoryModal, { signal });
+
   // Fechar ao clicar fora
   modalEl.addEventListener('click', (e) => {
     if (e.target === modalEl) closeInventoryModal();
-  });
-  
+  }, { signal });
+
   // Atualizar UI quando inventário muda
   document.addEventListener('inventoryUpdated', () => {
     if (modalEl.classList.contains('open')) {
       renderInventory();
     }
-  });
-  
+  }, { signal });
+
   // Expor globalmente
   window.openInventory = openInventoryModal;
   window.closeInventory = closeInventoryModal;
+  window.destroyInventoryUI = destroyInventoryUI;
 
   logger.info('✅ Inventory UI (Shadow DOM) Carregada');
 }
@@ -841,6 +849,41 @@ function updateDetailsPanel(item, qty) {
     }
   };
   actionsDiv.appendChild(dropBtn);
+}
+
+/**
+ * Limpa todos os event listeners e recursos do Inventory UI
+ * Remove todos os listeners registrados via AbortController
+ * @returns {void}
+ */
+export function destroyInventoryUI() {
+  // Remove todos os event listeners via AbortController
+  if (inventoryAbortController) {
+    inventoryAbortController.abort();
+    inventoryAbortController = null;
+  }
+
+  // Limpar elementos DOM
+  const host = document.getElementById('inventory-ui-host');
+  if (host) {
+    host.remove();
+  }
+
+  // Reset variáveis
+  shadowRoot = null;
+  modalEl = null;
+  contentEl = null;
+  tabsEl = null;
+  detailsEl = null;
+  selectedSlotIndex = -1;
+  currentItems = [];
+
+  // Limpar funções globais
+  delete window.openInventory;
+  delete window.closeInventory;
+  delete window.destroyInventoryUI;
+
+  logger.info('🗑️ Inventory UI destruído e listeners limpos');
 }
 
 // Exportar funções de debug

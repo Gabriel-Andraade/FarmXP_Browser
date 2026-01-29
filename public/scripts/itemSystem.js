@@ -22,6 +22,9 @@ export class ItemSystem {
         this.lastDamageTime = 0;
         this.DAMAGE_COOLDOWN = 300; // ms
 
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
         this.setupInteractions();
         this.setupEventListeners();
     }
@@ -33,6 +36,8 @@ export class ItemSystem {
      * @returns {void}
      */
     setupInteractions() {
+        const { signal } = this.abortController;
+
         document.addEventListener('gameClick', (e) => {
             try {
                 const { screenX, screenY } = e.detail || {};
@@ -50,7 +55,7 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:gameClick");
             }
-        });
+        }, { signal });
 
         document.addEventListener('playerInteract', (e) => {
             try {
@@ -60,7 +65,7 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:playerInteract");
             }
-        });
+        }, { signal });
     }
 
     /**
@@ -70,6 +75,8 @@ export class ItemSystem {
      * @returns {void}
      */
     setupEventListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('worldLoaded', (e) => {
             try {
                 const objs = e?.detail?.objects;
@@ -77,22 +84,22 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:worldLoadedListener");
             }
-        });
+        }, { signal });
 
         document.addEventListener('worldObjectAdded', (e) => {
             const obj = e.detail?.object;
             if (obj) this.registerInteractiveObject(obj);
-        });
+        }, { signal });
 
         document.addEventListener('objectRespawned', (e) => {
             const obj = e.detail?.object;
             if (obj) this.registerInteractiveObject(obj);
-        });
+        }, { signal });
 
         document.addEventListener('objectDestroyed', (e) => {
             const id = e.detail?.id || e.detail?.objectId;
             if (id) this.interactiveObjects.delete(id);
-        });
+        }, { signal });
     }
 
     /**
@@ -391,6 +398,19 @@ export class ItemSystem {
         if (!Array.isArray(list)) return;
         list.forEach(o => this.registerInteractiveObject(o));
     }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Limpa objetos interativos
+        this.interactiveObjects.clear();
+    }
 }
 
 // Instancia e exporta o sistema de itens
@@ -422,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerWorldObjects();
         }
     }, 1000);
-});
+}, { signal: itemSystem.abortController.signal });
 
 /**
  * Registra objetos quando o jogador estiver pronto
@@ -440,4 +460,4 @@ document.addEventListener('playerReady', () => {
             handleError(err, "itemSystem:playerReady_Init");
         }
     }, 500);
-});
+}, { signal: itemSystem.abortController.signal });
