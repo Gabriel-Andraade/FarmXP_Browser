@@ -30,13 +30,13 @@ export function runValidationTests() {
         const money2 = currencyManager.getMoney();
 
         const passed = !earnResult && money1 === money2;
-        console.assert(passed, '✅ NaN blocked');
+        console.assert(passed, ' NaN blocked');
 
         results.tests.push({ name: 'Currency NaN Block', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Currency NaN Block', passed: false, error: e.message });
     }
@@ -50,13 +50,13 @@ export function runValidationTests() {
         const money2 = currencyManager.getMoney();
 
         const passed = !spendResult && money1 === money2;
-        console.assert(passed, '✅ Infinity blocked');
+        console.assert(passed, ' Infinity blocked');
 
         results.tests.push({ name: 'Currency Infinity Block', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Currency Infinity Block', passed: false, error: e.message });
     }
@@ -72,13 +72,13 @@ export function runValidationTests() {
         const newMoney = currencyManager.getMoney();
 
         const passed = newMoney === Number.MAX_SAFE_INTEGER;
-        console.assert(passed, '✅ Capped at MAX_SAFE_INTEGER');
+        console.assert(passed, ' Capped at MAX_SAFE_INTEGER');
 
         results.tests.push({ name: 'Currency Overflow Protection', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Currency Overflow Protection', passed: false, error: e.message });
     } finally {
@@ -103,13 +103,13 @@ export function runValidationTests() {
         const finalCount = inventorySystem.getItemQuantity(1);
         const passed = result === false || (finalCount === initialCount + 1);
 
-        console.assert(passed, '✅ Negative quantity sanitized');
+        console.assert(passed, ' Negative quantity sanitized');
 
         results.tests.push({ name: 'Inventory Negative Quantity', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Inventory Negative Quantity', passed: false, error: e.message });
     } finally {
@@ -126,40 +126,41 @@ export function runValidationTests() {
         const result = inventorySystem.addItem(999999);
 
         const passed = result === false;
-        console.assert(passed, '✅ Invalid ID rejected');
+        console.assert(passed, ' Invalid ID rejected');
 
         results.tests.push({ name: 'Inventory Invalid Item ID', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Inventory Invalid Item ID', passed: false, error: e.message });
     }
     console.groupEnd();
 
-    // TEST 6: Storage NaN Handling
-    console.group('Test 6: Storage NaN Handling');
+       // TEST 6: Storage NaN Handling - Rejected via sanitizeQuantity
+    console.group('Test 6: Storage NaN Handling - Rejected');
     try {
         // Get storage state before
         const storageBefore = JSON.stringify(storageSystem.storage);
-
-        // Try to deposit with NaN quantity (should be sanitized or rejected)
+        
+        // Try to deposit with NaN quantity (should be rejected by sanitizeQuantity)
         const result = storageSystem.depositFromInventory(1, NaN);
-
-        // Should reject (false) since NaN quantity is invalid
-        // Also verify storage wasn't corrupted
+        
+        // Storage should remain unchanged (no deposit happened)
         const storageAfter = JSON.stringify(storageSystem.storage);
-        const passed = result === false || storageBefore === storageAfter;
-        console.assert(passed, '✅ NaN handled safely');
-
-        results.tests.push({ name: 'Storage NaN Handling', passed });
+        
+        // Result should be false (rejected) AND storage unchanged
+        const passed = result === false && storageBefore === storageAfter;
+        console.assert(passed, ' NaN rejected by sanitizeQuantity()');
+        
+        results.tests.push({ name: 'Storage NaN Handling (rejected)', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
-        results.tests.push({ name: 'Storage NaN Handling', passed: false, error: e.message });
+        results.tests.push({ name: 'Storage NaN Handling (rejected)', passed: false, error: e.message });
     }
     console.groupEnd();
 
@@ -172,13 +173,13 @@ export function runValidationTests() {
         const newHunger = playerSystem.needs.hunger;
 
         const passed = newHunger === 100;
-        console.assert(passed, '✅ Capped at 100');
+        console.assert(passed, ' Capped at 100');
 
         results.tests.push({ name: 'Needs Clamping Max', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Needs Clamping Max', passed: false, error: e.message });
     } finally {
@@ -198,13 +199,13 @@ export function runValidationTests() {
         const newThirst = playerSystem.needs.thirst;
 
         const passed = newThirst === 0;
-        console.assert(passed, '✅ Floored at 0');
+        console.assert(passed, ' Floored at 0');
 
         results.tests.push({ name: 'Needs Clamping Min', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'Needs Clamping Min', passed: false, error: e.message });
     } finally {
@@ -238,13 +239,13 @@ export function runValidationTests() {
         const passedNeg = afterNeg === originalCurrent;
 
         const passed = passedNaN && passedInf && passedNeg;
-        console.assert(passed, '✅ setInitialAmount blocks invalid values');
+        console.assert(passed, ' setInitialAmount blocks invalid values');
 
         results.tests.push({ name: 'setInitialAmount Validation', passed });
         if (passed) results.passed++;
         else results.failed++;
     } catch (e) {
-        console.error('❌ Test failed with error:', e);
+        console.error(' Test failed with error:', e);
         results.failed++;
         results.tests.push({ name: 'setInitialAmount Validation', passed: false, error: e.message });
     } finally {
@@ -257,8 +258,8 @@ export function runValidationTests() {
     console.groupEnd();
     console.group('📊 TEST SUMMARY');
     console.log(`Total Tests: ${results.passed + results.failed}`);
-    console.log(`✅ Passed: ${results.passed}`);
-    console.log(`❌ Failed: ${results.failed}`);
+    console.log(` Passed: ${results.passed}`);
+    console.log(` Failed: ${results.failed}`);
     console.log(`Success Rate: ${((results.passed / (results.passed + results.failed)) * 100).toFixed(1)}%`);
     console.groupEnd();
 
