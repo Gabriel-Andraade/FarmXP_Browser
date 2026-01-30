@@ -673,6 +673,9 @@ export class PlayerSystem {
         // Remove todos os event listeners
         this.abortController.abort();
 
+        // Reset AbortController para permitir re-inicialização
+        this.abortController = new AbortController();
+
         // Clear interval de atualização de needs
         if (this.needsUpdateInterval) {
             clearInterval(this.needsUpdateInterval);

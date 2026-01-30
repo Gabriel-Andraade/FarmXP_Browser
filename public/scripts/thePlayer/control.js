@@ -827,3 +827,6 @@ export function destroyControls() {
     // Re-inicializar AbortController para permitir re-setup
     controlsAbortController = new AbortController();
 }
+
+// Expor para cleanup global
+window.destroyControls = destroyControls;

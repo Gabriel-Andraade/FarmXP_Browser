@@ -27,6 +27,7 @@ export class ItemSystem {
 
         this.setupInteractions();
         this.setupEventListeners();
+        this.setupModuleLevelListeners();
     }
 
     /**
@@ -40,6 +41,50 @@ export class ItemSystem {
 
         // Limpar mapa de objetos interativos
         this.interactiveObjects.clear();
+    }
+
+    /**
+     * Registra listeners de DOMContentLoaded e playerReady com AbortController
+     * Garante que listeners sejam limpos quando o sistema for destruído
+     * @returns {void}
+     */
+    setupModuleLevelListeners() {
+        const { signal } = this.abortController;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.theWorld) {
+                    const registerWorldObjects = () => {
+                        try {
+                            if (window.currentPlayer) {
+                                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                                this.registerInteractiveObjects(objects);
+
+                                if (this.interactiveObjects.size === 0) {
+                                    setTimeout(registerWorldObjects, 500);
+                                }
+                            }
+                        } catch (err) {
+                            handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
+                        }
+                    };
+                    registerWorldObjects();
+                }
+            }, 1000);
+        }, { signal });
+
+        document.addEventListener('playerReady', () => {
+            setTimeout(() => {
+                try {
+                    if (window.theWorld && window.currentPlayer) {
+                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                        this.registerInteractiveObjects(objects);
+                    }
+                } catch (err) {
+                    handleError(err, "itemSystem:playerReady_Init");
+                }
+            }, 500);
+        }, { signal });
     }
 
     /**
@@ -416,48 +461,3 @@ export class ItemSystem {
 // Instancia e exporta o sistema de itens
 export const itemSystem = new ItemSystem();
 window.itemSystem = itemSystem;
-
-/**
- * Registra objetos do mundo quando o DOM estiver pronto
- * Tenta múltiplas vezes até que objetos sejam carregados com sucesso
- * @listens document#DOMContentLoaded
- */
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        if (window.theWorld) {
-            const registerWorldObjects = () => {
-                try {
-                    if (window.currentPlayer) {
-                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-                        itemSystem.registerInteractiveObjects(objects);
-
-                        if (itemSystem.interactiveObjects.size === 0) {
-                            setTimeout(registerWorldObjects, 500);
-                        }
-                    }
-                } catch (err) {
-                    handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
-                }
-            };
-            registerWorldObjects();
-        }
-    }, 1000);
-});
-
-/**
- * Registra objetos quando o jogador estiver pronto
- * Garante que objetos sejam registrados após inicialização completa do jogador
- * @listens document#playerReady
- */
-document.addEventListener('playerReady', () => {
-    setTimeout(() => {
-        try {
-            if (window.theWorld && window.currentPlayer) {
-                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-                itemSystem.registerInteractiveObjects(objects);
-            }
-        } catch (err) {
-            handleError(err, "itemSystem:playerReady_Init");
-        }
-    }, 500);
-});
