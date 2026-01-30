@@ -473,7 +473,7 @@ export class CollisionSystem {
     /**
      * resolve sobreposicao empurrando 'rect' para fora das hitboxes fisicas
      */
-    resolveOverlap(rect, ignoreId = null, { maxIters = MOVEMENT.MAX_COLLISION_ITERATIONS } = {}) {
+    resolveOverlap(rect, ignoreId = null, { maxIters = 6 } = {}) {  // 6 = MOVEMENT.MAX_COLLISION_ITERATIONS
         let r = _rect(rect.x, rect.y, rect.width, rect.height);
 
         for (let i = 0; i < maxIters; i++) {

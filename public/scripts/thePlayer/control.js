@@ -3,7 +3,7 @@ import { camera } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
 import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
-import { MOVEMENT, RANGES, MOBILE, SIZES, HITBOX_CONFIGS } from '../constants.js';
+import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 
 // Key configuration
 export const keys = {
@@ -298,7 +298,7 @@ export class PlayerInteractionSystem {
         button.id = 'mobile-interact-btn';
         button.innerHTML = 'E';
         button.style.cssText = `
-            position: fixed; bottom: ${SIZES.MOBILE_UI.INTERACT_BUTTON.BOTTOM}px; right: ${SIZES.MOBILE_UI.INTERACT_BUTTON.RIGHT}px; width: ${SIZES.MOBILE_UI.INTERACT_BUTTON.WIDTH}px; height: ${SIZES.MOBILE_UI.INTERACT_BUTTON.HEIGHT}px;
+            position: fixed; bottom: 100px; right: 30px; width: 70px; height: 70px;
             border-radius: 50%; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
             color: white; font-size: 24px; font-weight: bold; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             z-index: 1000; display: none; cursor: pointer; opacity: 0.9; transition: all 0.2s;
@@ -328,7 +328,7 @@ export class PlayerInteractionSystem {
         const joystickArea = document.createElement('div');
         joystickArea.id = 'joystick-area';
         joystickArea.style.cssText = `
-            position: fixed; bottom: 30px; left: 30px; width: ${SIZES.MOBILE_UI.JOYSTICK_AREA.WIDTH}px; height: ${SIZES.MOBILE_UI.JOYSTICK_AREA.HEIGHT}px;
+            position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px;
             border-radius: 50%; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.5);
             z-index: 999; touch-action: none; display: ${isMobile() ? 'block' : 'none'};
         `;

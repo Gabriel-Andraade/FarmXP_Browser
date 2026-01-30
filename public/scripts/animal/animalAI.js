@@ -13,21 +13,6 @@ import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX
 // =========================================================
 
 /**
- * Configurações de comportamento dos animais
- * @constant {Object}
- */
-const ANIMAL_CONFIG = {
-    IDLE_MIN: IDLE_STATE_MIN_MS,
-    IDLE_MAX: IDLE_STATE_MAX_MS,
-    MOVE_MIN: MOVE_STATE_MIN_MS,
-    MOVE_MAX: MOVE_STATE_MAX_MS,
-    SPEED: MOVEMENT.ANIMAL_SPEED,
-    FRAME_RATE_IDLE: ANIMATION.FRAME_RATE_IDLE_MS,
-    FRAME_RATE_MOVE: ANIMATION.FRAME_RATE_MOVE_MS,
-    SIGHT_RADIUS: RANGES.ANIMAL_SIGHT_RADIUS
-};
-
-/**
  * Estados possíveis da máquina de estados do animal
  * @enum {string}
  */
@@ -196,17 +181,17 @@ export class AnimalEntity {
     pickNewState() {
         if (Math.random() > 0.6) {
             this.state = AnimalState.MOVE;
-            this.stateDuration = Math.random() * (ANIMAL_CONFIG.MOVE_MAX - ANIMAL_CONFIG.MOVE_MIN) + ANIMAL_CONFIG.MOVE_MIN;
+            this.stateDuration = Math.random() * (MOVE_STATE_MAX_MS - MOVE_STATE_MIN_MS) + MOVE_STATE_MIN_MS;
             
             const angle = Math.random() * Math.PI * 2;
-            const dist = Math.random() * ANIMAL_CONFIG.SIGHT_RADIUS;
+            const dist = Math.random() * RANGES.ANIMAL_SIGHT_RADIUS;
             this.targetX = this.x + Math.cos(angle) * dist;
             this.targetY = this.y + Math.sin(angle) * dist;
 
             this.updateDirection();
         } else {
             this.state = AnimalState.IDLE;
-            this.stateDuration = Math.random() * (ANIMAL_CONFIG.IDLE_MAX - ANIMAL_CONFIG.IDLE_MIN) + ANIMAL_CONFIG.IDLE_MIN;
+            this.stateDuration = Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS) + IDLE_STATE_MIN_MS;
         }
     }
 
@@ -242,8 +227,8 @@ export class AnimalEntity {
             return;
         }
 
-        const vx = (dx / dist) * ANIMAL_CONFIG.SPEED;
-        const vy = (dy / dist) * ANIMAL_CONFIG.SPEED;
+        const vx = (dx / dist) * MOVEMENT.ANIMAL_SPEED;
+        const vy = (dy / dist) * MOVEMENT.ANIMAL_SPEED;
 
         const nextX = this.x + vx;
         const nextY = this.y + vy;
@@ -278,8 +263,8 @@ export class AnimalEntity {
      */
     updateAnimation(now) {
         const frameRate = this.state === AnimalState.MOVE 
-            ? ANIMAL_CONFIG.FRAME_RATE_MOVE 
-            : ANIMAL_CONFIG.FRAME_RATE_IDLE;
+            ? ANIMATION.FRAME_RATE_MOVE_MS 
+            : ANIMATION.FRAME_RATE_IDLE_MS;
 
         if (now - this.lastFrameTime >= frameRate) {
             this.lastFrameTime = now;

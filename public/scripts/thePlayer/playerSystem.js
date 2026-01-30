@@ -430,7 +430,8 @@ export class PlayerSystem {
      * @returns {number} Multiplier between 0.3 and 1.0
      */
     getEfficiencyMultiplier() {
-        const avgNeeds = (this.needs.hunger + this.needs.thirst + this.needs.energy) / (GAME_BALANCE.NEEDS.MAX_VALUE * 3);
+        const MAX_TOTAL_NEEDS = 3; // hunger + thirst + energy
+        const avgNeeds = (this.needs.hunger + this.needs.thirst + this.needs.energy) / (GAME_BALANCE.NEEDS.MAX_VALUE * MAX_TOTAL_NEEDS);
 
         const hasCritical = this.needs.hunger <= GAME_BALANCE.NEEDS.LOW_THRESHOLD ||
                            this.needs.thirst <= GAME_BALANCE.NEEDS.LOW_THRESHOLD ||
