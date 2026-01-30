@@ -3,6 +3,7 @@ import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
 
 export const allItems = items;
 
@@ -147,21 +148,38 @@ export class InventorySystem {
         let category = categoryOrId;
         let id = itemIdOrQty;
         let qty = quantity;
+        let itemDataCached = null;
 
         if (typeof categoryOrId === 'number') {
             id = categoryOrId;
             qty = itemIdOrQty || 1;
 
-            // 🔧 Usar getItem() centralizado
-            const itemData = getItem(id);
-            if (!itemData) {
-                logger.error(`❌ Erro: Item ID ${id} não existe no banco de dados`);
+            // Usar getItem() centralizado
+            itemDataCached = getItem(id);
+            if (!itemDataCached) {
+                logger.error(`Erro: Item ID ${id} não existe no banco de dados`);
                 return false;
             }
 
-            // 🔧 Usar mapeamento centralizado
-            category = mapTypeToCategory(itemData.type);
-            logger.debug(`📦 Adicionando: ${itemData.name} (Tipo: ${itemData.type}) → ${category}`);
+            // Usar mapeamento centralizado
+            category = mapTypeToCategory(itemDataCached.type);
+            logger.debug(`Adicionando: ${itemDataCached.name} (Tipo: ${itemDataCached.type}) → ${category}`);
+        }
+
+        // Sanitizar quantidade (bloqueia NaN, negativo, Infinity)
+        qty = sanitizeQuantity(qty, 1, 9999);
+
+        // Validar que o itemId é um número inteiro não-negativo válido
+        if (!isValidItemId(id)) {
+            logger.error(`Item ID inválido: ${id}`);
+            return false;
+        }
+
+        // Validar que o item existe no banco de dados (reusar lookup se já feito)
+        const itemData = itemDataCached || getItem(id);
+        if (!itemData) {
+            logger.error(`Item ID ${id} não encontrado no banco de dados`);
+            return false;
         }
 
         if (!this.categories[category]) {
@@ -237,7 +255,7 @@ export class InventorySystem {
             if (qty > stackLimit) {
                 const overflow = qty - stackLimit;
                 logger.debug(`📚 Item split: criando nova stack com ${overflow} itens`);
-                return this.addItem(category, id, overflow);
+                return this.addItem(category, id, overflow, _recursionDepth + 1);
             }
         }
 
@@ -270,6 +288,15 @@ export class InventorySystem {
                 logger.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
                 return false;
             }
+        }
+
+        // Sanitizar quantidade (bloqueia NaN, negativo, Infinity)
+        qty = sanitizeQuantity(qty, 1, 9999);
+
+        // Validar que o itemId é um número inteiro não-negativo válido
+        if (!isValidItemId(id)) {
+            logger.error(`Item ID inválido: ${id}`);
+            return false;
         }
 
         if (!this.categories[category]) return false;
