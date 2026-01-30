@@ -15,6 +15,7 @@
 
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { assets } from "./assetManager.js";
+import { SIZES, RANGES, VISUAL, UI } from './constants.js';
 
 /**
  * Manages in-world user interface elements
@@ -143,11 +144,11 @@ class WorldUIManager {
             obj.y
         );
 
-        const width = this.styles.hpBar.width * zoom;
-        const height = this.styles.hpBar.height * zoom;
+        const width = SIZES.HEALTH_BAR.WIDTH * zoom;
+        const height = SIZES.HEALTH_BAR.HEIGHT * zoom;
 
         const x = Math.floor(screenPos.x - width / 2);
-        const y = Math.floor(screenPos.y - this.styles.hpBar.offsetY * zoom);
+        const y = Math.floor(screenPos.y - SIZES.HEALTH_BAR.OFFSET_Y * zoom);
 
         const percent = Math.max(0, obj.health / obj.maxHealth);
 
@@ -160,11 +161,11 @@ class WorldUIManager {
         ctx.shadowColor = "transparent";
 
         let gradient;
-        if (percent > 0.5) {
+        if (percent > VISUAL.HEALTH_BAR.THRESHOLD_HIGH) {
             gradient = ctx.createLinearGradient(x, y, x + width * percent, y);
             gradient.addColorStop(0, this.styles.hpBar.gradientHigh[0]);
             gradient.addColorStop(1, this.styles.hpBar.gradientHigh[1]);
-        } else if (percent > 0.25) {
+        } else if (percent > VISUAL.HEALTH_BAR.THRESHOLD_MID) {
             gradient = ctx.createLinearGradient(x, y, x + width * percent, y);
             gradient.addColorStop(0, this.styles.hpBar.gradientMid[0]);
             gradient.addColorStop(1, this.styles.hpBar.gradientMid[1]);
@@ -174,7 +175,7 @@ class WorldUIManager {
             gradient.addColorStop(1, this.styles.hpBar.gradientLow[1]);
         }
 
-        const fillWidth = Math.max(4, width * percent);
+        const fillWidth = Math.max(VISUAL.HEALTH_BAR.MIN_WIDTH, width * percent);
         this.drawRoundedRect(ctx, x, y, fillWidth, height, 3, gradient);
 
         ctx.strokeStyle = this.styles.hpBar.borderColor;
@@ -182,7 +183,7 @@ class WorldUIManager {
         ctx.strokeRect(x - 0.5, y - 0.5, width + 1, height + 1);
 
         if (zoom > 0.8 && width > 60) {
-            ctx.font = `bold ${9 * zoom}px Arial`;
+            ctx.font = `bold ${UI.FONT_SIZES.HEALTH_BAR_TEXT * zoom}px Arial`;
             ctx.fillStyle = "#f5e9d3";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -214,12 +215,10 @@ class WorldUIManager {
             centerObjY - centerPlayerY
         );
 
-        const interactionRange = 70;
-
-        if (dist <= interactionRange) {
+        if (dist <= RANGES.INTERACTION_RANGE) {
             this.drawKeyPrompt(ctx, obj, "E");
 
-            if (dist <= interactionRange * 0.7) {
+            if (dist <= RANGES.INTERACTION_RANGE * RANGES.INTERACTION_RANGE_CLOSE_MULTIPLIER) {
                 this.drawInteractionGlow(ctx, obj);
             }
         }
@@ -243,15 +242,15 @@ class WorldUIManager {
 
         const hasHealthBar = obj.health < obj.maxHealth && obj.health > 0;
         const offsetY = hasHealthBar
-            ? (this.styles.hpBar.offsetY + this.styles.hpBar.height + 15) * zoom
-            : 20 * zoom;
+            ? (SIZES.HEALTH_BAR.OFFSET_Y + SIZES.HEALTH_BAR.HEIGHT + 15) * zoom
+            : SIZES.KEY_PROMPT.OFFSET_Y_NO_HEALTH * zoom;
 
         const x = screenPos.x;
         const y = screenPos.y - offsetY;
-        const size = this.styles.keyPrompt.size * zoom;
+        const size = SIZES.KEY_PROMPT.SIZE * zoom;
 
         ctx.shadowColor = this.styles.keyPrompt.shadowColor;
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur = VISUAL.KEY_PROMPT.SHADOW_BLUR;
         ctx.shadowOffsetY = 2;
 
         const gradient = ctx.createRadialGradient(
@@ -277,7 +276,7 @@ class WorldUIManager {
         ctx.stroke();
 
         ctx.fillStyle = this.styles.keyPrompt.textColor;
-        ctx.font = `bold ${14 * zoom}px Arial`;
+        ctx.font = `bold ${UI.FONT_SIZES.KEY_PROMPT * zoom}px Arial`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(key, x, y + 1);
@@ -299,21 +298,21 @@ class WorldUIManager {
         );
 
         const time = Date.now() / 1000;
-        const pulse = Math.sin(time * 3) * 0.2 + 0.8;
+        const pulse = Math.sin(time * VISUAL.GLOW.PULSE_FREQUENCY) * VISUAL.GLOW.PULSE_AMPLITUDE + VISUAL.GLOW.PULSE_BASE;
 
         ctx.save();
-        ctx.globalAlpha = 0.1 * pulse;
+        ctx.globalAlpha = VISUAL.GLOW.ALPHA * pulse;
 
         const gradient = ctx.createRadialGradient(
             screenPos.x, screenPos.y, 0,
-            screenPos.x, screenPos.y, 50 * zoom
+            screenPos.x, screenPos.y, VISUAL.GLOW.RADIUS * zoom
         );
         gradient.addColorStop(0, "#c9a463");
         gradient.addColorStop(1, "transparent");
 
         ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.arc(screenPos.x, screenPos.y, 50 * zoom, 0, Math.PI * 2);
+        ctx.arc(screenPos.x, screenPos.y, VISUAL.GLOW.RADIUS * zoom, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
@@ -387,11 +386,11 @@ class WorldUIManager {
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
             this.consumption.player.x + this.consumption.player.width / 2,
-            this.consumption.player.y - 30
+            this.consumption.player.y - SIZES.CONSUMPTION_BAR.PLAYER_OFFSET_Y
         );
 
-        const width = 60 * zoom;
-        const height = 8 * zoom;
+        const width = SIZES.CONSUMPTION_BAR.WIDTH * zoom;
+        const height = SIZES.CONSUMPTION_BAR.HEIGHT * zoom;
         const x = screenPos.x - width / 2;
         const y = screenPos.y;
 
