@@ -39,6 +39,9 @@ export class ItemSystem {
         // Remove todos os event listeners
         this.abortController.abort();
 
+        // Re-inicializar AbortController para permitir re-setup
+        this.abortController = new AbortController();
+
         // Limpar mapa de objetos interativos
         this.interactiveObjects.clear();
     }
@@ -53,9 +56,11 @@ export class ItemSystem {
 
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
+                if (signal.aborted) return;
                 if (window.theWorld) {
                     const registerWorldObjects = () => {
                         try {
+                            if (signal.aborted) return;
                             if (window.currentPlayer) {
                                 const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
                                 this.registerInteractiveObjects(objects);
@@ -75,6 +80,7 @@ export class ItemSystem {
 
         document.addEventListener('playerReady', () => {
             setTimeout(() => {
+                if (signal.aborted) return;
                 try {
                     if (window.theWorld && window.currentPlayer) {
                         const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
