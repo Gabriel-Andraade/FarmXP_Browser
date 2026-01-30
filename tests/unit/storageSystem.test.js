@@ -322,7 +322,7 @@ describe('StorageSystem (Production Implementation)', () => {
       expect(info.categoryStats.resources.stackCount).toBe(2);
     });
 
-    test('should remove from oldest stacks first (FIFO)', () => {
+    test('should consolidate stacks when removing across multiple (FIFO)', () => {
       storage.addItem(2, 20); // First stack
       storage.addItem(2, 30); // Second stack
 

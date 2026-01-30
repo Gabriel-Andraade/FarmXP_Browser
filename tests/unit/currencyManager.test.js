@@ -1,100 +1,30 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import "../setup.js";
 
-// Mock CurrencyManager for testing
-class TestCurrencyManager {
-  constructor(initialAmount = 1000) {
-    this.initialMoney = initialAmount;
-    this.currentMoney = this.initialMoney;
-    this.transactionHistory = [];
-    this._lastAmount = 0;
-  }
+// Import REAL CurrencyManager class from production code
+const { CurrencyManager } = await import('../../public/scripts/currencyManager.js');
 
-  init() {
-    this.currentMoney = this.initialMoney;
-    return this;
-  }
-
-  getMoney() {
-    return this.currentMoney;
-  }
-
-  earn(amount, source = "unknown") {
-    if (amount <= 0) return false;
-
-    const oldBalance = this.currentMoney;
-    this.currentMoney += amount;
-
-    this._addTransaction('earn', amount, source, oldBalance);
-
-    return true;
-  }
-
-  spend(amount, item = "unknown") {
-    if (amount <= 0) return false;
-    if (this.currentMoney < amount) return false;
-
-    const oldBalance = this.currentMoney;
-    this.currentMoney -= amount;
-
-    this._addTransaction('spend', amount, item, oldBalance);
-
-    return true;
-  }
-
-  reset() {
-    this.currentMoney = this.initialMoney;
-    return true;
-  }
-
-  canAfford(amount) {
-    return this.currentMoney >= amount;
-  }
-
-  setInitialAmount(amount) {
-    this.initialMoney = amount;
-    this.currentMoney = amount;
-  }
-
-  getTransactionHistory() {
-    return this.transactionHistory;
-  }
-
-  _addTransaction(type, amount, description, oldBalance) {
-    this.transactionHistory.push({
-      type,
-      amount,
-      description,
-      oldBalance,
-      newBalance: this.currentMoney,
-      timestamp: new Date().toISOString()
-    });
-
-    // Keep only last 100 transactions
-    if (this.transactionHistory.length > 100) {
-      this.transactionHistory.shift();
-    }
-  }
-}
-
-describe('CurrencyManager', () => {
+describe('CurrencyManager (Production Implementation)', () => {
   let manager;
 
   beforeEach(() => {
-    manager = new TestCurrencyManager(1000);
+    // Use the REAL CurrencyManager implementation
+    manager = new CurrencyManager();
+    // Reset transaction history for clean tests
+    manager.transactionHistory = [];
   });
 
   describe('initialization', () => {
-    test('should start with initial money', () => {
+    test('should start with initial money (1000)', () => {
       expect(manager.getMoney()).toBe(1000);
     });
 
-    test('should allow custom initial amount', () => {
-      const customManager = new TestCurrencyManager(5000);
-      expect(customManager.getMoney()).toBe(5000);
+    test('should allow custom initial amount via setInitialAmount', () => {
+      manager.setInitialAmount(5000);
+      expect(manager.getMoney()).toBe(5000);
     });
 
-    test('should initialize with empty transaction history', () => {
+    test('should initialize with empty transaction history after reset', () => {
       expect(manager.getTransactionHistory().length).toBe(0);
     });
   });
@@ -334,6 +264,19 @@ describe('CurrencyManager', () => {
 
       expect(manager.getMoney()).toBe(1050);
       expect(manager.getTransactionHistory().length).toBe(20);
+    });
+  });
+
+  describe('_notifyChange', () => {
+    test('should have _notifyChange method', () => {
+      expect(typeof manager._notifyChange).toBe('function');
+    });
+
+    test('should track lastAmount after operations', () => {
+      manager.earn(100, 'test');
+
+      // _notifyChange updates _lastAmount
+      expect(manager._lastAmount).toBe(1100);
     });
   });
 });

@@ -1,8 +1,9 @@
 import { describe, test, expect, mock } from 'bun:test';
 import "../setup.js";
 
+
 // Mock item.js EXACTLY like inventory.test.js does
-// This prevents conflicts when tests run in any order
+// This prevents conflicts when tests run in sequence
 mock.module('../../public/scripts/item.js', () => ({
   items: [
     { id: 1, name: 'Wood', type: 'resource', icon: '🪵', price: 5 },

@@ -1,114 +1,60 @@
 # Test Suite
 
-This directory contains the test suite for the FarmingXP game project.
-
-## Structure
-
-```
-tests/
-├── unit/
-│   ├── itemUtils.test.js        - Tests for item utility functions (6 tests)
-│   ├── collision.test.js        - Tests for AABB collision detection (6 tests)
-│   ├── inventory.test.js        - Tests for inventory system (6 tests)
-│   ├── collisionSystem.test.js  - Tests for CollisionSystem class (40 tests)
-│   ├── currencyManager.test.js  - Tests for CurrencyManager (42 tests)
-│   ├── storageSystem.test.js    - Tests for StorageSystem (30 tests)
-│   └── playerSystem.test.js     - Tests for PlayerSystem needs (13 tests)
-└── integration/                 - Integration tests (to be added)
-```
+This directory contains the test suite for the FarmingXP game project. All tests import and test **real production classes** - no mock classes.
 
 ## Running Tests
 
-### Run all tests
 ```bash
-bun test
+bun test                 # Run all tests
+bun test --watch        # Run in watch mode
+bun test tests/unit/     # Run specific directory
 ```
 
-### Run tests in watch mode (re-run on file changes)
-```bash
-bun test --watch
-```
+## Test Status
 
-### Run with coverage report
-```bash
-bun test --coverage
-```
+ **224 tests passing** | 0 failing | 6 core systems tested
 
-### Run specific test file
-```bash
-bun test tests/unit/collision.test.js
-```
+## File Organization
+
+- `00-itemUtils.test.js` - Item utilities (runs first to avoid module cache conflicts)
+- `collisionSystem.test.js` - Collision detection and hitbox management
+- `currencyManager.test.js` - Currency and transaction system
+- `inventory.test.js` - Player inventory with categories
+- `playerSystem.test.js` - Player needs and stats
+- `storageSystem.test.js` - Storage chest system
+
+**Note**: itemUtils is prefixed with `00-` to ensure it runs first. Since `item.js` is mocked differently by inventory and storage tests, itemUtils must establish its mock before those tests run (Bun module caching behavior).
 
 ## Test Coverage
 
-### Current Coverage
+| System | Tests | Scope |
+|--------|-------|-------|
+| itemUtils | 16 | Item lookup, type checking, pricing, stack limits |
+| InventorySystem | 39 | Categories, stacking, equipment, UI selection |
+| CollisionSystem | 40 | Hitboxes, AABB, interactions, player ranges |
+| CurrencyManager | 42 | Earn, spend, transactions, balance validation |
+| StorageSystem | 54 | Deposit, withdraw, FIFO, category management |
+| PlayerSystem | 33 | Needs, consumption, critical states, equipment |
 
-- ✅ **Item Utilities** (6 tests) - Finding items by ID and name, case-insensitive search
-- ✅ **Basic Collision** (6 tests) - AABB collision detection for various scenarios
-- ✅ **Basic Inventory** (6 tests) - Adding, removing, and stacking items
-- ✅ **CollisionSystem** (40 tests) - Hitbox management, collision detection, interaction zones
-- ✅ **CurrencyManager** (42 tests) - Earning, spending, balance validation, transaction history
-- ✅ **StorageSystem** (30 tests) - Deposit, withdraw, category mapping, stack management
-- ✅ **PlayerSystem** (13 tests) - Needs management, consumption rates, critical states, effects
+## Testing Philosophy
 
-
-## Writing New Tests
-
-### Test File Template
+All tests follow this pattern:
 
 ```javascript
-import { describe, test, expect, beforeEach } from 'bun:test';
+// Import and test REAL production classes
+const { RealClass } = await import('../../public/scripts/realClass.js');
 
-describe('Feature Name', () => {
-  let system;
+// Mock only external dependencies (DOM, other modules)
+mock.module('../../public/scripts/dependency.js', () => ({
+  stubbed: () => {}
+}));
 
-  beforeEach(() => {
-    // Setup before each test
-    system = new System();
-  });
-
-  describe('Method Name', () => {
-    test('should do something', () => {
-      const result = system.doSomething();
-      expect(result).toBe(expectedValue);
-    });
+describe('RealClass (Production Implementation)', () => {
+  test('should validate actual production behavior', () => {
+    const instance = new RealClass();
+    expect(instance.method()).toBe(expectedValue);
   });
 });
 ```
 
-### Best Practices
-
-1. **One assertion per test** - Keep tests focused and easy to debug
-2. **Use descriptive test names** - "should return true when X happens"
-3. **Test edge cases** - Empty arrays, null values, boundary conditions
-4. **Use beforeEach for setup** - Keep tests isolated and independent
-5. **Mock external dependencies** - Focus on testing the unit in isolation
-
-## Test Results
-
-All 143 tests passing ✅
-
-```
-143 pass
-0 fail
-251 expect() calls
-Ran 143 tests across 7 files. [172.00ms]
-```
-
-### Test Breakdown by File
-
-| File | Tests | Coverage |
-|------|-------|----------|
-| itemUtils.test.js | 6 | Item lookup utilities |
-| collision.test.js | 6 | AABB collision algorithm |
-| inventory.test.js | 6 | Basic inventory operations |
-| collisionSystem.test.js | 40 | Complete hitbox system |
-| currencyManager.test.js | 42 | Currency operations & history |
-| storageSystem.test.js | 30 | Storage & category system |
-| playerSystem.test.js | 13 | Player needs & effects |
-| **Total** | **143** | **7 systems covered** |
-
-## Related Documentation
-
-- [Bun Test Documentation](https://bun.sh/docs/cli/test)
-- [Issue #8 - Missing Test Suite](../claude.md)
+**Key principle**: Tests validate the real production code, not mock reimplementations.
