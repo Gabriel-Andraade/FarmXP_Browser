@@ -31,6 +31,15 @@ export class PlayerSystem {
         /** @type {Object|null} Currently equipped item */
         this.equippedItem = null;
 
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
+        // Armazenar referência do interval para cleanup
+        this.needsUpdateInterval = null;
+
+        // Armazenar referência do sleep interval para cleanup
+        this.sleepInterval = null;
+
         /**
          * Player survival needs configuration
          * @type {Object}
@@ -78,34 +87,36 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupEventListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('equipItemRequest', (e) => {
             this.equipItem(e.detail.item);
-        });
+        }, { signal });
 
         document.addEventListener('unequipItemRequest', () => {
             this.unequipItem();
-        });
+        }, { signal });
 
         document.addEventListener('discardItemRequest', (e) => {
             const { itemId } = e.detail;
             if (this.equippedItem && this.equippedItem.id === itemId) {
                 this.unequipItem();
             }
-        });
+        }, { signal });
 
         document.addEventListener('startConsumptionRequest', (e) => {
             const { category, itemId, quantity, item, fillUp } = e.detail;
             this.consumeItem(item);
-            
+
             document.dispatchEvent(new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
             }));
-        });
+        }, { signal });
 
         document.addEventListener('itemConsumed', (e) => {
             const item = e.detail.item;
             this.consumeItem(item);
-        });
+        }, { signal });
     }
 
     /**
@@ -114,35 +125,37 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupActionListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('playerMoved', (e) => {
             if (e.detail && e.detail.distance) {
                 this.consumeNeeds('moving', e.detail.distance / 100);
             }
-        });
+        }, { signal });
 
         document.addEventListener('toolUsedOnObject', (e) => {
             this.consumeNeeds('breaking', 1);
-        });
+        }, { signal });
 
         document.addEventListener('itemCollected', (e) => {
             this.consumeNeeds('collecting', 1);
-        });
+        }, { signal });
 
         document.addEventListener('buildingPlaced', (e) => {
             this.consumeNeeds('building', 1);
-        });
+        }, { signal });
 
         document.addEventListener('sleepStarted', () => {
             this.startSleep();
-        });
+        }, { signal });
 
         document.addEventListener('sleepEnded', () => {
             this.endSleep();
-        });
+        }, { signal });
 
         document.addEventListener('consumeFood', (e) => {
             this.restoreNeeds(e.detail.hunger || 0, e.detail.thirst || 0, e.detail.energy || 0);
-        });
+        }, { signal });
     }
 
     /**
@@ -151,7 +164,13 @@ export class PlayerSystem {
      * @returns {void}
      */
     startNeedsUpdate() {
-        setInterval(() => {
+        // Clear existing interval if any
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+        }
+
+        // Store interval reference for cleanup
+        this.needsUpdateInterval = setInterval(() => {
             this.updateNeeds();
         }, 2000);
     }
@@ -309,13 +328,20 @@ export class PlayerSystem {
     startSleep() {
         this.currentPlayer.isSleeping = true;
         
-        const sleepInterval = setInterval(() => {
+        // Clear any existing sleep interval to avoid duplicates
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
+        this.sleepInterval = setInterval(() => {
             if (this.needs.energy < 100) {
                 this.needs.energy = Math.min(100, this.needs.energy + 10);
                 this.dispatchNeedsUpdate();
                 
                 if (this.needs.energy >= 100) {
-                    clearInterval(sleepInterval);
+                    clearInterval(this.sleepInterval);
+                    this.sleepInterval = null;
                     this.endSleep();
                 }
             }
@@ -327,6 +353,12 @@ export class PlayerSystem {
      * @returns {void}
      */
     endSleep() {
+        // Clear sleep interval if it exists
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
         this.currentPlayer.isSleeping = false;
         this.needs.energy = 100;
         this.dispatchNeedsUpdate();
@@ -630,6 +662,31 @@ export class PlayerSystem {
     /** @returns {Function|null} Character draw function */
     getDrawFunction() {
         return this.drawFunction;
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners e para os intervals de needs e sleep
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Reset AbortController para permitir re-inicialização
+        this.abortController = new AbortController();
+
+        // Clear interval de atualização de needs
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // Clear sleep interval se estiver ativo
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
     }
 }
 

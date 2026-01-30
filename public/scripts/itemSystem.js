@@ -22,8 +22,75 @@ export class ItemSystem {
         this.lastDamageTime = 0;
         this.DAMAGE_COOLDOWN = 300; // ms
 
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
         this.setupInteractions();
         this.setupEventListeners();
+        this.setupModuleLevelListeners();
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Re-inicializar AbortController para permitir re-setup
+        this.abortController = new AbortController();
+
+        // Limpar mapa de objetos interativos
+        this.interactiveObjects.clear();
+    }
+
+    /**
+     * Registra listeners de DOMContentLoaded e playerReady com AbortController
+     * Garante que listeners sejam limpos quando o sistema for destruído
+     * @returns {void}
+     */
+    setupModuleLevelListeners() {
+        const { signal } = this.abortController;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (signal.aborted) return;
+                if (window.theWorld) {
+                    const registerWorldObjects = () => {
+                        try {
+                            if (signal.aborted) return;
+                            if (window.currentPlayer) {
+                                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                                this.registerInteractiveObjects(objects);
+
+                                if (this.interactiveObjects.size === 0) {
+                                    setTimeout(registerWorldObjects, 500);
+                                }
+                            }
+                        } catch (err) {
+                            handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
+                        }
+                    };
+                    registerWorldObjects();
+                }
+            }, 1000);
+        }, { signal });
+
+        document.addEventListener('playerReady', () => {
+            setTimeout(() => {
+                if (signal.aborted) return;
+                try {
+                    if (window.theWorld && window.currentPlayer) {
+                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                        this.registerInteractiveObjects(objects);
+                    }
+                } catch (err) {
+                    handleError(err, "itemSystem:playerReady_Init");
+                }
+            }, 500);
+        }, { signal });
     }
 
     /**
@@ -33,6 +100,8 @@ export class ItemSystem {
      * @returns {void}
      */
     setupInteractions() {
+        const { signal } = this.abortController;
+
         document.addEventListener('gameClick', (e) => {
             try {
                 const { screenX, screenY } = e.detail || {};
@@ -50,7 +119,7 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:gameClick");
             }
-        });
+        }, { signal });
 
         document.addEventListener('playerInteract', (e) => {
             try {
@@ -60,7 +129,7 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:playerInteract");
             }
-        });
+        }, { signal });
     }
 
     /**
@@ -70,6 +139,8 @@ export class ItemSystem {
      * @returns {void}
      */
     setupEventListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('worldLoaded', (e) => {
             try {
                 const objs = e?.detail?.objects;
@@ -77,22 +148,22 @@ export class ItemSystem {
             } catch (err) {
                 handleError(err, "itemSystem:worldLoadedListener");
             }
-        });
+        }, { signal });
 
         document.addEventListener('worldObjectAdded', (e) => {
             const obj = e.detail?.object;
             if (obj) this.registerInteractiveObject(obj);
-        });
+        }, { signal });
 
         document.addEventListener('objectRespawned', (e) => {
             const obj = e.detail?.object;
             if (obj) this.registerInteractiveObject(obj);
-        });
+        }, { signal });
 
         document.addEventListener('objectDestroyed', (e) => {
             const id = e.detail?.id || e.detail?.objectId;
             if (id) this.interactiveObjects.delete(id);
-        });
+        }, { signal });
     }
 
     /**
@@ -396,48 +467,3 @@ export class ItemSystem {
 // Instancia e exporta o sistema de itens
 export const itemSystem = new ItemSystem();
 window.itemSystem = itemSystem;
-
-/**
- * Registra objetos do mundo quando o DOM estiver pronto
- * Tenta múltiplas vezes até que objetos sejam carregados com sucesso
- * @listens document#DOMContentLoaded
- */
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-        if (window.theWorld) {
-            const registerWorldObjects = () => {
-                try {
-                    if (window.currentPlayer) {
-                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-                        itemSystem.registerInteractiveObjects(objects);
-
-                        if (itemSystem.interactiveObjects.size === 0) {
-                            setTimeout(registerWorldObjects, 500);
-                        }
-                    }
-                } catch (err) {
-                    handleWarn("Falha ao registrar objetos do mundo no DOMContentLoaded", "itemSystem:DOM_Init", err);
-                }
-            };
-            registerWorldObjects();
-        }
-    }, 1000);
-});
-
-/**
- * Registra objetos quando o jogador estiver pronto
- * Garante que objetos sejam registrados após inicialização completa do jogador
- * @listens document#playerReady
- */
-document.addEventListener('playerReady', () => {
-    setTimeout(() => {
-        try {
-            if (window.theWorld && window.currentPlayer) {
-                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
-                itemSystem.registerInteractiveObjects(objects);
-            }
-        } catch (err) {
-            handleError(err, "itemSystem:playerReady_Init");
-        }
-    }, 500);
-});
