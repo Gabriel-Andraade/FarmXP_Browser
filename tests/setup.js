@@ -72,11 +72,13 @@ globalThis.window.matchMedia = (query) => ({
 });
 
 globalThis.window.requestAnimationFrame = (callback) => {
-  setTimeout(callback, 16); // ~60fps
-  return 1;
+  const id = setTimeout(callback, 16); // ~60fps
+  return id;
 };
 
-globalThis.window.cancelAnimationFrame = () => {};
+globalThis.window.cancelAnimationFrame = (id) => {
+  clearTimeout(id);
+};
 
 globalThis.window.addEventListener = () => {};
 globalThis.window.removeEventListener = () => {};

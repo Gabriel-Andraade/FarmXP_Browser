@@ -73,12 +73,11 @@ describe('itemUtils (Production Implementation)', () => {
   describe('getItem', () => {
     test('should return item object for valid id', () => {
       const allItems = itemUtils.getAllItems();
-      if (allItems && allItems.length > 0) {
-        const firstItem = allItems[0];
-        const item = itemUtils.getItem(firstItem.id);
-        expect(item).toBeDefined();
-        expect(item.id).toBe(firstItem.id);
-      }
+      expect(allItems.length).toBeGreaterThan(0);
+      const firstItem = allItems[0];
+      const item = itemUtils.getItem(firstItem.id);
+      expect(item).toBeDefined();
+      expect(item.id).toBe(firstItem.id);
     });
 
     test('should return null for invalid id', () => {
@@ -104,9 +103,8 @@ describe('itemUtils (Production Implementation)', () => {
   describe('isTool', () => {
     test('should return true for tool items', () => {
       const tools = itemUtils.getItemsByType('tool');
-      if (tools && tools.length > 0) {
-        expect(itemUtils.isTool(tools[0].id)).toBe(true);
-      }
+      expect(tools.length).toBeGreaterThan(0);
+      expect(itemUtils.isTool(tools[0].id)).toBe(true);
     });
   });
 

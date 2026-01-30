@@ -27,14 +27,14 @@ bun test tests/unit/     # Run specific directory
 
 ## Test Coverage
 
-| System | Tests | Scope |
-|--------|-------|-------|
-| itemUtils | 16 | Item lookup, type checking, pricing, stack limits |
-| InventorySystem | 39 | Categories, stacking, equipment, UI selection |
-| CollisionSystem | 40 | Hitboxes, AABB, interactions, player ranges |
-| CurrencyManager | 42 | Earn, spend, transactions, balance validation |
-| StorageSystem | 54 | Deposit, withdraw, FIFO, category management |
-| PlayerSystem | 33 | Needs, consumption, critical states, equipment |
+| System          | Tests | Scope                                         |
+| --------------- | ----- | --------------------------------------------- |
+| itemUtils       | 16    | Item lookup, type checking, pricing, stack limits |
+| InventorySystem | 39    | Categories, stacking, equipment, UI selection |
+| CollisionSystem | 40    | Hitboxes, AABB, interactions, player ranges   |
+| CurrencyManager | 42    | Earn, spend, transactions, balance validation |
+| StorageSystem   | 54    | Deposit, withdraw, FIFO, category management  |
+| PlayerSystem    | 33    | Needs, consumption, critical states, equipment |
 
 ## Testing Philosophy
 

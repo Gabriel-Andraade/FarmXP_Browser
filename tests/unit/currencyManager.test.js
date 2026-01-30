@@ -10,8 +10,6 @@ describe('CurrencyManager (Production Implementation)', () => {
   beforeEach(() => {
     // Use the REAL CurrencyManager implementation
     manager = new CurrencyManager();
-    // Reset transaction history for clean tests
-    manager.transactionHistory = [];
   });
 
   describe('initialization', () => {
