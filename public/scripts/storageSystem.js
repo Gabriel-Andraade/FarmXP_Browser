@@ -200,7 +200,10 @@ export class StorageSystem {
       inventoryCategory = null;
     }
 
-    // ✅ CRÍTICO: Sanitizar quantidade ANTES de qualquer check (Math.floor(NaN) = NaN bypassa!)
+    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
+      console.warn('[Storage] Invalid quantity:', qty);
+      return false;
+    }
     qty = sanitizeQuantity(qty, 1, 9999);
 
     // ✅ Validar que o itemId é um número positivo válido
@@ -291,7 +294,10 @@ export class StorageSystem {
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
     if (!window.inventorySystem) return false;
 
-    // ✅ Sanitizar quantidade
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity)) {
+      console.warn('[Storage] Invalid quantity:', quantity);
+      return false;
+    }
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
     // ✅ Validar itemId
@@ -330,7 +336,10 @@ export class StorageSystem {
    * @returns {boolean} True se a adição foi bem-sucedida
    */
   addItem(itemId, quantity = 1) {
-    // ✅ Sanitizar quantidade
+    if (typeof quantity !== 'number' || !Number.isFinite(quantity)) {
+      console.warn('[Storage] Invalid quantity:', quantity);
+      return false;
+    }
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
     // ✅ Validar itemId
@@ -370,7 +379,10 @@ export class StorageSystem {
       category = found.category;
     }
 
-    // ✅ Sanitizar quantidade
+    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
+      console.warn('[Storage] Invalid quantity:', qty);
+      return false;
+    }
     qty = sanitizeQuantity(qty, 1, 9999);
 
     // ✅ Validar itemId

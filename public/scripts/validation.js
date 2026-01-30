@@ -8,7 +8,7 @@
  * Maximum safe currency value to prevent overflow
  * @constant {number}
  */
-export const MAX_CURRENCY = Number.MAX_SAFE_INTEGER;
+export const MAX_CURRENCY = 1_000_000_000;
 
 /**
  * Validates that a value is a positive integer (> 0)
@@ -52,7 +52,6 @@ export function isValidPositiveNumber(value) {
 
 /**
  * Sanitizes a quantity to a positive integer within bounds
- * POLÍTICA ESTRITA: Rejeita strings, objetos, arrays - apenas números são aceitos
  * Returns min value if input is invalid (NaN/Infinity/negative/non-number)
  *
  * @param {any} value - Quantity to sanitize
@@ -67,11 +66,10 @@ export function isValidPositiveNumber(value) {
  * sanitizeQuantity(NaN)         // 1 (invalid, returns min)
  * sanitizeQuantity(Infinity)    // 1 (invalid, returns min)
  * sanitizeQuantity(5.7)         // 5 (floored)
- * sanitizeQuantity("5")         // 1 (REJEITADO: não é number)
- * sanitizeQuantity(null)        // 1 (REJEITADO: não é number)
+ * sanitizeQuantity("5")         // 1 (string rejected)
+ * sanitizeQuantity(null)        // 1 (null rejected)
  */
 export function sanitizeQuantity(value, min = 1, max = 9999) {
-    // ✅ POLÍTICA ESTRITA: Rejeitar strings, objetos, arrays, etc.
     if (typeof value !== 'number' || !Number.isFinite(value)) {
         return min;
     }
@@ -103,7 +101,8 @@ export function sanitizeQuantity(value, min = 1, max = 9999) {
  * validateRange(Infinity, 0, 100) // 0 (invalid, returns min)
  */
 export function validateRange(value, min, max) {
-    const num = Number(value);
+    if (typeof value !== 'number') return min;
+    const num = value;
 
     // If not finite, return min
     if (!Number.isFinite(num)) {

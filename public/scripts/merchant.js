@@ -849,8 +849,11 @@ class MerchantSystem {
         const modal = document.getElementById('tradeConfirmModal');
         const messageEl = document.getElementById('confirmMessage');
 
-        // ✅ CRÍTICO: Recalcular preço esperado (não confiar em this.tradeValue que pode ser manipulado)
         const expectedPrice = this.calculateExpectedPrice();
+        if (expectedPrice === null) {
+            this.showMessage('Erro ao calcular preço', 'error');
+            return;
+        }
         const totalValue = expectedPrice * this.tradeQuantity;
 
         let itemName = '';
@@ -893,10 +896,9 @@ class MerchantSystem {
 
         this.hideConfirmModal();
 
-        // ✅ CRÍTICO: Recalcular preço esperado (não confiar em this.tradeValue que pode ser manipulado)
         const expectedPrice = this.calculateExpectedPrice();
-        if (!isValidPositiveNumber(expectedPrice)) {
-            logger.error('[Merchant] Invalid price calculation:', expectedPrice);
+        if (expectedPrice === null) {
+            logger.error('[Merchant] Invalid price calculation');
             this.showMessage('Erro no cálculo de preço', 'error');
             return;
         }
@@ -910,17 +912,16 @@ class MerchantSystem {
         }
     }
 
-    // ✅ CRÍTICO: Calcula preço esperado baseado no item selecionado (não confia na UI)
     calculateExpectedPrice() {
         if (this.tradeMode === 'sell') {
-            if (!this.selectedPlayerItem) return 0;
+            if (!this.selectedPlayerItem) return null;
             const itemData = getItem(this.selectedPlayerItem);
-            if (!itemData) return 0;
+            if (!itemData) return null;
             return getSellPrice(this.selectedPlayerItem);
         } else {
-            if (!this.selectedMerchantItem) return 0;
+            if (!this.selectedMerchantItem) return null;
             const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
-            if (!merchantItem) return 0;
+            if (!merchantItem) return null;
             return merchantItem.price;
         }
     }

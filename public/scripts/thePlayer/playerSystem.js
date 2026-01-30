@@ -228,8 +228,7 @@ export class PlayerSystem {
      * @returns {void}
      */
     restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
-        // ✅ Aplicar com validação (clamps to 0-100)
-        if (hunger !== undefined && hunger !== 0) {
+        if (hunger !== 0) {
             this.needs.hunger = validateRange(
                 this.needs.hunger + hunger,
                 MIN_NEED,
@@ -237,7 +236,7 @@ export class PlayerSystem {
             );
         }
 
-        if (thirst !== undefined && thirst !== 0) {
+        if (thirst !== 0) {
             this.needs.thirst = validateRange(
                 this.needs.thirst + thirst,
                 MIN_NEED,
@@ -245,7 +244,7 @@ export class PlayerSystem {
             );
         }
 
-        if (energy !== undefined && energy !== 0) {
+        if (energy !== 0) {
             this.needs.energy = validateRange(
                 this.needs.energy + energy,
                 MIN_NEED,
