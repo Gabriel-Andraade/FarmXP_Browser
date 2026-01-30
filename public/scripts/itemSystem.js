@@ -30,6 +30,19 @@ export class ItemSystem {
     }
 
     /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Limpar mapa de objetos interativos
+        this.interactiveObjects.clear();
+    }
+
+    /**
      * Configura os event listeners de clique e interação
      * Escuta eventos 'gameClick' (clique do mouse) e 'playerInteract' (tecla de interação)
      * Valida se o objeto está no alcance antes de processar interação
@@ -330,7 +343,7 @@ export class ItemSystem {
      * Exibe mensagem de coleta de itens ao jogador
      * Formata lista de itens coletados com quantidades
      * @param {Array<Object>} itemsList - Lista de itens coletados
-     * @param {string} type - Tipo do objetodo
+     * @param {string} type - Tipo do objeto destruído
      * @returns {void}
      */
     showCollectionMessage(itemsList, type) {

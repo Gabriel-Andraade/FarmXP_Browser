@@ -21,6 +21,7 @@ import { setViewportSize, camera } from "./thePlayer/cameraSystem.js";
 import { cssManager } from "./cssManager.js";
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./loadingScreen.js";
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
+import { setupAutoCleanup } from "./gameCleanup.js";
 
 // =============================================================================
 // VARIÁVEIS DE SISTEMAS LAZY LOADING
@@ -634,6 +635,7 @@ async function initGameBootstrap() {
   setupInteractionSystem();
 
   gameInitialized = true;
+  setupAutoCleanup(); // Configurar cleanup automático ao encerrar o jogo
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
   logger.info("Game Loop iniciado!");

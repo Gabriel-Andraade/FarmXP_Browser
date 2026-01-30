@@ -865,9 +865,7 @@ export function destroyInventoryUI() {
 
   // Re-habilitar input do jogador se o modal estava aberto
   if (modalEl && modalEl.classList.contains('open')) {
-    if (window.playerSystem) {
-      window.playerSystem.inputDisabled = false;
-    }
+    closeInventoryModal();
   }
 
   // Limpar elementos DOM
@@ -890,7 +888,7 @@ export function destroyInventoryUI() {
   delete window.closeInventory;
   delete window.destroyInventoryUI;
 
-  logger.info('🗑️ Inventory UI destruído e listeners limpos');
+  logger.info('Inventory UI destruído e listeners limpos');
 }
 
 // Exportar funções de debug

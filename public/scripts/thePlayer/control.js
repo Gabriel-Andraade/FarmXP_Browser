@@ -5,7 +5,7 @@ import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
 
 // AbortController global para cleanup de todos os listeners do módulo
-const controlsAbortController = new AbortController();
+let controlsAbortController = new AbortController();
 
 // Key configuration
 export const keys = {
@@ -823,4 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 export function destroyControls() {
     controlsAbortController.abort();
+    
+    // Re-inicializar AbortController para permitir re-setup
+    controlsAbortController = new AbortController();
 }

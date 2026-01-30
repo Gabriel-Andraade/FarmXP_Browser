@@ -1031,15 +1031,11 @@ class MerchantSystem {
         // Reset AbortController para permitir re-inicialização
         this.abortController = new AbortController();
 
-        // Remove listener manual do botão da loja
-        const storeBtn = document.getElementById('storeBtn');
-        if (storeBtn && this.storeBtnHandler) {
-            storeBtn.removeEventListener('click', this.storeBtnHandler);
-            this.storeBtnHandler = null;
-        }
-
         // Reset listeners flag para permitir re-setup
         this.listenersSetup = false;
+        
+        // Clear handler reference
+        this.storeBtnHandler = null;
         
         // Clear referências
         this.currentMerchant = null;

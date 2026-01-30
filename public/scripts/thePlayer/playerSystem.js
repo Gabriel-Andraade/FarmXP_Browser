@@ -37,6 +37,9 @@ export class PlayerSystem {
         // Armazenar referência do interval para cleanup
         this.needsUpdateInterval = null;
 
+        // Armazenar referência do sleep interval para cleanup
+        this.sleepInterval = null;
+
         /**
          * Player survival needs configuration
          * @type {Object}
