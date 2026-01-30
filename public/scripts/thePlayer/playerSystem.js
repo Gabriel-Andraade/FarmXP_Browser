@@ -228,25 +228,30 @@ export class PlayerSystem {
      * @returns {void}
      */
     restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
-        if (hunger !== 0) {
+        // Validate and coerce deltas to numbers
+        const validHunger = typeof hunger === 'number' && Number.isFinite(hunger) ? hunger : 0;
+        const validThirst = typeof thirst === 'number' && Number.isFinite(thirst) ? thirst : 0;
+        const validEnergy = typeof energy === 'number' && Number.isFinite(energy) ? energy : 0;
+
+        if (validHunger !== 0) {
             this.needs.hunger = validateRange(
-                this.needs.hunger + hunger,
+                this.needs.hunger + validHunger,
                 MIN_NEED,
                 MAX_NEED
             );
         }
 
-        if (thirst !== 0) {
+        if (validThirst !== 0) {
             this.needs.thirst = validateRange(
-                this.needs.thirst + thirst,
+                this.needs.thirst + validThirst,
                 MIN_NEED,
                 MAX_NEED
             );
         }
 
-        if (energy !== 0) {
+        if (validEnergy !== 0) {
             this.needs.energy = validateRange(
-                this.needs.energy + energy,
+                this.needs.energy + validEnergy,
                 MIN_NEED,
                 MAX_NEED
             );
@@ -254,8 +259,8 @@ export class PlayerSystem {
 
         this.dispatchNeedsUpdate();
 
-        if (hunger > 0 || thirst > 0 || energy > 0) {
-            this.showNeedRestoredFeedback(hunger, thirst, energy);
+        if (validHunger > 0 || validThirst > 0 || validEnergy > 0) {
+            this.showNeedRestoredFeedback(validHunger, validThirst, validEnergy);
         }
     }
 

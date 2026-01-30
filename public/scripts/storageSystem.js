@@ -6,7 +6,7 @@
  */
 
 import { items } from './item.js';
-import { sanitizeQuantity, isValidPositiveInteger } from './validation.js';
+import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -206,8 +206,8 @@ export class StorageSystem {
     }
     qty = sanitizeQuantity(qty, 1, 9999);
 
-    // ✅ Validar que o itemId é um número positivo válido
-    if (!isValidPositiveInteger(itemId)) {
+    // Validar que o itemId é um número inteiro não-negativo válido
+    if (!isValidItemId(itemId)) {
       console.warn('[Storage] Item ID inválido:', itemId);
       return false;
     }
@@ -300,8 +300,8 @@ export class StorageSystem {
     }
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
-    // ✅ Validar itemId
-    if (!isValidPositiveInteger(itemId)) {
+    // Validar itemId
+    if (!isValidItemId(itemId)) {
       console.warn('[Storage] Item ID inválido:', itemId);
       return false;
     }
@@ -315,7 +315,7 @@ export class StorageSystem {
       return false;
     }
 
-    // ✅ CRÍTICO: Usar qty (sanitizado) em TODAS as etapas
+    // Usar qty (sanitizado) em TODAS as etapas
     const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
       this.showMessage(`retirado: ${qty}x ${itemData.name}`);
@@ -342,8 +342,8 @@ export class StorageSystem {
     }
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
-    // ✅ Validar itemId
-    if (!isValidPositiveInteger(itemId)) {
+    // Validar itemId
+    if (!isValidItemId(itemId)) {
       console.warn('[Storage] Item ID inválido:', itemId);
       return false;
     }
@@ -385,8 +385,8 @@ export class StorageSystem {
     }
     qty = sanitizeQuantity(qty, 1, 9999);
 
-    // ✅ Validar itemId
-    if (!isValidPositiveInteger(id)) {
+    // Validar itemId
+    if (!isValidItemId(id)) {
       console.warn('[Storage] Item ID inválido:', id);
       return false;
     }

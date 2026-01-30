@@ -29,6 +29,25 @@ export function isValidPositiveInteger(value) {
 }
 
 /**
+ * Validates that a value is a non-negative integer (>= 0)
+ * Used for item IDs which can be 0
+ *
+ * @param {any} value - Value to check
+ * @returns {boolean} Whether the value is a valid non-negative integer
+ *
+ * @example
+ * isValidItemId(0)        // true
+ * isValidItemId(5)        // true
+ * isValidItemId(-1)       // false
+ * isValidItemId(5.5)      // false
+ * isValidItemId(NaN)      // false
+ * isValidItemId(Infinity) // false
+ */
+export function isValidItemId(value) {
+    return Number.isInteger(value) && value >= 0;
+}
+
+/**
  * Validates that a value is a positive number (> 0)
  * CRITICAL: Blocks NaN and Infinity which bypass normal comparisons
  *
