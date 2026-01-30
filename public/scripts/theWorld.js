@@ -1129,10 +1129,16 @@ const tryApplyBuildSaveOverride = () => {
   BuildSystem.__saveOverrideApplied = true;
   return true;
 };
-const waitForBuildSystem = () => {
-  if (!tryApplyBuildSaveOverride()) setTimeout(waitForBuildSystem, 50);
-};
-waitForBuildSystem();
+
+// Event-driven approach: listen for build system registration
+document.addEventListener('gamestate:registered', (e) => {
+  if (e.detail?.name === 'build') {
+    tryApplyBuildSaveOverride();
+  }
+});
+
+// Try immediately in case build system is already registered
+tryApplyBuildSaveOverride();
 
 /* função principal de renderização do mundo */
 export function renderWorld(ctx, player) {

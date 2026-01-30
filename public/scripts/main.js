@@ -7,8 +7,8 @@
 // =============================================================================
 // IMPORTAÇÕES ESSENCIAIS (não bloqueantes)
 // =============================================================================
-import { logger } from "./logger.js";
 import { handleError, handleWarn } from "./errorHandler.js";
+import { logger } from "./logger.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
@@ -62,7 +62,7 @@ const IS_MOBILE =
  * @returns {void}
  */
 function applyMobileOptimizations() {
-  logger.info("Mobile detectado: Aplicando otimizações");
+  logger.debug("Mobile detectado: Aplicando otimizações");
 
   // reduz custo de render em alguns dispositivos
   if (ctx && ctx.imageSmoothingEnabled !== undefined) {
@@ -246,7 +246,7 @@ async function loadCriticalSystems() {
  * @returns {Promise<boolean>} True se inicialização bem-sucedida, false caso contrário
  */
 async function initializeCriticalSystems() {
-  logger.info("Inicializando sistemas críticos...");
+  logger.debug("Inicializando sistemas críticos...");
 
   try {
     const ok = await loadCriticalSystems();
@@ -403,7 +403,7 @@ function spawnGameAnimals() {
 
 function setupSleepListeners() {
   document.addEventListener("sleepStarted", () => {
-    logger.info("SONO INICIADO: Bloqueando interações e congelando lógica");
+    logger.debug("SONO INICIADO: Bloqueando interações e congelando lógica");
     isSleeping = true;
     sleepBlockedControls = true;
 
@@ -428,7 +428,7 @@ function setupSleepListeners() {
   });
 
   document.addEventListener("sleepEnded", () => {
-    logger.info("SONO TERMINADO: Restaurando interações");
+    logger.debug("SONO TERMINADO: Restaurando interações");
     isSleeping = false;
 
     setTimeout(() => {
@@ -473,7 +473,7 @@ function setupSleepListeners() {
  * @returns {Promise<void>}
  */
 async function exposeGlobals() {
-    console.log("Registrando sistemas no gameState...");
+    logger.debug("Registrando sistemas no gameState...");
 
     try {
         // Registrar objetos do jogo
@@ -509,13 +509,13 @@ async function exposeGlobals() {
         // Expor debug se flag estiver habilitada
         exposeDebug();
 
-        console.log("Sistemas registrados no gameState");
+        logger.debug("Sistemas registrados no gameState");
     } catch (error) {
-        console.warn("Erro ao registrar sistemas:", error);
+        logger.warn("Erro ao registrar sistemas:", error);
     }
 
     interactionEnabled = true;
-    console.log("Interação Global habilitada");
+    logger.debug("Interação Global habilitada");
 }
 
 // =============================================================================
@@ -597,7 +597,7 @@ async function startFullGameLoad() {
 // =============================================================================
 
 async function initGameBootstrap() {
-  logger.info("Bootstrapping FarmingXP...");
+  logger.debug("Bootstrapping FarmingXP...");
 
   showLoadingScreen();
   updateLoadingProgress(0.02, "iniciando...");
@@ -659,7 +659,7 @@ async function initGameBootstrap() {
   gameInitialized = true;
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
-  logger.info("Game Loop iniciado!");
+  logger.debug("Game Loop iniciado!");
 }
 
 // =============================================================================
@@ -682,7 +682,7 @@ document.addEventListener("playerReady", async (e) => {
     handleWarn("falha ao inicializar player system", "main:playerReady:playerSystem", err);
   }
 
-  logger.info("Jogador spawnado e pronto!");
+  logger.debug("Jogador spawnado e pronto!");
 
   if (itemSystem && window.theWorld) {
     setTimeout(() => {
@@ -706,29 +706,41 @@ document.addEventListener("DOMContentLoaded", async () => {
         canvas.id = "gameCanvas";
         document.body.appendChild(canvas);
     }
-    
+
     // Configurar canvas
     const dpr = window.devicePixelRatio || 1;
     canvas.width = Math.round(INTERNAL_WIDTH * dpr);
     canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
     ctx = canvas.getContext("2d", { alpha: false });
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    
-    try {
-        console.log("Carregando estilos CSS...");
-        await cssManager.loadAll();
-        console.log("Todos os estilos CSS carregados");
 
-        console.log("Criando PlayerHUD...");
+    // Safety check for browsers that don't support canvas
+    if (!ctx) {
+        handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
+        return;
+    }
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Apply mobile-specific optimizations
+    if (IS_MOBILE) {
+        applyMobileOptimizations();
+    }
+
+    try {
+        logger.debug("Carregando estilos CSS...");
+        await cssManager.loadAll();
+        logger.debug("Todos os estilos CSS carregados");
+
+        logger.debug("Criando PlayerHUD...");
         const hud = new PlayerHUD();
         registerSystem('hud', hud);
-        console.log("PlayerHUD criado e registrado");
+        logger.debug("PlayerHUD criado e registrado");
         
         setupSleepListeners();
         
         await initGameBootstrap();
     } catch (error) {
-        console.error("Erro na inicialização do jogo:", error);
+        logger.error("Erro na inicialização do jogo:", error);
     }
 });
 
@@ -945,4 +957,4 @@ window.debugItem = async (id) => {
 
 // DEBUG_HITBOXES agora é gerenciado via gameState.js (use ?hitboxes=1 na URL)
 
-logger.info("main.js completo carregado!");
+logger.debug("main.js completo carregado!");

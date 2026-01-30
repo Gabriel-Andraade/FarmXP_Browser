@@ -760,8 +760,8 @@ function updateDetailsPanel(item, qty) {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
 
-      // Usar getSystem primeiro, fallback para window
-      let BuildSystem = getSystem('build') || window.BuildSystem;
+      // Usar getSystem (legacy bridge já garante compatibilidade)
+      let BuildSystem = getSystem('build');
 
       if (BuildSystem) {
           try {

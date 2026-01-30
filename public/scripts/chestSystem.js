@@ -410,7 +410,7 @@ export const chestSystem = {
      */
     addChestToWorld(chest) {
         const theWorld = getObject('world');
-        const addWorldObject = theWorld?.addWorldObject || window.addWorldObject;
+        const addWorldObject = theWorld?.addWorldObject;
 
         if (addWorldObject) {
             addWorldObject({
@@ -1010,7 +1010,7 @@ export const chestSystem = {
             if (saved) {
                 const loadedChests = JSON.parse(saved);
                 const theWorld = getObject('world');
-                const addWorldObject = theWorld?.addWorldObject || window.addWorldObject;
+                const addWorldObject = theWorld?.addWorldObject;
 
                 for (const chestId in loadedChests) {
                     const chestData = loadedChests[chestId];
@@ -1056,8 +1056,10 @@ export const chestSystem = {
     removeChest(chestId) {
         if (this.chests[chestId]) {
             // Remover do mundo visual
+            // Note: window.removeWorldObject is the correct function for removal
+            // theWorld.objectDestroyed has different cleanup behavior
             const theWorld = getObject('world');
-            const removeWorldObject = theWorld?.objectDestroyed || window.removeWorldObject;
+            const removeWorldObject = window.removeWorldObject || theWorld?.objectDestroyed;
             if (removeWorldObject) {
                 removeWorldObject(chestId);
             }

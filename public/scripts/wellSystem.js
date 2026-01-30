@@ -88,7 +88,7 @@ export const wellSystem = {
     wellState.wells[id] = wellObject;
 
     // Register in world.placedWells if not already present
-    const world = getObject("world") || window.theWorld;
+    const world = getObject("world");
     if (world) {
       if (!Array.isArray(world.placedWells)) world.placedWells = [];
       if (!world.placedWells.find(w => w.id === id)) {
@@ -115,7 +115,7 @@ export const wellSystem = {
 
   // remove um poço do mundo
   removeWell(id) {
-    const world = getObject("world") || window.theWorld;
+    const world = getObject("world");
     const wells = world?.placedWells || [];
     const index = wells.findIndex((w) => w.id === id);
 
@@ -136,15 +136,29 @@ export const wellSystem = {
       delete wellState.wells[id];
     }
 
-    // hitbox cleanup
-    if (typeof collisionSystem?.removeHitbox === "function") {
-    collisionSystem.removeHitbox(id);
+    // hitbox cleanup with error handling
+    try {
+      if (typeof collisionSystem?.removeHitbox === "function") {
+        collisionSystem.removeHitbox(id);
+      }
+      collisionSystem?.interactionHitboxes?.delete(id);
+    } catch (err) {
+      handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:hitbox", { id, err });
     }
-    collisionSystem?.interactionHitboxes?.delete(id);
 
+    // notifica mudança no mundo
+    try {
+      (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
+    } catch (err) {
+      handleWarn("falha ao marcar mundo como alterado", "wellSystem:removeWell:markWorldChanged", { id, err });
+    }
 
-    // notifica mudança no mundo sem try/catch
-    (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
+    // dispatch wellRemoved event
+    try {
+      document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
+    } catch (err) {
+      handleWarn("falha ao disparar evento wellRemoved", "wellSystem:removeWell:dispatchEvent", { id, err });
+    }
 
     this.updateUI();
     return true;

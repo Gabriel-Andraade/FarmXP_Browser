@@ -40,6 +40,8 @@ export function registerSystem(systemName, systemInstance) {
   if (getDebugFlag('debug')) {
     console.log(`✅ Registered system: ${systemName}`);
   }
+  // Dispatch event for systems waiting on registration
+  document.dispatchEvent(new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
   return systemInstance;
 }
 
@@ -98,6 +100,8 @@ export function getDebugFlag(flag) {
 export function setGameFlag(flag, value) {
   if (Object.prototype.hasOwnProperty.call(gameState.flags, flag)) {
     gameState.flags[flag] = value;
+  } else {
+    console.warn(`⚠️ Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
   }
 }
 
@@ -170,9 +174,16 @@ export function installLegacyGlobals() {
     animalUI: 'animalUI',
   };
 
+  // Track warned keys to avoid spam
+  const warnedSystemKeys = new Set();
+
   for (const [windowKey, systemKey] of Object.entries(legacySystemMappings)) {
     Object.defineProperty(window, windowKey, {
       get() {
+        if (getDebugFlag('debug') && !warnedSystemKeys.has(windowKey)) {
+          console.warn(`⚠️ Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
+          warnedSystemKeys.add(windowKey);
+        }
         return gameState.systems[systemKey];
       },
       set(value) {
@@ -192,9 +203,18 @@ export function installLegacyGlobals() {
     keys: 'keys',
   };
 
+  // Track warned keys for objects
+  const warnedObjectKeys = new Set();
+
   for (const [windowKey, objectKey] of Object.entries(legacyObjectMappings)) {
     Object.defineProperty(window, windowKey, {
-      get() { return gameState.objects[objectKey]; },
+      get() {
+        if (getDebugFlag('debug') && !warnedObjectKeys.has(windowKey)) {
+          console.warn(`⚠️ Deprecated: use getObject('${objectKey}') instead of window.${windowKey}`);
+          warnedObjectKeys.add(windowKey);
+        }
+        return gameState.objects[objectKey];
+      },
       set(value) { gameState.objects[objectKey] = value; },
       configurable: true,
     });

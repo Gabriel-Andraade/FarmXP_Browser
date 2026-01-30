@@ -371,7 +371,7 @@ export class HouseSystem {
     }
 
     checkPlayerProximity() {
-        const currentPlayer = getObject('currentPlayer') || window.currentPlayer;
+        const currentPlayer = getObject('currentPlayer');
         if (!this.houseInteractionHitbox || !currentPlayer) {
             this.isPlayerNearDoor = false;
             return;
@@ -829,7 +829,7 @@ export class HouseSystem {
     }
 
     _getInventoryStacksForStorageCategory(storageCategoryKey) {
-        const inv = getSystem('inventory') || window.inventorySystem;
+        const inv = getSystem('inventory');
         if (!inv) return [];
 
         const category = storageSystem.categories?.[storageCategoryKey];
