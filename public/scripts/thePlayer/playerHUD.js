@@ -138,9 +138,9 @@ export class PlayerHUD {
         const needs = window.playerSystem.getNeeds();
         if (!needs) return;
 
-        const hunger = needs.hunger || this.currentPlayer.hunger || 100;
-        const thirst = needs.thirst || this.currentPlayer.thirst || 100;
-        const energy = needs.energy || this.currentPlayer.energy || 100;
+        const hunger = needs.hunger ?? this.currentPlayer.hunger ?? 100;
+        const thirst = needs.thirst ?? this.currentPlayer.thirst ?? 100;
+        const energy = needs.energy ?? this.currentPlayer.energy ?? 100;
 
         // fix: Fixed indentation on setHUDValue calls (L148-150)
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
