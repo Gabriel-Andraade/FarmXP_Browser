@@ -23,6 +23,7 @@ import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./l
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
 import "./settingsUI.js";
+import { setupAutoCleanup } from "./gameCleanup.js";
 
 // =============================================================================
 // VARIÁVEIS DE SISTEMAS LAZY LOADING
@@ -636,6 +637,7 @@ async function initGameBootstrap() {
   setupInteractionSystem();
 
   gameInitialized = true;
+  setupAutoCleanup(); // Configurar cleanup automático ao encerrar o jogo
   lastTime = performance.now();
   requestAnimationFrame(gameLoop);
   logger.info("Game Loop iniciado!");
