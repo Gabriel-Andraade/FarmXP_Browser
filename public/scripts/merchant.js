@@ -11,6 +11,7 @@ import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
 import { getItem, getSellPrice } from "./itemUtils.js";
+import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } from './validation.js';
 
 /**
  * Sistema de comércio com mercadores NPC
@@ -32,6 +33,12 @@ class MerchantSystem {
         this.listenersSetup = false;
         this.lastMerchantOpenCheck = 0;
         this.merchantOpenCheckInterval = 5;
+
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
+        // Armazenar referência do handler do botão da loja
+        this.storeBtnHandler = null;
 
         this.initialize();
     }
@@ -64,13 +71,21 @@ class MerchantSystem {
             return;
         }
 
-        const newStoreBtn = storeBtn.cloneNode(true);
-        storeBtn.parentNode.replaceChild(newStoreBtn, storeBtn);
+        // Remove listener anterior se existir
+        if (this.storeBtnHandler) {
+            storeBtn.removeEventListener('click', this.storeBtnHandler);
+        }
 
-        newStoreBtn.addEventListener('click', (e) => {
+        // Criar e armazenar novo handler
+        this.storeBtnHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.openMerchantsList();
+        };
+
+        // Adicionar listener com signal para cleanup automático
+        storeBtn.addEventListener('click', this.storeBtnHandler, {
+            signal: this.abortController.signal
         });
 
         window.openStore = () => {
@@ -170,47 +185,49 @@ class MerchantSystem {
         if (this.listenersSetup) return;
         this.listenersSetup = true;
 
+        const { signal } = this.abortController;
+
         document.addEventListener('timeChanged', () => {
             this.checkAndCloseIfMerchantClosed();
             const merchantsListModal = document.getElementById('merchantsListModal');
             if (merchantsListModal && merchantsListModal.classList.contains('active')) {
                 this.updateMerchantsListStatus();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-close') ||
                 e.target.classList.contains('mch-close-button')) {
                 this.closeAllModals();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('mch-back-button')) {
                 this.backToMerchantsList();
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const toggleBtn = e.target.closest('.mch-storage-toggle-btn');
             if (toggleBtn) {
                 this.setPlayerStorage(toggleBtn.dataset.storage);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const catBtn = e.target.closest('.mch-player-category-btn');
             if (catBtn) {
                 this.setPlayerCategory(catBtn.dataset.category);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const catBtn = e.target.closest('.mch-merchant-category-btn');
             if (catBtn) {
                 this.setMerchantCategory(catBtn.dataset.category);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const arrow = e.target.closest('.mch-trade-arrow');
@@ -221,7 +238,7 @@ class MerchantSystem {
                     this.setTradeMode('buy');
                 }
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const hexagon = e.target.closest('.mch-hexagon-slot');
@@ -229,7 +246,7 @@ class MerchantSystem {
                 const itemId = parseInt(hexagon.dataset.itemId);
                 this.selectPlayerItem(itemId);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             const merchantHexagon = e.target.closest('.mch-merchant-hexagon');
@@ -237,7 +254,7 @@ class MerchantSystem {
                 const itemId = parseInt(merchantHexagon.dataset.itemId);
                 this.selectMerchantItem(itemId);
             }
-        });
+        }, { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('mch-confirm-yes')) {
@@ -245,11 +262,17 @@ class MerchantSystem {
             } else if (e.target.classList.contains('mch-confirm-no')) {
                 this.cancelTrade();
             }
-        });
+        }, { signal });
     }
 
     // aumenta a quantidade de transação
     increaseQuantity() {
+        // Validar que tradeQuantity é um inteiro positivo
+        if (!isValidPositiveInteger(this.tradeQuantity)) {
+            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            this.tradeQuantity = 1;
+        }
+
         const maxQuantity = this.getMaxQuantity();
         if (this.tradeQuantity < maxQuantity) {
             this.tradeQuantity++;
@@ -261,6 +284,12 @@ class MerchantSystem {
 
     // diminui a quantidade de transação
     decreaseQuantity() {
+        // Validar que tradeQuantity é um inteiro positivo
+        if (!isValidPositiveInteger(this.tradeQuantity)) {
+            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            this.tradeQuantity = 1;
+        }
+
         if (this.tradeQuantity > 1) {
             this.tradeQuantity--;
             this.updateTradeValue();
@@ -835,7 +864,13 @@ class MerchantSystem {
     showConfirmModal() {
         const modal = document.getElementById('tradeConfirmModal');
         const messageEl = document.getElementById('confirmMessage');
-        const totalValue = this.tradeValue * this.tradeQuantity;
+
+        const expectedPrice = this.calculateExpectedPrice();
+        if (expectedPrice === null) {
+            this.showMessage('Erro ao calcular preço', 'error');
+            return;
+        }
+        const totalValue = expectedPrice * this.tradeQuantity;
 
         let itemName = '';
         if (this.tradeMode === 'sell') {
@@ -859,13 +894,51 @@ class MerchantSystem {
 
     // confirma transação
     confirmTrade() {
+        // Validar tradeMode
+        if (!['buy', 'sell'].includes(this.tradeMode)) {
+            logger.error('[Merchant] Invalid trade mode:', this.tradeMode);
+            this.showMessage('Modo de transação inválido', 'error');
+            this.hideConfirmModal();
+            return;
+        }
+
+        // Validar tradeQuantity
+        if (!isValidPositiveInteger(this.tradeQuantity)) {
+            logger.error('[Merchant] Invalid quantity:', this.tradeQuantity);
+            this.showMessage('Quantidade inválida', 'error');
+            this.hideConfirmModal();
+            return;
+        }
+
         this.hideConfirmModal();
-        const totalValue = this.tradeValue * this.tradeQuantity;
+
+        const expectedPrice = this.calculateExpectedPrice();
+        if (expectedPrice === null) {
+            logger.error('[Merchant] Invalid price calculation');
+            this.showMessage('Erro no cálculo de preço', 'error');
+            return;
+        }
+
+        const totalValue = expectedPrice * this.tradeQuantity;
 
         if (this.tradeMode === 'sell') {
             this.processSell(totalValue);
         } else {
             this.processBuy(totalValue);
+        }
+    }
+
+    calculateExpectedPrice() {
+        if (this.tradeMode === 'sell') {
+            if (!this.selectedPlayerItem) return null;
+            const itemData = getItem(this.selectedPlayerItem);
+            if (!itemData) return null;
+            return getSellPrice(this.selectedPlayerItem);
+        } else {
+            if (!this.selectedMerchantItem) return null;
+            const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
+            if (!merchantItem) return null;
+            return merchantItem.price;
         }
     }
 
@@ -878,6 +951,27 @@ class MerchantSystem {
     processSell(totalValue) {
         if (!this.selectedPlayerItem) return;
 
+        // Validar que o item existe no inventário do jogador
+        const playerItem = this.getPlayerItems().find(i => i.id === this.selectedPlayerItem);
+        if (!playerItem) {
+            this.showMessage('Item não encontrado no inventário', 'error');
+            return;
+        }
+
+        // Validar quantidade disponível
+        const validation = validateTradeInput(this.tradeQuantity, playerItem.quantity);
+        if (!validation.valid) {
+            this.showMessage(validation.error, 'error');
+            return;
+        }
+
+        // Validar valor da transação
+        if (!isValidPositiveNumber(totalValue)) {
+            logger.error('[Merchant] Invalid sell value:', totalValue);
+            this.showMessage('Valor de venda inválido', 'error');
+            return;
+        }
+
         if (this.playerStorage === 'inventory') {
             if (window.inventorySystem && window.inventorySystem.removeItem) {
                 if (window.inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
@@ -888,7 +982,7 @@ class MerchantSystem {
                     } else {
                         logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
-                    
+
                     this.showMessage(`Venda realizada! +$${totalValue}`, 'success');
                     this.updateBalances();
                     this.renderPlayerItems();
@@ -907,7 +1001,29 @@ class MerchantSystem {
     processBuy(totalValue) {
         if (!this.selectedMerchantItem) return;
 
-        if (currencyManager.getMoney() < totalValue) {
+        // Validar que o item existe no estoque do mercador
+        const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
+        if (!merchantItem) {
+            this.showMessage('Item não encontrado no mercador', 'error');
+            return;
+        }
+
+        // Validar quantidade disponível no estoque do mercador
+        const validation = validateTradeInput(this.tradeQuantity, merchantItem.quantity);
+        if (!validation.valid) {
+            this.showMessage(validation.error, 'error');
+            return;
+        }
+
+        // Validar valor da transação
+        if (!isValidPositiveNumber(totalValue)) {
+            logger.error('[Merchant] Invalid buy value:', totalValue);
+            this.showMessage('Valor de compra inválido', 'error');
+            return;
+        }
+
+        // Usar canAfford() em vez de verificação manual (centraliza validação)
+        if (!currencyManager.canAfford(totalValue)) {
             this.showMessage('Dinheiro insuficiente!', 'error');
             return;
         }
@@ -924,9 +1040,16 @@ class MerchantSystem {
                         logger.error("Erro: método spend() não encontrado no currencyManager");
                     }
 
+                    // Decrementar estoque do mercador
+                    const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
+                    if (merchantItem) {
+                        merchantItem.quantity -= this.tradeQuantity;
+                    }
+
                     this.showMessage(`Compra realizada! -$${totalValue}`, 'success');
                     this.updateBalances();
-                    this.renderPlayerItems(); 
+                    this.renderPlayerItems();
+                    this.renderMerchantItems();
                     this.clearSelections();
                 } else {
                     this.showMessage('Inventário cheio ou erro ao adicionar item.', 'error');
@@ -1001,6 +1124,30 @@ class MerchantSystem {
             msg.classList.remove('show');
             setTimeout(() => msg.remove(), 300);
         }, 3000);
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+        
+        // Reset AbortController para permitir re-inicialização
+        this.abortController = new AbortController();
+
+        // Reset listeners flag para permitir re-setup
+        this.listenersSetup = false;
+        
+        // Clear handler reference
+        this.storeBtnHandler = null;
+        
+        // Clear referências
+        this.currentMerchant = null;
+        this.selectedPlayerItem = null;
+        this.selectedMerchantItem = null;
     }
 }
 

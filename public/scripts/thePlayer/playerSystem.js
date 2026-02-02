@@ -7,6 +7,14 @@
  */
 
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
+import { validateRange } from '../validation.js';
+
+/**
+ * Minimum and maximum values for player needs
+ * @constant {number}
+ */
+const MIN_NEED = 0;
+const MAX_NEED = 100;
 
 /**
  * Core player management class handling needs, equipment, and character state
@@ -32,6 +40,15 @@ export class PlayerSystem {
 
         /** @type {Object|null} Currently equipped item */
         this.equippedItem = null;
+
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
+        // Armazenar referência do interval para cleanup
+        this.needsUpdateInterval = null;
+
+        // Armazenar referência do sleep interval para cleanup
+        this.sleepInterval = null;
 
         /**
          * Player survival needs configuration
@@ -74,34 +91,36 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupEventListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('equipItemRequest', (e) => {
             this.equipItem(e.detail.item);
-        });
+        }, { signal });
 
         document.addEventListener('unequipItemRequest', () => {
             this.unequipItem();
-        });
+        }, { signal });
 
         document.addEventListener('discardItemRequest', (e) => {
             const { itemId } = e.detail;
             if (this.equippedItem && this.equippedItem.id === itemId) {
                 this.unequipItem();
             }
-        });
+        }, { signal });
 
         document.addEventListener('startConsumptionRequest', (e) => {
             const { category, itemId, quantity, item, fillUp } = e.detail;
             this.consumeItem(item);
-            
+
             document.dispatchEvent(new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
             }));
-        });
+        }, { signal });
 
         document.addEventListener('itemConsumed', (e) => {
             const item = e.detail.item;
             this.consumeItem(item);
-        });
+        }, { signal });
     }
 
     /**
@@ -110,35 +129,37 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupActionListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('playerMoved', (e) => {
             if (e.detail && e.detail.distance) {
                 this.consumeNeeds('moving', e.detail.distance / 100);
             }
-        });
+        }, { signal });
 
         document.addEventListener('toolUsedOnObject', (e) => {
             this.consumeNeeds('breaking', 1);
-        });
+        }, { signal });
 
         document.addEventListener('itemCollected', (e) => {
             this.consumeNeeds('collecting', 1);
-        });
+        }, { signal });
 
         document.addEventListener('buildingPlaced', (e) => {
             this.consumeNeeds('building', 1);
-        });
+        }, { signal });
 
         document.addEventListener('sleepStarted', () => {
             this.startSleep();
-        });
+        }, { signal });
 
         document.addEventListener('sleepEnded', () => {
             this.endSleep();
-        });
+        }, { signal });
 
         document.addEventListener('consumeFood', (e) => {
             this.restoreNeeds(e.detail.hunger || 0, e.detail.thirst || 0, e.detail.energy || 0);
-        });
+        }, { signal });
     }
 
     /**
@@ -147,7 +168,13 @@ export class PlayerSystem {
      * @returns {void}
      */
     startNeedsUpdate() {
-        setInterval(() => {
+        // Clear existing interval if any
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+        }
+
+        // Store interval reference for cleanup
+        this.needsUpdateInterval = setInterval(() => {
             this.updateNeeds();
         }, NEEDS_UPDATE_INTERVAL_MS);
     }
@@ -174,7 +201,13 @@ export class PlayerSystem {
      * @returns {void}
      */
     consumeNeeds(actionType, multiplier = 1) {
-        if (!this.needs.consumptionRates[actionType]) return;
+        if (!this.needs.consumptionRates[actionType]) {
+            console.warn('[PlayerSystem] Unknown action type:', actionType);
+            return;
+        }
+
+        // ✅ Validar multiplier (0-10 é range razoável)
+        const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
 
@@ -201,9 +234,9 @@ export class PlayerSystem {
         this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + energy);
         
         this.dispatchNeedsUpdate();
-        
-        if (hunger > 0 || thirst > 0 || energy > 0) {
-            this.showNeedRestoredFeedback(hunger, thirst, energy);
+
+        if (validHunger > 0 || validThirst > 0 || validEnergy > 0) {
+            this.showNeedRestoredFeedback(validHunger, validThirst, validEnergy);
         }
     }
 
@@ -323,6 +356,12 @@ export class PlayerSystem {
      * @returns {void}
      */
     endSleep() {
+        // Clear sleep interval if it exists
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
         this.currentPlayer.isSleeping = false;
         this.needs.energy = GAME_BALANCE.NEEDS.MAX_VALUE;
         this.dispatchNeedsUpdate();
@@ -628,6 +667,31 @@ export class PlayerSystem {
     /** @returns {Function|null} Character draw function */
     getDrawFunction() {
         return this.drawFunction;
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners e para os intervals de needs e sleep
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Reset AbortController para permitir re-inicialização
+        this.abortController = new AbortController();
+
+        // Clear interval de atualização de needs
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // Clear sleep interval se estiver ativo
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
     }
 }
 
