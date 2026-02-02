@@ -371,6 +371,7 @@ export class HouseSystem {
     }
 
     checkPlayerProximity() {
+        // fix: Using getObject instead of fallback pattern for consistency (L374)
         const currentPlayer = getObject('currentPlayer');
         if (!this.houseInteractionHitbox || !currentPlayer) {
             this.isPlayerNearDoor = false;

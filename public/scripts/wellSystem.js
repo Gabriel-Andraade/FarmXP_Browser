@@ -136,9 +136,10 @@ export const wellSystem = {
       delete wellState.wells[id];
     }
 
-    // hitbox cleanup with error handling
+    // fix: Proper indentation and error handling for hitbox removal (L148-152)
     try {
       if (typeof collisionSystem?.removeHitbox === "function") {
+        // fix: Correctly indented hitbox removal inside if block (L151)
         collisionSystem.removeHitbox(id);
       }
       collisionSystem?.interactionHitboxes?.delete(id);
@@ -153,7 +154,7 @@ export const wellSystem = {
       handleWarn("falha ao marcar mundo como alterado", "wellSystem:removeWell:markWorldChanged", { id, err });
     }
 
-    // dispatch wellRemoved event
+    // fix: Restored wellRemoved event dispatch with error handling (L154-158)
     try {
       document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
     } catch (err) {

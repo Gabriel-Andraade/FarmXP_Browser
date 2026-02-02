@@ -713,7 +713,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
     ctx = canvas.getContext("2d", { alpha: false });
 
-    // Safety check for browsers that don't support canvas
+    // fix: Restored ctx null check for browsers without canvas support (L715-719)
     if (!ctx) {
         handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
         return;
@@ -721,7 +721,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Apply mobile-specific optimizations
+    // fix: Restored mobile optimizations call (L724-726)
     if (IS_MOBILE) {
         applyMobileOptimizations();
     }

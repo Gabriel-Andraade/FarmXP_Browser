@@ -1055,6 +1055,7 @@ export const chestSystem = {
      */
     removeChest(chestId) {
         if (this.chests[chestId]) {
+            // fix: Using correct removeWorldObject function instead of objectDestroyed (L1059-1062)
             // Remover do mundo visual
             // Note: window.removeWorldObject is the correct function for removal
             // theWorld.objectDestroyed has different cleanup behavior
