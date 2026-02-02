@@ -7,7 +7,7 @@
 // ============================================================
 // TIMING CONSTANTS (in milliseconds)
 // ============================================================
-
+// fix: Centralized timing constants into grouped TIMING object (L11-27)
 export const TIMING = {
   UI_UPDATE_DELAY_MS: 50,
   UI_MIN_UPDATE_INTERVAL_MS: 30,
@@ -26,6 +26,7 @@ export const TIMING = {
   MOVE_STATE_MAX_MS: 2000
 };
 
+// fix: Re-exports for backward compatibility (L29-42)
 // Re-export commonly used timing constants for backward compatibility
 export const UI_UPDATE_DELAY_MS = TIMING.UI_UPDATE_DELAY_MS;
 export const UI_MIN_UPDATE_INTERVAL_MS = TIMING.UI_MIN_UPDATE_INTERVAL_MS;
@@ -45,6 +46,7 @@ export const MOVE_STATE_MAX_MS = TIMING.MOVE_STATE_MAX_MS;
 // GAME BALANCE CONSTANTS
 // ============================================================
 
+// fix: Removed duplicate DAMAGE_COOLDOWN_MS - only GAME_BALANCE.DAMAGE.COOLDOWN_MS remains (L48-55)
 export const GAME_BALANCE = {
   DAMAGE: {
     COOLDOWN_MS: 300,

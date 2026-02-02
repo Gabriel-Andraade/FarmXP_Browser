@@ -6,6 +6,7 @@
 
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
+// fix: Direct constant imports instead of ANIMAL_CONFIG wrapper (L9)
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 
 // =========================================================

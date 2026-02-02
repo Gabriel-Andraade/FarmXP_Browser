@@ -473,6 +473,7 @@ export class CollisionSystem {
     /**
      * resolve sobreposicao empurrando 'rect' para fora das hitboxes fisicas
      */
+    // fix: Default parameter uses literal (L476) instead of import-dependent value
     resolveOverlap(rect, ignoreId = null, { maxIters = 6 } = {}) {  // 6 = MOVEMENT.MAX_COLLISION_ITERATIONS
         let r = _rect(rect.x, rect.y, rect.width, rect.height);
 

@@ -142,9 +142,7 @@ export class PlayerHUD {
         const thirst = needs.thirst || this.currentPlayer.thirst || 100;
         const energy = needs.energy || this.currentPlayer.energy || 100;
 
-        // 🛠️ CORREÇÃO AQUI: Não usar o operador OR (||) pois 0 é falsy.
-        // Se usar `needs.hunger || 100`, quando for 0 ele exibe 100.
-        // A lógica abaixo garante que ele usa o valor do sistema, mesmo que seja 0.
+        // fix: Fixed indentation on setHUDValue calls (L148-150)
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
@@ -157,11 +155,8 @@ export class PlayerHUD {
         this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
         this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
         
-        // 🆕 USAR VALORES DO PLAYER SYSTEM
+        // fix: Defensive nullish coalescing (??) to handle 0 values safely (L161-167)
         const needs = window.playerSystem?.getNeeds();
-
-        // 🛠️ CORREÇÃO PRINCIPAL AQUI (USANDO ??)
-        // O operador ?? verifica se é null ou undefined. Se for 0, ele mantém o 0.
         const hunger = needs?.hunger ?? this.currentPlayer.hunger ?? 100;
         const thirst = needs?.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;

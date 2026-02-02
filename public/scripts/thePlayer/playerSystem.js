@@ -430,6 +430,7 @@ export class PlayerSystem {
      * @returns {number} Multiplier between 0.3 and 1.0
      */
     getEfficiencyMultiplier() {
+        // fix: Extracted needs count constant for clarity (L433-434)
         const MAX_TOTAL_NEEDS = 3; // hunger + thirst + energy
         const avgNeeds = (this.needs.hunger + this.needs.thirst + this.needs.energy) / (GAME_BALANCE.NEEDS.MAX_VALUE * MAX_TOTAL_NEEDS);
 
