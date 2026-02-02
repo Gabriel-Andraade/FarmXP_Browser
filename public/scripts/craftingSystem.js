@@ -2,7 +2,6 @@ import { logger } from './logger.js';
 import { recipes } from "./recipes.js";
 import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
-import { translateDOM } from './settingsUI.js';
 
 /**
  * Sistema de crafting do jogo

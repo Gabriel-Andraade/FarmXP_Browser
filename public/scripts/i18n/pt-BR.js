@@ -1,6 +1,15 @@
 /**
- * Portuguese (Brazilian) translations
+ * Portuguese (Brazilian) Translations Dictionary
  * @file pt-BR.js
+ * @description Complete Portuguese (Brazilian) translation object for FarmingXP game
+ * Contains all UI strings, messages, and game content in Portuguese (Brazil)
+ * Used by i18n system for language localization
+ * @module translations/pt-BR
+ * @exports {Object} Translation dictionary with nested keys
+ * @example
+ * import ptBR from './pt-BR.js';
+ * const menuPlayText = ptBR.menu.play; // 'Jogar'
+ * const hungerLabel = ptBR.player.hunger; // 'Fome'
  */
 export default {
   // Main Menu
@@ -21,7 +30,7 @@ export default {
     animal_food: 'Ração',
     food: 'Comida',
     resources: 'Recursos',
-    animals: 'Comida Animal',
+    animals: 'Animais',
   },
 
   // Inventory System
@@ -77,8 +86,8 @@ export default {
     backToMerchants: 'Voltar aos Mercadores',
     notEnoughMoney: 'Dinheiro insuficiente!',
     inventoryFull: 'Inventário cheio ou erro ao adicionar item.',
-    purchaseSuccess: 'Compra realizada! -${value}',
-    saleSuccess: 'Venda realizada! +${value}',
+    purchaseSuccess: 'Compra realizada! -{value}',
+    saleSuccess: 'Venda realizada! +{value}',
     confirm: 'Confirmar',
     open: 'Aberto',
     closed: 'Fechado',
@@ -431,6 +440,11 @@ export default {
       ben: 'O fazendeiro esperto',
       graham: 'O braço da agricultura',
       default: 'Fazendeiro'
+    },
+    descriptions: {
+      stella: 'Aventureira e corajosa, Stella cresceu na fazenda da família e conhece todos os segredos da vida rural.',
+      ben: 'Um cara pequeno com um grande cérebro! O técnico dos computadores nos campos.',
+      graham: 'Um cara grande, destemido, sério e protetor, o melhor para o trabalho no campo.'
     }
   },
 

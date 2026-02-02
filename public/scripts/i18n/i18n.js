@@ -19,6 +19,12 @@ const AVAILABLE_TRANSLATIONS = {
 };
 
 class I18nManager {
+  /**
+   * Initialize I18nManager singleton instance
+   * Sets default language to Portuguese (Brazil)
+   * Loads all available translations into memory
+   * @constructor
+   */
   constructor() {
     this.currentLanguage = DEFAULT_LANGUAGE;
     this.translations = { ...AVAILABLE_TRANSLATIONS };
@@ -29,7 +35,7 @@ class I18nManager {
    * Initialize i18n system
    * @param {string} [preferredLanguage] - Language to use
    */
-  async init(preferredLanguage) {
+  init(preferredLanguage) {
     // Determine language priority: parameter > localStorage > browser > default
     const detectedLang =
       preferredLanguage ||
@@ -51,7 +57,11 @@ class I18nManager {
 
   /**
    * Get stored language from localStorage
-   * @returns {string|null}
+   * Safely retrieves language preference from browser storage
+   * Returns null if localStorage is unavailable or empty
+   * @returns {string|null} Stored language code (e.g., 'pt-BR', 'en', 'es') or null
+   * @example
+   * const lang = i18n.getStoredLanguage(); // 'pt-BR' or null
    */
   getStoredLanguage() {
     try {
@@ -62,8 +72,16 @@ class I18nManager {
   }
 
   /**
-   * Detect browser's preferred language
-   * @returns {string|null}
+   * Detect browser's preferred language from navigator settings
+   * Maps browser language codes to supported game languages
+   * Returns null if browser language is not supported
+   * @returns {string|null} Detected language code ('pt-BR', 'en', 'es') or null if not supported
+   * @example
+   * // If browser is Portuguese (Brazil)
+   * const lang = i18n.detectBrowserLanguage(); // 'pt-BR'
+   * 
+   * // If browser is unsupported language
+   * const lang = i18n.detectBrowserLanguage(); // null
    */
   detectBrowserLanguage() {
     try {
@@ -126,9 +144,15 @@ class I18nManager {
 
   /**
    * Get nested object value by dot notation path
-   * @param {Object} obj - Object to search
+   * Safely traverses nested objects using dot-separated string keys
+   * Returns undefined if path is invalid or key not found
+   * @param {Object} obj - Object to search (usually translations object)
    * @param {string} path - Dot notation path (e.g., 'inventory.categories.tools')
-   * @returns {*}
+   * @returns {*} Value at path or undefined if not found
+   * @example
+   * const translations = { menu: { play: 'Play' } };
+   * i18n.getNestedValue(translations, 'menu.play'); // 'Play'
+   * i18n.getNestedValue(translations, 'invalid.path'); // undefined
    */
   getNestedValue(obj, path) {
     if (!obj) return undefined;
@@ -138,14 +162,21 @@ class I18nManager {
   }
 
   /**
-   * Interpolate variables into string
-   * @param {string} text - Text with {placeholders}
-   * @param {Object} params - Values to insert
-   * @returns {string}
-   *
+   * Interpolate variables into translation string
+   * Replaces {placeholder} patterns with values from params object
+   * Non-string text is returned unchanged
+   * @param {string} text - Text template with {placeholders}
+   * @param {Object} params - Key-value pairs for substitution
+   * @returns {string} Text with interpolated values
    * @example
-   * interpolate("Hello {name}", { name: "John" }) // "Hello John"
-   * interpolate("Day {day}", { day: 5 }) // "Day 5"
+   * // Simple interpolation
+   * i18n.interpolate("Hello {name}", { name: "John" }); // "Hello John"
+   * 
+   * // Multiple placeholders
+   * i18n.interpolate("Day {day} of {month}", { day: 5, month: 'January' }); // "Day 5 of January"
+   * 
+   * // Missing param keeps placeholder
+   * i18n.interpolate("Value: {missing}", { other: 'value' }); // "Value: {missing}"
    */
   interpolate(text, params) {
     if (typeof text !== 'string') return text;
@@ -157,9 +188,9 @@ class I18nManager {
   /**
    * Change current language and notify listeners
    * @param {string} lang - New language code
-   * @returns {Promise<boolean>}
+   * @returns {boolean}
    */
-  async setLanguage(lang) {
+  setLanguage(lang) {
     if (!this.translations[lang]) {
       console.log(`Language "${lang}" not available`);
       return false;
@@ -183,8 +214,18 @@ class I18nManager {
   }
 
   /**
-   * Get available languages
-   * @returns {Array<{code: string, name: string}>}
+   * Get available languages in the game
+   * Returns array of language code and human-readable names
+   * Used to populate language selector in settings
+   * @returns {Array<{code: string, name: string}>} Array of supported languages
+   * @example
+   * const langs = i18n.getAvailableLanguages();
+   * // Returns:
+   * // [
+   * //   { code: 'pt-BR', name: 'Português (Brasil)' },
+   * //   { code: 'en', name: 'English' },
+   * //   { code: 'es', name: 'Español' }
+   * // ]
    */
   getAvailableLanguages() {
     return [
@@ -195,8 +236,11 @@ class I18nManager {
   }
 
   /**
-   * Get current language code
-   * @returns {string}
+   * Get current active language code
+   * Returns the language code currently in use by i18n system
+   * @returns {string} Current language code ('pt-BR', 'en', or 'es')
+   * @example
+   * const currentLang = i18n.getCurrentLanguage(); // 'pt-BR'
    */
   getCurrentLanguage() {
     return this.currentLanguage;

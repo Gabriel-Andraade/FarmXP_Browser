@@ -1,6 +1,15 @@
 /**
- * English translations
+ * English Translations Dictionary
  * @file en.js
+ * @description Complete English translation object for FarmingXP game
+ * Contains all UI strings, messages, and game content in English
+ * Used by i18n system for language localization
+ * @module translations/en
+ * @exports {Object} Translation dictionary with nested keys
+ * @example
+ * import en from './en.js';
+ * const menuPlayText = en.menu.play; // 'Play'
+ * const hungerLabel = en.player.hunger; // 'Hunger'
  */
 export default {
   // Main Menu
@@ -21,7 +30,7 @@ export default {
     animal_food: 'Animal Feed',
     food: 'Food',
     resources: 'Resources',
-    animals: 'Animal Food',
+    animals: 'Animals',
   },
 
   // Inventory System
@@ -431,6 +440,11 @@ export default {
       ben: 'The clever farmer',
       graham: 'The arm of agriculture',
       default: 'Farmer'
+    },
+    descriptions: {
+      stella: 'Adventurous and courageous, Stella grew up on the family farm and knows all the secrets of rural life.',
+      ben: 'A small guy with big brain! The technician for the computers in the fields.',
+      graham: 'A big guy, fearless, serious and protective man, the best for field work.'
     }
   },
 

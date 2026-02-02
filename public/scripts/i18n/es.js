@@ -1,6 +1,15 @@
 /**
- * Spanish translations
+ * Spanish Translations Dictionary
  * @file es.js
+ * @description Complete Spanish translation object for FarmingXP game
+ * Contains all UI strings, messages, and game content in Spanish
+ * Used by i18n system for language localization
+ * @module translations/es
+ * @exports {Object} Translation dictionary with nested keys
+ * @example
+ * import es from './es.js';
+ * const menuPlayText = es.menu.play; // 'Jugar'
+ * const hungerLabel = es.player.hunger; // 'Hambre'
  */
 export default {
   // Main Menu
@@ -21,7 +30,7 @@ export default {
     animal_food: 'Alimento Animal',
     food: 'Comida',
     resources: 'Recursos',
-    animals: 'Comida Animal',
+    animals: 'Animales',
   },
 
   // Inventory System
@@ -77,8 +86,8 @@ export default {
     backToMerchants: 'Volver a Mercaderes',
     notEnoughMoney: '¡Dinero insuficiente!',
     inventoryFull: 'Inventario lleno o error al añadir artículo.',
-    purchaseSuccess: '¡Compra realizada! -${value}',
-    saleSuccess: '¡Venta realizada! +${value}',
+    purchaseSuccess: '¡Compra realizada! -{value}',
+    saleSuccess: '¡Venta realizada! +{value}',
     confirm: 'Confirmar',
     open: 'Abierto',
     closed: 'Cerrado',
@@ -431,6 +440,11 @@ export default {
       ben: 'El granjero astuto',
       graham: 'El brazo de la agricultura',
       default: 'Granjero'
+    },
+    descriptions: {
+      stella: 'Aventurera y valiente, Stella creció en la granja familiar y conoce todos los secretos de la vida rural.',
+      ben: '¡Un tipo pequeño con un gran cerebro! El técnico de las computadoras en los campos.',
+      graham: 'Un tipo grande, intrépido, serio y protector, el mejor para el trabajo de campo.'
     }
   },
 

@@ -9,19 +9,16 @@ export class CharacterSelection {
             {
                 id: "stella",
                 name: "Stella",
-                description: "Adventurous and courageous, Stella grew up on the family farm and knows all the secrets of rural life.",
                 portrait: "./assets/character/portrait/Stella_portrait.webp",
             },
             {
                 id: "ben",
                 name: "Ben",
-                description: "A small guy with big brain! The technician for the computers in the fields.",
                 portrait: "./assets/character/portrait/Ben_portrait.webp",
             },
             {
                 id: "graham",
                 name: "Graham",
-                description: "A big guy, fearless, serious and protective man, the best for field work.",
                 portrait: "./assets/character/portrait/Graham_portrait.webp",
             }
         ];
@@ -160,7 +157,7 @@ export class CharacterSelection {
 
         detailsSection.querySelector('.chs-character-portrait-img').src = this.selectedCharacter.portrait;
         detailsSection.querySelector('.chs-character-name').textContent = this.selectedCharacter.name;
-        detailsSection.querySelector('.chs-character-description').textContent = this.selectedCharacter.description;
+        detailsSection.querySelector('.chs-character-description').textContent = t(`characterSelection.descriptions.${this.selectedCharacter.id}`);
 
         this.updatePlayerInfo();
     }

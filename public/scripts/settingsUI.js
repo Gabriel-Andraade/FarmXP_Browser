@@ -7,7 +7,14 @@ import { i18n, t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 
 /**
- * Initialize settings UI components
+ * Initialize settings UI components and language selector
+ * Sets up event listeners for language changes and updates DOM translations
+ * Attempts to initialize when DOM is ready
+ * @returns {void}
+ * @throws {void} Logs warning if language selector not found
+ * @example
+ * // Auto-initializes when DOM is ready
+ * // Creates language selector listener and translates all DOM elements
  */
 export function initSettingsUI() {
   const languageSelect = document.getElementById('languageSelect');
@@ -34,6 +41,8 @@ export function initSettingsUI() {
       languageSelect.value = i18n.getCurrentLanguage();
     } else {
       logger.info(`✅ Language changed successfully to: ${newLang}`);
+      // Update HTML lang attribute for accessibility
+      document.documentElement.lang = newLang;
       // Update all elements with data-i18n attributes
       translateDOM();
     }
@@ -43,6 +52,7 @@ export function initSettingsUI() {
   document.addEventListener('languageChanged', (e) => {
     const { language } = e.detail;
     languageSelect.value = language;
+    document.documentElement.lang = language;
     translateDOM();
   });
 
@@ -50,7 +60,17 @@ export function initSettingsUI() {
 }
 
 /**
- * Translate all DOM elements with data-i18n attributes
+ * Translate all DOM elements with data-i18n attributes to current language
+ * Preserves emoji/icons if present at the beginning of element text
+ * Queries all elements with data-i18n attribute and updates their textContent
+ * @returns {void}
+ * @example
+ * // HTML: <button data-i18n="ui.close">Close</button>
+ * // Result: <button>Fechar</button> (if language is Portuguese)
+ * 
+ * // Emoji preservation example:
+ * // HTML: <div data-i18n="ui.merchants">🏪 Regional Merchants</div>
+ * // Result: <div>🏪 Mercadores da Região</div>
  */
 export function translateDOM() {
   document.querySelectorAll('[data-i18n]').forEach(el => {

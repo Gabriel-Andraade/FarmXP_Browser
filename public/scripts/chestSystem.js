@@ -708,7 +708,7 @@ export const chestSystem = {
         });
         
         if (itemCount === 0) {
-            html = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">🎒 Inventário vazio</div>';
+            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">🎒 ${t('inventory.empty')}</div>`;
         }
         
         container.innerHTML = html;
