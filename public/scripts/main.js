@@ -21,6 +21,8 @@ import { setViewportSize, camera } from "./thePlayer/cameraSystem.js";
 import { cssManager } from "./cssManager.js";
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./loadingScreen.js";
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
+import { i18n, t } from "./i18n/i18n.js";
+import "./settingsUI.js";
 
 // =============================================================================
 // VARIÁVEIS DE SISTEMAS LAZY LOADING
@@ -577,7 +579,7 @@ async function initGameBootstrap() {
   logger.info("Bootstrapping FarmingXP...");
 
   showLoadingScreen();
-  updateLoadingProgress(0.02, "iniciando...");
+  updateLoadingProgress(0.02, t('messages.loading'));
 
   const loadingSteps = [
     { name: "Sprites do jogador", action: loadImages },
@@ -701,6 +703,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 
   try {
+    // Initialize i18n system FIRST (before any UI that uses translations)
+    logger.debug("Inicializando sistema de idiomas...");
+    await i18n.init();
+    logger.debug("Sistema i18n inicializado");
+
     logger.debug("Carregando estilos CSS...");
     await cssManager.loadAll();
     logger.debug("Todos os estilos CSS carregados");

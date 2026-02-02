@@ -1,6 +1,8 @@
 import { logger } from '../logger.js';
 import { inventorySystem } from "./inventorySystem.js";
 import { items } from "../item.js";
+import { t } from '../i18n/i18n.js';
+import { INVENTORY_CATEGORIES } from '../categoryMapper.js';
 
 // ---------- CSS ISOLADO COM SHADOW DOM ----------
 const createInventoryUI = () => {
@@ -499,7 +501,7 @@ const createInventoryUI = () => {
     <div class="inv-overlay" id="inventoryModal">
       <div class="inv-container">
         <div class="inv-header">
-          <span class="inv-title">🎒 Inventário</span>
+          <span class="inv-title">🎒 ${t('inventory.title')}</span>
           <button class="inv-close" id="closeInvBtn">&times;</button>
         </div>
         <div class="inv-body">
@@ -528,15 +530,22 @@ let activeCategory = 'resources';
 let selectedSlotIndex = -1;
 let currentItems = [];
 
-// Mapeamento de Categorias
-const CATEGORY_MAP = {
-  resources: { label: 'Recursos', icon: '🪵' },
-  tools: { label: 'Ferramentas', icon: '⚒️' },
-  seeds: { label: 'Sementes', icon: '🌱' },
-  construction: { label: 'Construção', icon: '🏗️' },
-  animal_food: { label: 'Comida de Animais', icon: '🐔' },
-  food: { label: 'Comidas', icon: '🍎' }
-};
+/**
+ * Obtém nome traduzido do item pelo ID
+ * @param {number} itemId - ID do item
+ * @param {string} fallbackName - Nome padrão se tradução não existir
+ * @returns {string} Nome traduzido
+ */
+function getItemName(itemId, fallbackName = '') {
+  const translatedName = t(`itemNames.${itemId}`);
+  if (translatedName === `itemNames.${itemId}`) {
+    return fallbackName;
+  }
+  return translatedName || fallbackName;
+}
+
+// Mapeamento de Categorias (agora importado de categoryMapper.js)
+const CATEGORY_MAP = INVENTORY_CATEGORIES;
 
 // Cache de elementos DOM
 let modalEl, contentEl, tabsEl, detailsEl;
@@ -618,10 +627,10 @@ function renderTabs() {
   const categories = Object.keys(inventorySystem.categories || {});
 
   categories.forEach(catKey => {
-    const catData = CATEGORY_MAP[catKey] || { label: catKey, icon: '📦' };
+    const catData = CATEGORY_MAP[catKey] || { label: () => catKey, icon: '📦' };
     const btn = document.createElement('button');
     btn.className = `inv-tab-btn ${activeCategory === catKey ? 'active' : ''}`;
-    btn.innerHTML = `<span style="font-size: 20px;">${catData.icon}</span> ${catData.label}`;
+    btn.innerHTML = `<span style="font-size: 20px;">${catData.icon}</span> ${catData.label()}`;
     
     btn.onclick = () => {
       activeCategory = catKey;
@@ -647,8 +656,8 @@ function renderInventory() {
   if (!categoryData?.items || categoryData.items.length === 0) {
     contentEl.innerHTML = `
       <div class="inv-empty-msg">
-        <div>Nada por aqui...</div>
-        <div style="font-size: 14px; opacity: 0.5;">Esta categoria está vazia</div>
+        <div>${t('inventory.empty')}</div>
+        <div style="font-size: 14px; opacity: 0.5;">${t('inventory.emptySubtext')}</div>
       </div>
     `;
     currentItems = [];
@@ -730,8 +739,9 @@ function updateDetailsPanel(item, qty) {
   }
 
   detailsEl.style.display = 'flex';
-  shadowRoot.getElementById('detailName').textContent = `${item.name} ${qty > 1 ? `(x${qty})` : ''}`;
-  shadowRoot.getElementById('detailDesc').textContent = item.description || "Sem descrição disponível.";
+  const itemName = getItemName(item.id, item.name);
+  shadowRoot.getElementById('detailName').textContent = `${itemName} ${qty > 1 ? `(x${qty})` : ''}`;
+  shadowRoot.getElementById('detailDesc').textContent = item.description || t('inventory.noDescription');
   
   const actionsDiv = shadowRoot.getElementById('detailActions');
   actionsDiv.innerHTML = '';
@@ -740,7 +750,7 @@ function updateDetailsPanel(item, qty) {
   if (item.type === 'tool') {
     const equipBtn = document.createElement('button');
     equipBtn.className = 'btn-action btn-equip';
-    equipBtn.innerHTML = '🛠️ Equipar';
+    equipBtn.innerHTML = `🛠️ ${t('inventory.actions.equip')}`;
     equipBtn.onclick = () => {
       document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
       closeInventoryModal();
@@ -752,7 +762,7 @@ function updateDetailsPanel(item, qty) {
   if (['placeable', 'structure', 'construction'].includes(item.type)) {
     const buildBtn = document.createElement('button');
     buildBtn.className = 'btn-action btn-build';
-    buildBtn.innerHTML = '🔨 Construir';
+    buildBtn.innerHTML = `🔨 ${t('inventory.actions.build')}`;
     buildBtn.onclick = async () => {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
@@ -768,11 +778,11 @@ function updateDetailsPanel(item, qty) {
               window.BuildSystem.startBuilding(item);
             } else {
               logger.error('❌ window.BuildSystem.startBuilding não disponível');
-              alert('Função de construção não disponível.');
+              alert(t('build.notAvailable'));
             }
           } catch (err) {
             logger.error('❌ Erro ao usar window.BuildSystem:', err);
-            alert('Erro ao entrar no modo de construção. Verifique o console.');
+            alert(t('build.buildError'));
           }
           return;
       }
@@ -791,15 +801,15 @@ function updateDetailsPanel(item, qty) {
                window.BuildSystem.startBuilding(item);
              } else {
                logger.error('❌ BuildSystem carregado mas startBuilding ausente');
-               alert('Função de construção não disponível após carregamento.');
+               alert(t('build.notAvailableAfter'));
              }
           } else {
             logger.error('❌ BuildSystem não foi exportado corretamente do módulo');
-            alert('Erro ao entrar no modo de construção. Verifique o console.');
+            alert(t('build.buildError'));
           }
       } catch (error) {
           logger.error('❌ Falha crítica ao iniciar BuildSystem:', error);
-          alert('Erro ao entrar no modo de construção. Verifique o console.');
+          alert(t('build.buildError'));
       }
     };
     actionsDiv.appendChild(buildBtn);
@@ -809,7 +819,7 @@ function updateDetailsPanel(item, qty) {
   if (item.type === 'food' || item.type === 'consumable' || item.fillUp) {
     const useBtn = document.createElement('button');
     useBtn.className = 'btn-action btn-use';
-    useBtn.innerHTML = '🍽️ Consumir';
+    useBtn.innerHTML = `🍽️ ${t('inventory.actions.consume')}`;
     useBtn.onclick = () => {
       document.dispatchEvent(new CustomEvent('startConsumptionRequest', { 
         detail: { 
@@ -827,9 +837,9 @@ function updateDetailsPanel(item, qty) {
   // 4. DESCARTAR (Sempre disponível)
   const dropBtn = document.createElement('button');
   dropBtn.className = 'btn-action btn-discard';
-  dropBtn.innerHTML = '🗑️ Descartar';
+  dropBtn.innerHTML = `🗑️ ${t('inventory.actions.discard')}`;
   dropBtn.onclick = () => {
-    if (confirm(`Deseja descartar ${item.name}?`)) {
+    if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
       const success = inventorySystem.removeItem(activeCategory, item.id, 1);
       if (success) {
         if (!inventorySystem.getItemQuantity(activeCategory, item.id)) {
@@ -856,6 +866,17 @@ window.debugInventory = () => {
     logger.debug('Modal toggled:', modalEl.classList.contains('open'));
   }
 };
+
+// Listener para mudança de idioma
+if (typeof document !== 'undefined') {
+  document.addEventListener('languageChanged', () => {
+    if (shadowRoot && modalEl) {
+      // Recriar a UI com novo idioma
+      renderTabs();
+      renderInventory();
+    }
+  });
+}
 
 // Auto-inicialização quando importado
 if (typeof window !== 'undefined') {

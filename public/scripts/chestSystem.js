@@ -3,6 +3,21 @@ import { storageSystem } from './storageSystem.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { TILE_SIZE } from './worldConstants.js';
+import { t } from './i18n/i18n.js';
+
+/**
+ * Obtém nome traduzido do item pelo ID
+ * @param {number} itemId - ID do item
+ * @param {string} fallbackName - Nome padrão se tradução não existir
+ * @returns {string} Nome traduzido
+ */
+function getItemName(itemId, fallbackName = '') {
+  const translatedName = t(`itemNames.${itemId}`);
+  if (translatedName === `itemNames.${itemId}`) {
+    return fallbackName;
+  }
+  return translatedName || fallbackName;
+}
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -624,7 +639,7 @@ export const chestSystem = {
         });
         
         if (totalItems === 0) {
-            html = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">📦 O baú está vazio</div>';
+            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">📦 ${t('chest.empty')}</div>`;
         } else {
             // Mostrar todos os itens de todas as categorias
             this.categories.forEach(category => {
@@ -633,7 +648,7 @@ export const chestSystem = {
                     html += `
                         <div class="chest-slot" data-item-id="${item.id}" data-category="${category}">
                             <div class="item-icon">${item.icon || '📦'}</div>
-                            <div class="item-name">${item.name}</div>
+                            <div class="item-name">${getItemName(item.id, item.name)}</div>
                             <div class="item-quantity">${item.quantity}</div>
                         </div>
                     `;
@@ -670,7 +685,7 @@ export const chestSystem = {
         if (!container) return;
         
         if (!window.inventorySystem) {
-            container.innerHTML = '<div style="color: #aaa; text-align: center;">🎒 Sistema de inventário não disponível</div>';
+            container.innerHTML = `<div style="color: #aaa; text-align: center;">${t('ui.inventoryNotAvailable')}</div>`;
             return;
         }
         
@@ -685,7 +700,7 @@ export const chestSystem = {
                 html += `
                     <div class="inventory-item" data-item-id="${item.id}" data-category="${category}">
                         <div class="item-icon">${item.icon || '🎒'}</div>
-                        <div class="item-name">${item.name}</div>
+                        <div class="item-name">${getItemName(item.id, item.name)}</div>
                         <div class="item-quantity">${item.quantity}</div>
                     </div>
                 `;
@@ -746,7 +761,7 @@ export const chestSystem = {
                 });
             }
             
-            this.showMessage(`✅ ${itemData.name} guardado no baú`, 'success');
+            this.showMessage(`✅ ${t('chest.stored', { name: getItemName(itemData.id, itemData.name) })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);
@@ -783,7 +798,7 @@ export const chestSystem = {
                 categoryData.items.splice(itemIndex, 1);
             }
             
-            this.showMessage(`✅ ${item.name} retirado do baú`, 'success');
+            this.showMessage(`✅ ${t('chest.taken', { name: getItemName(item.id, item.name) })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);

@@ -3,6 +3,7 @@ import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { t } from '../i18n/i18n.js';
 
 export const allItems = items;
 
@@ -591,7 +592,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.fillUp) {
         const consumeBtn = document.createElement('button');
         consumeBtn.className = 'item-action-btn consume-btn';
-        consumeBtn.textContent = '🍽️ Consumir';
+        consumeBtn.textContent = `🍽️ ${t('inventory.actions.consume')}`;
         consumeBtn.style.cssText = `
             background: linear-gradient(135deg, #27ae60, #1e8449);
             color: white;
@@ -614,7 +615,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.type === 'tool') {
         const equipBtn = document.createElement('button');
         equipBtn.className = 'item-action-btn equip-btn';
-        equipBtn.textContent = '⚔️ Equipar';
+        equipBtn.textContent = `⚔️ ${t('inventory.actions.equip')}`;
         equipBtn.style.cssText = `
             background: linear-gradient(135deg, #3498db, #2980b9);
             color: white;
@@ -636,7 +637,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     
     const discardBtn = document.createElement('button');
     discardBtn.className = 'item-action-btn discard-btn';
-    discardBtn.textContent = '🗑️ Descartar';
+    discardBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
     discardBtn.style.cssText = `
         background: linear-gradient(135deg, #e74c3c, #c0392b);
         color: white;

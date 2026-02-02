@@ -1,6 +1,8 @@
 import { logger } from './logger.js';
 import { recipes } from "./recipes.js";
 import { items } from "./item.js";
+import { t } from './i18n/i18n.js';
+import { translateDOM } from './settingsUI.js';
 
 /**
  * Sistema de crafting do jogo
@@ -19,6 +21,58 @@ export class CraftingSystem {
         this.useInventory = true;
         this.activeCategory = "all";
         this.injectStyles();
+        this.setupLanguageListener();
+    }
+
+    /**
+     * Configura listener para mudança de idioma
+     * Re-renderiza a interface quando o idioma muda
+     */
+    setupLanguageListener() {
+        document.addEventListener('languageChanged', () => {
+            if (this.isOpen) {
+                this.renderRecipeList();
+            }
+        });
+    }
+
+    /**
+     * Obtém nome traduzido da receita pelo ID
+     * @param {string} recipeId - ID da receita
+     * @param {string} fallbackName - Nome padrão se tradução não existir
+     * @returns {string} Nome traduzido
+     */
+    getRecipeName(recipeId, fallbackName = '') {
+        const translatedName = t(`recipeNames.${recipeId}`);
+        if (translatedName === `recipeNames.${recipeId}`) {
+            return fallbackName;
+        }
+        return translatedName || fallbackName;
+    }
+
+    /**
+     * Obtém nome traduzido do item pelo ID
+     * @param {number} itemId - ID do item
+     * @param {string} fallbackName - Nome padrão se tradução não existir
+     * @returns {string} Nome traduzido
+     */
+    getItemName(itemId, fallbackName = '') {
+        const translatedName = t(`itemNames.${itemId}`);
+        if (translatedName === `itemNames.${itemId}`) {
+            return fallbackName;
+        }
+        return translatedName || fallbackName;
+    }
+
+    /**
+     * Obtém nome traduzido da categoria
+     * @param {string} category - Chave da categoria
+     * @returns {string} Nome traduzido
+     */
+    getCategoryDisplayName(category) {
+        if (category === 'all') return t('categories.all');
+        if (category === 'material') return t('categories.resources');
+        return t(`categories.${category}`) || category;
     }
 
     /**
@@ -366,14 +420,14 @@ export class CraftingSystem {
         if (!recipe) return;
 
         if (!this.canCraft(recipe)) {
-            this.showMessage("❌ Faltam materiais!", "error");
+            this.showMessage(t('crafting.notEnoughMaterials'), "error");
             return;
         }
 
         const craftBtn = document.querySelector(`.craft-btn[data-id="${recipeId}"]`);
         if (craftBtn) {
             craftBtn.disabled = true;
-            craftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Craftando...';
+            craftBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('crafting.crafting')}`;
             craftBtn.classList.add("disabled");
         }
 
@@ -383,14 +437,14 @@ export class CraftingSystem {
 
         window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
 
-        this.showMessage(`🔨 Craftado: ${recipe.name}!`, "success");
+        this.showMessage(t('crafting.crafted', { name: this.getRecipeName(recipe.id, recipe.name) }), "success");
 
         this.renderRecipeList();
 
         if (craftBtn) {
             setTimeout(() => {
                 craftBtn.disabled = false;
-                craftBtn.innerHTML = '<i class="fas fa-hammer"></i> Craftar';
+                craftBtn.innerHTML = `<i class="fas fa-hammer"></i> ${t('crafting.craft')}`;
                 craftBtn.classList.remove("disabled");
             }, 1000);
         }
@@ -454,9 +508,9 @@ export class CraftingSystem {
 
         panel.innerHTML = `
             <button class="crafting-close-btn">&times;</button>
-            
+
             <div class="crafting-header">
-                <h2>⚒️ Sistema de Crafting</h2>
+                <h2>${t('crafting.title')}</h2>
             </div>
 
             <div class="crafting-categories" id="craft-categories"></div>
@@ -500,10 +554,10 @@ export class CraftingSystem {
         catBox.innerHTML = uniqueCats
             .map(
                 cat => `
-            <button class="craft-category-btn ${this.activeCategory === cat ? "active" : ""}" 
+            <button class="craft-category-btn ${this.activeCategory === cat ? "active" : ""}"
                 data-cat="${cat}">
                 <i class="fas fa-${this.getCategoryIcon(cat)}"></i>
-                ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+                ${this.getCategoryDisplayName(cat)}
             </button>`
             )
             .join("");
@@ -563,7 +617,7 @@ export class CraftingSystem {
                 <div class="crafting-info">
                     <div class="crafting-name">
                         <i class="fas fa-${recipe.icon || 'hammer'}"></i>
-                        ${recipe.name}
+                        ${this.getRecipeName(recipe.id, recipe.name)}
                     </div>
 
                     <div class="crafting-requirements">
@@ -574,7 +628,7 @@ export class CraftingSystem {
                                 <div class="requirement ${hasEnough ? 'has-enough' : 'not-enough'}">
                                     <span class="req-icon">${data?.icon || '📦'}</span>
                                     <span class="req-qty">${req.qty}x</span>
-                                    <span class="req-name">${data?.name || req.itemId}</span>
+                                    <span class="req-name">${this.getItemName(req.itemId, data?.name || req.itemId)}</span>
                                 </div>
                             `;
                         }).join('')}
@@ -583,22 +637,22 @@ export class CraftingSystem {
                     ${missing.length > 0 ? `
                         <div class="craft-missing">
                             <i class="fas fa-exclamation-triangle"></i>
-                            Faltando:  
+                            ${t('crafting.missing')}:
                             ${missing.map(m => {
                                 const data = items.find(i => i.id === m.itemId);
-                                return `${m.missing}x ${data?.name}`;
+                                return `${m.missing}x ${this.getItemName(m.itemId, data?.name)}`;
                             }).join(", ")}
                         </div>
                     ` : ""}
                 </div>
 
-                <button 
+                <button
                     class="craft-btn ${can ? "" : "disabled"}"
                     data-id="${recipe.id}"
                     ${can ? "" : "disabled"}
                 >
                     <i class="fas fa-hammer"></i>
-                    Craftar
+                    ${t('crafting.craft')}
                 </button>
             `;
 
