@@ -491,14 +491,14 @@ export const chestSystem = {
         
         panel.innerHTML = `
             <div class="chest-header">
-                <h2><span>📦</span> Baú - ${chest.name}</h2>
+                <h2><span>📦</span> ${t('chest.title')} - ${chest.name}</h2>
                 <button class="chest-close-btn">&times;</button>
             </div>
             
             <div class="chest-content">
                 <!-- Lado esquerdo: Baú -->
                 <div class="chest-side">
-                    <div class="side-title">📦 Armazenamento do Baú</div>
+                     <div class="side-title">📦 ${t('chest.storage')}</div>
                     
                     <div class="chest-categories" id="chest-categories">
                         <!-- Categorias serão injetadas aqui -->
@@ -511,7 +511,7 @@ export const chestSystem = {
                 
                 <!-- Lado direito: Inventário do Jogador -->
                 <div class="chest-side">
-                    <div class="side-title">🎒 Seu Inventário</div>
+                    <div class="side-title">🎒 ${t('chest.inventory')}</div>
                     
                     <div class="player-inventory" id="player-inventory">
                         <!-- Itens do inventário serão injetados aqui -->
@@ -521,13 +521,13 @@ export const chestSystem = {
             
             <div class="chest-controls">
                 <button class="chest-btn take-all" id="take-all-btn">
-                    <span>⬇️</span> Pegar Tudo
+                    <span>⬇️</span> ${t('chest.takeAll')}
                 </button>
                 <button class="chest-btn store-all" id="store-all-btn">
-                    <span>⬆️</span> Guardar Tudo
+                    <span>⬆️</span> ${t('chest.storeAll')}
                 </button>
                 <button class="chest-btn" id="organize-btn">
-                    <span>🔧</span> Organizar
+                    <span>🔧</span> ${t('chest.organize')}
                 </button>
             </div>
         `;
@@ -836,7 +836,7 @@ export const chestSystem = {
         });
         
         if (takenCount > 0) {
-            this.showMessage(`✅ ${takenCount} itens retirados do baú`, 'success');
+            this.showMessage(`✅ ${t('chest.takenAll', { count: takenCount })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);
@@ -884,7 +884,7 @@ export const chestSystem = {
         });
         
         if (storedCount > 0) {
-            this.showMessage(`✅ ${storedCount} itens guardados no baú`, 'success');
+            this.showMessage(`✅ ${t('chest.storedAll', { count: storedCount })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);

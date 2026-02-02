@@ -105,9 +105,9 @@ export default {
     empty: 'Vazio',
     buyMode: 'Modo de compra ativo. Selecione um item do mercador.',
     sellMode: 'Modo de venda ativo. Selecione um item do seu inventário.',
-    selected: 'Selecionado: {name} ({qty}x) - {action}: ${price} cada',
-    confirmSell: 'Vender {qty}x {name} por ${value}?',
-    confirmBuy: 'Comprar {qty}x {name} por ${value}?',
+    selected: 'Selecionado: {name} ({qty}x) - {action}: {price} cada',
+    confirmSell: 'Vender {qty}x {name} por {value}?',
+    confirmBuy: 'Comprar {qty}x {name} por {value}?',
     removeError: 'Erro ao remover item do inventário.',
     storageNotImplemented: 'Venda/Compra direta do armazém não implementada.',
     professions: {
@@ -488,9 +488,17 @@ export default {
 
   // Chest System
   chest: {
+    title: 'Baú',
+    storage: 'Armazenamento do Baú',
+    inventory: 'Seu Inventário',
+    takeAll: 'Pegar Tudo',
+    storeAll: 'Guardar Tudo',
+    organize: 'Organizar',
     empty: 'O baú está vazio',
     stored: '{name} guardado no baú',
-    taken: '{name} retirado do baú'
+    taken: '{name} retirado do baú',
+    takenAll: '{count} itens retirados do baú',
+    storedAll: '{count} itens guardados no baú'
   },
 
   // Crafting System

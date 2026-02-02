@@ -105,9 +105,9 @@ export default {
     empty: 'Vacío',
     buyMode: 'Modo compra activo. Selecciona un artículo del mercader.',
     sellMode: 'Modo venta activo. Selecciona un artículo de tu inventario.',
-    selected: 'Seleccionado: {name} ({qty}x) - {action}: ${price} cada uno',
-    confirmSell: '¿Vender {qty}x {name} por ${value}?',
-    confirmBuy: '¿Comprar {qty}x {name} por ${value}?',
+    selected: 'Seleccionado: {name} ({qty}x) - {action}: {price} cada uno',
+    confirmSell: '¿Vender {qty}x {name} por {value}?',
+    confirmBuy: '¿Comprar {qty}x {name} por {value}?',
     removeError: 'Error al remover artículo del inventario.',
     storageNotImplemented: 'Venta/Compra directa del almacén no implementada.',
     professions: {
@@ -488,9 +488,17 @@ export default {
 
   // Chest System
   chest: {
+    title: 'Cofre',
+    storage: 'Almacenamiento del Cofre',
+    inventory: 'Tu Inventario',
+    takeAll: 'Tomar Todo',
+    storeAll: 'Guardar Todo',
+    organize: 'Organizar',
     empty: 'El cofre está vacío',
     stored: '{name} guardado en el cofre',
-    taken: '{name} retirado del cofre'
+    taken: '{name} retirado del cofre',
+    takenAll: '{count} artículos retirados del cofre',
+    storedAll: '{count} artículos guardados en el cofre'
   },
 
   // Crafting System

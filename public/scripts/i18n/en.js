@@ -86,8 +86,8 @@ export default {
     backToMerchants: 'Back to Merchants',
     notEnoughMoney: 'Not enough money!',
     inventoryFull: 'Inventory full or error adding item.',
-    purchaseSuccess: 'Purchase complete! -${value}',
-    saleSuccess: 'Sale complete! +${value}',
+    purchaseSuccess: 'Purchase complete! -{value}',
+    saleSuccess: 'Sale complete! +{value}',
     confirm: 'Confirm',
     open: 'Open',
     closed: 'Closed',
@@ -105,9 +105,9 @@ export default {
     empty: 'Empty',
     buyMode: 'Buy mode active. Select an item from the merchant.',
     sellMode: 'Sell mode active. Select an item from your inventory.',
-    selected: 'Selected: {name} ({qty}x) - {action}: ${price} each',
-    confirmSell: 'Sell {qty}x {name} for ${value}?',
-    confirmBuy: 'Buy {qty}x {name} for ${value}?',
+    selected: 'Selected: {name} ({qty}x) - {action}: {price} each',
+    confirmSell: 'Sell {qty}x {name} for {value}?',
+    confirmBuy: 'Buy {qty}x {name} for {value}?',
     removeError: 'Error removing item from inventory.',
     storageNotImplemented: 'Direct storage sale/purchase not implemented.',
     professions: {
@@ -488,9 +488,17 @@ export default {
 
   // Chest System
   chest: {
+    title: 'Chest',
+    storage: 'Chest Storage',
+    inventory: 'Your Inventory',
+    takeAll: 'Take All',
+    storeAll: 'Store All',
+    organize: 'Organize',
     empty: 'The chest is empty',
     stored: '{name} stored in chest',
-    taken: '{name} taken from chest'
+    taken: '{name} taken from chest',
+    takenAll: '{count} items taken from chest',
+    storedAll: '{count} items stored in chest'
   },
 
   // Crafting System

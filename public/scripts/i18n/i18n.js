@@ -134,7 +134,7 @@ class I18nManager {
 
     // Still not found? Return key
     if (text === undefined) {
-      console.log(`Missing translation: ${key}`);
+      console.warn(`[i18n] Missing translation: ${key}`);
       return key;
     }
 

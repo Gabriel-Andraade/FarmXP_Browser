@@ -32,7 +32,7 @@ export function initSettingsUI() {
     const newLang = e.target.value;
     logger.info(`🌍 Changing language to: ${newLang}`);
 
-    const success = await i18n.setLanguage(newLang);
+    const success = i18n.setLanguage(newLang);
 
     if (!success) {
       logger.error(`❌ Failed to load language: ${newLang}`);
@@ -77,7 +77,8 @@ export function translateDOM() {
     const key = el.getAttribute('data-i18n');
 
     // Preserve emoji if present
-    const emoji = el.textContent.match(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u)?.[0] || '';
+    // Match leading emoji (broader pattern including ZWJ sequences)
+    const emoji = el.textContent.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})+/u)?.[0] || '';
     const translation = t(key);
 
     if (emoji) {
