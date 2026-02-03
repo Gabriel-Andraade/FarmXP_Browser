@@ -1,7 +1,7 @@
 import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
 import { t } from '../i18n/i18n.js';
-
+import { getSystem } from "../gameState.js";
 /**
  * Obtém nome traduzido do item pelo ID
  * @param {number} itemId - ID do item
@@ -227,13 +227,15 @@ export class PlayerHUD {
 
 // Listeners globais
 document.addEventListener('itemEquipped', (e) => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(e.detail.item);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(e.detail.item);
     }
 });
 
 document.addEventListener('itemUnequipped', () => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(null);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(null);
     }
 });

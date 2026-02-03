@@ -15,6 +15,7 @@ import { WeatherSystem } from './weather.js';
 import { items } from './item.js';
 import { craftingSystem } from './craftingSystem.js';
 import { t } from './i18n/i18n.js';
+import { registerSystem, getObject, getSystem } from './gameState.js';
 
 /**
  * Sistema de interação com a casa do jogador
@@ -371,16 +372,18 @@ export class HouseSystem {
     }
 
     checkPlayerProximity() {
-        if (!this.houseInteractionHitbox || !window.currentPlayer) {
+        // fix: Using getObject instead of fallback pattern for consistency (L374)
+        const currentPlayer = getObject('currentPlayer');
+        if (!this.houseInteractionHitbox || !currentPlayer) {
             this.isPlayerNearDoor = false;
             return;
         }
 
         const playerHitbox = collisionSystem.createPlayerHitbox(
-            window.currentPlayer.x,
-            window.currentPlayer.y,
-            window.currentPlayer.width,
-            window.currentPlayer.height
+            currentPlayer.x,
+            currentPlayer.y,
+            currentPlayer.width,
+            currentPlayer.height
         );
 
         const wasPlayerNear = this.isPlayerNearDoor;
@@ -558,11 +561,10 @@ export class HouseSystem {
 
     openCrafting() {
         this.closeHouseMenu();
+        const cs = craftingSystem || getSystem('crafting');
 
-        if (craftingSystem && typeof craftingSystem.open === 'function') {
-            craftingSystem.open();
-        } else if (window.craftingSystem && typeof window.craftingSystem.open === 'function') {
-            window.craftingSystem.open();
+        if (cs && typeof cs.open === 'function') {
+            cs.open();
         } else {
             this.showMessage(t('house.craftingNotAvailable'));
         }
@@ -829,7 +831,7 @@ export class HouseSystem {
     }
 
     _getInventoryStacksForStorageCategory(storageCategoryKey) {
-        const inv = window.inventorySystem;
+        const inv = getSystem('inventory');
         if (!inv) return [];
 
         const category = storageSystem.categories?.[storageCategoryKey];
@@ -987,4 +989,5 @@ export class HouseSystem {
 }
 
 export const houseSystem = new HouseSystem();
-window.houseSystem = houseSystem;
+// Registrar no gameState (legacy window.houseSystem tratado por installLegacyGlobals)
+registerSystem('house', houseSystem);
