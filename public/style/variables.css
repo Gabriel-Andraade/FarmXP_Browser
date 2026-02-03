@@ -1,0 +1,131 @@
+/**
+ * CSS Custom Properties (Variables)
+ * Central location for all design tokens
+ */
+
+:root {
+  /* ============================================
+     COLOR PALETTE - THEME
+     ============================================ */
+
+  /* Primary Colors (Farm Theme) */
+  --color-bg-dark: #17160A;
+  --color-bg-medium: #1a1a2e;
+  --color-bg-light: #0f3460;
+
+  /* Panel Colors */
+  --color-panel-deep: #27180E;
+  --color-panel: #3C2414;
+  --color-panel-light: #2e1c0f;
+
+  /* Accent Colors */
+  --color-header: #B9782F;
+  --color-accent: #E6C293;
+  --color-beige: #F3DCC0;
+  --color-gold: #ffd700;
+  --color-gold-light: #fff8dc;
+
+  /* UI Colors */
+  --color-success: #4ecca3;
+  --color-success-dark: #3da58a;
+  --color-warning: #e9c46a;
+  --color-error: #c0392b;
+  --color-info: #2980b9;
+
+  /* Text Colors */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e0bc87;
+  --color-text-muted: #c9a463;
+  --color-text-dark: #aaa;
+
+  /* Surface Colors */
+  --color-surface: rgba(0, 0, 0, 0.6);
+  --color-surface-hover: rgba(0, 0, 0, 0.8);
+  --color-overlay: rgba(0, 0, 0, 0.85);
+  --color-glass: rgba(255, 255, 255, 0.03);
+
+  /* ============================================
+     TYPOGRAPHY
+     ============================================ */
+
+  --font-family-primary: 'Segoe UI', Tahoma, sans-serif;
+  --font-family-mono: 'Courier New', monospace;
+  --font-family-serif: 'Georgia', serif;
+
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-md: 1rem;      /* 16px */
+  --font-size-lg: 1.25rem;   /* 20px */
+  --font-size-xl: 1.5rem;    /* 24px */
+  --font-size-2xl: 2rem;     /* 32px */
+  --font-size-3xl: 3rem;     /* 48px */
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+
+  /* ============================================
+     SPACING
+     ============================================ */
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  /* ============================================
+     BORDERS & RADIUS
+     ============================================ */
+
+  --border-width: 1px;
+  --border-width-md: 2px;
+  --border-width-lg: 3px;
+
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-accent: rgba(185, 120, 47, 0.3);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 50%;
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
+
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 15px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-glow: 0 0 40px rgba(185, 120, 47, 0.3);
+
+  /* ============================================
+     TRANSITIONS
+     ============================================ */
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  --transition-bounce: 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ============================================
+     Z-INDEX LAYERS
+     ============================================ */
+
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-ui-panel: 2500;
+  --z-weather: 2600;
+  --z-modal-backdrop: 9000;
+  --z-modal: 9500;
+  --z-build-help: 9999;
+  --z-loading: 10000;
+  --z-tooltip: 10500;
+}

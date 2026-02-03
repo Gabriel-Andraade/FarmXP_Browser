@@ -181,25 +181,14 @@ export const wellSystem = {
     );
   },
 
+  /**
+   * Verifica se os estilos CSS do poço estão carregados
+   * CSS carregado externamente via style/well.css
+   * @deprecated CSS agora é carregado externamente
+   */
   injectStyles() {
-    if (document.getElementById("well-styles")) return;
-
-    const style = document.createElement("style");
-    style.id = "well-styles";
-    style.textContent = `
-      #well-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 9000; }
-      #well-modal { width: 700px; max-width: calc(100% - 40px); background:#2c241b; color:#fff; border-radius:12px; padding:16px; display:flex; gap:12px; position:relative; }
-      .well-col { flex:1; border-radius:8px; padding:10px; background: rgba(0,0,0,0.12); border:2px solid rgba(0,0,0,0.2); }
-      .item-slot { width:100%; height:80px; display:flex; align-items:center; justify-content:center; flex-direction:column; }
-      .main-btn { padding:12px; border-radius:8px; cursor:pointer; border:none; font-weight:bold; }
-      .btn-blue { background:#2980b9; color:#fff; }
-      .btn-red { background:#c0392b; color:#fff; }
-      .btn-green { background:#1e8449; color:#fff; }
-      .well-bucket-container { width:100%; height:180px; background:#d2b48c; border:4px solid #5a3a22; border-radius:12px; display:flex; align-items:flex-end; overflow:hidden; }
-      .water-fill { width:100%; text-align:center; transition:height 0.5s ease; background: rgba(52,152,219,0.85); }
-      .close-btn { position:absolute; right:8px; top:8px; width:30px; height:30px; cursor:pointer; }
-    `;
-    document.head.appendChild(style);
+    // CSS movido para style/well.css - incluir no index.html
+    // Este método é mantido para compatibilidade, mas não injeta mais estilos
   },
 
   openWellMenu() {

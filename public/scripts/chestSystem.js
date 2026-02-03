@@ -28,323 +28,14 @@ export const chestSystem = {
     },
     
     /**
-     * Injeta os estilos CSS necessários para a interface de baús
-     * Cria e adiciona uma tag <style> ao documento se ainda não existir
-     * Previne injeção duplicada verificando a existência do elemento
+     * Verifica se os estilos CSS do baú estão carregados
+     * Os estilos devem ser incluídos via link externo em index.html: style/chest.css
      * @returns {void}
+     * @deprecated CSS agora é carregado externamente via style/chest.css
      */
     injectStyles() {
-        if (document.getElementById('chest-styles')) return;
-        
-        const styles = `
-            <style id="chest-styles">
-            /* ===== CHEST OVERLAY ===== */
-            .chest-overlay {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: rgba(0, 0, 0, 0.7);
-                z-index: 9998;
-            }
-
-            /* ===== CHEST PANEL ===== */
-            .chest-panel {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 850px;
-                max-width: 90vw;
-                height: 700px;
-                max-height: 85vh;
-                background: #2d1b0e;
-                border: 3px solid #8b5a2b;
-                border-radius: 15px;
-                z-index: 9999;
-                color: white;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                box-shadow: 0 0 30px rgba(0,0,0,0.8);
-            }
-
-            /* ===== HEADER ===== */
-            .chest-header {
-                text-align: center;
-                margin-bottom: 20px;
-                padding-bottom: 15px;
-                border-bottom: 2px solid #8b5a2b;
-                position: relative;
-            }
-
-            .chest-header h2 {
-                color: #ffdfa7;
-                margin: 0;
-                font-size: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            }
-
-            /* ===== BOTÃO FECHAR ===== */
-            .chest-close-btn {
-                position: absolute;
-                top: 0;
-                right: 0;
-                background: #8b5a2b;
-                border: none;
-                color: white;
-                width: 30px;
-                height: 30px;
-                border-radius: 50%;
-                cursor: pointer;
-                font-size: 18px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-
-            .chest-close-btn:hover {
-                background: #ff9e4a;
-            }
-
-            /* ===== CONTEÚDO PRINCIPAL ===== */
-            .chest-content {
-                display: flex;
-                gap: 20px;
-                flex: 1;
-                overflow: hidden;
-            }
-
-            .chest-side {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                background: rgba(0, 0, 0, 0.3);
-                border-radius: 10px;
-                padding: 15px;
-                overflow: hidden;
-            }
-
-            .side-title {
-                color: #ffdfa7;
-                margin-bottom: 15px;
-                text-align: center;
-                font-size: 18px;
-                border-bottom: 1px solid #8b5a2b;
-                padding-bottom: 8px;
-            }
-
-            /* ===== CATEGORIAS DO BAÚ ===== */
-            .chest-categories {
-                display: flex;
-                gap: 8px;
-                margin-bottom: 15px;
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .chest-category-btn {
-                padding: 6px 12px;
-                background: #5a3a1c;
-                border: 1px solid #8b5a2b;
-                border-radius: 15px;
-                color: white;
-                cursor: pointer;
-                font-size: 12px;
-                transition: all 0.2s;
-            }
-
-            .chest-category-btn.active,
-            .chest-category-btn:hover {
-                background: #8b5a2b;
-            }
-
-            /* ===== SLOTS DO BAÚ ===== */
-            .chest-slots {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap: 10px;
-                padding: 10px;
-                flex: 1;
-                overflow-y: auto;
-            }
-
-            .chest-slot {
-                aspect-ratio: 1;
-                background: rgba(139, 90, 43, 0.3);
-                border: 2px solid #5a3a1c;
-                border-radius: 8px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                transition: all 0.2s;
-            }
-
-            .chest-slot:hover {
-                border-color: #ff9e4a;
-                transform: scale(1.05);
-            }
-
-            .chest-slot.empty {
-                background: rgba(0, 0, 0, 0.2);
-                border-style: dashed;
-                opacity: 0.5;
-            }
-
-            .chest-slot .item-icon {
-                font-size: 24px;
-                margin-bottom: 5px;
-            }
-
-            .chest-slot .item-name {
-                font-size: 10px;
-                text-align: center;
-                color: #ffdfa7;
-                margin-top: 3px;
-                max-width: 100%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            .chest-slot .item-quantity {
-                position: absolute;
-                bottom: 2px;
-                right: 2px;
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                font-size: 10px;
-                padding: 2px 5px;
-                border-radius: 4px;
-                min-width: 20px;
-                text-align: center;
-            }
-
-            /* ===== INVENTÁRIO DO JOGADOR ===== */
-            .player-inventory {
-                display: grid;
-                grid-template-columns: repeat(5, 1fr);
-                gap: 10px;
-                padding: 10px;
-                overflow-y: auto;
-            }
-
-            .inventory-item {
-                aspect-ratio: 1;
-                background: rgba(52, 152, 219, 0.3);
-                border: 2px solid #3498db;
-                border-radius: 8px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                position: relative;
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .inventory-item:hover {
-                background: rgba(52, 152, 219, 0.5);
-                transform: scale(1.05);
-            }
-
-            .inventory-item .item-icon {
-                font-size: 24px;
-            }
-
-            .inventory-item .item-quantity {
-                position: absolute;
-                bottom: 2px;
-                right: 2px;
-                background: rgba(0, 0, 0, 0.8);
-                color: white;
-                font-size: 10px;
-                padding: 2px 5px;
-                border-radius: 4px;
-            }
-
-            /* ===== CONTROLES ===== */
-            .chest-controls {
-                margin-top: 20px;
-                display: flex;
-                justify-content: center;
-                gap: 15px;
-                padding-top: 15px;
-                border-top: 2px solid #5a3a1c;
-            }
-
-            .chest-btn {
-                padding: 10px 20px;
-                background: #8b5a2b;
-                border: none;
-                border-radius: 8px;
-                color: white;
-                cursor: pointer;
-                font-weight: bold;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                transition: all 0.2s;
-            }
-
-            .chest-btn:hover {
-                background: #ff9e4a;
-                transform: translateY(-2px);
-            }
-
-            .chest-btn.take-all {
-                background: #27ae60;
-            }
-
-            .chest-btn.store-all {
-                background: #3498db;
-            }
-
-            /* ===== MENSAGENS ===== */
-            .chest-message {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                background: #2d1b0e;
-                border: 2px solid #8b5a2b;
-                border-radius: 10px;
-                color: #ffdfa7;
-                z-index: 10000;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-                animation: slideIn 0.3s ease;
-            }
-
-            @keyframes slideIn {
-                from { transform: translateX(100px); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-
-            /* ===== RESPONSIVO ===== */
-            @media (max-width: 768px) {
-                .chest-panel {
-                    width: 95vw;
-                    height: 90vh;
-                }
-                
-                .chest-content {
-                    flex-direction: column;
-                }
-                
-                .chest-side {
-                    max-height: 300px;
-                }
-            }
-            </style>
-        `;
-        
-        document.head.insertAdjacentHTML('beforeend', styles);
+        // CSS movido para style/chest.css - incluir no index.html
+        // Este método é mantido para compatibilidade, mas não injeta mais estilos
     },
     
     /**
@@ -465,53 +156,53 @@ export const chestSystem = {
         
         // Criar overlay
         const overlay = document.createElement('div');
-        overlay.className = 'chest-overlay';
-        overlay.id = 'chest-overlay';
+        overlay.className = 'cht-overlay';
+        overlay.id = 'cht-overlay';
         document.body.appendChild(overlay);
         
         // Criar painel principal
         const panel = document.createElement('div');
-        panel.className = 'chest-panel';
-        panel.id = 'chest-panel';
+        panel.className = 'cht-panel';
+        panel.id = 'cht-panel';
         
         panel.innerHTML = `
-            <div class="chest-header">
+            <div class="cht-header">
                 <h2><span>📦</span> Baú - ${chest.name}</h2>
-                <button class="chest-close-btn">&times;</button>
+                <button class="cht-close-btn">&times;</button>
             </div>
             
-            <div class="chest-content">
+            <div class="cht-content">
                 <!-- Lado esquerdo: Baú -->
-                <div class="chest-side">
-                    <div class="side-title">📦 Armazenamento do Baú</div>
+                <div class="cht-side">
+                    <div class="cht-side-title">📦 Armazenamento do Baú</div>
                     
-                    <div class="chest-categories" id="chest-categories">
+                    <div class="cht-categories" id="cht-categories">
                         <!-- Categorias serão injetadas aqui -->
                     </div>
                     
-                    <div class="chest-slots" id="chest-slots">
+                    <div class="cht-slots" id="cht-slots">
                         <!-- Slots serão injetados aqui -->
                     </div>
                 </div>
                 
                 <!-- Lado direito: Inventário do Jogador -->
-                <div class="chest-side">
-                    <div class="side-title">🎒 Seu Inventário</div>
+                <div class="cht-side">
+                    <div class="cht-side-title">🎒 Seu Inventário</div>
                     
-                    <div class="player-inventory" id="player-inventory">
+                    <div class="cht-player-inventory" id="cht-player-inventory">
                         <!-- Itens do inventário serão injetados aqui -->
                     </div>
                 </div>
             </div>
             
-            <div class="chest-controls">
-                <button class="chest-btn take-all" id="take-all-btn">
+            <div class="cht-controls">
+                <button class="cht-btn take-all" id="take-all-btn">
                     <span>⬇️</span> Pegar Tudo
                 </button>
-                <button class="chest-btn store-all" id="store-all-btn">
+                <button class="cht-btn store-all" id="store-all-btn">
                     <span>⬆️</span> Guardar Tudo
                 </button>
-                <button class="chest-btn" id="organize-btn">
+                <button class="cht-btn" id="organize-btn">
                     <span>🔧</span> Organizar
                 </button>
             </div>
@@ -520,7 +211,7 @@ export const chestSystem = {
         document.body.appendChild(panel);
         
         // Adicionar event listeners
-        panel.querySelector('.chest-close-btn').addEventListener('click', () => this.closeChestUI());
+        panel.querySelector('.cht-close-btn').addEventListener('click', () => this.closeChestUI());
         overlay.addEventListener('click', () => this.closeChestUI());
         
         document.getElementById('take-all-btn').addEventListener('click', () => this.takeAllItems(chest.id));
@@ -554,8 +245,8 @@ export const chestSystem = {
      * @returns {void}
      */
     closeChestUI() {
-        const overlay = document.getElementById('chest-overlay');
-        const panel = document.getElementById('chest-panel');
+        const overlay = document.getElementById('cht-overlay');
+        const panel = document.getElementById('cht-panel');
         
         if (overlay) overlay.remove();
         if (panel) panel.remove();
@@ -575,14 +266,14 @@ export const chestSystem = {
         const chest = this.chests[chestId];
         if (!chest) return;
         
-        const container = document.getElementById('chest-categories');
+        const container = document.getElementById('cht-categories');
         if (!container) return;
         
         let html = '';
         this.categories.forEach(category => {
             const itemCount = chest.storage[category]?.items?.length || 0;
             html += `
-                <button class="chest-category-btn" data-category="${category}">
+                <button class="cht-category-btn" data-category="${category}">
                     ${this.getCategoryIcon(category)} ${category} (${itemCount})
                 </button>
             `;
@@ -591,16 +282,16 @@ export const chestSystem = {
         container.innerHTML = html;
         
         // Adicionar event listeners
-        container.querySelectorAll('.chest-category-btn').forEach(btn => {
+        container.querySelectorAll('.cht-category-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 // Atualizar categoria ativa
-                container.querySelectorAll('.chest-category-btn').forEach(b => b.classList.remove('active'));
+                container.querySelectorAll('.cht-category-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
         
         // Ativar primeira categoria
-        const firstBtn = container.querySelector('.chest-category-btn');
+        const firstBtn = container.querySelector('.cht-category-btn');
         if (firstBtn) firstBtn.classList.add('active');
     },
     
@@ -612,7 +303,7 @@ export const chestSystem = {
      */
     renderChestItems(chestId) {
         const chest = this.chests[chestId];
-        const container = document.getElementById('chest-slots');
+        const container = document.getElementById('cht-slots');
         if (!chest || !container) return;
         
         let html = '';
@@ -631,7 +322,7 @@ export const chestSystem = {
                 const items = chest.storage[category]?.items || [];
                 items.forEach(item => {
                     html += `
-                        <div class="chest-slot" data-item-id="${item.id}" data-category="${category}">
+                        <div class="cht-slot" data-item-id="${item.id}" data-category="${category}">
                             <div class="item-icon">${item.icon || '📦'}</div>
                             <div class="item-name">${item.name}</div>
                             <div class="item-quantity">${item.quantity}</div>
@@ -643,14 +334,14 @@ export const chestSystem = {
             // Adicionar slots vazios
             const emptySlots = (this.categories.length * this.slotsPerCategory) - totalItems;
             for (let i = 0; i < emptySlots; i++) {
-                html += '<div class="chest-slot empty"></div>';
+                html += '<div class="cht-slot empty"></div>';
             }
         }
         
         container.innerHTML = html;
         
         // Adicionar event listeners para os slots
-        container.querySelectorAll('.chest-slot:not(.empty)').forEach(slot => {
+        container.querySelectorAll('.cht-slot:not(.empty)').forEach(slot => {
             slot.addEventListener('click', () => {
                 const itemId = parseInt(slot.dataset.itemId);
                 const category = slot.dataset.category;
@@ -666,7 +357,7 @@ export const chestSystem = {
      * @returns {void}
      */
     renderPlayerInventory(chestId) {
-        const container = document.getElementById('player-inventory');
+        const container = document.getElementById('cht-player-inventory');
         if (!container) return;
         
         if (!window.inventorySystem) {
@@ -683,7 +374,7 @@ export const chestSystem = {
             data.items.forEach(item => {
                 itemCount++;
                 html += `
-                    <div class="inventory-item" data-item-id="${item.id}" data-category="${category}">
+                    <div class="cht-inventory-item" data-item-id="${item.id}" data-category="${category}">
                         <div class="item-icon">${item.icon || '🎒'}</div>
                         <div class="item-name">${item.name}</div>
                         <div class="item-quantity">${item.quantity}</div>
@@ -699,7 +390,7 @@ export const chestSystem = {
         container.innerHTML = html;
         
         // Adicionar event listeners
-        container.querySelectorAll('.inventory-item').forEach(item => {
+        container.querySelectorAll('.cht-inventory-item').forEach(item => {
             item.addEventListener('click', () => {
                 const itemId = parseInt(item.dataset.itemId);
                 const category = item.dataset.category;
@@ -946,11 +637,11 @@ export const chestSystem = {
      */
     showMessage(text, type = 'info') {
         // Remover mensagem anterior
-        const existing = document.querySelector('.chest-message');
+        const existing = document.querySelector('.cht-message');
         if (existing) existing.remove();
         
         const msg = document.createElement('div');
-        msg.className = `chest-message ${type}`;
+        msg.className = `cht-message ${type}`;
         msg.textContent = text;
         msg.style.borderColor = type === 'error' ? '#c97878' : 
                                type === 'success' ? '#90c978' : '#8b5a2b';

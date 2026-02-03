@@ -1,0 +1,259 @@
+/* Prefixo escolhido: crf- (de "crafting") */
+
+/* id do style */
+#crf-styles {}
+
+/* overlay e painel */
+.crf-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9998;
+}
+
+.crf-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  max-width: 90vw;
+  height: 600px;
+  max-height: 80vh;
+  background: #2d1b0e;
+  border: 3px solid #8b5a2b;
+  border-radius: 15px;
+  z-index: 9999;
+  color: white;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 30px rgba(0,0,0,0.8);
+}
+
+/* header */
+.crf-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 2px solid #8b5a2b;
+}
+
+.crf-header h2 {
+  color: #ffdfa7;
+  margin: 0;
+  font-size: 24px;
+}
+
+/* close button */
+.crf-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: #8b5a2b;
+  border: none;
+  color: white;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crf-close-btn:hover {
+  background: #ff9e4a;
+}
+
+/* categorias */
+.crf-categories {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.crf-category-btn {
+  padding: 8px 16px;
+  background: #5a3a1c;
+  border: 1px solid #8b5a2b;
+  border-radius: 20px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.crf-category-btn.crf-active,
+.crf-category-btn:hover {
+  background: #8b5a2b;
+  transform: translateY(-2px);
+}
+
+/* lista de receitas */
+.crf-recipes {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  padding-right: 10px;
+}
+
+.crf-recipes::-webkit-scrollbar { width: 8px; }
+
+.crf-recipes::-webkit-scrollbar-track {
+  background: #5a3a1c;
+  border-radius: 4px;
+}
+
+.crf-recipes::-webkit-scrollbar-thumb {
+  background: #8b5a2b;
+  border-radius: 4px;
+}
+
+/* item/linha de receita */
+.crf-item {
+  background: rgba(139, 90, 43, 0.2);
+  border: 2px solid #5a3a1c;
+  border-radius: 10px;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.crf-item:hover {
+  border-color: #ff9e4a;
+  transform: translateY(-2px);
+}
+
+.crf-info { flex: 1; }
+
+.crf-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffdfa7;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* requirements */
+.crf-requirements {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crf-requirement {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: #5a3a1c;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.crf-requirement.crf-has-enough {
+  background: #4a7a35;
+}
+
+.crf-requirement.crf-not-enough {
+  background: #7a3535;
+}
+
+/* spans internos do requirement */
+.crf-req-icon {}
+.crf-req-qty {}
+.crf-req-name {}
+
+/* botão craft */
+.crf-btn {
+  padding: 10px 20px;
+  background: #8b5a2b;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.crf-btn:hover:not(.crf-disabled) {
+  background: #ff9e4a;
+  transform: translateY(-2px);
+}
+
+.crf-btn.crf-disabled {
+  background: #555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* feedback */
+.crf-feedback {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  background: #2d1b0e;
+  border: 2px solid #8b5a2b;
+  border-radius: 10px;
+  color: #ffdfa7;
+  z-index: 10000;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.crf-feedback.crf-success {
+  border-color: #90c978;
+  color: #90c978;
+}
+
+.crf-feedback.crf-error {
+  border-color: #c97878;
+  color: #c97878;
+}
+
+/* missing materials */
+.crf-missing {
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(201, 120, 120, 0.3);
+  border-radius: 6px;
+  font-size: 14px;
+  color: #c97878;
+}
+
+/* responsivo */
+@media (max-width: 768px) {
+  .crf-panel {
+    width: 95vw;
+    height: 90vh;
+  }
+
+  .crf-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+
+  .crf-category-btn {
+    align-self: flex-end;
+  }
+}
+
+/* IDs do markup do crafting (antes: craft-categories, craft-list) */
+#crf-categories {}
+#crf-list {}

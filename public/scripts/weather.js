@@ -15,46 +15,7 @@ const WEATHER_UI_ID = "weather-ui-panel";
 function ensureWeatherUIPanel() {
   if (typeof document === "undefined") return null;
 
-  if (!document.getElementById(WEATHER_UI_STYLE_ID)) {
-    const style = document.createElement("style");
-    style.id = WEATHER_UI_STYLE_ID;
-    style.textContent = `
-      #${WEATHER_UI_ID}{
-        position: fixed;
-        z-index: 2600;
-        left: 0;
-        top: 0;
-        padding: 10px 12px;
-        min-width: 180px;
-        color: #ffffff;
-        background: rgba(0,0,0,0.6);
-        font-family: "Courier New", monospace;
-        font-size: 14px;
-        line-height: 1.25;
-        border-radius: 6px;
-        pointer-events: none;
-        user-select: none;
-        transform: translateZ(0);
-      }
-      #${WEATHER_UI_ID} .wui-time{
-        font-weight: 800;
-        font-size: 20px;
-        margin-bottom: 2px;
-      }
-      #${WEATHER_UI_ID} .wui-weekday{
-        color: #ffd700;
-        font-weight: 800;
-        font-size: 16px;
-        margin-bottom: 6px;
-      }
-      #${WEATHER_UI_ID} .wui-row{
-        display: flex;
-        gap: 6px;
-        white-space: nowrap;
-      }
-    `;
-    document.head.appendChild(style);
-  }
+  // CSS agora esta em style/weather.css
 
   let el = document.getElementById(WEATHER_UI_ID);
   if (!el) {
