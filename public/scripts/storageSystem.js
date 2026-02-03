@@ -6,6 +6,7 @@
  */
 
 import { items } from './item.js';
+import { registerSystem } from './gameState.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
 
 /**
@@ -81,11 +82,11 @@ export class StorageSystem {
   }
 
   /**
-   * Inicializa o sistema e expõe globalmente
+   * Inicializa o sistema e registra no gameState
    * @returns {void}
    */
   init() {
-    window.storageSystem = this;
+    registerSystem('storage', this);
   }
 
   /**

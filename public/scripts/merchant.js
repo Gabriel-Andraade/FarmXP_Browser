@@ -11,6 +11,7 @@ import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
 import { getItem, getSellPrice } from "./itemUtils.js";
+import { registerSystem, getSystem } from "./gameState.js";
 import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } from './validation.js';
 
 /**
@@ -657,10 +658,12 @@ class MerchantSystem {
     // obtém itens do jogador a partir do storage selecionado
     getPlayerItems() {
         let playerItems = [];
+        const inventorySystem = getSystem('inventory');
+        const storageSystem = getSystem('storage');
 
         if (this.playerStorage === 'inventory') {
-            if (window.inventorySystem && window.inventorySystem.getInventory) {
-                const inventory = window.inventorySystem.getInventory();
+            if (inventorySystem && inventorySystem.getInventory) {
+                const inventory = inventorySystem.getInventory();
                 Object.values(inventory).forEach(category => {
                     if (category && category.items) {
                         playerItems = playerItems.concat(category.items.map(item => ({
@@ -674,8 +677,8 @@ class MerchantSystem {
                 });
             }
         } else {
-            if (window.storageSystem && window.storageSystem.storage) {
-                const storage = window.storageSystem.storage;
+            if (storageSystem && storageSystem.storage) {
+                const storage = storageSystem.storage;
                 Object.keys(storage).forEach(category => {
                     if (storage[category]) {
                         storage[category].forEach(stack => {
@@ -950,6 +953,7 @@ class MerchantSystem {
     // processa venda
     processSell(totalValue) {
         if (!this.selectedPlayerItem) return;
+        const inventorySystem = getSystem('inventory');
 
         // Validar que o item existe no inventário do jogador
         const playerItem = this.getPlayerItems().find(i => i.id === this.selectedPlayerItem);
@@ -973,8 +977,8 @@ class MerchantSystem {
         }
 
         if (this.playerStorage === 'inventory') {
-            if (window.inventorySystem && window.inventorySystem.removeItem) {
-                if (window.inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
+            if (inventorySystem && inventorySystem.removeItem) {
+                if (inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
 
                     // FIX: Usar 'earn' conforme definido em currencyManager.js
                     if (typeof currencyManager.earn === 'function') {
@@ -1000,6 +1004,7 @@ class MerchantSystem {
     // processa compra
     processBuy(totalValue) {
         if (!this.selectedMerchantItem) return;
+        const inventorySystem = getSystem('inventory');
 
         // Validar que o item existe no estoque do mercador
         const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
@@ -1029,9 +1034,9 @@ class MerchantSystem {
         }
 
         if (this.playerStorage === 'inventory') {
-            if (window.inventorySystem && window.inventorySystem.addItem) {
+            if (inventorySystem && inventorySystem.addItem) {
                 // Tentar adicionar ao inventário (usando apenas ID e quantidade para mapeamento automático)
-                if (window.inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
+                if (inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
 
                     // FIX: Usar 'spend' conforme definido em currencyManager.js
                     if (typeof currencyManager.spend === 'function') {
@@ -1063,8 +1068,9 @@ class MerchantSystem {
     // atualiza saldos na UI
     updateBalances() {
         this.updateCommerceBalance();
-        if (window.playerHUD && window.playerHUD.updateMoney) {
-            window.playerHUD.updateMoney();
+        const playerHUD = getSystem('hud');
+        if (playerHUD && playerHUD.updateMoney) {
+            playerHUD.updateMoney();
         }
     }
 
@@ -1152,7 +1158,7 @@ class MerchantSystem {
 }
 
 export const merchantSystem = new MerchantSystem();
-window.merchantSystem = merchantSystem;
+registerSystem('merchant', merchantSystem);
 
 // =============================================================================
 // FUNÇÕES GLOBAIS PARA COMPATIBILIDADE COM HTML (onclick)
