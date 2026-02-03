@@ -580,15 +580,16 @@ export function setInventoryUpdateDelay(delayMs) {
  * CSS carregado externamente via style/inventory-actions.css
  */
 export function addItemActionButtons(itemElement, item, category, itemId) {
-    const existingButtons = itemElement.querySelectorAll('.item-action-btn');
-    existingButtons.forEach(btn => btn.remove());
+    const existingContainer = itemElement.querySelector('.inv-item-actions');
+    if (existingContainer) existingContainer.remove();
+
 
     const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'item-actions';
+    buttonContainer.className = 'inv-item-actions';
 
     if (item.fillUp) {
         const consumeBtn = document.createElement('button');
-        consumeBtn.className = 'item-action-btn consume-btn';
+        consumeBtn.className = 'inv-action-btn inv-consume-btn';
         consumeBtn.textContent = '🍽️ Consumir';
         consumeBtn.onclick = (e) => {
             e.stopPropagation();
@@ -599,7 +600,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 
     if (item.type === 'tool') {
         const equipBtn = document.createElement('button');
-        equipBtn.className = 'item-action-btn equip-btn';
+        equipBtn.className = 'inv-action-btn inv-equip-btn';
         equipBtn.textContent = '⚔️ Equipar';
         equipBtn.onclick = (e) => {
             e.stopPropagation();
@@ -609,7 +610,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     }
 
     const discardBtn = document.createElement('button');
-    discardBtn.className = 'item-action-btn discard-btn';
+    discardBtn.className = 'inv-action-btn inv-discard-btn';
     discardBtn.textContent = '🗑️ Descartar';
     discardBtn.onclick = (e) => {
         e.stopPropagation();

@@ -8,8 +8,6 @@
 import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
 
-/** @constant {string} ID do elemento de estilo da UI de clima */
-const WEATHER_UI_STYLE_ID = "weather-ui-style";
 const WEATHER_UI_ID = "weather-ui-panel";
 
 function ensureWeatherUIPanel() {

@@ -84,8 +84,10 @@ export class CraftingSystem {
       let amountToRemove = req.qty;
 
       if (this.useInventory && window.inventorySystem) {
-        const removed = window.inventorySystem.removeItem(req.itemId, amountToRemove);
-        amountToRemove -= removed;
+        const success = window.inventorySystem.removeItem(req.itemId, amountToRemove);
+        if (success) {
+          amountToRemove = 0;
+        }
       }
 
       if (amountToRemove > 0 && this.useStorage && window.storageSystem) {
@@ -101,8 +103,7 @@ export class CraftingSystem {
    * @returns {Promise<void>}
    */
   async craft(recipeId) {
-    const rid = Number(recipeId);
-    const recipe = recipes.find((r) => r.id === rid);
+    const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
 
     if (!this.canCraft(recipe)) {
@@ -110,19 +111,24 @@ export class CraftingSystem {
       return;
     }
 
-    const craftBtn = document.querySelector(`.crf-btn[data-id="${rid}"]`);
+    const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
       craftBtn.disabled = true;
       craftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Craftando...';
       craftBtn.classList.add("crf-disabled");
     }
 
-    this.removeRequiredItems(recipe);
-
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    if (window.inventorySystem) {
-      window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
+    try {
+      if (window.inventorySystem) {
+        window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
+      }
+      this.removeRequiredItems(recipe);
+    } catch (error) {
+      this.showMessage("❌ Erro ao craftar!", "error");
+      logger.error("Craft failed:", error);
+      return;
     }
 
     this.showMessage(`🔨 Craftado: ${recipe.name}!`, "success");
@@ -273,6 +279,7 @@ export class CraftingSystem {
       food: "apple-alt",
       material: "box",
       construction: "hammer",
+      animal_food: "paw",
       all: "star",
     };
     return icons[category] || "question";

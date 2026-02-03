@@ -127,5 +127,6 @@
   --z-modal: 9500;
   --z-build-help: 9999;
   --z-loading: 10000;
+  --z-notification: 10001;
   --z-tooltip: 10500;
 }

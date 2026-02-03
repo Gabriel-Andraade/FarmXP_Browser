@@ -71,7 +71,12 @@ export const BuildSystem = {
      */
     _ensureBuildHelpUI() {
       // CSS movido para style/build.css - incluir no index.html
-      if (!this._helpPanelEl || !document.getElementById(this._helpPanelId)) {
+      const existing = document.getElementById(this._helpPanelId);
+      if (existing) {
+        this._helpPanelEl = existing;
+        return;
+      }
+      if (!this._helpPanelEl) {
         const panel = document.createElement('div');
         panel.id = this._helpPanelId;
         panel.innerHTML = `

@@ -29,23 +29,23 @@ class LoadingScreenManager {
      */
     showInitialLoading() {
         // Evita duplicatas
-        if (document.getElementById("initial-loading-screen")) return;
+        if (document.getElementById("ldg-initial-screen")) return;
 
         const loadingScreen = document.createElement("div");
-        loadingScreen.id = "initial-loading-screen";
+        loadingScreen.id = "ldg-initial-screen";
 
         loadingScreen.innerHTML = `
-            <div class="loading-content">
+            <div class="ldg-content">
                 <h1>FarmingXP</h1>
-                <p class="loading-subtitle">Preparando sua fazenda...</p>
-                <div class="loading-progress-container">
-                    <div id="initial-progress-bar"></div>
+                <p class="ldg-subtitle">Preparando sua fazenda...</p>
+                <div class="ldg-progress-container">
+                    <div id="ldg-initial-progress-bar"></div>
                 </div>
-                <p id="initial-loading-message"></p>
-                <div class="loading-dots">
-                    <div class="loading-dot"></div>
-                    <div class="loading-dot"></div>
-                    <div class="loading-dot"></div>
+                <p id="ldg-initial-message"></p>
+                <div class="ldg-dots">
+                    <div class="ldg-dot"></div>
+                    <div class="ldg-dot"></div>
+                    <div class="ldg-dot"></div>
                 </div>
             </div>
         `;
@@ -63,8 +63,8 @@ class LoadingScreenManager {
      * @returns {void}
      */
     updateInitialProgress(progress, message = "") {
-        const progressBar = document.getElementById('initial-progress-bar');
-        const messageEl = document.getElementById('initial-loading-message');
+        const progressBar = document.getElementById('ldg-initial-progress-bar');
+        const messageEl = document.getElementById('ldg-initial-message');
         if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
         if (messageEl && message) messageEl.textContent = message;
     }
@@ -75,7 +75,7 @@ class LoadingScreenManager {
      * @returns {void}
      */
     hideInitialLoading() {
-        const loadingScreen = document.getElementById('initial-loading-screen');
+        const loadingScreen = document.getElementById('ldg-initial-screen');
         if (loadingScreen) {
             loadingScreen.style.transition = 'opacity 0.8s, transform 0.8s';
             loadingScreen.style.opacity = '0';
@@ -100,36 +100,36 @@ class LoadingScreenManager {
         if (this.sleepScreen) this.hideSleepLoading();
 
         this.sleepScreen = document.createElement("div");
-        this.sleepScreen.id = "sleep-loading-screen";
+        this.sleepScreen.id = "ldg-sleep-screen";
 
         this.sleepScreen.innerHTML = `
-            <div class="sleep-content">
-                <div class="sleep-emoji">💤</div>
-                <h2 class="sleep-title">Repouso Restaurador</h2>
+            <div class="ldg-sleep-content">
+                <div class="ldg-sleep-emoji">💤</div>
+                <h2 class="ldg-sleep-title">Repouso Restaurador</h2>
 
-                <div class="sleep-progress-container">
-                    <div class="sleep-progress-header">
+                <div class="ldg-sleep-progress-container">
+                    <div class="ldg-sleep-progress-header">
                         <span>Progresso</span>
-                        <span id="sleep-time-remaining">${durationSeconds}s</span>
+                        <span id="ldg-sleep-time-remaining">${durationSeconds}s</span>
                     </div>
-                    <div class="sleep-progress-bar">
-                        <div id="sleep-progress-bar"></div>
+                    <div class="ldg-sleep-progress-bar">
+                        <div id="ldg-sleep-progress-bar"></div>
                     </div>
                 </div>
 
-                <div class="sleep-message-container">
-                    <p id="sleep-main-message">Adormecendo...</p>
-                    <p id="sleep-detail-message">Fechando os olhos...</p>
+                <div class="ldg-sleep-message-container">
+                    <p id="ldg-sleep-main-message">Adormecendo...</p>
+                    <p id="ldg-sleep-detail-message">Fechando os olhos...</p>
                 </div>
 
-                <div class="sleep-optimizations">
-                    <div class="optimization-card">
-                        <div class="card-title">Cache</div>
-                        <div id="cache-status" class="card-status">Aguardando...</div>
+                <div class="ldg-sleep-optimizations">
+                    <div class="ldg-optimization-card">
+                        <div class="ldg-card-title">Cache</div>
+                        <div id="cache-status" class="ldg-card-status">Aguardando...</div>
                     </div>
-                    <div class="optimization-card">
-                        <div class="card-title">Memória</div>
-                        <div id="memory-status" class="card-status">Aguardando...</div>
+                    <div class="ldg-optimization-card">
+                        <div class="ldg-card-title">Memória</div>
+                        <div id="memory-status" class="ldg-card-status">Aguardando...</div>
                     </div>
                 </div>
             </div>
@@ -153,9 +153,9 @@ class LoadingScreenManager {
      */
     updateSleepProgress(progress, mainMessage, detailMessage) {
         this.sleepProgress = progress;
-        const progressBar = document.getElementById('sleep-progress-bar');
-        const mainMsgEl = document.getElementById('sleep-main-message');
-        const detailMsgEl = document.getElementById('sleep-detail-message');
+        const progressBar = document.getElementById('ldg-sleep-progress-bar');
+        const mainMsgEl = document.getElementById('ldg-sleep-main-message');
+        const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
         
         if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
@@ -198,7 +198,7 @@ class LoadingScreenManager {
             if (memEl) memEl.textContent = s.mem;
 
             // Atualiza o timer visual
-            const timerEl = document.getElementById('sleep-time-remaining');
+            const timerEl = document.getElementById('ldg-sleep-time-remaining');
             if(timerEl) {
                 const remaining = Math.max(0, Math.ceil(durationSeconds * (1 - s.t)));
                 timerEl.textContent = `${remaining}s`;
@@ -238,12 +238,13 @@ class LoadingScreenManager {
      */
     hideSleepLoading() {
         if (this.sleepScreen) {
-            this.sleepScreen.classList.remove('visible');
+            const screen = this.sleepScreen;
+            screen.classList.remove('visible');
+            this.sleepScreen = null;
             setTimeout(() => {
-                if (this.sleepScreen && this.sleepScreen.parentNode) {
-                    this.sleepScreen.parentNode.removeChild(this.sleepScreen);
+                 if (screen.parentNode) {
+                    screen.parentNode.removeChild(screen);
                 }
-                this.sleepScreen = null;
             }, 800);
         }
     }

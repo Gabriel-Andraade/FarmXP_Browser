@@ -192,43 +192,43 @@ export const wellSystem = {
   },
 
   openWellMenu() {
-    this.injectStyles();
+   
 
-    if (document.getElementById("well-overlay")) {
-      document.getElementById("well-overlay").style.display = "flex";
+    if (document.getElementById("wll-overlay")) {
+      document.getElementById("wll-overlay").style.display = "flex";
       wellState.isOpen = true;
       this.updateUI();
       return;
     }
 
     const overlay = document.createElement("div");
-    overlay.id = "well-overlay";
+    overlay.id = "wll-overlay";
     overlay.innerHTML = `
-      <div id="well-modal">
-        <div class="close-btn" id="well-close">X</div>
+      <div id="wll-modal">
+        <div class="wll-close-btn" id="well-close">X</div>
 
-        <div class="well-col">
+        <div class="wll-col">
           <h3>Mochila</h3>
-          <div class="item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
-          <div class="item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
+          <div class="wll-item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
+          <div class="wll-item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
         </div>
 
-        <div class="well-col">
+        <div class="wll-col">
           <h3>Acoes</h3>
-          <button class="main-btn btn-blue" id="btn-drink">Beber</button>
-          <button class="main-btn btn-red" id="btn-transfer-menu">Coletar</button>
+          <button class="wll-main-btn wll-btn-blue" id="btn-drink">Beber</button>
+          <button class="wll-main-btn wll-btn-red" id="btn-transfer-menu">Coletar</button>
           <div id="transfer-options" style="display:none">
-            <button class="main-btn" id="btn-fill-bottle">Encher garrafa</button>
+            <button class="wll-main-btn" id="btn-fill-bottle">Encher garrafa</button>
           </div>
         </div>
 
-        <div class="well-col">
+        <div class="wll-col">
           <h3>Poco</h3>
-          <div class="well-bucket-container">
-            <div class="water-fill" id="well-water-level"></div>
+          <div class="wll-bucket-container">
+            <div class="wll-water-fill" id="well-water-level"></div>
           </div>
-          <button class="main-btn btn-green" id="btn-pull-water">Descer balde</button>
-          <div id="well-timer" style="display:none">00:00</div>
+          <button class="wll-main-btn wll-btn-green" id="btn-pull-water">Descer balde</button>
+          <div id="wll-timer" style="display:none">00:00</div>
         </div>
       </div>
     `;
@@ -248,7 +248,7 @@ export const wellSystem = {
   },
 
   closeWellMenu() {
-    document.getElementById("well-overlay")?.remove();
+    document.getElementById("wll-overlay")?.remove();
     wellState.isOpen = false;
   },
 
@@ -256,7 +256,7 @@ export const wellSystem = {
     const bucketQtyEl = document.getElementById("qty-bucket");
     const bottleQtyEl = document.getElementById("qty-bottle");
     const levelEl = document.getElementById("well-water-level");
-    const timerEl = document.getElementById("well-timer");
+    const timerEl = document.getElementById("wll-timer");
 
     const bucketQty = inventorySystem.getItemQuantity?.("tools", WELL_CONFIG.BUCKET_EMPTY_ID) || 0;
     const bottleQty = inventorySystem.getItemQuantity?.("consumable", WELL_CONFIG.BOTTLE_EMPTY_ID) || 0;
@@ -282,7 +282,7 @@ export const wellSystem = {
     const duration = Math.random() * (maxMs - minMs) + minMs;
 
     const end = Date.now() + duration;
-    const timerEl = document.getElementById("well-timer");
+    const timerEl = document.getElementById("wll-timer");
 
     const tick = () => {
       const left = end - Date.now();

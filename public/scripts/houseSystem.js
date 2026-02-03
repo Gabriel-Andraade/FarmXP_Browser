@@ -625,17 +625,7 @@ export class HouseSystem {
             window.showMessage(text);
         } else {
             const msg = document.createElement('div');
-            msg.style.cssText = `
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background: rgba(0,0,0,0.8);
-                color: white;
-                padding: 20px;
-                border-radius: 10px;
-                z-index: 10000;
-            `;
+            msg.className = 'hse-system-message';
             msg.textContent = text;
             document.body.appendChild(msg);
             setTimeout(() => msg.remove(), 2000);
