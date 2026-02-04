@@ -125,10 +125,11 @@ export class CraftingSystem {
     await new Promise((resolve) => setTimeout(resolve, 800));
 
     try {
+      this.removeRequiredItems(recipe);
       if (window.inventorySystem) {
         window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
       }
-      this.removeRequiredItems(recipe);
+      
     } catch (error) {
       this.showMessage("❌ Erro ao craftar!", "error");
       logger.error("Craft failed:", error);
