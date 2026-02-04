@@ -84,14 +84,18 @@ export class CraftingSystem {
       let amountToRemove = req.qty;
 
       if (this.useInventory && window.inventorySystem) {
-        const success = window.inventorySystem.removeItem(req.itemId, amountToRemove);
-        if (success) {
-          amountToRemove = 0;
+        const invQty = window.inventorySystem.getItemQuantity?.(req.itemId) || 0;
+        const invRemove = Math.min(invQty, amountToRemove);
+        if (invRemove > 0) {
+          const success = window.inventorySystem.removeItem(req.itemId, invRemove);
+          if (!success) throw new Error(`Falha ao remover item ${req.itemId} do inventário`);
+          amountToRemove -= invRemove;
         }
       }
 
       if (amountToRemove > 0 && this.useStorage && window.storageSystem) {
-        window.storageSystem.removeItem(req.itemId, amountToRemove);
+        const success = window.storageSystem.removeItem(req.itemId, amountToRemove);
+        if (!success) throw new Error(`Falha ao remover item ${req.itemId} do armazenamento`);
       }
     }
   }
@@ -128,6 +132,11 @@ export class CraftingSystem {
     } catch (error) {
       this.showMessage("❌ Erro ao craftar!", "error");
       logger.error("Craft failed:", error);
+      if (craftBtn) {
+        craftBtn.disabled = false;
+        craftBtn.innerHTML = '<i class="fas fa-hammer"></i> Craftar';
+        craftBtn.classList.remove("crf-disabled");
+      }
       return;
     }
 

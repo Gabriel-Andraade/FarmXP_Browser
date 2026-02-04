@@ -136,7 +136,10 @@ class LoadingScreenManager {
         `;
 
         document.body.appendChild(this.sleepScreen);
-        setTimeout(() => { this.sleepScreen.classList.add('visible'); }, 50);
+        const screen = this.sleepScreen;
+        setTimeout(() => {
+          if (screen) screen.classList.add('visible');
+        }, 50);
 
         // Iniciar simulação de otimização sincronizada com o tempo
         this.startSleepOptimizations(durationSeconds);

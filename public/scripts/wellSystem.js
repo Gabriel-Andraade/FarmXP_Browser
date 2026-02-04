@@ -192,10 +192,9 @@ export const wellSystem = {
   },
 
   openWellMenu() {
-   
-
-    if (document.getElementById("wll-overlay")) {
-      document.getElementById("wll-overlay").style.display = "flex";
+    const existingOverlay = document.getElementById("wll-overlay");
+    if (existingOverlay) {
+      existingOverlay.classList.add("active");
       wellState.isOpen = true;
       this.updateUI();
       return;
@@ -203,6 +202,7 @@ export const wellSystem = {
 
     const overlay = document.createElement("div");
     overlay.id = "wll-overlay";
+    overlay.classList.add("active");
     overlay.innerHTML = `
       <div id="wll-modal">
         <div class="wll-close-btn" id="well-close">X</div>
@@ -217,7 +217,7 @@ export const wellSystem = {
           <h3>Acoes</h3>
           <button class="wll-main-btn wll-btn-blue" id="btn-drink">Beber</button>
           <button class="wll-main-btn wll-btn-red" id="btn-transfer-menu">Coletar</button>
-          <div id="transfer-options" style="display:none">
+          <div id="transfer-options" hidden>
             <button class="wll-main-btn" id="btn-fill-bottle">Encher garrafa</button>
           </div>
         </div>
@@ -228,7 +228,7 @@ export const wellSystem = {
             <div class="wll-water-fill" id="well-water-level"></div>
           </div>
           <button class="wll-main-btn wll-btn-green" id="btn-pull-water">Descer balde</button>
-          <div id="wll-timer" style="display:none">00:00</div>
+          <div id="wll-timer" hidden>00:00</div>
         </div>
       </div>
     `;
@@ -239,7 +239,7 @@ export const wellSystem = {
     document.getElementById("btn-drink").onclick = () => this.drinkFromWell();
     document.getElementById("btn-transfer-menu").onclick = () => {
       const opts = document.getElementById("transfer-options");
-      opts.style.display = opts.style.display === "block" ? "none" : "block";
+      opts.hidden = !opts.hidden;
     };
     document.getElementById("btn-fill-bottle").onclick = () => this.fillBottle();
 
@@ -269,7 +269,7 @@ export const wellSystem = {
       levelEl.textContent = `${Math.floor(wellState.waterLevel)}%`;
     }
 
-    if (timerEl) timerEl.style.display = wellState.isPulling ? "block" : "none";
+    if (timerEl) timerEl.hidden = !wellState.isPulling;
   },
 
   startPullingWater() {
