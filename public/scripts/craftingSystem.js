@@ -1,6 +1,6 @@
 import { logger } from './logger.js';
 import { recipes } from "./recipes.js";
-import { items } from "./item.js";
+import { getItem } from "./itemUtils.js";
 
 /**
  * Sistema de crafting do jogo
@@ -568,7 +568,7 @@ export class CraftingSystem {
 
                     <div class="crafting-requirements">
                         ${recipe.requiredItems.map(req => {
-                            const data = items.find(i => i.id === req.itemId);
+                            const data = getItem(req.itemId);
                             const hasEnough = this.getTotalItemQuantity(req.itemId) >= req.qty;
                             return `
                                 <div class="requirement ${hasEnough ? 'has-enough' : 'not-enough'}">
@@ -583,9 +583,9 @@ export class CraftingSystem {
                     ${missing.length > 0 ? `
                         <div class="craft-missing">
                             <i class="fas fa-exclamation-triangle"></i>
-                            Faltando:  
+                            Faltando:
                             ${missing.map(m => {
-                                const data = items.find(i => i.id === m.itemId);
+                                const data = getItem(m.itemId);
                                 return `${m.missing}x ${data?.name}`;
                             }).join(", ")}
                         </div>

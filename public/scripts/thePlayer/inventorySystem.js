@@ -1,10 +1,9 @@
 import { logger } from '../logger.js';
-import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
-import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsumable, getConsumptionData as itemUtilsGetConsumptionData, getAllItems } from '../itemUtils.js';
 
-export const allItems = items;
+export { getAllItems as allItems };
 
 export class InventorySystem {
     constructor() {
@@ -535,27 +534,17 @@ export function removeItemFromInventory(category, itemId, quantity = 1) {
 }
 
 export function isConsumable(itemId) {
-    const item = items.find(i => i.id === itemId);
-    return item && item.fillUp;
+    return itemUtilsIsConsumable(itemId);
 }
 
 export function getConsumptionData(itemId) {
-    const item = items.find(i => i.id === itemId);
-    if (!item || !item.fillUp) return null;
-    
-    return {
-        name: item.name,
-        icon: item.icon,
-        hunger: item.fillUp.hunger || 0,
-        thirst: item.fillUp.thirst || 0,
-        energy: item.fillUp.energy || 0
-    };
+    return itemUtilsGetConsumptionData(itemId);
 }
 
 export function startConsuming(itemId, player) {
-    const item = items.find(i => i.id === itemId);
+    const item = getItem(itemId);
     if (!item || !item.fillUp) return false;
-    
+
     document.dispatchEvent(new CustomEvent('startConsumptionBar', {
         detail: {
             item,
@@ -563,7 +552,7 @@ export function startConsuming(itemId, player) {
             duration: 2000
         }
     }));
-    
+
     return true;
 }
 

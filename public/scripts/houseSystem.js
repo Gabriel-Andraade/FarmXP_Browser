@@ -12,7 +12,7 @@ import { collisionSystem } from './collisionSystem.js';
 import { storageSystem } from './storageSystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { WeatherSystem } from './weather.js';
-import { items } from './item.js';
+import { getItem } from './itemUtils.js';
 import { craftingSystem } from './craftingSystem.js';
 
 /**
@@ -717,7 +717,7 @@ export class HouseSystem {
         const getKey = (itemId, sourceCat) => `${mode}:${categoryKey}:${sourceCat || 'null'}:${itemId}`;
 
         grid.innerHTML = list.map((s) => {
-            const data = items.find(i => i.id === s.itemId);
+            const data = getItem(s.itemId);
             const icon = data?.icon || '';
             const name = data?.name || `item ${s.itemId}`;
             const qty = s.quantity || 0;
@@ -839,7 +839,7 @@ export class HouseSystem {
 
         return stacks
             .filter(s => {
-                const data = items.find(i => i.id === s.itemId);
+                const data = getItem(s.itemId);
                 if (!data) return false;
                 // Filtra apenas itens que pertencem a esta categoria do armazém (ex: Tools)
                 return allowedTypes.includes(data.type);

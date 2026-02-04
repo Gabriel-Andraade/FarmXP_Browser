@@ -5,7 +5,7 @@
  * @module StorageSystem
  */
 
-import { items } from './item.js';
+import { getItem } from './itemUtils.js';
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -201,7 +201,7 @@ export class StorageSystem {
 
     if (qty < 1) return false;
 
-    const itemData = items.find(i => i.id === itemId);
+    const itemData = getItem(itemId);
     if (!itemData) return false;
 
     const invCatOk = inventoryCategory && this._inventoryCategoryExists(inventoryCategory);
@@ -280,7 +280,7 @@ export class StorageSystem {
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
     if (!window.inventorySystem) return false;
 
-    const itemData = items.find(i => i.id === itemId);
+    const itemData = getItem(itemId);
     if (!itemData) return false;
 
     const removed = this.removeItem(storageCategory, itemId, quantity);
@@ -308,7 +308,7 @@ export class StorageSystem {
    * @returns {boolean} True se a adição foi bem-sucedida
    */
   addItem(itemId, quantity = 1) {
-    const itemData = items.find(i => i.id === itemId);
+    const itemData = getItem(itemId);
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
@@ -370,7 +370,7 @@ export class StorageSystem {
         return {
           category,
           stack,
-          itemData: items.find(i => i.id === itemId)
+          itemData: getItem(itemId)
         };
       }
     }
@@ -434,7 +434,7 @@ export class StorageSystem {
       };
 
       stacks.forEach(stack => {
-        const data = items.find(i => i.id === stack.itemId);
+        const data = getItem(stack.itemId);
         if (data) {
           stats.itemCount += stack.quantity;
           info.totalItems += stack.quantity;

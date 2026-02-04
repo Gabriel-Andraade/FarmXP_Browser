@@ -1,5 +1,4 @@
 import { inventorySystem } from './inventorySystem.js';
-import { items } from '../item.js';
 import { getItem, isConsumable, getConsumptionData } from '../itemUtils.js';
 import { mapTypeToCategory } from '../categoryMapper.js';
 
@@ -54,7 +53,7 @@ export function unequipItem() {
 }
 
 export function discardItem(category, itemId, quantity = 1) {
-    const item = items.find(i => i.id === itemId);
+    const item = getItem(itemId);
     if (!item) {
         logger.error('❌ Item não encontrado para descartar:', itemId);
         return false;

@@ -920,9 +920,8 @@ window.gameDebug = {
 
 window.debugItem = async (id) => {
   if (!inventorySystem) await initializeInventorySystem();
-  const itemsModule = await import("./item.js");
-  const items = itemsModule.items;
-  const item = items.find((i) => i.id === Number(id));
+  const { getItem } = await import("./itemUtils.js");
+  const item = getItem(Number(id));
   if (!item) return logger.error("Item não existe:", id);
   inventorySystem.addItem(item.id, 1);
   logger.debug(`Debug: Adicionado ${item.name}`);

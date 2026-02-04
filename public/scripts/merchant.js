@@ -7,7 +7,6 @@
 
 import { logger } from './logger.js';
 import { currencyManager } from "./currencyManager.js";
-import { items } from "./item.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
 import { getItem, getSellPrice } from "./itemUtils.js";
@@ -650,7 +649,7 @@ class MerchantSystem {
                 Object.keys(storage).forEach(category => {
                     if (storage[category]) {
                         storage[category].forEach(stack => {
-                            const itemData = items.find(item => item.id === stack.itemId);
+                            const itemData = getItem(stack.itemId);
                             if (itemData) {
                                 playerItems.push({
                                     id: stack.itemId,
@@ -783,7 +782,7 @@ class MerchantSystem {
 
         const item = this.getPlayerItems().find(i => i.id === itemId);
         if (item) {
-            const originalItem = items.find(i => i.id === itemId);
+            const originalItem = getItem(itemId);
             if (originalItem) {
                 this.tradeValue = Math.floor(originalItem.price * 0.5);
                 this.updateTradeValue();
