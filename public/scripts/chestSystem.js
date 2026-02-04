@@ -3,6 +3,7 @@ import { storageSystem } from './storageSystem.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { TILE_SIZE } from './worldConstants.js';
+import { registerSystem, getObject } from './gameState.js';
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -23,7 +24,8 @@ export const chestSystem = {
     init() {
         this.injectStyles();
         this.loadChests();
-        logger.info('📦 Sistema de baús inicializado');
+        registerSystem('chest', this);
+        console.log('📦 Sistema de baús inicializado');
         return this;
     },
     
@@ -98,8 +100,11 @@ export const chestSystem = {
      * @returns {void}
      */
     addChestToWorld(chest) {
-        if (window.addWorldObject) {
-            window.addWorldObject({
+        const theWorld = getObject('world');
+        const addWorldObject = theWorld?.addWorldObject;
+
+        if (addWorldObject) {
+            addWorldObject({
                 id: chest.id,
                 name: chest.name,
                 x: chest.x,
@@ -695,14 +700,16 @@ export const chestSystem = {
             const saved = localStorage.getItem('farmingXP_chests');
             if (saved) {
                 const loadedChests = JSON.parse(saved);
-                
+                const theWorld = getObject('world');
+                const addWorldObject = theWorld?.addWorldObject;
+
                 for (const chestId in loadedChests) {
                     const chestData = loadedChests[chestId];
                     this.chests[chestId] = chestData;
-                    
+
                     // Adicionar ao mundo visual (sem função draw personalizada)
-                    if (window.addWorldObject) {
-                        window.addWorldObject({
+                    if (addWorldObject) {
+                        addWorldObject({
                             id: chestData.id,
                             name: chestData.name,
                             x: chestData.x,
@@ -724,7 +731,7 @@ export const chestSystem = {
                     }
                 }
 
-                logger.info('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
+                console.log('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
             }
         } catch (e) {
             logger.error('❌ Erro ao carregar baús:', e);
@@ -739,9 +746,14 @@ export const chestSystem = {
      */
     removeChest(chestId) {
         if (this.chests[chestId]) {
+            // fix: Using correct removeWorldObject function instead of objectDestroyed (L1059-1062)
             // Remover do mundo visual
-            if (window.removeWorldObject) {
-                window.removeWorldObject(chestId);
+            // Note: window.removeWorldObject is the correct function for removal
+            // theWorld.objectDestroyed has different cleanup behavior
+            const theWorld = getObject('world');
+            const removeWorldObject = window.removeWorldObject || theWorld?.objectDestroyed;
+            if (removeWorldObject) {
+                removeWorldObject(chestId);
             }
 
             delete this.chests[chestId];
@@ -784,5 +796,5 @@ export const chestSystem = {
 };
 
 // Inicializar e exportar
+// O registerSystem('chest', this) é chamado dentro do init()
 chestSystem.init();
-window.chestSystem = chestSystem;

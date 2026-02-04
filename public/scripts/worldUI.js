@@ -27,6 +27,9 @@ class WorldUIManager {
      * Initializes style configurations, cache, and consumption state
      */
     constructor() {
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
         /**
          * Style configurations for UI elements
          * @type {Object}
@@ -328,6 +331,8 @@ class WorldUIManager {
      * @listens consumptionCancelled - When consumption is interrupted
      */
     setupConsumptionListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener("startConsumption", (e) => {
             const { item, player, duration } = e.detail;
             this.consumption = {
@@ -338,11 +343,11 @@ class WorldUIManager {
                 startTime: Date.now(),
                 duration
             };
-        });
+        }, { signal });
 
         document.addEventListener("consumptionCancelled", () => {
             this.consumption.isActive = false;
-        });
+        }, { signal });
     }
 
     /**
@@ -440,6 +445,21 @@ class WorldUIManager {
             ctx.fillStyle = fillStyle;
             ctx.fill();
         }
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners registrados via AbortController
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Reset consumption state e limpar referências para permitir GC
+        this.consumption.isActive = false;
+        this.consumption.item = null;
+        this.consumption.player = null;
     }
 }
 

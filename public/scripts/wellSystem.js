@@ -5,12 +5,12 @@
  * @module WellSystem
  */
 
-import { handleWarn } from "./errorHandler.js";
 import { inventorySystem } from "./thePlayer/inventorySystem.js";
-import { PlayerSystem } from "./thePlayer/playerSystem.js";
 import { assets } from "./assetManager.js";
 import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
+import { registerSystem, getObject, getSystem } from "./gameState.js";
+import { handleWarn } from "./errorHandler.js";
 
 /**
  * Configurações do sistema de poços
@@ -87,16 +87,27 @@ export const wellSystem = {
 
     wellState.wells[id] = wellObject;
 
-    try {
-      window.markWorldChanged?.();
-    } catch (err) {
-      handleWarn("falha ao marcar mundo alterado", "wellSystem:placeWell:markWorldChanged", err);
+    // Register in world.placedWells if not already present
+    const world = getObject("world");
+    if (world) {
+      if (!Array.isArray(world.placedWells)) world.placedWells = [];
+      if (!world.placedWells.find(w => w.id === id)) {
+        world.placedWells.push(wellObject);
+      }
     }
+    // notifica mudança no mundo
+    (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
 
+    //  se algum listener quebrar
     try {
-      document.dispatchEvent(new CustomEvent("wellPlaced", { detail: { well: wellObject } }));
+      document.dispatchEvent(
+        new CustomEvent("wellPlaced", { detail: { well: wellObject } })
+      );
     } catch (err) {
-      handleWarn("falha ao disparar evento wellPlaced", "wellSystem:placeWell:event", err);
+      handleWarn("falha ao disparar evento wellPlaced", "wellSystem:placeWell:dispatchEvent", {
+        id,
+        err,
+      });
     }
 
     return wellObject;
@@ -104,37 +115,53 @@ export const wellSystem = {
 
   // remove um poço do mundo
   removeWell(id) {
-    if (!id) return false;
+    const world = getObject("world");
+    const wells = world?.placedWells || [];
+    const index = wells.findIndex((w) => w.id === id);
 
-    delete wellState.wells[id];
+    // track both sources of truth
+    const hadWorld = index !== -1;
+    const hadLocal = Boolean(wellState.wells[id]);
 
-    try {
-      collisionSystem.removeHitbox(id);
-    } catch (err) {
-      handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:removeHitbox", { id, err });
+    // only return false if not found in either source
+    if (!hadWorld && !hadLocal) return false;
+
+    // conditionally remove from world.placedWells
+    if (hadWorld) {
+      wells.splice(index, 1);
     }
 
-    try {
-      collisionSystem.interactionHitboxes.delete(id);
-    } catch (err) {
-      handleWarn("falha ao remover interaction hitbox do poço", "wellSystem:removeWell:interactionHitboxes", {
-        id,
-        err,
-      });
+    // always delete from local registry if it existed
+    if (hadLocal) {
+      delete wellState.wells[id];
     }
 
+    // fix: Proper indentation and error handling for hitbox removal (L148-152)
     try {
-      window.markWorldChanged?.();
+      if (typeof collisionSystem?.removeHitbox === "function") {
+        // fix: Correctly indented hitbox removal inside if block (L151)
+        collisionSystem.removeHitbox(id);
+      }
+      collisionSystem?.interactionHitboxes?.delete(id);
     } catch (err) {
-      handleWarn("falha ao marcar mundo alterado", "wellSystem:removeWell:markWorldChanged", { id, err });
+      handleWarn("falha ao remover hitbox do poço", "wellSystem:removeWell:hitbox", { id, err });
     }
 
+    // notifica mudança no mundo
+    try {
+      (world?.markWorldChanged || window.theWorld?.markWorldChanged)?.();
+    } catch (err) {
+      handleWarn("falha ao marcar mundo como alterado", "wellSystem:removeWell:markWorldChanged", { id, err });
+    }
+
+    // fix: Restored wellRemoved event dispatch with error handling (L154-158)
     try {
       document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
     } catch (err) {
-      handleWarn("falha ao disparar evento wellRemoved", "wellSystem:removeWell:event", { id, err });
+      handleWarn("falha ao disparar evento wellRemoved", "wellSystem:removeWell:dispatchEvent", { id, err });
     }
 
+    this.updateUI();
     return true;
   },
 
@@ -164,6 +191,7 @@ export const wellSystem = {
       }
     }
 
+    // fallback simples se sprite não estiver disponível
     ctx.fillStyle = "#4a6b8a";
     ctx.fillRect(
       Math.floor(screenPos.x),
@@ -243,6 +271,7 @@ export const wellSystem = {
     };
     document.getElementById("btn-fill-bottle").onclick = () => this.fillBottle();
 
+    overlay.style.display = "flex";
     wellState.isOpen = true;
     this.updateUI();
   },
@@ -262,7 +291,7 @@ export const wellSystem = {
     const bottleQty = inventorySystem.getItemQuantity?.("consumable", WELL_CONFIG.BOTTLE_EMPTY_ID) || 0;
 
     if (bucketQtyEl) bucketQtyEl.textContent = bucketQty ? "1" : "0";
-    if (bottleQtyEl) bottleQtyEl.textContent = bottleQty;
+    if (bottleQtyEl) bottleQtyEl.textContent = bottleQty.toString();
 
     if (levelEl) {
       levelEl.style.height = `${wellState.waterLevel}%`;
@@ -303,10 +332,18 @@ export const wellSystem = {
   },
 
   drinkFromWell() {
-    if (wellState.waterLevel < 5) return;
+    if (wellState.waterLevel < 5) {
+      console.warn("⚠️ Água insuficiente no poço");
+      return;
+    }
 
-    window.playerSystem?.restoreNeeds?.(0, WELL_CONFIG.THIRST_RESTORE, 0);
-    wellState.waterLevel -= 5;
+    const playerSystem = getSystem('player');
+    if (playerSystem?.restoreNeeds) {
+      playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
+      wellState.waterLevel -= 5;
+    } else {
+      console.warn("⚠️ Sistema do jogador não disponível");
+    }
     this.updateUI();
   },
 
@@ -323,7 +360,15 @@ export const wellSystem = {
       }
     }
 
-    if (!catFound || wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) return;
+    if (!catFound) {
+      console.warn("⚠️ Nenhuma garrafa vazia no inventário");
+      return;
+    }
+
+    if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
+      console.warn("⚠️ Água insuficiente no poço");
+      return;
+    }
 
     inventorySystem.removeItem(catFound, WELL_CONFIG.BOTTLE_EMPTY_ID, 1);
     inventorySystem.addItem(catFound, WELL_CONFIG.BOTTLE_WATER_ID, 1);
@@ -335,5 +380,6 @@ export const wellSystem = {
   init() {},
 };
 
-window.wellSystem = wellSystem;
+// Registrar no gameState (legacy window.wellSystem tratado por installLegacyGlobals)
+registerSystem("well", wellSystem);
 wellSystem.init();
