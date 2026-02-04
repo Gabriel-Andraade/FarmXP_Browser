@@ -5,9 +5,20 @@
  * @module StorageSystem
  */
 
-import { getItem } from './itemUtils.js';
-import { registerSystem } from './gameState.js';
-import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
+import { getItem } from "./itemUtils.js";
+
+/**
+ * Helpers locais (evitam duplicação e garantem validação consistente)
+ */
+function isValidItemId(itemId) {
+  return Number.isInteger(itemId) && itemId > 0;
+}
+
+function sanitizeQuantity(value, min = 1, max = 9999) {
+  const n = Math.floor(value);
+  if (!Number.isFinite(n)) return min;
+  return Math.max(min, Math.min(max, n));
+}
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -38,36 +49,36 @@ export class StorageSystem {
         icon: "",
         itemTypes: ["tool"],
         maxStacks: 10,
-        color: "#FFD166"
+        color: "#FFD166",
       },
       construction: {
         name: "Construção",
         icon: "",
         itemTypes: ["construction", "decoration", "seed", "material"],
         maxStacks: 20,
-        color: "#118AB2"
+        color: "#118AB2",
       },
       animals: {
         name: "Comida Animal",
         icon: "",
         itemTypes: ["animal_food"],
         maxStacks: 10,
-        color: "#FF9E64"
+        color: "#FF9E64",
       },
       food: {
         name: "Comida",
         icon: "",
         itemTypes: ["food"],
         maxStacks: 15,
-        color: "#EF476F"
+        color: "#EF476F",
       },
       resources: {
         name: "Recursos",
         icon: "",
         itemTypes: ["resource", "crop"],
         maxStacks: 30,
-        color: "#06D6A0"
-      }
+        color: "#06D6A0",
+      },
     };
   }
 
@@ -77,16 +88,16 @@ export class StorageSystem {
    */
   initializeEmptyStorage() {
     const initialStorage = {};
-    Object.keys(this.categories).forEach(c => initialStorage[c] = []);
+    Object.keys(this.categories).forEach((c) => (initialStorage[c] = []));
     return initialStorage;
   }
 
   /**
-   * Inicializa o sistema e registra no gameState
+   * Inicializa o sistema e expõe globalmente
    * @returns {void}
    */
   init() {
-    registerSystem('storage', this);
+    window.storageSystem = this;
   }
 
   /**
@@ -104,7 +115,7 @@ export class StorageSystem {
       decoration: "construction",
       material: "construction",
       resource: "resources",
-      crop: "resources"
+      crop: "resources",
     };
     return map[itemType] || "resources";
   }
@@ -124,7 +135,7 @@ export class StorageSystem {
       decoration: "construction",
       material: "resources",
       resource: "resources",
-      crop: "resources"
+      crop: "resources",
     };
     return map[itemType] || "resources";
   }
@@ -136,7 +147,11 @@ export class StorageSystem {
    * @returns {boolean} True se a categoria existe
    */
   _inventoryCategoryExists(category) {
-    return !!(window.inventorySystem && window.inventorySystem.categories && window.inventorySystem.categories[category]);
+    return !!(
+      window.inventorySystem &&
+      window.inventorySystem.categories &&
+      window.inventorySystem.categories[category]
+    );
   }
 
   /**
@@ -155,8 +170,8 @@ export class StorageSystem {
     let remaining = quantity;
 
     while (remaining > 0) {
-      let stack = this.storage[storageCategory].find(
-        s => s.itemId === itemId && s.quantity < this.maxStack
+      const stack = this.storage[storageCategory].find(
+        (s) => s.itemId === itemId && s.quantity < this.maxStack
       );
 
       if (stack) {
@@ -170,9 +185,8 @@ export class StorageSystem {
         this.storage[storageCategory].push({
           itemId,
           quantity: add,
-          addedAt: Date.now()
+          addedAt: Date.now(),
         });
-
         remaining -= add;
       }
     }
@@ -191,25 +205,29 @@ export class StorageSystem {
   depositFromInventory(categoryOrId, itemIdOrQty, quantity = 1) {
     if (!window.inventorySystem) return false;
 
-    let inventoryCategory = categoryOrId;
-    let itemId = itemIdOrQty;
-    let qty = quantity;
+    let inventoryCategory = null;
+    let itemId = null;
+    let rawQuantity = quantity;
 
+    // assinatura: (itemId, qty)
     if (typeof categoryOrId === "number") {
       itemId = categoryOrId;
-      qty = itemIdOrQty || 1;
-      inventoryCategory = null;
+      rawQuantity = itemIdOrQty ?? 1;
+    } else {
+      // assinatura: (inventoryCategory, itemId, qty)
+      inventoryCategory = categoryOrId;
+      itemId = itemIdOrQty;
     }
 
-    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
-      console.warn('[Storage] Invalid quantity:', qty);
+    if (typeof rawQuantity !== "number" || !Number.isFinite(rawQuantity)) {
+      console.warn("[Storage] Invalid quantity:", rawQuantity);
       return false;
     }
-    qty = sanitizeQuantity(qty, 1, 9999);
 
-    // Validar que o itemId é um número inteiro não-negativo válido
+    const qty = sanitizeQuantity(rawQuantity, 1, 9999);
+
     if (!isValidItemId(itemId)) {
-      console.warn('[Storage] Item ID inválido:', itemId);
+      console.warn("[Storage] Item ID inválido:", itemId);
       return false;
     }
 
@@ -230,16 +248,16 @@ export class StorageSystem {
     const storageCategory = this.mapItemTypeToCategory(itemData.type);
     const categoryConfig = this.categories[storageCategory];
     if (!categoryConfig) {
-        this.showMessage("categoria inválida");
-        return false;
+      this.showMessage("categoria inválida");
+      return false;
     }
 
     let remaining = qty;
     let deposited = 0;
 
     while (remaining > 0) {
-      let existingStack = this.storage[storageCategory].find(
-        s => s.itemId === itemId && s.quantity < this.maxStack
+      const existingStack = this.storage[storageCategory].find(
+        (s) => s.itemId === itemId && s.quantity < this.maxStack
       );
 
       if (existingStack) {
@@ -257,7 +275,7 @@ export class StorageSystem {
         this.storage[storageCategory].push({
           itemId,
           quantity: add,
-          addedAt: Date.now()
+          addedAt: Date.now(),
         });
 
         remaining -= add;
@@ -292,6 +310,18 @@ export class StorageSystem {
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
     if (!window.inventorySystem) return false;
 
+    if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
+      console.warn("[Storage] Invalid quantity:", quantity);
+      return false;
+    }
+
+    const qty = sanitizeQuantity(quantity, 1, 9999);
+
+    if (!isValidItemId(itemId)) {
+      console.warn("[Storage] Item ID inválido:", itemId);
+      return false;
+    }
+
     const itemData = getItem(itemId);
     if (!itemData) return false;
 
@@ -301,14 +331,13 @@ export class StorageSystem {
       return false;
     }
 
-    // Usar qty (sanitizado) em TODAS as etapas
     const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
       this.showMessage(`retirado: ${qty}x ${itemData.name}`);
       return true;
     }
 
-    // Rollback: usar qty
+    // rollback
     this._addToCategory(storageCategory, itemId, qty);
     this.showMessage("inventário cheio");
     return false;
@@ -322,6 +351,18 @@ export class StorageSystem {
    * @returns {boolean} True se a adição foi bem-sucedida
    */
   addItem(itemId, quantity = 1) {
+    if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
+      console.warn("[Storage] Invalid quantity:", quantity);
+      return false;
+    }
+
+    const qty = sanitizeQuantity(quantity, 1, 9999);
+
+    if (!isValidItemId(itemId)) {
+      console.warn("[Storage] Item ID inválido:", itemId);
+      return false;
+    }
+
     const itemData = getItem(itemId);
     if (!itemData) return false;
 
@@ -341,11 +382,12 @@ export class StorageSystem {
   removeItem(categoryOrId, itemIdOrQty, quantity = 1) {
     let category = categoryOrId;
     let id = itemIdOrQty;
-    let qty = quantity;
+    let rawQty = quantity;
 
+    // assinatura: (itemId, qty)
     if (typeof categoryOrId === "number") {
       id = categoryOrId;
-      qty = itemIdOrQty || 1;
+      rawQty = itemIdOrQty ?? 1;
 
       const found = this.findItem(id);
       if (!found) return false;
@@ -353,22 +395,22 @@ export class StorageSystem {
       category = found.category;
     }
 
-    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
-      console.warn('[Storage] Invalid quantity:', qty);
+    if (typeof rawQty !== "number" || !Number.isFinite(rawQty)) {
+      console.warn("[Storage] Invalid quantity:", rawQty);
       return false;
     }
-    qty = sanitizeQuantity(qty, 1, 9999);
 
-    // Validar itemId
+    const qty = sanitizeQuantity(rawQty, 1, 9999);
+
     if (!isValidItemId(id)) {
-      console.warn('[Storage] Item ID inválido:', id);
+      console.warn("[Storage] Item ID inválido:", id);
       return false;
     }
 
     if (!this.storage[category]) return false;
 
     const stacks = this.storage[category]
-      .filter(s => s.itemId === id)
+      .filter((s) => s.itemId === id)
       .sort((a, b) => a.addedAt - b.addedAt);
 
     let remaining = qty;
@@ -380,7 +422,7 @@ export class StorageSystem {
       remaining -= remove;
     }
 
-    this.storage[category] = this.storage[category].filter(s => s.quantity > 0);
+    this.storage[category] = this.storage[category].filter((s) => s.quantity > 0);
     return remaining === 0;
   }
 
@@ -390,13 +432,15 @@ export class StorageSystem {
    * @returns {Object|null} Objeto com categoria, stack e dados do item, ou null se não encontrado
    */
   findItem(itemId) {
+    if (!isValidItemId(itemId)) return null;
+
     for (const [category, stacks] of Object.entries(this.storage)) {
-      const stack = stacks.find(s => s.itemId === itemId);
+      const stack = stacks.find((s) => s.itemId === itemId);
       if (stack) {
         return {
           category,
           stack,
-          itemData: getItem(itemId)
+          itemData: getItem(itemId),
         };
       }
     }
@@ -409,11 +453,13 @@ export class StorageSystem {
    * @returns {number} Quantidade total do item
    */
   getItemQuantity(itemId) {
+    if (!isValidItemId(itemId)) return 0;
+
     let total = 0;
     for (const stacks of Object.values(this.storage)) {
       stacks
-        .filter(s => s.itemId === itemId)
-        .forEach(s => total += s.quantity);
+        .filter((s) => s.itemId === itemId)
+        .forEach((s) => (total += s.quantity));
     }
     return total;
   }
@@ -428,14 +474,18 @@ export class StorageSystem {
     if (!window.inventorySystem) return false;
 
     if (typeof categoryOrId === "number") {
+      if (!isValidItemId(categoryOrId)) return false;
       return window.inventorySystem.getItemQuantity(categoryOrId) > 0;
     }
 
     const category = categoryOrId;
+
     if (this._inventoryCategoryExists(category)) {
+      if (!isValidItemId(itemId)) return false;
       return window.inventorySystem.getItemQuantity(category, itemId) > 0;
     }
 
+    if (!isValidItemId(itemId)) return false;
     return window.inventorySystem.getItemQuantity(itemId) > 0;
   }
 
@@ -448,7 +498,7 @@ export class StorageSystem {
     const info = {
       totalItems: 0,
       totalValue: 0,
-      categoryStats: {}
+      categoryStats: {},
     };
 
     for (const [category, stacks] of Object.entries(this.storage)) {
@@ -456,10 +506,10 @@ export class StorageSystem {
       const stats = {
         itemCount: 0,
         stackCount: stacks.length,
-        maxStacks: config.maxStacks
+        maxStacks: config?.maxStacks ?? 0,
       };
 
-      stacks.forEach(stack => {
+      stacks.forEach((stack) => {
         const data = getItem(stack.itemId);
         if (data) {
           stats.itemCount += stack.quantity;
