@@ -194,7 +194,7 @@ Items organized by categories:
 
 ### Pré-requisitos / Prerequisites
 
-- [Bun](https://bun.sh/) v1.2.21 ou superior / or higher
+- Bun v1.2.21 ou superior / or higher - <https://bun.sh/>
 
 ### Instalação / Installation
 
