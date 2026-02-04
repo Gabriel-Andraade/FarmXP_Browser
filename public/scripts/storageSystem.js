@@ -6,6 +6,8 @@
  */
 
 import { getItem } from './itemUtils.js';
+import { registerSystem } from './gameState.js';
+import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -80,11 +82,11 @@ export class StorageSystem {
   }
 
   /**
-   * Inicializa o sistema e expõe globalmente
+   * Inicializa o sistema e registra no gameState
    * @returns {void}
    */
   init() {
-    window.storageSystem = this;
+    registerSystem('storage', this);
   }
 
   /**
@@ -191,15 +193,25 @@ export class StorageSystem {
 
     let inventoryCategory = categoryOrId;
     let itemId = itemIdOrQty;
-    let qty = Math.floor(quantity); // Sanitização
+    let qty = quantity;
 
     if (typeof categoryOrId === "number") {
       itemId = categoryOrId;
-      qty = Math.floor(itemIdOrQty || 1);
+      qty = itemIdOrQty || 1;
       inventoryCategory = null;
     }
 
-    if (qty < 1) return false;
+    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
+      console.warn('[Storage] Invalid quantity:', qty);
+      return false;
+    }
+    qty = sanitizeQuantity(qty, 1, 9999);
+
+    // Validar que o itemId é um número inteiro não-negativo válido
+    if (!isValidItemId(itemId)) {
+      console.warn('[Storage] Item ID inválido:', itemId);
+      return false;
+    }
 
     const itemData = getItem(itemId);
     if (!itemData) return false;
@@ -283,19 +295,21 @@ export class StorageSystem {
     const itemData = getItem(itemId);
     if (!itemData) return false;
 
-    const removed = this.removeItem(storageCategory, itemId, quantity);
+    const removed = this.removeItem(storageCategory, itemId, qty);
     if (!removed) {
       this.showMessage("item não encontrado no armazém");
       return false;
     }
 
-    const added = window.inventorySystem.addItem(itemId, quantity);
+    // Usar qty (sanitizado) em TODAS as etapas
+    const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
-      this.showMessage(`retirado: ${quantity}x ${itemData.name}`);
+      this.showMessage(`retirado: ${qty}x ${itemData.name}`);
       return true;
     }
 
-    this._addToCategory(storageCategory, itemId, quantity);
+    // Rollback: usar qty
+    this._addToCategory(storageCategory, itemId, qty);
     this.showMessage("inventário cheio");
     return false;
   }
@@ -312,7 +326,7 @@ export class StorageSystem {
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
-    return this._addToCategory(category, itemId, quantity);
+    return this._addToCategory(category, itemId, qty);
   }
 
   /**
@@ -337,6 +351,18 @@ export class StorageSystem {
       if (!found) return false;
 
       category = found.category;
+    }
+
+    if (typeof qty !== 'number' || !Number.isFinite(qty)) {
+      console.warn('[Storage] Invalid quantity:', qty);
+      return false;
+    }
+    qty = sanitizeQuantity(qty, 1, 9999);
+
+    // Validar itemId
+    if (!isValidItemId(id)) {
+      console.warn('[Storage] Item ID inválido:', id);
+      return false;
     }
 
     if (!this.storage[category]) return false;

@@ -1,3 +1,5 @@
+import { isValidPositiveNumber, MAX_CURRENCY } from './validation.js';
+
 /**
  * Sistema de gerenciamento de moeda do jogo
  * Responsável por controlar ganhos, gastos, saldo e histórico de transações
@@ -42,10 +44,21 @@ export class CurrencyManager {
      * @returns {boolean} True se a operação foi bem-sucedida, false se a quantidade for inválida
      */
     earn(amount, source = "unknown") {
-        if (amount <= 0) return false;
+        // CRÍTICO: Validar antes de qualquer operação (bloqueia NaN/Infinity)
+        if (!isValidPositiveNumber(amount)) {
+            console.warn('[CurrencyManager] Invalid earn amount:', amount, 'from:', source);
+            return false;
+        }
 
         const oldBalance = this.currentMoney;
-        this.currentMoney += amount;
+
+        // Proteção de overflow
+        if (this.currentMoney + amount > MAX_CURRENCY) {
+            console.warn('[CurrencyManager] Currency overflow prevented');
+            this.currentMoney = MAX_CURRENCY;
+        } else {
+            this.currentMoney += amount;
+        }
 
         this._addTransaction('earn', amount, source, oldBalance);
         this._notifyChange();
@@ -62,8 +75,15 @@ export class CurrencyManager {
      * @returns {boolean} True se a operação foi bem-sucedida, false se a quantidade for inválida ou saldo insuficiente
      */
     spend(amount, item = "unknown") {
-        if (amount <= 0) return false;
-        if (this.currentMoney < amount) return false;
+        // CRÍTICO: Validar antes de qualquer operação (bloqueia NaN/Infinity)
+        if (!isValidPositiveNumber(amount)) {
+            console.warn('[CurrencyManager] Invalid spend amount:', amount);
+            return false;
+        }
+
+        if (amount > this.currentMoney) {
+            return false;
+        }
 
         const oldBalance = this.currentMoney;
         this.currentMoney -= amount;
@@ -91,6 +111,9 @@ export class CurrencyManager {
      * @returns {boolean} True se o saldo é suficiente, false caso contrário
      */
     canAfford(amount) {
+        if (!isValidPositiveNumber(amount)) {
+            return false;
+        }
         return this.currentMoney >= amount;
     }
 
@@ -101,8 +124,21 @@ export class CurrencyManager {
      * @returns {void}
      */
     setInitialAmount(amount) {
-        this.initialMoney = amount;
-        this.currentMoney = amount;
+        // ✅ CRÍTICO: Validar ANTES de atribuir (bloqueia NaN/Infinity/negativo)
+        if (!isValidPositiveNumber(amount)) {
+            console.warn('[CurrencyManager] Invalid initial amount:', amount);
+            return;
+        }
+
+        // ✅ Proteção de overflow
+        let safeAmount = amount;
+        if (amount > MAX_CURRENCY) {
+            console.warn('[CurrencyManager] Currency overflow prevented in setInitialAmount');
+            safeAmount = MAX_CURRENCY;
+        }
+
+        this.initialMoney = safeAmount;
+        this.currentMoney = safeAmount;
         this._notifyChange();
     }
 

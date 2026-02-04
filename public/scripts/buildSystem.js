@@ -11,7 +11,7 @@ import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
-import { wellSystem } from "./wellSystem.js";
+import { getObject, getSystem } from "./gameState.js";
 
 /**
  * Sistema de construção e posicionamento de objetos no mundo
@@ -366,17 +366,18 @@ export const BuildSystem = {
     placeObject() {
         if (!this.selectedItem) return;
 
-        if (!window.theWorld) {
-            logger.error("the world object not available");
+        const theWorld = getObject('world');
+        if (!theWorld) {
+            console.error("the world object not available");
             this.showDebugMessage("erro de sistema (theworld)", 2000);
             return;
         }
 
-        const pos = this.getSnapPosition(); 
+        const pos = this.getSnapPosition();
         const dim = this.getConstructionDimensions();
         const constructionType = this.getConstructionType();
         const itemQuantity = inventorySystem.getItemQuantity ? inventorySystem.getItemQuantity(this.selectedItem.id) : (this.selectedItem.quantity || 1);
-        
+
         if (!itemQuantity || itemQuantity <= 0) {
             this.showDebugMessage("acabou o item!");
             this.stopBuilding();
@@ -384,7 +385,8 @@ export const BuildSystem = {
         }
 
         if (constructionType === 'chest') {
-            if (window.chestSystem && typeof window.chestSystem.addChest === 'function') {
+            const chestSystem = getSystem('chest');
+            if (chestSystem && typeof chestSystem.addChest === 'function') {
                 const newChestId = `chest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
                 const buildingData = {
@@ -402,7 +404,7 @@ export const BuildSystem = {
                 };
 
                 try {
-                    window.chestSystem.addChest(buildingData);
+                    chestSystem.addChest(buildingData);
                     inventorySystem.removeItem(this.selectedItem.id, 1);
                     const restante = itemQuantity - 1;
                     this.showDebugMessage(`bau colocado! (${restante} restante)`, 1000);
@@ -415,11 +417,12 @@ export const BuildSystem = {
                 this.showDebugMessage("sistema de baus carregando...", 1500);
                 return;
             }
-            return; 
+            return;
         }
 
         if (constructionType === 'well') {
-            if ((window.wellSystem && typeof window.wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) { 
+            const wellSystem = getSystem('well');
+            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (theWorld && typeof theWorld.placeWell === 'function')) { 
                 
                 const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
@@ -437,9 +440,12 @@ export const BuildSystem = {
                 };
 
                 try {
-                    const wellObject = typeof window.theWorld.placeWell === 'function'
-                        ? window.theWorld.placeWell(pos.x, pos.y, wellBuildingData)
-                        : (window.wellSystem ? window.wellSystem.placeWell(wellId, pos.x, pos.y) : null);
+                    let wellObject = null;
+                    if (typeof theWorld.placeWell === 'function') {
+                        wellObject = theWorld.placeWell(pos.x, pos.y, wellBuildingData);
+                    } else if (wellSystem) {
+                        wellObject = wellSystem.placeWell(wellId, pos.x, pos.y);
+                    }
 
                     if (wellObject) {
                         inventorySystem.removeItem(this.selectedItem.id, 1);
@@ -457,10 +463,10 @@ export const BuildSystem = {
                 this.showDebugMessage("sistema de pocos carregando...", 1500);
                 return;
             }
-            return; 
+            return;
         }
 
-        if (typeof window.theWorld.addWorldObject === 'function') {
+        if (typeof theWorld.addWorldObject === 'function') {
             try {
                 let constructionTypeForCollision = constructionType;
                 if (constructionType === 'fence') {
@@ -481,7 +487,7 @@ export const BuildSystem = {
                     placeable: true
                 };
 
-                window.theWorld.addWorldObject(worldObj);
+                theWorld.addWorldObject(worldObj);
                 inventorySystem.removeItem(this.selectedItem.id, 1);
 
                 const restante = itemQuantity - 1;
@@ -499,29 +505,28 @@ export const BuildSystem = {
     },
 
     saveBuildings(objects, key = this.STORAGE_KEY_BUILDINGS) {
-        if (window.storageSystem) {
-            try {
-                const dataToSave = objects.map(b => {
-                    const { draw, onInteract, getHitbox, ...rest } = b;
-                    return rest;
-                });
-                window.storageSystem.set(key, dataToSave);
-            } catch (e) {
-                logger.error(`erro ao salvar ${key}:`, e);
-            }
+        try {
+            const dataToSave = objects.map(b => {
+                const { draw, onInteract, getHitbox, ...rest } = b;
+                return rest;
+            });
+            localStorage.setItem(key, JSON.stringify(dataToSave));
+        } catch (e) {
+            console.error(`erro ao salvar ${key}:`, e);
         }
     },
 
     loadBuildings(key = this.STORAGE_KEY_BUILDINGS) {
-        if (window.storageSystem) {
-            try {
-                const data = window.storageSystem.get(key);
-                if (data && Array.isArray(data)) {
+        try {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data)) {
                     return data;
                 }
-            } catch (e) {
-                logger.error(`erro ao carregar ${key}:`, e);
             }
+        } catch (e) {
+            console.error(`erro ao carregar ${key}:`, e);
         }
         return [];
     },
@@ -690,7 +695,8 @@ export const BuildSystem = {
     }
 };
 
-window.BuildSystem = BuildSystem;
+// BuildSystem will be registered in gameState via main.js
+// Legacy window.BuildSystem access is handled by installLegacyGlobals()
 
 try {
     BuildSystem.initAdvancedSystem();

@@ -6,6 +6,15 @@
  * @module PlayerSystem
  */
 
+import { validateRange } from '../validation.js';
+
+/**
+ * Minimum and maximum values for player needs
+ * @constant {number}
+ */
+const MIN_NEED = 0;
+const MAX_NEED = 100;
+
 /**
  * Core player management class handling needs, equipment, and character state
  * @class PlayerSystem
@@ -30,6 +39,15 @@ export class PlayerSystem {
 
         /** @type {Object|null} Currently equipped item */
         this.equippedItem = null;
+
+        // AbortController para cleanup de event listeners
+        this.abortController = new AbortController();
+
+        // Armazenar referência do interval para cleanup
+        this.needsUpdateInterval = null;
+
+        // Armazenar referência do sleep interval para cleanup
+        this.sleepInterval = null;
 
         /**
          * Player survival needs configuration
@@ -78,34 +96,36 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupEventListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('equipItemRequest', (e) => {
             this.equipItem(e.detail.item);
-        });
+        }, { signal });
 
         document.addEventListener('unequipItemRequest', () => {
             this.unequipItem();
-        });
+        }, { signal });
 
         document.addEventListener('discardItemRequest', (e) => {
             const { itemId } = e.detail;
             if (this.equippedItem && this.equippedItem.id === itemId) {
                 this.unequipItem();
             }
-        });
+        }, { signal });
 
         document.addEventListener('startConsumptionRequest', (e) => {
             const { category, itemId, quantity, item, fillUp } = e.detail;
             this.consumeItem(item);
-            
+
             document.dispatchEvent(new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
             }));
-        });
+        }, { signal });
 
         document.addEventListener('itemConsumed', (e) => {
             const item = e.detail.item;
             this.consumeItem(item);
-        });
+        }, { signal });
     }
 
     /**
@@ -114,35 +134,37 @@ export class PlayerSystem {
      * @returns {void}
      */
     setupActionListeners() {
+        const { signal } = this.abortController;
+
         document.addEventListener('playerMoved', (e) => {
             if (e.detail && e.detail.distance) {
                 this.consumeNeeds('moving', e.detail.distance / 100);
             }
-        });
+        }, { signal });
 
         document.addEventListener('toolUsedOnObject', (e) => {
             this.consumeNeeds('breaking', 1);
-        });
+        }, { signal });
 
         document.addEventListener('itemCollected', (e) => {
             this.consumeNeeds('collecting', 1);
-        });
+        }, { signal });
 
         document.addEventListener('buildingPlaced', (e) => {
             this.consumeNeeds('building', 1);
-        });
+        }, { signal });
 
         document.addEventListener('sleepStarted', () => {
             this.startSleep();
-        });
+        }, { signal });
 
         document.addEventListener('sleepEnded', () => {
             this.endSleep();
-        });
+        }, { signal });
 
         document.addEventListener('consumeFood', (e) => {
             this.restoreNeeds(e.detail.hunger || 0, e.detail.thirst || 0, e.detail.energy || 0);
-        });
+        }, { signal });
     }
 
     /**
@@ -151,7 +173,13 @@ export class PlayerSystem {
      * @returns {void}
      */
     startNeedsUpdate() {
-        setInterval(() => {
+        // Clear existing interval if any
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+        }
+
+        // Store interval reference for cleanup
+        this.needsUpdateInterval = setInterval(() => {
             this.updateNeeds();
         }, 2000);
     }
@@ -178,16 +206,35 @@ export class PlayerSystem {
      * @returns {void}
      */
     consumeNeeds(actionType, multiplier = 1) {
-        if (!this.needs.consumptionRates[actionType]) return;
+        if (!this.needs.consumptionRates[actionType]) {
+            console.warn('[PlayerSystem] Unknown action type:', actionType);
+            return;
+        }
+
+        // ✅ Validar multiplier (0-10 é range razoável)
+        const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
-        
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * multiplier));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * multiplier));
-        
-        this.needs.energy = Math.max(0, Math.min(100, 
-            this.needs.energy - (rates.energy * multiplier)));
-        
+
+        // ✅ Aplicar com validação (clamps to 0-100)
+        this.needs.hunger = validateRange(
+            this.needs.hunger - (rates.hunger * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
+        this.needs.thirst = validateRange(
+            this.needs.thirst - (rates.thirst * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
+        this.needs.energy = validateRange(
+            this.needs.energy - (rates.energy * validMultiplier),
+            MIN_NEED,
+            MAX_NEED
+        );
+
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
     }
@@ -199,15 +246,40 @@ export class PlayerSystem {
      * @param {number} energy - Amount of energy to restore
      * @returns {void}
      */
-    restoreNeeds(hunger, thirst, energy) {
-        this.needs.hunger = Math.min(100, this.needs.hunger + hunger);
-        this.needs.thirst = Math.min(100, this.needs.thirst + thirst);
-        this.needs.energy = Math.min(100, this.needs.energy + energy);
-        
+    restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
+        // Validate and coerce deltas to numbers
+        const validHunger = typeof hunger === 'number' && Number.isFinite(hunger) ? hunger : 0;
+        const validThirst = typeof thirst === 'number' && Number.isFinite(thirst) ? thirst : 0;
+        const validEnergy = typeof energy === 'number' && Number.isFinite(energy) ? energy : 0;
+
+        if (validHunger !== 0) {
+            this.needs.hunger = validateRange(
+                this.needs.hunger + validHunger,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
+        if (validThirst !== 0) {
+            this.needs.thirst = validateRange(
+                this.needs.thirst + validThirst,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
+        if (validEnergy !== 0) {
+            this.needs.energy = validateRange(
+                this.needs.energy + validEnergy,
+                MIN_NEED,
+                MAX_NEED
+            );
+        }
+
         this.dispatchNeedsUpdate();
-        
-        if (hunger > 0 || thirst > 0 || energy > 0) {
-            this.showNeedRestoredFeedback(hunger, thirst, energy);
+
+        if (validHunger > 0 || validThirst > 0 || validEnergy > 0) {
+            this.showNeedRestoredFeedback(validHunger, validThirst, validEnergy);
         }
     }
 
@@ -309,13 +381,20 @@ export class PlayerSystem {
     startSleep() {
         this.currentPlayer.isSleeping = true;
         
-        const sleepInterval = setInterval(() => {
+        // Clear any existing sleep interval to avoid duplicates
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
+        this.sleepInterval = setInterval(() => {
             if (this.needs.energy < 100) {
                 this.needs.energy = Math.min(100, this.needs.energy + 10);
                 this.dispatchNeedsUpdate();
                 
                 if (this.needs.energy >= 100) {
-                    clearInterval(sleepInterval);
+                    clearInterval(this.sleepInterval);
+                    this.sleepInterval = null;
                     this.endSleep();
                 }
             }
@@ -327,6 +406,12 @@ export class PlayerSystem {
      * @returns {void}
      */
     endSleep() {
+        // Clear sleep interval if it exists
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
+        
         this.currentPlayer.isSleeping = false;
         this.needs.energy = 100;
         this.dispatchNeedsUpdate();
@@ -630,6 +715,31 @@ export class PlayerSystem {
     /** @returns {Function|null} Character draw function */
     getDrawFunction() {
         return this.drawFunction;
+    }
+
+    /**
+     * Limpa todos os event listeners e recursos do sistema
+     * Remove todos os listeners e para os intervals de needs e sleep
+     * @returns {void}
+     */
+    destroy() {
+        // Remove todos os event listeners
+        this.abortController.abort();
+
+        // Reset AbortController para permitir re-inicialização
+        this.abortController = new AbortController();
+
+        // Clear interval de atualização de needs
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // Clear sleep interval se estiver ativo
+        if (this.sleepInterval) {
+            clearInterval(this.sleepInterval);
+            this.sleepInterval = null;
+        }
     }
 }
 
