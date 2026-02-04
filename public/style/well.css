@@ -1,10 +1,10 @@
 /**
  * Well System Modal Styles
  * Extracted from: scripts/wellSystem.js
- * Prefix: wll-
+ * Prefix: well-
  */
 
-#wll-overlay {
+#well-overlay {
   position: fixed;
   inset: 0;
   display: none;
@@ -14,11 +14,11 @@
   z-index: var(--z-modal-backdrop, 9000);
 }
 
-#wll-overlay.active {
+#well-overlay.active {
   display: flex;
 }
 
-#wll-modal {
+#well-modal {
   width: 700px;
   max-width: calc(100% - 40px);
   background: var(--color-panel-light, #2c241b);
@@ -30,7 +30,7 @@
   position: relative;
 }
 
-.wll-col {
+.well-col {
   flex: 1;
   border-radius: var(--radius-md, 8px);
   padding: 10px;
@@ -38,13 +38,13 @@
   border: 2px solid rgba(0, 0, 0, 0.2);
 }
 
-.wll-col h3 {
+.well-col h3 {
   margin: 0 0 10px 0;
   font-size: var(--font-size-md, 16px);
   color: var(--color-text-secondary, #e0bc87);
 }
 
-.wll-item-slot {
+.well-item-slot {
   width: 100%;
   height: 80px;
   display: flex;
@@ -57,7 +57,7 @@
 }
 
 /* Action Buttons */
-.wll-main-btn {
+.well-main-btn {
   width: 100%;
   padding: 12px;
   border-radius: var(--radius-md, 8px);
@@ -69,31 +69,31 @@
               filter var(--transition-fast, 0.15s ease);
 }
 
-.wll-main-btn:hover {
+.well-main-btn:hover {
   filter: brightness(1.1);
 }
 
-.wll-main-btn:active {
+.well-main-btn:active {
   transform: scale(0.98);
 }
 
-.wll-btn-blue {
+.well-btn-blue {
   background: var(--color-info, #2980b9);
   color: var(--color-text-primary, #fff);
 }
 
-.wll-btn-red {
+.well-btn-red {
   background: var(--color-error, #c0392b);
   color: var(--color-text-primary, #fff);
 }
 
-.wll-btn-green {
+.well-btn-green {
   background: var(--color-success, #1e8449);
   color: var(--color-text-primary, #fff);
 }
 
 /* Well Bucket Visual */
-.wll-bucket-container {
+.well-bucket-container {
   width: 100%;
   height: 180px;
   background: var(--color-bucket, #d2b48c);
@@ -105,7 +105,7 @@
   margin-bottom: 12px;
 }
 
-.wll-water-fill {
+.well-water-fill {
   width: 100%;
   text-align: center;
   transition: height var(--transition-slow, 0.5s ease);
@@ -116,7 +116,7 @@
 }
 
 /* Close Button */
-.wll-close-btn {
+.well-close-btn {
   position: absolute;
   right: 8px;
   top: 8px;
@@ -133,12 +133,12 @@
   transition: background var(--transition-fast, 0.15s ease);
 }
 
-.wll-close-btn:hover {
+.well-close-btn:hover {
   background: rgba(192, 57, 43, 0.8);
 }
 
 /* Timer Display */
-#wll-timer {
+#well-timer {
   text-align: center;
   font-size: var(--font-size-lg, 20px);
   font-family: var(--font-family-mono, monospace);
