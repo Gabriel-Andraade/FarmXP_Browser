@@ -116,7 +116,7 @@ O jogador possui três necessidades para gerenciar:
 - **Sede** - Beba água para restaurar
 - **Energia** - Durma para restaurar
 
-⚠️ **Aviso:** Não é bom ficar acordado muitos dias seguidos... Cuide de si mesmo!
+⚠️ **Aviso:** Não é bom ficar acordado muitos dias seguidos... Cuide de si!
 
 **EN:**
 The player has three needs to manage:
@@ -217,13 +217,13 @@ bun run dev
 bun run start
 ```
 
-Abra / Open `http://localhost:3000` no seu navegador / in your browser.
+Abra / Open <http://localhost:3000> no seu navegador / in your browser.
 
 ---
 
 ## Estrutura do Projeto / Project Structure
 
-```
+```text
 FarmXP_Browser/
 ├── index.html          # Ponto de entrada / Main entry point
 ├── server.ts           # Servidor de desenvolvimento Bun / Bun dev server
