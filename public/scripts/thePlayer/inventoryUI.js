@@ -1,6 +1,7 @@
 import { logger } from '../logger.js';
 import { inventorySystem } from "./inventorySystem.js";
 import { items } from "../item.js";
+import { getSystem } from "../gameState.js";
 
 // ---------- CSS ISOLADO COM SHADOW DOM ----------
 const createInventoryUI = () => {
@@ -590,16 +591,17 @@ function isInputActive() {
 
 export function openInventoryModal() {
   if (!shadowRoot) initInventoryUI();
-  
+
   renderTabs();
   renderInventory();
   modalEl.classList.add('open');
-  
+
   // Desabilitar input do jogador
-  if (window.playerSystem) {
-    window.playerSystem.inputDisabled = true;
+  const playerSystem = getSystem('player');
+  if (playerSystem) {
+    playerSystem.inputDisabled = true;
   }
-  
+
   // Focar no modal
   setTimeout(() => {
     shadowRoot.getElementById('closeInvBtn')?.focus();
@@ -612,10 +614,11 @@ export function closeInventoryModal() {
   }
   selectedSlotIndex = -1;
   updateDetailsPanel(null);
-  
+
   // Reabilitar input do jogador
-  if (window.playerSystem) {
-    window.playerSystem.inputDisabled = false;
+  const playerSystem = getSystem('player');
+  if (playerSystem) {
+    playerSystem.inputDisabled = false;
   }
 }
 
@@ -756,7 +759,7 @@ function updateDetailsPanel(item, qty) {
     actionsDiv.appendChild(equipBtn);
   }
 
-  // 2. CONSTRUIR (Placeables/Structures) — CORREÇÃO: usar global se existir, fallback com import seguro
+  // 2. CONSTRUIR (Placeables/Structures)
   if (['placeable', 'structure', 'construction'].includes(item.type)) {
     const buildBtn = document.createElement('button');
     buildBtn.className = 'btn-action btn-build';
@@ -764,22 +767,23 @@ function updateDetailsPanel(item, qty) {
     buildBtn.onclick = async () => {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
-      
-      // Tentar usar o global primeiro (carregado pelo main.js)
-      if (window.BuildSystem) {
+
+      // Usar getSystem (legacy bridge já garante compatibilidade)
+      let BuildSystem = getSystem('build');
+
+      if (BuildSystem) {
           try {
-            // startBuilding pode depender de init; chamar com segurança
-            if (typeof window.BuildSystem.initAdvancedSystem === 'function') {
-              await window.BuildSystem.initAdvancedSystem();
+            if (typeof BuildSystem.initAdvancedSystem === 'function') {
+              await BuildSystem.initAdvancedSystem();
             }
-            if (typeof window.BuildSystem.startBuilding === 'function') {
-              window.BuildSystem.startBuilding(item);
+            if (typeof BuildSystem.startBuilding === 'function') {
+              BuildSystem.startBuilding(item);
             } else {
-              logger.error('❌ window.BuildSystem.startBuilding não disponível');
+              console.error('❌ BuildSystem.startBuilding não disponível');
               alert('Função de construção não disponível.');
             }
           } catch (err) {
-            logger.error('❌ Erro ao usar window.BuildSystem:', err);
+            console.error('❌ Erro ao usar BuildSystem:', err);
             alert('Erro ao entrar no modo de construção. Verifique o console.');
           }
           return;
@@ -787,16 +791,15 @@ function updateDetailsPanel(item, qty) {
 
       // Fallback: Tentar importar se não existir
       try {
-          // Ajuste o caminho: Se inventoryUI está em /scripts/thePlayer/, então ../buildSystem.js está correto
-          const buildModule = await import("../buildSystem.js"); 
-          window.BuildSystem = buildModule.BuildSystem;
-          
-          if (window.BuildSystem) {
-             if (typeof window.BuildSystem.initAdvancedSystem === 'function') {
-               await window.BuildSystem.initAdvancedSystem();
+          const buildModule = await import("../buildSystem.js");
+          BuildSystem = buildModule.BuildSystem;
+
+          if (BuildSystem) {
+             if (typeof BuildSystem.initAdvancedSystem === 'function') {
+               await BuildSystem.initAdvancedSystem();
              }
-             if (typeof window.BuildSystem.startBuilding === 'function') {
-               window.BuildSystem.startBuilding(item);
+             if (typeof BuildSystem.startBuilding === 'function') {
+               BuildSystem.startBuilding(item);
              } else {
                logger.error('❌ BuildSystem carregado mas startBuilding ausente');
                alert('Função de construção não disponível após carregamento.');

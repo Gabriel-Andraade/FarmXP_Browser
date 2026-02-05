@@ -14,6 +14,7 @@ import { collisionSystem } from "./collisionSystem.js";
 import { AnimalEntity } from "./animal/animalAI.js";
 import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
 import { CAMERA } from './constants.js';
+import { setObject, getDebugFlag, getSystem } from "./gameState.js";
 
 // =============================================================================
 // WORLD OBJECT ARRAYS
@@ -99,9 +100,10 @@ export function placeWell(a, b, c) {
 
   let wellObject = null;
   try {
-    if (window.wellSystem && typeof window.wellSystem.placeWell === "function") {
-      if (id) wellObject = window.wellSystem.placeWell(id, x, y);
-      else wellObject = window.wellSystem.placeWell(x, y, opts);
+    const wellSystem = getSystem('well');
+    if (wellSystem && typeof wellSystem.placeWell === "function") {
+      if (id) wellObject = wellSystem.placeWell(id, x, y);
+      else wellObject = wellSystem.placeWell(x, y, opts);
     }
   } catch (err) {
     handleWarn("Failed to place well via wellSystem", "theWorld:placeWell", { id, x, y, err });
@@ -557,7 +559,10 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
     } else {
       img = cat?.[obj.type]?.img;
     }
-  } catch (err) { img = null; }
+  } catch (err) {
+    console.warn("Erro ao obter imagem do asset:", err);
+    img = null;
+  }
 
   if (img && img.complete) {
     try {
@@ -688,7 +693,7 @@ function drawBuilding(ctx, building) {
     }
   }
 
-  if (window.DEBUG_HITBOXES && building.originalType !== "chest") {
+  if (getDebugFlag('hitboxes') && building.originalType !== "chest") {
     ctx.fillStyle = "#fff";
     ctx.font = "10px Arial";
     ctx.textAlign = "center";
@@ -714,8 +719,9 @@ function drawBuilding(ctx, building) {
  * @returns {void}
  */
 export function drawBuildPreview(ctx) {
-  if (window.BuildSystem && window.BuildSystem.active) {
-    window.BuildSystem.drawPreview(ctx);
+  const BuildSystem = getSystem('build');
+  if (BuildSystem && BuildSystem.active) {
+    BuildSystem.drawPreview(ctx);
   }
 }
 
@@ -752,7 +758,10 @@ function drawHouseRoof(ctx, house) {
   const drawW = Math.floor(hWidth * zoom);
   const drawH = Math.floor(hHeight * zoom);
 
-  if (!img) { drawHouseRoofFallback(ctx, drawX, drawY, drawW, drawH); return; }
+  if (!img) {
+    drawHouseRoofFallback(ctx, drawX, drawY, drawW, drawH);
+    return;
+  }
 
   const roofSrcHeight = Math.round(img.height * (hHeight / WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT));
   ctx.drawImage(img, 0, 0, img.width, roofSrcHeight, drawX, drawY, drawW, drawH);
@@ -791,7 +800,10 @@ function drawHouseWalls(ctx, house) {
   const drawW = Math.floor(hWidth * zoom);
   const drawH = Math.floor(hHeight * zoom);
 
-  if (!img) { drawHouseWallsFallback(ctx, drawX, drawY, drawW, drawH); return; }
+  if (!img) {
+    drawHouseWallsFallback(ctx, drawX, drawY, drawW, drawH);
+    return;
+  }
 
   const totalRef = WORLD_GENERATOR_CONFIG.HOUSES.HEIGHT;
   const wallRatio = hHeight / totalRef;
@@ -1104,18 +1116,36 @@ window.addWorldObject = function(objectData) {
 };
 
 /* sobrescreve salvamento para excluir baús se BuildSystem existir */
-if (window.BuildSystem && window.BuildSystem.saveBuildings) {
-  const originalSaveBuildings = window.BuildSystem.saveBuildings;
-  window.BuildSystem.saveBuildings = function(buildings) {
+// Note: aplica override quando BuildSystem estiver registrado
+const tryApplyBuildSaveOverride = () => {
+  const BuildSystem = getSystem('build');
+  if (!BuildSystem || typeof BuildSystem.saveBuildings !== "function" || BuildSystem.__saveOverrideApplied) {
+    return false;
+  }
+  const originalSaveBuildings = BuildSystem.saveBuildings;
+  BuildSystem.saveBuildings = function(buildings) {
     const buildingsToSave = buildings ? buildings.filter(b => b.originalType !== "chest") : [];
     return originalSaveBuildings.call(this, buildingsToSave);
   };
-}
+  BuildSystem.__saveOverrideApplied = true;
+  return true;
+};
+
+// Event-driven approach: listen for build system registration
+document.addEventListener('gamestate:registered', (e) => {
+  if (e.detail?.name === 'build') {
+    tryApplyBuildSaveOverride();
+  }
+});
+
+// Try immediately in case build system is already registered
+tryApplyBuildSaveOverride();
 
 /* função principal de renderização do mundo */
 export function renderWorld(ctx, player) {
-  if (window.BuildSystem) {
-    window.BuildSystem._gridDrawnThisFrame = false;
+  const BuildSystem = getSystem('build');
+  if (BuildSystem) {
+    BuildSystem._gridDrawnThisFrame = false;
   }
 
   drawBackground(ctx);
@@ -1133,7 +1163,7 @@ export function renderWorld(ctx, player) {
 }
 
 /* export público do world para outros módulos */
-window.theWorld = {
+const theWorld = {
   addWorldObject: window.addWorldObject || null,
   placedBuildings,
   placedWells,
@@ -1159,3 +1189,6 @@ window.theWorld = {
   GAME_WIDTH,
   GAME_HEIGHT
 };
+
+// Registrar no gameState (legacy window.theWorld é tratado por installLegacyGlobals)
+setObject('world', theWorld);

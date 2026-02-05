@@ -1,5 +1,6 @@
 import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
+import { getSystem } from "../gameState.js";
 
 export class PlayerHUD {
     constructor() {
@@ -211,13 +212,15 @@ export class PlayerHUD {
 
 // 🧩 Listeners globais para equipar/desequipar
 document.addEventListener('itemEquipped', (e) => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(e.detail.item);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(e.detail.item);
     }
 });
 
 document.addEventListener('itemUnequipped', () => {
-    if (window.playerHUD && typeof window.playerHUD.updateEquippedItem === 'function') {
-        window.playerHUD.updateEquippedItem(null);
+    const playerHUD = getSystem('hud');
+    if (playerHUD && typeof playerHUD.updateEquippedItem === 'function') {
+        playerHUD.updateEquippedItem(null);
     }
 });
