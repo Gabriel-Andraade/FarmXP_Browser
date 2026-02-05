@@ -206,16 +206,16 @@ export class PlayerSystem {
             return;
         }
 
-        // ✅ Validar multiplier (0-10 é range razoável)
+        // Valida o multiplicador para um range razoável (0-10)
         const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
 
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * multiplier));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * multiplier));
+        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier));
+        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier));
 
         this.needs.energy = Math.max(0, Math.min(GAME_BALANCE.NEEDS.MAX_VALUE,
-            this.needs.energy - (rates.energy * multiplier)));
+            this.needs.energy - (rates.energy * validMultiplier)));
 
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
@@ -229,15 +229,14 @@ export class PlayerSystem {
      * @returns {void}
      */
     restoreNeeds(hunger, thirst, energy) {
-    const validHunger = validateRange(hunger, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
-    const validThirst = validateRange(thirst, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
-    const validEnergy = validateRange(energy, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+        const validHunger = validateRange(hunger, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+        const validThirst = validateRange(thirst, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+        const validEnergy = validateRange(energy, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
 
-    this.needs.hunger = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.hunger + validHunger);
-    this.needs.thirst = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.thirst + validThirst);
-    this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + validEnergy);
- 
-        
+        this.needs.hunger = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.hunger + validHunger);
+        this.needs.thirst = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.thirst + validThirst);
+        this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + validEnergy);
+
         this.dispatchNeedsUpdate();
 
         if (validHunger > 0 || validThirst > 0 || validEnergy > 0) {

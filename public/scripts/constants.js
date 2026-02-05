@@ -167,7 +167,8 @@ export const VISUAL = {
   HEALTH_BAR: {
     THRESHOLD_HIGH: 0.5,
     THRESHOLD_MID: 0.25,
-    BORDER_RADIUS: 3
+    BORDER_RADIUS: 3,
+    MIN_WIDTH: 0
   },
 
   GLOW: {
@@ -269,6 +270,7 @@ export const CAMERA = {
 
 export const UI = {
   FONT_SIZES: {
-    KEY_PROMPT: 14
+    KEY_PROMPT: 14,
+    HEALTH_BAR_TEXT: 10
   }
 };
