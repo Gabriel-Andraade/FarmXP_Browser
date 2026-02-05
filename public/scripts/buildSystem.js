@@ -45,7 +45,7 @@ export const BuildSystem = {
     currentSubPosY: 0,
 
     showAdvancedGrid: true,
-    gridAlpha: VISUAL.GRID.ALPHA,
+    gridAlpha: VISUAL.GRID.ALPHA ?? 0.4,
     
     subPositionColors: {
         '-1': 'rgba(0, 100, 255, 0.6)',

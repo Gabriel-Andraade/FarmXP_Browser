@@ -178,7 +178,9 @@ class WorldUIManager {
             gradient.addColorStop(1, this.styles.hpBar.gradientLow[1]);
         }
 
-        const fillWidth = Math.max(VISUAL.HEALTH_BAR.MIN_WIDTH, width * percent);
+            const minFillWidth = Number.isFinite(VISUAL.HEALTH_BAR.MIN_WIDTH) ? VISUAL.HEALTH_BAR.MIN_WIDTH : 0;
+            const fillWidth = Math.max(minFillWidth, width * percent);
+
         this.drawRoundedRect(ctx, x, y, fillWidth, height, 3, gradient);
 
         ctx.strokeStyle = this.styles.hpBar.borderColor;
@@ -186,7 +188,8 @@ class WorldUIManager {
         ctx.strokeRect(x - 0.5, y - 0.5, width + 1, height + 1);
 
         if (zoom > 0.8 && width > 60) {
-            ctx.font = `bold ${UI.FONT_SIZES.HEALTH_BAR_TEXT * zoom}px Arial`;
+            const healthFontSize = Number.isFinite(UI.FONT_SIZES.HEALTH_BAR_TEXT) ? UI.FONT_SIZES.HEALTH_BAR_TEXT : 10;
+            ctx.font = `bold ${healthFontSize * zoom}px Arial`;
             ctx.fillStyle = "#f5e9d3";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -253,7 +256,7 @@ class WorldUIManager {
         const size = SIZES.KEY_PROMPT.SIZE * zoom;
 
         ctx.shadowColor = this.styles.keyPrompt.shadowColor;
-        ctx.shadowBlur = VISUAL.KEY_PROMPT.SHADOW_BLUR;
+        ctx.shadowBlur = Number.isFinite(VISUAL.KEY_PROMPT.SHADOW_BLUR) ? VISUAL.KEY_PROMPT.SHADOW_BLUR : 0;
         ctx.shadowOffsetY = 2;
 
         const gradient = ctx.createRadialGradient(

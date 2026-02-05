@@ -229,9 +229,14 @@ export class PlayerSystem {
      * @returns {void}
      */
     restoreNeeds(hunger, thirst, energy) {
-        this.needs.hunger = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.hunger + hunger);
-        this.needs.thirst = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.thirst + thirst);
-        this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + energy);
+    const validHunger = validateRange(hunger, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+    const validThirst = validateRange(thirst, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+    const validEnergy = validateRange(energy, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+
+    this.needs.hunger = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.hunger + validHunger);
+    this.needs.thirst = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.thirst + validThirst);
+    this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + validEnergy);
+ 
         
         this.dispatchNeedsUpdate();
 
@@ -338,13 +343,15 @@ export class PlayerSystem {
     startSleep() {
         this.currentPlayer.isSleeping = true;
 
-        const sleepInterval = setInterval(() => {
+        if (this.sleepInterval) clearInterval(this.sleepInterval);
+        this.sleepInterval = setInterval(() => {
             if (this.needs.energy < GAME_BALANCE.NEEDS.MAX_VALUE) {
                 this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + GAME_BALANCE.NEEDS.SLEEP_ENERGY_RESTORE_AMOUNT);
                 this.dispatchNeedsUpdate();
 
                 if (this.needs.energy >= GAME_BALANCE.NEEDS.MAX_VALUE) {
-                    clearInterval(sleepInterval);
+                    clearInterval(this.sleepInterval);
+                    this.sleepInterval = null;
                     this.endSleep();
                 }
             }
