@@ -123,6 +123,10 @@ export class CharacterSelection {
         }
     }
 
+    /**
+     * Exibe uma mensagem de aviso temporária
+     * CSS carregado externamente via style/character-select.css
+     */
     showWarning(message) {
         const existingWarning = document.querySelector('.chs-character-warning-message');
         if (existingWarning) existingWarning.remove();
@@ -130,17 +134,6 @@ export class CharacterSelection {
         const warning = document.createElement('div');
         warning.className = 'chs-character-warning-message';
         warning.textContent = message;
-        warning.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(255, 0, 0, 0.9);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            z-index: 10001;
-        `;
 
         document.body.appendChild(warning);
 

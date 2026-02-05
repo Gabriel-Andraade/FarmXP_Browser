@@ -1,0 +1,74 @@
+/**
+ * Mobile Controls Styles (Sketch/Draft)
+ * Extracted from: scripts/thePlayer/control.js
+ *
+ * NOTA: Este e um esboco. O usuario ira finalizar os estilos.
+ */
+
+/* ================= BOTAO DE INTERACAO MOBILE ================= */
+#mobile-interact-btn {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  width: 70px;
+  height: 70px;
+  border-radius: var(--radius-full, 50%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: var(--color-text-primary, white);
+  font-size: 24px;
+  font-weight: var(--font-weight-bold, bold);
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  display: none;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: all 0.2s;
+}
+
+#mobile-interact-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+#mobile-interact-btn:active {
+  transform: scale(0.95);
+}
+
+/* ================= AREA DO JOYSTICK ================= */
+#joystick-area {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  width: 150px;
+  height: 150px;
+  border-radius: var(--radius-full, 50%);
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  z-index: 999;
+  touch-action: none;
+  display: none; /* Mostrado apenas em mobile */
+}
+
+/* ================= JOYSTICK HANDLE ================= */
+#joystick {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: var(--radius-full, 50%);
+  background: rgba(255, 255, 255, 0.85);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  touch-action: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ================= RESPONSIVO ================= */
+@media (max-width: 768px) {
+  #joystick-area {
+    display: block;
+  }
+}
+
+/* TODO: Adicionar mais estilos conforme necessario */

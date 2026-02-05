@@ -209,33 +209,20 @@ export const wellSystem = {
     );
   },
 
+  /**
+   * Verifica se os estilos CSS do poço estão carregados
+   * CSS carregado externamente via style/well.css
+   * @deprecated CSS agora é carregado externamente
+   */
   injectStyles() {
-    if (document.getElementById("well-styles")) return;
-
-    const style = document.createElement("style");
-    style.id = "well-styles";
-    style.textContent = `
-      #well-overlay { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); z-index: 9000; }
-      #well-modal { width: 700px; max-width: calc(100% - 40px); background:#2c241b; color:#fff; border-radius:12px; padding:16px; display:flex; gap:12px; position:relative; }
-      .well-col { flex:1; border-radius:8px; padding:10px; background: rgba(0,0,0,0.12); border:2px solid rgba(0,0,0,0.2); }
-      .item-slot { width:100%; height:80px; display:flex; align-items:center; justify-content:center; flex-direction:column; }
-      .main-btn { padding:12px; border-radius:8px; cursor:pointer; border:none; font-weight:bold; }
-      .btn-blue { background:#2980b9; color:#fff; }
-      .btn-red { background:#c0392b; color:#fff; }
-      .btn-green { background:#1e8449; color:#fff; }
-      .well-bucket-container { width:100%; height:180px; background:#d2b48c; border:4px solid #5a3a22; border-radius:12px; display:flex; align-items:flex-end; overflow:hidden; }
-      .water-fill { width:100%; text-align:center; transition:height 0.5s ease; background: rgba(52,152,219,0.85); }
-      .close-btn { position:absolute; right:8px; top:8px; width:30px; height:30px; cursor:pointer; }
-    `;
-    document.head.appendChild(style);
+    // CSS movido para style/well.css - incluir no index.html
+    // Este método é mantido para compatibilidade, mas não injeta mais estilos
   },
 
   openWellMenu() {
-    this.injectStyles();
-
-    const existing = document.getElementById("well-overlay");
-    if (existing) {
-      existing.style.display = "flex";
+    const existingOverlay = document.getElementById("well-overlay");
+    if (existingOverlay) {
+      existingOverlay.classList.add("active");
       wellState.isOpen = true;
       this.updateUI();
       return;
@@ -243,32 +230,33 @@ export const wellSystem = {
 
     const overlay = document.createElement("div");
     overlay.id = "well-overlay";
+    overlay.classList.add("active");
     overlay.innerHTML = `
       <div id="well-modal">
-        <div class="close-btn" id="well-close">X</div>
+        <div class="well-close-btn" id="well-close">X</div>
 
         <div class="well-col">
           <h3>Mochila</h3>
-          <div class="item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
-          <div class="item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
+          <div class="well-item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
+          <div class="well-item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
         </div>
 
         <div class="well-col">
           <h3>Acoes</h3>
-          <button class="main-btn btn-blue" id="btn-drink">Beber</button>
-          <button class="main-btn btn-red" id="btn-transfer-menu">Coletar</button>
-          <div id="transfer-options" style="display:none">
-            <button class="main-btn" id="btn-fill-bottle">Encher garrafa</button>
+          <button class="well-main-btn well-btn-blue" id="btn-drink">Beber</button>
+          <button class="well-main-btn well-btn-red" id="btn-transfer-menu">Coletar</button>
+          <div id="transfer-options" hidden>
+            <button class="well-main-btn" id="btn-fill-bottle">Encher garrafa</button>
           </div>
         </div>
 
         <div class="well-col">
           <h3>Poco</h3>
           <div class="well-bucket-container">
-            <div class="water-fill" id="well-water-level"></div>
+            <div class="well-water-fill" id="well-water-level"></div>
           </div>
-          <button class="main-btn btn-green" id="btn-pull-water">Descer balde</button>
-          <div id="well-timer" style="display:none">00:00</div>
+          <button class="well-main-btn well-btn-green" id="btn-pull-water">Descer balde</button>
+          <div id="well-timer" hidden>00:00</div>
         </div>
       </div>
     `;
@@ -279,7 +267,7 @@ export const wellSystem = {
     document.getElementById("btn-drink").onclick = () => this.drinkFromWell();
     document.getElementById("btn-transfer-menu").onclick = () => {
       const opts = document.getElementById("transfer-options");
-      opts.style.display = opts.style.display === "block" ? "none" : "block";
+      opts.hidden = !opts.hidden;
     };
     document.getElementById("btn-fill-bottle").onclick = () => this.fillBottle();
 
@@ -310,7 +298,7 @@ export const wellSystem = {
       levelEl.textContent = `${Math.floor(wellState.waterLevel)}%`;
     }
 
-    if (timerEl) timerEl.style.display = wellState.isPulling ? "block" : "none";
+    if (timerEl) timerEl.hidden = !wellState.isPulling;
   },
 
   startPullingWater() {

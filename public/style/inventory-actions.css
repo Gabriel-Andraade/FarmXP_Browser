@@ -1,0 +1,64 @@
+/**
+ * Inventory Action Buttons Styles
+ * Extracted from: scripts/thePlayer/inventorySystem.js
+ * Prefix: inv-
+ */
+
+/* ===== ITEM ACTIONS CONTAINER ===== */
+.inv-item-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ===== BASE ACTION BUTTON ===== */
+.inv-action-btn {
+  color: var(--color-text-primary, white);
+  border: none;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm, 5px);
+  cursor: pointer;
+  font-size: var(--font-size-xs, 11px);
+  transition: transform var(--transition-fast, 0.2s ease);
+}
+
+.inv-action-btn:hover {
+  transform: scale(1.05);
+}
+
+.inv-action-btn:active {
+  transform: scale(0.98);
+}
+.inv-action-btn:focus-visible {
+  outline: 2px solid var(--color-text-primary, #fff);
+  outline-offset: 2px;
+}
+
+/* ===== CONSUME BUTTON ===== */
+.inv-consume-btn {
+  background: linear-gradient(135deg, var(--color-success, #27ae60), #1e8449);
+}
+
+.inv-consume-btn:hover {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+/* ===== EQUIP BUTTON ===== */
+.inv-equip-btn {
+  background: linear-gradient(135deg, var(--color-info, #3498db), #2980b9);
+}
+
+.inv-equip-btn:hover {
+  background: linear-gradient(135deg, #5dade2, #3498db);
+}
+
+/* ===== DISCARD BUTTON ===== */
+.inv-discard-btn {
+  background: linear-gradient(135deg, var(--color-error, #e74c3c), #c0392b);
+}
+
+.inv-discard-btn:hover {
+  background: linear-gradient(135deg, #ec7063, #e74c3c);
+}

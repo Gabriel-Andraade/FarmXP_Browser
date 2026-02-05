@@ -13,6 +13,7 @@ import { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT, TILE_SIZE } from ".
 import { collisionSystem } from "./collisionSystem.js";
 import { AnimalEntity } from "./animal/animalAI.js";
 import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
+import { CAMERA } from './constants.js';
 import { setObject, getDebugFlag, getSystem } from "./gameState.js";
 
 // =============================================================================
@@ -68,7 +69,7 @@ let lastPlayerHeight = -1;
  * Objects within this buffer are still rendered to prevent pop-in
  * @constant {number}
  */
-const CULLING_BUFFER = 200;
+const CULLING_BUFFER = CAMERA.CULLING_BUFFER;
 
 /**
  * Invalidates the world object cache, forcing recalculation on next render
