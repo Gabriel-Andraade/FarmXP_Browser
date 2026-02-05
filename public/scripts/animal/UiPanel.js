@@ -4,234 +4,6 @@
  * atualiza conteúdo (nome, tipo, barras) e posicionamento baseado em camera/canvas
  */
 
-const STYLES = `
-/* ================= CONTAINER GERAL ================= */
-#animal-ui-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 2500;
-  pointer-events: none; /* deixa passar cliques onde nao tem ui */
-  display: none;
-  font-family: "Segoe UI", Tahoma, sans-serif;
-}
-#animal-ui-layer.visible { display: block; }
-
-/* permite interacao nos botoes e menus */
-#animal-ui-layer .aui-interactive { pointer-events: auto; }
-
-/* ================= CIRCULO CENTRAL (SELECAO) ================= */
-.selection-oval {
-  position: absolute;
-  border: 3px solid #ffd700;
-  border-radius: 50%;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), inset 0 0 10px rgba(255, 215, 0, 0.1);
-  background: rgba(43, 26, 12, 0.15);
-  z-index: 5; /* acima das linhas, abaixo dos botoes */
-  pointer-events: none;
-  opacity: 0;
-  transform-origin: center;
-  transition: width 0.08s linear, height 0.08s linear, top 0.08s linear, left 0.08s linear;
-}
-
-.selection-oval.active {
-  opacity: 1;
-  animation: oval-pulse 2s infinite;
-}
-
-@keyframes oval-pulse {
-  0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); border-color: #ffd700; }
-  50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); border-color: #fff8dc; }
-  100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.3); border-color: #ffd700; }
-}
-
-/* ================= BOTOES ORBITAIS ================= */
-.aui-btn {
-  position: absolute;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  border: 2px solid #fff8dc;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  cursor: pointer;
-  user-select: none;
-
-  z-index: 20;
-
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
-  box-shadow: 0 6px 12px rgba(0,0,0,0.6);
-  color: #fff;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-}
-
-.aui-btn:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-  z-index: 25;
-}
-.aui-btn:active { transform: scale(0.95); }
-
-/* botao esquerdo (acoes) */
-.aui-btn.left-btn {
-  background: linear-gradient(135deg, #2e8b57 0%, #1a4d33 100%);
-  border-color: #98fb98;
-}
-
-/* botao direito (info) */
-.aui-btn.right-btn {
-  background: linear-gradient(135deg, #daa520 0%, #b8860b 100%);
-  border-color: #ffd700;
-}
-
-/* ================= PAINEIS DE MENU ================= */
-.aui-menu {
-  position: absolute;
-  background: rgba(35, 25, 15, 0.96);
-  border: 2px solid #b8860b;
-  border-radius: 10px;
-  padding: 12px;
-  color: #f0e6d2;
-  min-width: 220px;
-  max-width: 320px;
-  z-index: 15;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-  opacity: 0;
-  transform: scale(0.9);
-  transition: opacity 0.18s, transform 0.18s;
-  pointer-events: none;
-  font-size: 14px;
-  backdrop-filter: blur(4px);
-}
-
-.aui-menu.visible {
-  opacity: 1;
-  transform: scale(1);
-  pointer-events: auto;
-}
-
-.aui-menu h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  color: #ffd700;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(184, 134, 11, 0.4);
-  padding-bottom: 6px;
-  text-align: center;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-
-.aui-action-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  background: linear-gradient(to right, rgba(255,255,255,0.05), transparent);
-  border: 1px solid #5c4033;
-  color: #e6e6e6;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.18s;
-}
-.aui-action-btn:hover {
-  background: rgba(255, 215, 0, 0.1);
-  border-color: #ffd700;
-  color: #fff;
-  transform: translateX(4px);
-  box-shadow: -2px 2px 5px rgba(0,0,0,0.3);
-}
-.aui-action-btn span.icon { font-size: 18px; }
-
-/* ================= LINHAS SVG (CONECTORES) ================= */
-.aui-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1; /* atras de tudo */
-  pointer-events: none;
-  overflow: visible;
-}
-.aui-line-path {
-  fill: none;
-  stroke: #b8860b;
-  stroke-width: 2.5;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.8));
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  opacity: 0.9;
-}
-
-/* ================= INFO HEADER + BARRAS ================= */
-.aui-info-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 10px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid rgba(184, 134, 11, 0.35);
-}
-.aui-gender-circle {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #6aa84f 0%, #274e13 100%);
-  border: 2px solid rgba(255, 215, 0, 0.7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-}
-.aui-name-wrap { flex: 1; min-width: 0; }
-.aui-animal-name {
-  font-weight: 800;
-  font-size: 15px;
-  color: #fff;
-  outline: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.aui-animal-type {
-  font-size: 12px;
-  color: #d6c7ab;
-  opacity: 0.95;
-  margin-top: 1px;
-}
-
-.aui-bars { display: flex; flex-direction: column; gap: 10px; }
-.aui-bar-row { display: flex; align-items: center; gap: 10px; }
-.aui-bar-label { width: 56px; font-weight: 700; color: #deb887; font-size: 13px; }
-.aui-bar {
-  flex: 1;
-  height: 9px;
-  border-radius: 6px;
-  overflow: hidden;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(0,0,0,0.25);
-}
-.aui-bar-fill {
-  height: 100%;
-  width: 50%;
-  border-radius: 6px;
-  background: linear-gradient(90deg, #ffd700, #2e8b57);
-}
-.aui-bar-val {
-  width: 46px;
-  text-align: right;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
-`;
-
 /**
  * limita um numero dentro de um intervalo
  * @param {number} n
@@ -349,13 +121,8 @@ class UiPanel {
    * injeta estilos, cria camada, registra listeners e inicia loop de atualizacao
    */
   init() {
-    // injeta css apenas uma vez por pagina
-    if (!document.getElementById("aui-styles-injected")) {
-      const styleEl = document.createElement("style");
-      styleEl.id = "aui-styles-injected";
-      styleEl.textContent = STYLES;
-      document.head.appendChild(styleEl);
-    }
+    // REMOVIDO: A injeção de CSS foi removida pois o CSS agora é externo
+    // IMPORTANTE: Você deve incluir o arquivo CSS separado no HTML
 
     // cria ou reutiliza a camada raiz
     this.layer = document.getElementById("animal-ui-layer");
@@ -399,12 +166,12 @@ class UiPanel {
 
     // oval de selecao, posicionado sobre o animal
     this.oval = document.createElement("div");
-    this.oval.className = "selection-oval";
+    this.oval.className = "aui-selection-oval";
     this.layer.appendChild(this.oval);
 
     // botao esquerdo (acoes)
     this.leftBtn = document.createElement("div");
-    this.leftBtn.className = "aui-btn left-btn aui-interactive";
+    this.leftBtn.className = "aui-btn aui-left-btn aui-interactive";
     this.leftBtn.textContent = "⚙️";
     this.leftBtn.title = "Acoes";
     this.leftBtn.addEventListener("click", (e) => {
@@ -415,7 +182,7 @@ class UiPanel {
 
     // botao direito (info)
     this.rightBtn = document.createElement("div");
-    this.rightBtn.className = "aui-btn right-btn aui-interactive";
+    this.rightBtn.className = "aui-btn aui-right-btn aui-interactive";
     this.rightBtn.textContent = "📜";
     this.rightBtn.title = "Info";
     this.rightBtn.addEventListener("click", (e) => {
@@ -552,14 +319,14 @@ class UiPanel {
 
     this.visible = true;
 
-    this.layer.classList.add("visible");
-    this.oval.classList.add("active");
+    this.layer.classList.add("aui-visible");
+    this.oval.classList.add("aui-active");
 
     // abre menus por padrao
     this.showActions = true;
     this.showInfo = true;
-    this.actionsMenu.classList.toggle("visible", this.showActions);
-    this.infoMenu.classList.toggle("visible", this.showInfo);
+    this.actionsMenu.classList.toggle("aui-visible", this.showActions);
+    this.infoMenu.classList.toggle("aui-visible", this.showInfo);
 
     this.updateContent();
     this.updatePositions(true);
@@ -586,10 +353,10 @@ class UiPanel {
     this.visible = false;
     this.target = null;
 
-    this.layer.classList.remove("visible");
-    this.oval.classList.remove("active");
-    this.actionsMenu.classList.remove("visible");
-    this.infoMenu.classList.remove("visible");
+    this.layer.classList.remove("aui-visible");
+    this.oval.classList.remove("aui-active");
+    this.actionsMenu.classList.remove("aui-visible");
+    this.infoMenu.classList.remove("aui-visible");
 
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
@@ -600,7 +367,7 @@ class UiPanel {
    */
   toggleActions() {
     this.showActions = !this.showActions;
-    this.actionsMenu.classList.toggle("visible", this.showActions);
+    this.actionsMenu.classList.toggle("aui-visible", this.showActions);
     this.updatePositions();
   }
 
@@ -609,7 +376,7 @@ class UiPanel {
    */
   toggleInfo() {
     this.showInfo = !this.showInfo;
-    this.infoMenu.classList.toggle("visible", this.showInfo);
+    this.infoMenu.classList.toggle("aui-visible", this.showInfo);
     this.updatePositions();
   }
 

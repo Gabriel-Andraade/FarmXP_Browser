@@ -23,41 +23,33 @@ class LoadingScreenManager {
      * Previne criação duplicada verificando existência
      * @returns {HTMLElement|undefined} Elemento da tela de loading ou undefined se já existe
      */
+    /**
+     * Exibe a tela de carregamento inicial do jogo
+     * CSS carregado externamente via style/loading.css
+     */
     showInitialLoading() {
         // Evita duplicatas
-        if (document.getElementById("initial-loading-screen")) return;
+        if (document.getElementById("ldg-initial-screen")) return;
 
         const loadingScreen = document.createElement("div");
-        loadingScreen.id = "initial-loading-screen";
-        loadingScreen.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
-            color: #fff; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 10000;
-            font-family: 'Courier New', monospace; user-select: none;
-        `;
-        
+        loadingScreen.id = "ldg-initial-screen";
+
         loadingScreen.innerHTML = `
-            <div style="text-align: center; padding: 30px;">
-                <h1 style="color: #4ecca3; font-size: 3em; margin-bottom: 20px; text-shadow: 0 0 10px rgba(78, 204, 163, 0.5);">
-                    FarmingXP
-                </h1>
-                <p style="color: #e0bc87; font-size: 1.2em; margin-bottom: 40px;">Preparando sua fazenda...</p>
-                <div style="width: 300px; height: 20px; background: #2e1c0f; border-radius: 10px; overflow: hidden; margin: 20px auto;">
-                    <div id="initial-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4ecca3, #3da58a); transition: width 0.3s;"></div>
+            <div class="ldg-content">
+                <h1>FarmingXP</h1>
+                <p class="ldg-subtitle">Preparando sua fazenda...</p>
+                <div class="ldg-progress-container">
+                    <div id="ldg-initial-progress-bar"></div>
                 </div>
-                <p id="initial-loading-message" style="margin: 20px 0; color: #c9a463; min-height: 1.5em;"></p>
-                <div style="display: flex; justify-content: center; gap: 10px; margin-top: 40px;">
-                    <div class="loading-dot" style="width: 12px; height: 12px; background: #4ecca3; border-radius: 50%; animation: loadingPulse 1.5s infinite;"></div>
-                    <div class="loading-dot" style="width: 12px; height: 12px; background: #4ecca3; border-radius: 50%; animation: loadingPulse 1.5s infinite 0.2s;"></div>
-                    <div class="loading-dot" style="width: 12px; height: 12px; background: #4ecca3; border-radius: 50%; animation: loadingPulse 1.5s infinite 0.4s;"></div>
+                <p id="ldg-initial-message"></p>
+                <div class="ldg-dots">
+                    <div class="ldg-dot"></div>
+                    <div class="ldg-dot"></div>
+                    <div class="ldg-dot"></div>
                 </div>
             </div>
-            <style>
-                @keyframes loadingPulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
-            </style>
         `;
-        
+
         document.body.appendChild(loadingScreen);
         this.currentScreen = loadingScreen;
         return loadingScreen;
@@ -71,8 +63,8 @@ class LoadingScreenManager {
      * @returns {void}
      */
     updateInitialProgress(progress, message = "") {
-        const progressBar = document.getElementById('initial-progress-bar');
-        const messageEl = document.getElementById('initial-loading-message');
+        const progressBar = document.getElementById('ldg-initial-progress-bar');
+        const messageEl = document.getElementById('ldg-initial-message');
         if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
         if (messageEl && message) messageEl.textContent = message;
     }
@@ -83,7 +75,7 @@ class LoadingScreenManager {
      * @returns {void}
      */
     hideInitialLoading() {
-        const loadingScreen = document.getElementById('initial-loading-screen');
+        const loadingScreen = document.getElementById('ldg-initial-screen');
         if (loadingScreen) {
             loadingScreen.style.transition = 'opacity 0.8s, transform 0.8s';
             loadingScreen.style.opacity = '0';
@@ -100,67 +92,58 @@ class LoadingScreenManager {
      * @param {number} [durationSeconds=5] - Duração do sono em segundos
      * @returns {HTMLElement} Elemento da tela de sono
      */
+    /**
+     * Exibe tela de carregamento durante o sono do jogador
+     * CSS carregado externamente via style/loading.css
+     */
     showSleepLoading(durationSeconds = 5) {
         if (this.sleepScreen) this.hideSleepLoading();
-        
+
         this.sleepScreen = document.createElement("div");
-        this.sleepScreen.id = "sleep-loading-screen";
-        this.sleepScreen.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
-            color: #fff; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; z-index: 9999;
-            font-family: 'Courier New', monospace; opacity: 0; transition: opacity 1s;
-        `;
-        
+        this.sleepScreen.id = "ldg-sleep-screen";
+
         this.sleepScreen.innerHTML = `
-            <div style="text-align: center; padding: 40px; background: rgba(10, 10, 26, 0.9); 
-                        border-radius: 20px; border: 3px solid #4ecca3; max-width: 600px; 
-                        box-shadow: 0 0 40px rgba(78, 204, 163, 0.3);">
-                <div style="font-size: 5em; margin-bottom: 20px; animation: float 3s infinite ease-in-out;">💤</div>
-                <h2 style="color: #4ecca3; margin-bottom: 30px; font-size: 2em;">Repouso Restaurador</h2>
-                
-                <div style="background: rgba(46, 28, 15, 0.5); border-radius: 15px; padding: 20px; margin: 20px 0;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                        <span style="color: #e0bc87;">Progresso</span>
-                        <span id="sleep-time-remaining" style="color: #c9a463;">${durationSeconds}s</span>
+            <div class="ldg-sleep-content">
+                <div class="ldg-sleep-emoji">💤</div>
+                <h2 class="ldg-sleep-title">Repouso Restaurador</h2>
+
+                <div class="ldg-sleep-progress-container">
+                    <div class="ldg-sleep-progress-header">
+                        <span>Progresso</span>
+                        <span id="ldg-sleep-time-remaining">${durationSeconds}s</span>
                     </div>
-                    <div style="width: 100%; height: 25px; background: #2e1c0f; border-radius: 12px; overflow: hidden;">
-                        <div id="sleep-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4ecca3, #3da58a, #4ecca3); background-size: 200% 100%; animation: gradientShift 2s infinite linear; transition: width 0.5s;"></div>
+                    <div class="ldg-sleep-progress-bar">
+                        <div id="ldg-sleep-progress-bar"></div>
                     </div>
                 </div>
-                
-                <div id="sleep-message-container" style="min-height: 60px; margin: 20px 0;">
-                    <p id="sleep-main-message" style="font-size: 1.3em; color: #e0bc87; margin: 10px 0;">Adormecendo...</p>
-                    <p id="sleep-detail-message" style="font-size: 1em; color: #c9a463; margin: 5px 0;">Fechando os olhos...</p>
+
+                <div class="ldg-sleep-message-container">
+                    <p id="ldg-sleep-main-message">Adormecendo...</p>
+                    <p id="ldg-sleep-detail-message">Fechando os olhos...</p>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin: 30px 0;">
-                    <div class="optimization-card" style="background: rgba(78, 204, 163, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid #4ecca3;">
-                        <div style="color: #4ecca3; font-weight: bold;">Cache</div>
-                        <div id="cache-status" style="color: #e0bc87; font-size: 0.9em;">Aguardando...</div>
+
+                <div class="ldg-sleep-optimizations">
+                    <div class="ldg-optimization-card">
+                        <div class="ldg-card-title">Cache</div>
+                        <div id="cache-status" class="ldg-card-status">Aguardando...</div>
                     </div>
-                    <div class="optimization-card" style="background: rgba(233, 196, 106, 0.1); padding: 15px; border-radius: 10px; border-left: 4px solid #e9c46a;">
-                        <div style="color: #e9c46a; font-weight: bold;">Memória</div>
-                        <div id="memory-status" style="color: #e0bc87; font-size: 0.9em;">Aguardando...</div>
+                    <div class="ldg-optimization-card">
+                        <div class="ldg-card-title">Memória</div>
+                        <div id="memory-status" class="ldg-card-status">Aguardando...</div>
                     </div>
                 </div>
             </div>
-            <style>
-                @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
-                @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-                .optimization-card { animation: fadeIn 0.5s forwards; opacity: 0; }
-                .optimization-card:nth-child(1) { animation-delay: 0.2s; } .optimization-card:nth-child(2) { animation-delay: 0.4s; }
-            </style>
         `;
-        
+
         document.body.appendChild(this.sleepScreen);
-        setTimeout(() => { this.sleepScreen.style.opacity = '1'; }, 50);
-        
+        const screen = this.sleepScreen;
+        setTimeout(() => {
+          if (screen) screen.classList.add('visible');
+        }, 50);
+
         // Iniciar simulação de otimização sincronizada com o tempo
         this.startSleepOptimizations(durationSeconds);
-        
+
         return this.sleepScreen;
     }
 
@@ -173,9 +156,9 @@ class LoadingScreenManager {
      */
     updateSleepProgress(progress, mainMessage, detailMessage) {
         this.sleepProgress = progress;
-        const progressBar = document.getElementById('sleep-progress-bar');
-        const mainMsgEl = document.getElementById('sleep-main-message');
-        const detailMsgEl = document.getElementById('sleep-detail-message');
+        const progressBar = document.getElementById('ldg-sleep-progress-bar');
+        const mainMsgEl = document.getElementById('ldg-sleep-main-message');
+        const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
         
         if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
@@ -218,7 +201,7 @@ class LoadingScreenManager {
             if (memEl) memEl.textContent = s.mem;
 
             // Atualiza o timer visual
-            const timerEl = document.getElementById('sleep-time-remaining');
+            const timerEl = document.getElementById('ldg-sleep-time-remaining');
             if(timerEl) {
                 const remaining = Math.max(0, Math.ceil(durationSeconds * (1 - s.t)));
                 timerEl.textContent = `${remaining}s`;
@@ -258,13 +241,13 @@ class LoadingScreenManager {
      */
     hideSleepLoading() {
         if (this.sleepScreen) {
-            this.sleepScreen.style.opacity = '0';
-            this.sleepScreen.style.transform = 'scale(1.1)';
+            const screen = this.sleepScreen;
+            screen.classList.remove('visible');
+            this.sleepScreen = null;
             setTimeout(() => {
-                if (this.sleepScreen && this.sleepScreen.parentNode) {
-                    this.sleepScreen.parentNode.removeChild(this.sleepScreen);
+                 if (screen.parentNode) {
+                    screen.parentNode.removeChild(screen);
                 }
-                this.sleepScreen = null;
             }, 800);
         }
     }

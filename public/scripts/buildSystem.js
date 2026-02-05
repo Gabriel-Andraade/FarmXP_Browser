@@ -63,124 +63,35 @@ export const BuildSystem = {
     
     _gridDrawnThisFrame: false,
     
-    _helpStyleId: 'build-help-style',
-    _helpPanelId: 'build-help-panel',
+    _helpStyleId: 'bld-help-style',
+    _helpPanelId: 'bld-help-panel',
     _helpPanelEl: null,
 
+    /**
+     * Cria o painel de ajuda do modo construção
+     * CSS carregado externamente via style/build.css
+     */
     _ensureBuildHelpUI() {
-      if (!document.getElementById(this._helpStyleId)) {
-        const style = document.createElement('style');
-        style.id = this._helpStyleId;
-        style.textContent = `
-#${this._helpPanelId} {
-  position: fixed;
-  left: 18px;
-  top: 18px;
-  z-index: 9999;
-  width: 340px;
-  max-width: calc(100vw - 36px);
-  background: linear-gradient(135deg, rgba(43, 26, 12, 0.97) 0%, rgba(59, 38, 18, 0.93) 100%);
-  border: 2px solid #c9a463;
-  border-radius: 14px;
-  box-shadow: 0 12px 35px rgba(0,0,0,0.45);
-  color: #f5e9d3;
-  font-family: "Georgia", serif;
-  pointer-events: none;
-  opacity: 0;
-  transform: translateY(-6px);
-  transition: opacity .2s ease, transform .2s ease;
-}
-
-#${this._helpPanelId}.open {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-#${this._helpPanelId} .bhp-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(201, 164, 99, 0.35);
-  background: rgba(46, 28, 15, 0.65);
-  border-radius: 12px 12px 0 0;
-}
-
-#${this._helpPanelId} .bhp-title {
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: .5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-#${this._helpPanelId} .bhp-sub {
-  font-size: 11px;
-  color: #c9a463;
-  font-weight: 700;
-}
-
-#${this._helpPanelId} .bhp-body {
-  padding: 12px;
-  display: grid;
-  gap: 8px;
-}
-
-#${this._helpPanelId} .bhp-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: rgba(201, 164, 99, 0.08);
-  border: 1px solid rgba(201, 164, 99, 0.18);
-}
-
-#${this._helpPanelId} .bhp-row strong {
-  color: #f5e9d3;
-  font-size: 12px;
-}
-
-#${this._helpPanelId} .bhp-row span {
-  color: #c9a463;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-#${this._helpPanelId} kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
-  font-weight: 900;
-  color: #2e1c0f;
-  background: linear-gradient(135deg, #c9a463, #e0bc87);
-  border: 1px solid rgba(245, 233, 211, 0.6);
-  border-bottom-width: 2px;
-  padding: 2px 7px;
-  border-radius: 8px;
-  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
-  margin-right: 6px;
-  white-space: nowrap;
-}
-    `.trim();
-        document.head.appendChild(style);
+      // CSS movido para style/build.css - incluir no index.html
+      const existing = document.getElementById(this._helpPanelId);
+      if (existing) {
+        this._helpPanelEl = existing;
+        return;
       }
-
-      if (!this._helpPanelEl || !document.getElementById(this._helpPanelId)) {
+      if (!this._helpPanelEl) {
         const panel = document.createElement('div');
         panel.id = this._helpPanelId;
         panel.innerHTML = `
-  <div class="bhp-header">
-    <div class="bhp-title">modo construcao</div>
-    <div class="bhp-sub" id="bhp-item-name">-</div>
+  <div class="bld-header">
+    <div class="bld-title">modo construcao</div>
+    <div class="bld-sub" id="bld-item-name">-</div>
   </div>
-  <div class="bhp-body">
-    <div class="bhp-row"><strong><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></strong><span>grade x: esq | cen | dir</span></div>
-    <div class="bhp-row"><strong><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></strong><span>grade y: baixo | cen | cima</span></div>
-    <div class="bhp-row"><strong><kbd>r</kbd></strong><span>rotacionar (variante)</span></div>
-    <div class="bhp-row"><strong><kbd>t</kbd></strong><span>posicionar</span></div>
-    <div class="bhp-row"><strong><kbd>esc</kbd></strong><span>sair do modo construcao</span></div>
+  <div class="bld-body">
+    <div class="bld-row"><strong><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></strong><span>grade x: esq | cen | dir</span></div>
+    <div class="bld-row"><strong><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></strong><span>grade y: baixo | cen | cima</span></div>
+    <div class="bld-row"><strong><kbd>r</kbd></strong><span>rotacionar (variante)</span></div>
+    <div class="bld-row"><strong><kbd>t</kbd></strong><span>posicionar</span></div>
+    <div class="bld-row"><strong><kbd>esc</kbd></strong><span>sair do modo construcao</span></div>
   </div>
     `.trim();
         document.body.appendChild(panel);
@@ -191,7 +102,7 @@ export const BuildSystem = {
     _showBuildHelpPanel() {
       this._ensureBuildHelpUI();
       const label = this.selectedItem?.name ? this.selectedItem.name : '-';
-      const nameEl = this._helpPanelEl?.querySelector('#bhp-item-name');
+      const nameEl = this._helpPanelEl?.querySelector('#bld-item-name');
       if (nameEl) nameEl.textContent = label;
       this._helpPanelEl?.classList.add('open');
     },
