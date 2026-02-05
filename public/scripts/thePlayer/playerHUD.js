@@ -1,6 +1,6 @@
 import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
-import { t } from '../i18n/i18n.js';
+import { t, getItemName } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
 /**
  * Obtém nome traduzido do item pelo ID
@@ -8,13 +8,7 @@ import { getSystem } from "../gameState.js";
  * @param {string} fallbackName - Nome padrão se tradução não existir
  * @returns {string} Nome traduzido
  */
-function getItemName(itemId, fallbackName = '') {
-  const translatedName = t(`itemNames.${itemId}`);
-  if (translatedName === `itemNames.${itemId}`) {
-    return fallbackName;
-  }
-  return translatedName || fallbackName;
-}
+
 
 export class PlayerHUD {
     constructor() {

@@ -149,7 +149,7 @@ export function isExistingItemId(id, items) {
     if (!Array.isArray(items)) {
         return false;
     }
-    return isValidPositiveInteger(id) &&
+    return isValidItemId(id) &&
            items.some(item => item.id === id);
 }
 
