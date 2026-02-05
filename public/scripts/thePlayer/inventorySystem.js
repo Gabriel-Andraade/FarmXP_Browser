@@ -3,6 +3,7 @@ import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
 
 export const allItems = items;
@@ -10,7 +11,7 @@ export const allItems = items;
 export class InventorySystem {
     constructor() {
         this.uiUpdateTimer = null;
-        this.UI_UPDATE_DELAY = 50;
+        this.UI_UPDATE_DELAY = UI_UPDATE_DELAY_MS;
         this.lastUIUpdate = 0;
 
         // AbortController para cleanup de event listeners
@@ -52,8 +53,8 @@ export class InventorySystem {
     
     triggerUIUpdate() {
         const now = Date.now();
-        
-        if (now - this.lastUIUpdate < 30) {
+
+        if (now - this.lastUIUpdate < UI_MIN_UPDATE_INTERVAL_MS) {
             return;
         }
         
@@ -134,7 +135,7 @@ export class InventorySystem {
     init() {
         setTimeout(() => {
             this.triggerUIUpdate();
-        }, 100);
+        }, INIT_DELAY_MS);
         logger.info('🎒 Sistema de inventário pronto para uso');
     }
 
@@ -608,7 +609,7 @@ export function startConsuming(itemId, player) {
         detail: {
             item,
             player,
-            duration: 2000
+            duration: CONSUMPTION_BAR_DURATION_MS
         }
     }));
     
