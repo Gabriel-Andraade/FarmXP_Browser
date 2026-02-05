@@ -2,6 +2,8 @@ import { logger } from '../logger.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsumable, getConsumptionData as itemUtilsGetConsumptionData, getAllItems } from '../itemUtils.js';
+
+import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
 
 
@@ -10,7 +12,7 @@ export { getAllItems as allItems };
 export class InventorySystem {
     constructor() {
         this.uiUpdateTimer = null;
-        this.UI_UPDATE_DELAY = 50;
+        this.UI_UPDATE_DELAY = UI_UPDATE_DELAY_MS;
         this.lastUIUpdate = 0;
 
         // AbortController para cleanup de event listeners
@@ -52,8 +54,8 @@ export class InventorySystem {
     
     triggerUIUpdate() {
         const now = Date.now();
-        
-        if (now - this.lastUIUpdate < 30) {
+
+        if (now - this.lastUIUpdate < UI_MIN_UPDATE_INTERVAL_MS) {
             return;
         }
         
@@ -134,7 +136,7 @@ export class InventorySystem {
     init() {
         setTimeout(() => {
             this.triggerUIUpdate();
-        }, 100);
+        }, INIT_DELAY_MS);
         logger.info('🎒 Sistema de inventário pronto para uso');
     }
 
@@ -598,7 +600,7 @@ export function startConsuming(itemId, player) {
         detail: {
             item,
             player,
-            duration: 2000
+            duration: CONSUMPTION_BAR_DURATION_MS
         }
     }));
 
@@ -613,86 +615,49 @@ export function setInventoryUpdateDelay(delayMs) {
     return inventorySystem.setUpdateDelay(delayMs);
 }
 
+/**
+ * Adiciona botões de ação a um item do inventário
+ * CSS carregado externamente via style/inventory-actions.css
+ */
 export function addItemActionButtons(itemElement, item, category, itemId) {
-    const existingButtons = itemElement.querySelectorAll('.item-action-btn');
-    existingButtons.forEach(btn => btn.remove());
-    
+    const existingContainer = itemElement.querySelector('.inv-item-actions');
+    if (existingContainer) existingContainer.remove();
+
+
     const buttonContainer = document.createElement('div');
-    buttonContainer.className = 'item-actions';
-    buttonContainer.style.cssText = `
-        display: flex;
-        gap: 5px;
-        margin-top: 5px;
-        justify-content: center;
-    `;
-    
+    buttonContainer.className = 'inv-item-actions';
+
     if (item.fillUp) {
         const consumeBtn = document.createElement('button');
-        consumeBtn.className = 'item-action-btn consume-btn';
+        consumeBtn.className = 'inv-action-btn inv-consume-btn';
         consumeBtn.textContent = '🍽️ Consumir';
-        consumeBtn.style.cssText = `
-            background: linear-gradient(135deg, #27ae60, #1e8449);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-        `;
-        consumeBtn.onmouseover = () => consumeBtn.style.transform = 'scale(1.05)';
-        consumeBtn.onmouseout = () => consumeBtn.style.transform = 'scale(1)';
         consumeBtn.onclick = (e) => {
             e.stopPropagation();
             consumeItem(category, itemId, 1);
         };
         buttonContainer.appendChild(consumeBtn);
     }
-    
+
     if (item.type === 'tool') {
         const equipBtn = document.createElement('button');
-        equipBtn.className = 'item-action-btn equip-btn';
+        equipBtn.className = 'inv-action-btn inv-equip-btn';
         equipBtn.textContent = '⚔️ Equipar';
-        equipBtn.style.cssText = `
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-        `;
-        equipBtn.onmouseover = () => equipBtn.style.transform = 'scale(1.05)';
-        equipBtn.onmouseout = () => equipBtn.style.transform = 'scale(1)';
         equipBtn.onclick = (e) => {
             e.stopPropagation();
             equipItem(category, itemId);
         };
         buttonContainer.appendChild(equipBtn);
     }
-    
+
     const discardBtn = document.createElement('button');
-    discardBtn.className = 'item-action-btn discard-btn';
+    discardBtn.className = 'inv-action-btn inv-discard-btn';
     discardBtn.textContent = '🗑️ Descartar';
-    discardBtn.style.cssText = `
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-        color: white;
-        border: none;
-        padding: 5px 10px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 11px;
-        transition: all 0.2s;
-    `;
-    discardBtn.onmouseover = () => discardBtn.style.transform = 'scale(1.05)';
-    discardBtn.onmouseout = () => discardBtn.style.transform = 'scale(1)';
     discardBtn.onclick = (e) => {
         e.stopPropagation();
         discardItem(category, itemId, 1);
     };
     buttonContainer.appendChild(discardBtn);
-    
+
     itemElement.appendChild(buttonContainer);
 }
 

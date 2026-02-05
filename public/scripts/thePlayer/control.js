@@ -3,6 +3,7 @@ import { camera } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
 import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
+import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -46,7 +47,7 @@ export const isMobile = () => {
         const hasTouch = navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0 || ('ontouchstart' in window);
         const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
         const coarsePointer = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-        const smallScreen = window.innerWidth <= 768;
+        const smallScreen = window.innerWidth <= MOBILE.SCREEN_WIDTH_THRESHOLD;
         return hasTouch && (uaMobile || coarsePointer || smallScreen);
     } catch (err) {
         return false;
@@ -58,8 +59,8 @@ export class TouchMoveSystem {
     constructor() {
         this.destination = null;
         this.isMovingToTouch = false;
-        this.moveSpeed = 180;
-        this.stopDistance = 15;
+        this.moveSpeed = MOVEMENT.TOUCH_MOVE_SPEED;
+        this.stopDistance = RANGES.TOUCH_MOVE_STOP_DISTANCE;
         this.canvas = document.getElementById("gameCanvas");
         this.mobile = isMobile();
 
@@ -300,6 +301,7 @@ export class PlayerInteractionSystem {
         const button = document.createElement('button');
         button.id = 'mobile-interact-btn';
         button.innerHTML = 'E';
+        // fix: Reverted CSS layout values inline (L301)
         button.style.cssText = `
             position: fixed; bottom: 100px; right: 30px; width: 70px; height: 70px;
             border-radius: 50%; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
@@ -330,6 +332,7 @@ export class PlayerInteractionSystem {
 
         const joystickArea = document.createElement('div');
         joystickArea.id = 'joystick-area';
+        // fix: Reverted CSS layout values inline (L331)
         joystickArea.style.cssText = `
             position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px;
             border-radius: 50%; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.5);
@@ -353,7 +356,7 @@ export class PlayerInteractionSystem {
     activateVirtualJoystick(area, joystick) {
         let isTouching = false;
         let startX = 0, startY = 0;
-        const maxDistance = 40;
+        const maxDistance = MOBILE.JOYSTICK_MAX_DISTANCE;
 
         area.addEventListener('touchstart', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
@@ -408,7 +411,7 @@ export class PlayerInteractionSystem {
 
     updateKeysFromJoystick(x, y) {
         if (isSleeping) return;
-        const threshold = 10;
+        const threshold = MOBILE.JOYSTICK_THRESHOLD;
         keys.ArrowLeft = keys.KeyA = Math.abs(x) > threshold && x < 0;
         keys.ArrowRight = keys.KeyD = Math.abs(x) > threshold && x > 0;
         keys.ArrowUp = keys.KeyW = Math.abs(y) > threshold && y < 0;
@@ -565,10 +568,10 @@ export class PlayerInteractionSystem {
 
 // Player interaction zone configuration
 export const PLAYER_INTERACTION_CONFIG = {
-    widthRatio: 1.8,
-    heightRatio: 1.8,
-    offsetX: -0.4,
-    offsetY: -0.4
+    widthRatio: HITBOX_CONFIGS.INTERACTION_ZONES.PLAYER.WIDTH_RATIO,
+    heightRatio: HITBOX_CONFIGS.INTERACTION_ZONES.PLAYER.HEIGHT_RATIO,
+    offsetX: HITBOX_CONFIGS.INTERACTION_ZONES.PLAYER.OFFSET_X,
+    offsetY: HITBOX_CONFIGS.INTERACTION_ZONES.PLAYER.OFFSET_Y
 };
 
 // Main keyboard controls setup
@@ -799,7 +802,7 @@ export function getMovementDirection() {
     if (keys.ArrowUp || keys.KeyW) y -= 1;
     if (keys.ArrowDown || keys.KeyS) y += 1;
 
-    if (x !== 0 && y !== 0) { x *= 0.7071; y *= 0.7071; }
+    if (x !== 0 && y !== 0) { x *= MOVEMENT.DIAGONAL_MULTIPLIER; y *= MOVEMENT.DIAGONAL_MULTIPLIER; }
     return { x, y };
 }
 

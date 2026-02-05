@@ -4,7 +4,12 @@ import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { objectDestroyed, markWorldChanged } from './theWorld.js';
 import { collisionSystem } from './collisionSystem.js';
 import { camera } from './thePlayer/cameraSystem.js';
+<<<<<<< issue/21-code-duplication-item-LookUp
 import { getItem } from './itemUtils.js';
+=======
+import { items } from './item.js';
+import { GAME_BALANCE } from './constants.js';
+>>>>>>> main
 
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
@@ -20,7 +25,7 @@ export class ItemSystem {
     constructor() {
         this.interactiveObjects = new Map();
         this.lastDamageTime = 0;
-        this.DAMAGE_COOLDOWN = 300; // ms
+        this.DAMAGE_COOLDOWN = GAME_BALANCE.DAMAGE.COOLDOWN_MS;
 
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
@@ -191,7 +196,7 @@ export class ItemSystem {
 
             if (!obj || obj.destroyed) return;
 
-            if (Date.now() - this.lastDamageTime < this.DAMAGE_COOLDOWN) return;
+            if (Date.now() - this.lastDamageTime < GAME_BALANCE.DAMAGE.COOLDOWN_MS) return;
 
             const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
             const targetType = (obj.type || '').toLowerCase();
@@ -215,13 +220,13 @@ export class ItemSystem {
 
             if (equippedTool) {
                 if (targetType === 'tree' && equippedTool.toolType === 'axe') {
-                    damage = equippedTool.damage || 2;
+                    damage = equippedTool.damage || GAME_BALANCE.DAMAGE.AXE_DAMAGE;
                     isCorrectTool = true;
                 } else if (targetType === 'rock' && equippedTool.toolType === 'pickaxe') {
-                    damage = equippedTool.damage || 2;
+                    damage = equippedTool.damage || GAME_BALANCE.DAMAGE.PICKAXE_DAMAGE;
                     isCorrectTool = true;
                 } else if (targetType === 'thicket' && equippedTool.toolType === 'machete') {
-                    damage = equippedTool.damage || 1;
+                    damage = equippedTool.damage || GAME_BALANCE.DAMAGE.MACHETE_DAMAGE;
                     isCorrectTool = true;
                 }
             }
@@ -373,10 +378,10 @@ export class ItemSystem {
      * @returns {number} HP padrão do tipo
      */
     getHpFromAssetManager(type) {
-        if (type === 'tree') return 6;
-        if (type === 'rock') return 3;
-        if (['well', 'chest', 'construction'].includes(type)) return 10;
-        return 1;
+        if (type === 'tree') return GAME_BALANCE.DAMAGE.TREE_HP;
+        if (type === 'rock') return GAME_BALANCE.DAMAGE.ROCK_HP;
+        if (['well', 'chest', 'construction'].includes(type)) return GAME_BALANCE.DAMAGE.STRUCTURE_HP;
+        return GAME_BALANCE.DAMAGE.DEFAULT_HP;
     }
 
     /**

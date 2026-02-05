@@ -6,6 +6,7 @@
  * @module PlayerSystem
  */
 
+import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
 import { validateRange } from '../validation.js';
 
 /**
@@ -54,31 +55,25 @@ export class PlayerSystem {
          * @type {Object}
          */
         this.needs = {
-            hunger: 100,
-            thirst: 100,
-            energy: 100,
+            hunger: GAME_BALANCE.NEEDS.MAX_VALUE,
+            thirst: GAME_BALANCE.NEEDS.MAX_VALUE,
+            energy: GAME_BALANCE.NEEDS.MAX_VALUE,
             lastUpdate: Date.now(),
-            
+
             criticalFlags: {
                 hungerCritical: false,
                 thirstCritical: false,
                 energyCritical: false
             },
-            
-            consumptionRates: {
-                moving: { hunger: 0.5, thirst: 0.7, energy: 1.0 },
-                breaking: { hunger: 1.0, thirst: 1.5, energy: 2.0 },
-                building: { hunger: 0.8, thirst: 1.0, energy: 1.5 },
-                collecting: { hunger: 0.3, thirst: 0.4, energy: 0.5 },
-                idle: { hunger: 0.05, thirst: 0.1, energy: -0.5 }
-            },
-            
+
+            consumptionRates: GAME_BALANCE.NEEDS.CONSUMPTION_RATES,
+
             criticalLevels: {
-                hunger: 10,
-                thirst: 10,
-                energy: 15
+                hunger: GAME_BALANCE.NEEDS.CRITICAL_THRESHOLD,
+                thirst: GAME_BALANCE.NEEDS.CRITICAL_THRESHOLD,
+                energy: GAME_BALANCE.NEEDS.ENERGY_CRITICAL
             },
-            
+
             lowNeedsEffects: {
                 speedMultiplier: 0.5,
                 miningMultiplier: 0.3,
@@ -181,7 +176,7 @@ export class PlayerSystem {
         // Store interval reference for cleanup
         this.needsUpdateInterval = setInterval(() => {
             this.updateNeeds();
-        }, 2000);
+        }, NEEDS_UPDATE_INTERVAL_MS);
     }
 
     /**
@@ -192,9 +187,9 @@ export class PlayerSystem {
     updateNeeds() {
         const now = Date.now();
         const deltaTime = (now - this.needs.lastUpdate) / 1000;
-        
+
         this.consumeNeeds('idle', deltaTime);
-        
+
         this.needs.lastUpdate = now;
         this.dispatchNeedsUpdate();
     }
@@ -211,29 +206,16 @@ export class PlayerSystem {
             return;
         }
 
-        // ✅ Validar multiplier (0-10 é range razoável)
+        // Valida o multiplicador para um range razoável (0-10)
         const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
 
-        // ✅ Aplicar com validação (clamps to 0-100)
-        this.needs.hunger = validateRange(
-            this.needs.hunger - (rates.hunger * validMultiplier),
-            MIN_NEED,
-            MAX_NEED
-        );
+        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier));
+        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier));
 
-        this.needs.thirst = validateRange(
-            this.needs.thirst - (rates.thirst * validMultiplier),
-            MIN_NEED,
-            MAX_NEED
-        );
-
-        this.needs.energy = validateRange(
-            this.needs.energy - (rates.energy * validMultiplier),
-            MIN_NEED,
-            MAX_NEED
-        );
+        this.needs.energy = Math.max(0, Math.min(GAME_BALANCE.NEEDS.MAX_VALUE,
+            this.needs.energy - (rates.energy * validMultiplier)));
 
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
@@ -246,35 +228,14 @@ export class PlayerSystem {
      * @param {number} energy - Amount of energy to restore
      * @returns {void}
      */
-    restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
-        // Validate and coerce deltas to numbers
-        const validHunger = typeof hunger === 'number' && Number.isFinite(hunger) ? hunger : 0;
-        const validThirst = typeof thirst === 'number' && Number.isFinite(thirst) ? thirst : 0;
-        const validEnergy = typeof energy === 'number' && Number.isFinite(energy) ? energy : 0;
+    restoreNeeds(hunger, thirst, energy) {
+        const validHunger = validateRange(hunger, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+        const validThirst = validateRange(thirst, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
+        const validEnergy = validateRange(energy, MIN_NEED, GAME_BALANCE.NEEDS.MAX_VALUE);
 
-        if (validHunger !== 0) {
-            this.needs.hunger = validateRange(
-                this.needs.hunger + validHunger,
-                MIN_NEED,
-                MAX_NEED
-            );
-        }
-
-        if (validThirst !== 0) {
-            this.needs.thirst = validateRange(
-                this.needs.thirst + validThirst,
-                MIN_NEED,
-                MAX_NEED
-            );
-        }
-
-        if (validEnergy !== 0) {
-            this.needs.energy = validateRange(
-                this.needs.energy + validEnergy,
-                MIN_NEED,
-                MAX_NEED
-            );
-        }
+        this.needs.hunger = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.hunger + validHunger);
+        this.needs.thirst = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.thirst + validThirst);
+        this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + validEnergy);
 
         this.dispatchNeedsUpdate();
 
@@ -295,7 +256,7 @@ export class PlayerSystem {
                 energy: Math.round(this.needs.energy)
             }
         }));
-        
+
         if (window.playerHUD) {
             window.playerHUD.updatePlayerInfo();
         }
@@ -357,7 +318,7 @@ export class PlayerSystem {
             this.needs.energy
         );
         
-        const criticalMultiplier = lowestNeed <= 20 ? 0.3 : 0.7;
+        const criticalMultiplier = lowestNeed <= GAME_BALANCE.NEEDS.LOW_THRESHOLD ? 0.3 : 0.7;
         
         if (this.currentPlayer.applyNeedEffects) {
             this.currentPlayer.applyNeedEffects(criticalMultiplier);
@@ -380,25 +341,20 @@ export class PlayerSystem {
      */
     startSleep() {
         this.currentPlayer.isSleeping = true;
-        
-        // Clear any existing sleep interval to avoid duplicates
-        if (this.sleepInterval) {
-            clearInterval(this.sleepInterval);
-            this.sleepInterval = null;
-        }
-        
+
+        if (this.sleepInterval) clearInterval(this.sleepInterval);
         this.sleepInterval = setInterval(() => {
-            if (this.needs.energy < 100) {
-                this.needs.energy = Math.min(100, this.needs.energy + 10);
+            if (this.needs.energy < GAME_BALANCE.NEEDS.MAX_VALUE) {
+                this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + GAME_BALANCE.NEEDS.SLEEP_ENERGY_RESTORE_AMOUNT);
                 this.dispatchNeedsUpdate();
-                
-                if (this.needs.energy >= 100) {
+
+                if (this.needs.energy >= GAME_BALANCE.NEEDS.MAX_VALUE) {
                     clearInterval(this.sleepInterval);
                     this.sleepInterval = null;
                     this.endSleep();
                 }
             }
-        }, 1000);
+        }, SLEEP_ENERGY_RESTORE_INTERVAL_MS);
     }
 
     /**
@@ -413,9 +369,9 @@ export class PlayerSystem {
         }
         
         this.currentPlayer.isSleeping = false;
-        this.needs.energy = 100;
+        this.needs.energy = GAME_BALANCE.NEEDS.MAX_VALUE;
         this.dispatchNeedsUpdate();
-        
+
         document.dispatchEvent(new CustomEvent('sleepCompleted'));
     }
 
@@ -445,15 +401,15 @@ export class PlayerSystem {
                     );
                     
                     if (isDrink) {
-                        thirstRestore = 20;
-                        energyRestore = 5;
+                        thirstRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.DRINK_THIRST;
+                        energyRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.DRINK_ENERGY;
                     } else {
-                        hungerRestore = 20;
-                        energyRestore = 10;
+                        hungerRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_HUNGER;
+                        energyRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_ENERGY;
                     }
                     break;
                 case 'water':
-                    thirstRestore = 30;
+                    thirstRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.WATER_THIRST;
                     break;
                 default:
                     if (item.restoreHunger) hungerRestore = item.restoreHunger;
@@ -507,11 +463,11 @@ export class PlayerSystem {
         document.head.appendChild(style);
         
         document.body.appendChild(feedback);
-        
+
         setTimeout(() => {
             feedback.remove();
             style.remove();
-        }, 1500);
+        }, FEEDBACK_MESSAGE_DURATION_MS);
     }
 
     /**
@@ -519,11 +475,13 @@ export class PlayerSystem {
      * @returns {number} Multiplier between 0.3 and 1.0
      */
     getEfficiencyMultiplier() {
-        const avgNeeds = (this.needs.hunger + this.needs.thirst + this.needs.energy) / 300;
-        
-        const hasCritical = this.needs.hunger <= 20 || 
-                           this.needs.thirst <= 20 || 
-                           this.needs.energy <= 20;
+        // fix: Extracted needs count constant for clarity (L433-434)
+        const MAX_TOTAL_NEEDS = 3; // hunger + thirst + energy
+        const avgNeeds = (this.needs.hunger + this.needs.thirst + this.needs.energy) / (GAME_BALANCE.NEEDS.MAX_VALUE * MAX_TOTAL_NEEDS);
+
+        const hasCritical = this.needs.hunger <= GAME_BALANCE.NEEDS.LOW_THRESHOLD ||
+                           this.needs.thirst <= GAME_BALANCE.NEEDS.LOW_THRESHOLD ||
+                           this.needs.energy <= GAME_BALANCE.NEEDS.LOW_THRESHOLD;
         
         if (hasCritical) {
             return 0.3;

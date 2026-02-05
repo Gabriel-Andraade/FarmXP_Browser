@@ -1,0 +1,41 @@
+/**
+ * Weather UI Panel Styles
+ * Extracted from: scripts/weather.js
+ */
+
+#weather-ui-panel {
+  position: fixed;
+  z-index: var(--z-weather, 2600);
+  left: 0;
+  top: 0;
+  padding: 10px 12px;
+  min-width: 180px;
+  color: var(--color-text-primary, #ffffff);
+  background: var(--color-surface, rgba(0, 0, 0, 0.6));
+  font-family: var(--font-family-mono, "Courier New", monospace);
+  font-size: var(--font-size-sm, 14px);
+  line-height: var(--line-height-tight, 1.25);
+  border-radius: var(--radius-sm, 6px);
+  pointer-events: none;
+  user-select: none;
+  transform: translateZ(0);
+}
+
+#weather-ui-panel .wui-time {
+  font-weight: var(--font-weight-black, 800);
+  font-size: var(--font-size-lg, 20px);
+  margin-bottom: 2px;
+}
+
+#weather-ui-panel .wui-weekday {
+  color: var(--color-gold, #ffd700);
+  font-weight: var(--font-weight-black, 800);
+  font-size: var(--font-size-md, 16px);
+  margin-bottom: 6px;
+}
+
+#weather-ui-panel .wui-row {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
+}

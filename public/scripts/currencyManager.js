@@ -1,3 +1,4 @@
+import { GAME_BALANCE } from './constants.js';
 import { isValidPositiveNumber, MAX_CURRENCY } from './validation.js';
 
 /**
@@ -12,7 +13,7 @@ export class CurrencyManager {
      * Inicializa o saldo inicial e o histórico de transações
      */
     constructor() {
-        this.initialMoney = 1000;
+        this.initialMoney = GAME_BALANCE.ECONOMY.INITIAL_MONEY;
         this.currentMoney = this.initialMoney;
         this.transactionHistory = [];
         this.init();
@@ -171,7 +172,7 @@ export class CurrencyManager {
             timestamp: new Date().toISOString()
         });
 
-        if (this.transactionHistory.length > 100) {
+        if (this.transactionHistory.length > GAME_BALANCE.ECONOMY.MAX_TRANSACTION_HISTORY) {
             this.transactionHistory.shift();
         }
     }
