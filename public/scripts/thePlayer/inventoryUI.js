@@ -527,6 +527,7 @@ const createInventoryUI = () => {
 
 // Variáveis de estado
 let shadowRoot;
+let inventoryAbortController;
 let activeCategory = 'resources';
 let selectedSlotIndex = -1;
 let currentItems = [];

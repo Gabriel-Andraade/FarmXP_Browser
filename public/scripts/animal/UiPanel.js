@@ -64,17 +64,7 @@ class UiPanel {
   }
 
   init() {
-<<<<<<< issue/14-add-i18n-system
-    if (!document.getElementById("aui-styles-injected")) {
-      const styleEl = document.createElement("style");
-      styleEl.id = "aui-styles-injected";
-      styleEl.textContent = STYLES;
-      document.head.appendChild(styleEl);
-    }
-=======
-    // REMOVIDO: A injeção de CSS foi removida pois o CSS agora é externo
-    // IMPORTANTE: Você deve incluir o arquivo CSS separado no HTML
->>>>>>> main
+    // CSS agora é externo - incluir o arquivo CSS separado no HTML
 
     this.layer = document.getElementById("animal-ui-layer");
     if (!this.layer) {
@@ -108,10 +98,10 @@ class UiPanel {
           if (this.visible && this.target) {
               this.updateContent();
               // Re-aplica estado visual
-              this.layer.classList.add("visible");
-              this.oval.classList.add("active");
-              this.actionsMenu.classList.toggle("visible", this.showActions);
-              this.infoMenu.classList.toggle("visible", this.showInfo);
+              this.layer.classList.add("aui-visible");
+              this.oval.classList.add("aui-active");
+              this.actionsMenu.classList.toggle("aui-visible", this.showActions);
+              this.infoMenu.classList.toggle("aui-visible", this.showInfo);
               this.updatePositions(true);
           }
       }
@@ -238,15 +228,6 @@ class UiPanel {
     const map = auiLoadNameMap();
     if (map[key]) this.target.customName = map[key];
     this.visible = true;
-<<<<<<< issue/14-add-i18n-system
-    this.layer.classList.add("visible");
-    this.oval.classList.add("active");
-    this.showActions = true;
-    this.showInfo = true;
-    this.actionsMenu.classList.toggle("visible", this.showActions);
-    this.infoMenu.classList.toggle("visible", this.showInfo);
-=======
-
     this.layer.classList.add("aui-visible");
     this.oval.classList.add("aui-active");
 
@@ -256,7 +237,6 @@ class UiPanel {
     this.actionsMenu.classList.toggle("aui-visible", this.showActions);
     this.infoMenu.classList.toggle("aui-visible", this.showInfo);
 
->>>>>>> main
     this.updateContent();
     this.updatePositions(true);
     this.target.__uiPaused = true;
@@ -268,19 +248,11 @@ class UiPanel {
     if (this.target) this.target.__uiPaused = false;
     this.visible = false;
     this.target = null;
-<<<<<<< issue/14-add-i18n-system
-    this.layer.classList.remove("visible");
-    this.oval.classList.remove("active");
-    this.actionsMenu.classList.remove("visible");
-    this.infoMenu.classList.remove("visible");
-=======
-
     this.layer.classList.remove("aui-visible");
     this.oval.classList.remove("aui-active");
     this.actionsMenu.classList.remove("aui-visible");
     this.infoMenu.classList.remove("aui-visible");
 
->>>>>>> main
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
   }
@@ -301,9 +273,10 @@ class UiPanel {
     if (!this.target) return;
     const name = this.target.customName || this.target.name || this.target.assetName || "Animal";
     const type = this.target.assetName ? t(`animals.${this.target.assetName.toLowerCase()}`) : this.target.type || t('animal.type.unknown');
-    
+
     // Fallback se a tradução retornar a chave ou for indefinida
-    const displayType = type.includes('animals.') ? this.target.assetName : type;
+    const typeStr = (typeof type === "string") ? type : "";
+    const displayType = typeStr.includes('animals.') ? (this.target.assetName || typeStr) : typeStr;
 
     const genderRaw = this.target.gender ?? this.target.sex ?? (this.target.isMale === true ? "male" : this.target.isMale === false ? "female" : undefined);
     const genderChar = (typeof genderRaw === "string" && genderRaw.toLowerCase().startsWith("m")) ? "♂" : (typeof genderRaw === "string" && genderRaw.toLowerCase().startsWith("f")) ? "♀" : (genderRaw === true) ? "♂" : (genderRaw === false) ? "♀" : "?";

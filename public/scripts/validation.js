@@ -140,12 +140,12 @@ export function validateRange(value, min, max) {
  *
  * @example
  * const items = [{id: 1, name: 'Apple'}, {id: 2, name: 'Sword'}];
- * isValidItemId(1, items)      // true
- * isValidItemId(999, items)    // false (doesn't exist)
- * isValidItemId(NaN, items)    // false (not a valid integer)
- * isValidItemId(-1, items)     // false (not positive)
+ * isExistingItemId(1, items)      // true
+ * isExistingItemId(999, items)    // false (doesn't exist)
+ * isExistingItemId(NaN, items)    // false (not a valid integer)
+ * isExistingItemId(-1, items)     // false (not positive)
  */
-export function isValidItemId(id, items) {
+export function isExistingItemId(id, items) {
     if (!Array.isArray(items)) {
         return false;
     }

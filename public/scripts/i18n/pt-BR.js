@@ -500,7 +500,10 @@ export default {
     stored: '{name} guardado no baú',
     taken: '{name} retirado do baú',
     takenAll: '{count} itens retirados do baú',
-    storedAll: '{count} itens guardados no baú'
+    storedAll: '{count} itens guardados no baú',
+    organized: 'Baú organizado!',
+    notFound: 'Baú não encontrado!',
+    categoryFull: 'Categoria {category} cheia no baú!'
   },
 
   // Crafting System

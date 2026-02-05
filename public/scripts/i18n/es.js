@@ -500,7 +500,10 @@ export default {
     stored: '{name} guardado en el cofre',
     taken: '{name} retirado del cofre',
     takenAll: '{count} artículos retirados del cofre',
-    storedAll: '{count} artículos guardados en el cofre'
+    storedAll: '{count} artículos guardados en el cofre',
+    organized: '¡Cofre organizado!',
+    notFound: '¡Cofre no encontrado!',
+    categoryFull: '¡Categoría {category} llena en el cofre!'
   },
 
   // Crafting System

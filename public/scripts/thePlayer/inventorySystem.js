@@ -640,7 +640,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.fillUp) {
         const consumeBtn = document.createElement('button');
         consumeBtn.className = 'inv-action-btn inv-consume-btn';
-        consumeBtn.textContent = '🍽️ ${t('inventory.actions.consume')}';
+        consumeBtn.textContent = '🍽️ ' + t('inventory.actions.consume');
         consumeBtn.onclick = (e) => {
             e.stopPropagation();
             consumeItem(category, itemId, 1);
@@ -651,7 +651,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.type === 'tool') {
         const equipBtn = document.createElement('button');
         equipBtn.className = 'inv-action-btn inv-equip-btn';
-        equipBtn.textContent = '⚔️ ${t('inventory.actions.equip')}';
+        equipBtn.textContent = '⚔️ ' + t('inventory.actions.equip');
         equipBtn.onclick = (e) => {
             e.stopPropagation();
             equipItem(category, itemId);
@@ -661,7 +661,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 
     const discardBtn = document.createElement('button');
     discardBtn.className = 'inv-action-btn inv-discard-btn';
-    discardBtn.textContent = '🗑️ ${t('inventory.actions.discard')}';
+    discardBtn.textContent = '🗑️ ' + t('inventory.actions.discard');
     discardBtn.onclick = (e) => {
         e.stopPropagation();
         discardItem(category, itemId, 1);

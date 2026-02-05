@@ -163,19 +163,13 @@ export class PlayerHUD {
         const energy = needs.energy ?? this.currentPlayer.energy ?? 100;
 
         // fix: Fixed indentation on setHUDValue calls (L148-150)
-        this.setHUDValue('hudPlayerHunger', `${needs.hunger}%`);
-        this.setHUDValue('hudPlayerThirst', `${needs.thirst}%`);
-        this.setHUDValue('hudPlayerEnergy', `${needs.energy}%`);
+        this.setHUDValue('hudPlayerHunger', `${hunger}%`);
+        this.setHUDValue('hudPlayerThirst', `${thirst}%`);
+        this.setHUDValue('hudPlayerEnergy', `${energy}%`);
     }
 
     updatePlayerInfo() {
         if (!this.currentPlayer) return;
-
-        this.setHUDValue('hudPlayerName', this.currentPlayer.name || "Aventureiro");
-        this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
-        this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
-        
-        // fix: Defensive nullish coalescing (??) to handle 0 values safely (L161-167)
 
         const needs = window.playerSystem?.getNeeds();
         const hunger = needs?.hunger ?? this.currentPlayer.hunger ?? 100;

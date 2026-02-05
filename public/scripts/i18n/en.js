@@ -500,7 +500,10 @@ export default {
     stored: '{name} stored in chest',
     taken: '{name} taken from chest',
     takenAll: '{count} items taken from chest',
-    storedAll: '{count} items stored in chest'
+    storedAll: '{count} items stored in chest',
+    organized: 'Chest organized!',
+    notFound: 'Chest not found!',
+    categoryFull: '{category} category full in chest!'
   },
 
   // Crafting System

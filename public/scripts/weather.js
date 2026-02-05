@@ -165,7 +165,11 @@ export const WeatherSystem = {
   getWeekday() {
     const index = (this.day - 1) % 7;
     const weekdays = t('time.weekdays');
-    return Array.isArray(weekdays) ? weekdays[index] : weekdays;
+    if (Array.isArray(weekdays) && weekdays[index]) {
+      return weekdays[index];
+    }
+    // Fallback to index if translation unavailable
+    return `Day ${index + 1}`;
   },
 
   getSeasonName() {
