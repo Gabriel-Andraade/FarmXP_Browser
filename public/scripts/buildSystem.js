@@ -437,7 +437,7 @@ export const BuildSystem = {
 
         if (constructionType === 'well') {
             const wellSystem = getSystem('well');
-            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (theWorld && typeof theWorld.placeWell === 'function')) { 
+            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) { 
                 
                 const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
@@ -456,8 +456,8 @@ export const BuildSystem = {
 
                 try {
                     let wellObject = null;
-                    if (typeof theWorld.placeWell === 'function') {
-                        wellObject = theWorld.placeWell(pos.x, pos.y, wellBuildingData);
+                    if (window.theWorld && typeof window.theWorld.placeWell === 'function') {
+                        wellObject = window.theWorld.placeWell(pos.x, pos.y, wellBuildingData);
                     } else if (wellSystem) {
                         wellObject = wellSystem.placeWell(wellId, pos.x, pos.y);
                     }
@@ -481,7 +481,7 @@ export const BuildSystem = {
             return;
         }
 
-        if (typeof theWorld.addWorldObject === 'function') {
+        if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
             try {
                 let constructionTypeForCollision = constructionType;
                 if (constructionType === 'fence') {
@@ -502,7 +502,7 @@ export const BuildSystem = {
                     placeable: true
                 };
 
-                theWorld.addWorldObject(worldObj);
+                window.theWorld.addWorldObject(worldObj);
                 inventorySystem.removeItem(this.selectedItem.id, 1);
 
                 const restante = itemQuantity - 1;

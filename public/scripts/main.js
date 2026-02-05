@@ -717,16 +717,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
     ctx = canvas.getContext("2d", { alpha: false });
 
-  try {
-    // Initialize i18n system FIRST (before any UI that uses translations)
-    logger.debug("Inicializando sistema de idiomas...");
-    await i18n.init();
-    logger.debug("Sistema i18n inicializado");
+    try {
+        // Inicializa o sistema de idiomas antes de qualquer UI que use traduções
+        logger.debug("Inicializando sistema de idiomas...");
+        await i18n.init();
+        logger.debug("Sistema i18n inicializado");
+    } catch (error) {
+        logger.error("Erro na inicialização do i18n:", error);
+    }
 
-    logger.debug("Carregando estilos CSS...");
-    await cssManager.loadAll();
-    logger.debug("Todos os estilos CSS carregados");
-    // fix: Restored ctx null check for browsers without canvas support (L715-719)
+    // Verifica se o contexto 2D está disponível no navegador
     if (!ctx) {
         handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
         return;
@@ -734,7 +734,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // fix: Restored mobile optimizations call (L724-726)
+    // Aplica otimizações específicas para dispositivos móveis
     if (IS_MOBILE) {
         applyMobileOptimizations();
     }
@@ -748,9 +748,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const hud = new PlayerHUD();
         registerSystem('hud', hud);
         logger.debug("PlayerHUD criado e registrado");
-        
+
         setupSleepListeners();
-        
+
         await initGameBootstrap();
     } catch (error) {
         logger.error("Erro na inicialização do jogo:", error);

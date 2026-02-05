@@ -188,6 +188,8 @@ class MerchantSystem {
         if (this.listenersSetup) return;
         this.listenersSetup = true;
 
+        const { signal } = this.abortController;
+
         // Listener para mudança de idioma - re-renderiza interfaces abertas
         document.addEventListener('languageChanged', () => {
             const merchantsListModal = document.getElementById('merchantsListModal');
@@ -199,8 +201,7 @@ class MerchantSystem {
             if (commerceModal && commerceModal.classList.contains('active')) {
                 this.renderCommerceModal();
             }
-        });
-        const { signal } = this.abortController;
+        }, { signal });
 
         document.addEventListener('timeChanged', () => {
             this.checkAndCloseIfMerchantClosed();
@@ -396,18 +397,29 @@ class MerchantSystem {
 
     // obtém profissão traduzida do mercador
     getMerchantProfession(merchant) {
-        return t(`trading.professions.${merchant.professionKey}`) || merchant.professionKey;
+        const key = `trading.professions.${merchant.professionKey}`;
+        const translated = t(key);
+        // Se a tradução retornar a própria chave, usar o fallback
+        return translated === key ? merchant.professionKey : translated;
     }
 
     // obtém descrição traduzida do mercador
     getMerchantDescription(merchant) {
-        return t(`trading.descriptions.${merchant.descriptionKey}`) || merchant.descriptionKey;
+        const key = `trading.descriptions.${merchant.descriptionKey}`;
+        const translated = t(key);
+        // Se a tradução retornar a própria chave, usar o fallback
+        return translated === key ? merchant.descriptionKey : translated;
     }
 
     // obtém especialidades traduzidas do mercador
     getMerchantSpecialties(merchant) {
         if (!merchant.specialtiesKeys) return [];
-        return merchant.specialtiesKeys.map(key => t(`trading.specialtiesLabels.${key}`) || key);
+        return merchant.specialtiesKeys.map(specialtyKey => {
+            const key = `trading.specialtiesLabels.${specialtyKey}`;
+            const translated = t(key);
+            // Se a tradução retornar a própria chave, usar o fallback
+            return translated === key ? specialtyKey : translated;
+        });
     }
 
     // obtém status legível do mercador
@@ -1037,14 +1049,14 @@ class MerchantSystem {
             if (inventorySystem && inventorySystem.removeItem) {
                 if (inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
 
-                    // FIX: Usar 'earn' conforme definido em currencyManager.js
+                    // Adiciona o valor da venda ao dinheiro do jogador
                     if (typeof currencyManager.earn === 'function') {
                         currencyManager.earn(totalValue, "Venda ao Mercador");
                     } else {
                         logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
                     
-                    this.showMessage(t('trading.saleSuccess', +$${ value: totalValue }), 'success');
+                    this.showMessage(t('trading.saleSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
                     this.renderPlayerItems();
                     this.clearSelections();
@@ -1065,10 +1077,13 @@ class MerchantSystem {
 
         if (currencyManager.getMoney() < totalValue) {
             this.showMessage(t('trading.notEnoughMoney'), 'error');
+            return;
+        }
+
         // Validar que o item existe no estoque do mercador
         const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
         if (!merchantItem) {
-            this.showMessage('Item não encontrado no mercador', 'error');
+            this.showMessage(t('trading.itemNotFound'), 'error');
             return;
         }
 
@@ -1082,13 +1097,7 @@ class MerchantSystem {
         // Validar valor da transação
         if (!isValidPositiveNumber(totalValue)) {
             logger.error('[Merchant] Invalid buy value:', totalValue);
-            this.showMessage('Valor de compra inválido', 'error');
-            return;
-        }
-
-        // Usar canAfford() em vez de verificação manual (centraliza validação)
-        if (!currencyManager.canAfford(totalValue)) {
-            this.showMessage('Dinheiro insuficiente!', 'error');
+            this.showMessage(t('trading.invalidBuyValue'), 'error');
             return;
         }
 
@@ -1097,7 +1106,7 @@ class MerchantSystem {
                 // Tentar adicionar ao inventário (usando apenas ID e quantidade para mapeamento automático)
                 if (inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
 
-                    // FIX: Usar 'spend' conforme definido em currencyManager.js
+                    // Deduz o valor da compra do dinheiro do jogador
                     if (typeof currencyManager.spend === 'function') {
                         currencyManager.spend(totalValue, "Compra do Mercador");
                     } else {

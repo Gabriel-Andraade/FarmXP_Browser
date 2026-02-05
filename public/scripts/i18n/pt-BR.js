@@ -110,6 +110,8 @@ export default {
     confirmBuy: 'Comprar {qty}x {name} por {value}?',
     removeError: 'Erro ao remover item do inventário.',
     storageNotImplemented: 'Venda/Compra direta do armazém não implementada.',
+    itemNotFound: 'Item não encontrado no mercador.',
+    invalidBuyValue: 'Valor de compra inválido.',
     professions: {
       materialsSeller: 'Vendedor de Materiais',
       cook: 'Cozinheira',

@@ -216,6 +216,7 @@ class I18nManager {
   /**
    * Get available languages in the game
    * Returns array of language code and human-readable names
+   * Dynamically derived from loaded translations
    * Used to populate language selector in settings
    * @returns {Array<{code: string, name: string}>} Array of supported languages
    * @example
@@ -228,11 +229,18 @@ class I18nManager {
    * // ]
    */
   getAvailableLanguages() {
-    return [
-      { code: 'pt-BR', name: 'Português (Brasil)' },
-      { code: 'en', name: 'English' },
-      { code: 'es', name: 'Español' }
-    ];
+    // Mapa de nomes legíveis para cada código de idioma
+    const languageNames = {
+      'pt-BR': 'Português (Brasil)',
+      'en': 'English',
+      'es': 'Español'
+    };
+
+    // Derivar dinamicamente das chaves de translations carregadas
+    return Object.keys(this.translations).map(code => ({
+      code,
+      name: languageNames[code] || code
+    }));
   }
 
   /**

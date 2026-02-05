@@ -582,6 +582,14 @@ export function initInventoryUI() {
     }
   }, { signal });
 
+  // Listener para mudança de idioma - re-renderiza UI com novo idioma
+  document.addEventListener('languageChanged', () => {
+    if (shadowRoot && modalEl) {
+      renderTabs();
+      renderInventory();
+    }
+  }, { signal });
+
   // Expor globalmente
   window.openInventory = openInventoryModal;
   window.closeInventory = closeInventoryModal;
@@ -914,17 +922,6 @@ window.debugInventory = () => {
     logger.debug('Modal toggled:', modalEl.classList.contains('open'));
   }
 };
-
-// Listener para mudança de idioma
-if (typeof document !== 'undefined') {
-  document.addEventListener('languageChanged', () => {
-    if (shadowRoot && modalEl) {
-      // Recriar a UI com novo idioma
-      renderTabs();
-      renderInventory();
-    }
-  });
-}
 
 // Auto-inicialização quando importado
 if (typeof window !== 'undefined') {

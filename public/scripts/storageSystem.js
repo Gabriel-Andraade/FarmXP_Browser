@@ -339,11 +339,12 @@ export class StorageSystem {
     // Usar qty (sanitizado) em TODAS as etapas
     const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
-      this.showMessage(t('storage.withdrawn', { qty: quantity, name: getItemName(itemId, itemData.name) }));
+      this.showMessage(t('storage.withdrawn', { qty, name: getItemName(itemId, itemData.name) }));
       return true;
     }
 
-    this._addToCategory(storageCategory, itemId, quantity);
+    // Devolve o item ao armazenamento se o inventário estiver cheio
+    this._addToCategory(storageCategory, itemId, qty);
     this.showMessage(t('storage.inventoryFull'));
     return false;
   }

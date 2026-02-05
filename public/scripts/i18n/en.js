@@ -110,6 +110,8 @@ export default {
     confirmBuy: 'Buy {qty}x {name} for {value}?',
     removeError: 'Error removing item from inventory.',
     storageNotImplemented: 'Direct storage sale/purchase not implemented.',
+    itemNotFound: 'Item not found at the merchant.',
+    invalidBuyValue: 'Invalid purchase value.',
     professions: {
       materialsSeller: 'Materials Seller',
       cook: 'Cook',
