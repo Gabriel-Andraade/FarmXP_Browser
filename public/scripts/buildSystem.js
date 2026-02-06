@@ -12,8 +12,23 @@ import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
 import { wellSystem } from "./wellSystem.js";
+import { t } from './i18n/i18n.js';
 import { MOUSE_UPDATE_INTERVAL_MS, DEBUG_UPDATE_INTERVAL_MS, VISUAL } from './constants.js';
 import { getObject, getSystem } from "./gameState.js";
+
+/**
+ * Obtém nome traduzido do item pelo ID
+ * @param {number} itemId - ID do item
+ * @param {string} fallbackName - Nome padrão se tradução não existir
+ * @returns {string} Nome traduzido
+ */
+function getItemName(itemId, fallbackName = '') {
+  const translatedName = t(`itemNames.${itemId}`);
+  if (translatedName === `itemNames.${itemId}`) {
+    return fallbackName;
+  }
+  return translatedName || fallbackName;
+}
 
 /**
  * Sistema de construção e posicionamento de objetos no mundo
@@ -82,16 +97,16 @@ export const BuildSystem = {
         const panel = document.createElement('div');
         panel.id = this._helpPanelId;
         panel.innerHTML = `
-  <div class="bld-header">
-    <div class="bld-title">modo construcao</div>
-    <div class="bld-sub" id="bld-item-name">-</div>
+  <div class="bhp-header">
+    <div class="bhp-title">${t('build.mode')}</div>
+    <div class="bhp-sub" id="bhp-item-name">-</div>
   </div>
-  <div class="bld-body">
-    <div class="bld-row"><strong><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></strong><span>grade x: esq | cen | dir</span></div>
-    <div class="bld-row"><strong><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></strong><span>grade y: baixo | cen | cima</span></div>
-    <div class="bld-row"><strong><kbd>r</kbd></strong><span>rotacionar (variante)</span></div>
-    <div class="bld-row"><strong><kbd>t</kbd></strong><span>posicionar</span></div>
-    <div class="bld-row"><strong><kbd>esc</kbd></strong><span>sair do modo construcao</span></div>
+  <div class="bhp-body">
+    <div class="bhp-row"><strong><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></strong><span>${t('build.gridX')}</span></div>
+    <div class="bhp-row"><strong><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></strong><span>${t('build.gridY')}</span></div>
+    <div class="bhp-row"><strong><kbd>r</kbd></strong><span>${t('build.rotate')}</span></div>
+    <div class="bhp-row"><strong><kbd>t</kbd></strong><span>${t('build.place')}</span></div>
+    <div class="bhp-row"><strong><kbd>esc</kbd></strong><span>${t('build.exit')}</span></div>
   </div>
     `.trim();
         document.body.appendChild(panel);
@@ -168,15 +183,15 @@ export const BuildSystem = {
 
         this.updateDebugInfo();
         
-        const labelX = this.currentSubPosX === -1 ? 'esq' : (this.currentSubPosX === 0 ? 'cen' : 'dir');
-        const labelY = this.currentSubPosY === -1 ? 'topo' : (this.currentSubPosY === 0 ? 'cen' : 'baixo');
+        const labelX = this.currentSubPosX === -1 ? t('build.alignLeft') : (this.currentSubPosX === 0 ? t('build.alignCenter') : t('build.alignRight'));
+        const labelY = this.currentSubPosY === -1 ? t('build.alignTop') : (this.currentSubPosY === 0 ? t('build.alignCenter') : t('build.alignBottom'));
 
-        this.showDebugMessage(`alinhamento: [${labelX} | ${labelY}]`, 1000);
+        this.showDebugMessage(`${t('build.alignment')}: [${labelX} | ${labelY}]`, 1000);
     },
 
     startBuilding(itemData) {
         if (!itemData || !itemData.placeable) {
-            this.showDebugMessage("item nao e construivel");
+            this.showDebugMessage(t('build.notBuildable'));
             return;
         }
 
@@ -209,7 +224,7 @@ export const BuildSystem = {
             this.updateDebugInfo();
         }
         
-        this.showDebugMessage(`construindo: ${itemData.name}`);
+        this.showDebugMessage(t('build.building', { name: getItemName(itemData.id, itemData.name) }));
     },
 
     stopBuilding() {
@@ -279,10 +294,9 @@ export const BuildSystem = {
     placeObject() {
         if (!this.selectedItem) return;
 
-        const theWorld = getObject('world');
-        if (!theWorld) {
-            console.error("the world object not available");
-            this.showDebugMessage("erro de sistema (theworld)", 2000);
+        if (!window.theWorld) {
+            logger.error("the world object not available");
+            this.showDebugMessage(t('build.systemError'), 2000);
             return;
         }
 
@@ -292,7 +306,7 @@ export const BuildSystem = {
         const itemQuantity = inventorySystem.getItemQuantity ? inventorySystem.getItemQuantity(this.selectedItem.id) : (this.selectedItem.quantity || 1);
 
         if (!itemQuantity || itemQuantity <= 0) {
-            this.showDebugMessage("acabou o item!");
+            this.showDebugMessage(t('build.itemEmpty'));
             this.stopBuilding();
             return;
         }
@@ -320,14 +334,14 @@ export const BuildSystem = {
                     chestSystem.addChest(buildingData);
                     inventorySystem.removeItem(this.selectedItem.id, 1);
                     const restante = itemQuantity - 1;
-                    this.showDebugMessage(`bau colocado! (${restante} restante)`, 1000);
+                    this.showDebugMessage(t('build.chestPlaced', { remaining: restante }), 1000);
                     if (restante <= 0) this.stopBuilding();
                 } catch (err) {
-                    logger.error("erro ao adicionar bau:", err);
-                    this.showDebugMessage("falha ao colocar bau", 2000);
+                    logger.error(t('build.chestError'), err);
+                    this.showDebugMessage(t('build.chestFailed'), 2000);
                 }
             } else {
-                this.showDebugMessage("sistema de baus carregando...", 1500);
+                this.showDebugMessage(t('build.chestLoading'), 1500);
                 return;
             }
             return;
@@ -335,7 +349,7 @@ export const BuildSystem = {
 
         if (constructionType === 'well') {
             const wellSystem = getSystem('well');
-            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (theWorld && typeof theWorld.placeWell === 'function')) { 
+            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) { 
                 
                 const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
@@ -354,8 +368,8 @@ export const BuildSystem = {
 
                 try {
                     let wellObject = null;
-                    if (typeof theWorld.placeWell === 'function') {
-                        wellObject = theWorld.placeWell(pos.x, pos.y, wellBuildingData);
+                    if (window.theWorld && typeof window.theWorld.placeWell === 'function') {
+                        wellObject = window.theWorld.placeWell(pos.x, pos.y, wellBuildingData);
                     } else if (wellSystem) {
                         wellObject = wellSystem.placeWell(wellId, pos.x, pos.y);
                     }
@@ -363,23 +377,23 @@ export const BuildSystem = {
                     if (wellObject) {
                         inventorySystem.removeItem(this.selectedItem.id, 1);
                         const restante = itemQuantity - 1;
-                        this.showDebugMessage(`poco colocado! (${restante} restante)`, 1000);
+                        this.showDebugMessage(t('build.wellPlaced', { remaining: restante }), 1000);
                         if (restante <= 0) this.stopBuilding();
                     } else {
-                        this.showDebugMessage("erro ao colocar poco", 2000);
+                        this.showDebugMessage(t('build.wellError'), 2000);
                     }
                 } catch (err) {
-                    logger.error("excecao ao tentar colocar poco:", err);
-                    this.showDebugMessage("erro ao colocar poco", 2000);
+                    logger.error(t('build.wellError'), err);
+                    this.showDebugMessage(t('build.wellError'), 2000);
                 }
             } else {
-                this.showDebugMessage("sistema de pocos carregando...", 1500);
+                this.showDebugMessage(t('build.wellLoading'), 1500);
                 return;
             }
             return;
         }
 
-        if (typeof theWorld.addWorldObject === 'function') {
+        if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
             try {
                 let constructionTypeForCollision = constructionType;
                 if (constructionType === 'fence') {
@@ -400,20 +414,20 @@ export const BuildSystem = {
                     placeable: true
                 };
 
-                theWorld.addWorldObject(worldObj);
+                window.theWorld.addWorldObject(worldObj);
                 inventorySystem.removeItem(this.selectedItem.id, 1);
 
                 const restante = itemQuantity - 1;
-                this.showDebugMessage(`colocado! (${restante} restante)`, 1000);
+                this.showDebugMessage(t('build.placed', { remaining: restante }), 1000);
 
                 if (restante <= 0) this.stopBuilding();
             } catch (err) {
-                logger.error("erro ao adicionar objeto ao mundo:", err);
-                this.showDebugMessage("erro ao colocar objeto", 2000);
+                logger.error(t('build.placeError'), err);
+                this.showDebugMessage(t('build.placeError'), 2000);
             }
         } else {
-            logger.error("theworld.addworldobject nao disponivel");
-            this.showDebugMessage("erro: theworld.addworldobject nao disponivel", 2000);
+            logger.error("theworld.addworldobject not available");
+            this.showDebugMessage(t('build.worldNotAvailable'), 2000);
         }
     },
 
@@ -559,7 +573,7 @@ export const BuildSystem = {
         const v = this.selectedItem.variants;
         this.currentVariant = v[(v.indexOf(this.currentVariant) + 1) % v.length];
         this.previewImg = assets.furniture?.fences?.[this.currentVariant]?.img;
-        this.showDebugMessage(`variante: ${this.currentVariant}`);
+        this.showDebugMessage(t('build.variant', { name: this.currentVariant }));
     },
 
     createDebugOverlay() {

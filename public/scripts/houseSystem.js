@@ -14,6 +14,7 @@ import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { WeatherSystem } from './weather.js';
 import { items } from './item.js';
 import { craftingSystem } from './craftingSystem.js';
+import { t } from './i18n/i18n.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
 
 /**
@@ -84,7 +85,7 @@ export class HouseSystem {
         hint.className = 'door-hint active';
         hint.innerHTML = `
             <div class="hint-content">
-                <span class="hint-text">Pressione <strong>E</strong> para acessar a casa</span>
+                <span class="hint-text">${t('help.doorHint')}</span>
             </div>
         `;
         hint.id = 'doorHint';
@@ -165,28 +166,28 @@ export class HouseSystem {
         modal.innerHTML = `
             <div class="modal-content house-modal-content">
                 <div class="modal-header">
-                    <h2>Minha Casa</h2>
+                    <h2>${t('house.title')}</h2>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="hse-house-options">
                     <button class="hse-house-option" data-action="enter">
-                        <span class="hse-option-text">Entrar em Casa</span>
+                        <span class="hse-option-text">${t('house.enter')}</span>
                     </button>
                     <button class="hse-house-option" data-action="sleep">
-                        <span class="hse-option-text">Dormir</span>
+                        <span class="hse-option-text">${t('house.sleep')}</span>
                     </button>
                     <button class="hse-house-option" data-action="crafting">
-                        <span class="hse-option-text">Crafting</span>
+                        <span class="hse-option-text">${t('house.crafting')}</span>
                     </button>
                     <button class="hse-house-option" data-action="storage">
-                        <span class="hse-option-text">Armazém</span>
+                        <span class="hse-option-text">${t('house.storage')}</span>
                     </button>
                     <button class="hse-house-option" data-action="customize">
-                        <span class="hse-option-text">Customizar</span>
+                        <span class="hse-option-text">${t('house.customize')}</span>
                     </button>
                 </div>
                 <div class="hse-house-footer">
-                    <button class="hse-house-close-btn">Fechar</button>
+                    <button class="hse-house-close-btn">${t('house.close')}</button>
                 </div>
             </div>
         `;
@@ -228,7 +229,7 @@ export class HouseSystem {
     }
 
     enterHouse() {
-        this.showMessage('Entrando na casa...');
+        this.showMessage(t('house.entering'));
     }
 
     sleep() {
@@ -245,7 +246,7 @@ export class HouseSystem {
         if (cs && typeof cs.open === 'function') {
             cs.open();
         } else {
-            this.showMessage('Sistema de crafting não disponível');
+            this.showMessage(t('house.craftingNotAvailable'));
         }
     }
 
@@ -255,7 +256,7 @@ export class HouseSystem {
 
     openCustomize() {
         this.closeHouseMenu();
-        this.showMessage('customização ainda não implementada');
+        this.showMessage(t('house.customizeNotImplemented'));
     }
 
     showStorageModal() {
@@ -266,13 +267,13 @@ export class HouseSystem {
         modal.innerHTML = `
             <div class="modal-content storage-modal-content">
                 <div class="modal-header">
-                    <h2>Storage</h2>
+                    <h2>${t('storage.title')}</h2>
                     <button class="modal-close">&times;</button>
                 </div>
 
                 <div class="storage-tabs">
-                    <button class="storage-tab active" data-tab="withdraw">Retirar Itens</button>
-                    <button class="storage-tab" data-tab="deposit">Depositar Itens</button>
+                    <button class="storage-tab active" data-tab="withdraw">${t('storage.withdraw')}</button>
+                    <button class="storage-tab" data-tab="deposit">${t('storage.deposit')}</button>
                 </div>
 
                 <div class="storage-stats" id="storageStats"></div>
@@ -289,7 +290,7 @@ export class HouseSystem {
                 <div class="storage-content" id="storageContent"></div>
 
                 <div class="storage-footer">
-                    <button class="storage-close-btn">Fechar</button>
+                    <button class="storage-close-btn">${t('ui.close')}</button>
                 </div>
             </div>
         `;
@@ -339,11 +340,11 @@ export class HouseSystem {
         el.innerHTML = `
             <div class="stat-row">
                 <div class="stat-item">
-                    <div class="stat-label">itens</div>
+                    <div class="stat-label">${t('storage.items')}</div>
                     <div class="stat-value">${info.totalItems || 0}</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-label">valor</div>
+                    <div class="stat-label">${t('storage.value')}</div>
                     <div class="stat-value">${info.totalValue || 0}</div>
                 </div>
             </div>
@@ -365,8 +366,8 @@ export class HouseSystem {
             <div class="category-info">
               <h3>${title}</h3>
               <div class="category-stats">
-                <span>stacks: ${usedStacks}/${maxStacks}</span>
-                <span>modo: ${mode === 'deposit' ? 'depositar' : 'retirar'}</span>
+                <span>${t('storage.stacks')}: ${usedStacks}/${maxStacks}</span>
+                <span>${t('storage.mode')}: ${mode === 'deposit' ? t('storage.depositMode') : t('storage.withdrawMode')}</span>
               </div>
             </div>
             <div class="storage-grid" id="storageGrid"></div>
@@ -392,7 +393,7 @@ export class HouseSystem {
             })();
 
         if (!list.length) {
-            grid.innerHTML = `<div class="empty-storage">sem itens nesta categoria</div>`;
+            grid.innerHTML = `<div class="empty-storage">${t('storage.emptyCategory')}</div>`;
             return;
         }
 
@@ -409,7 +410,7 @@ export class HouseSystem {
             const selected = Math.max(1, Math.min(saved, qty));
 
             const btnClass = mode === 'deposit' ? 'deposit-btn' : 'withdraw-btn';
-            const btnText = mode === 'deposit' ? `depositar (${selected})` : `retirar (${selected})`;
+            const btnText = mode === 'deposit' ? t('storage.depositBtn', { qty: selected }) : t('storage.withdrawBtn', { qty: selected });
 
             return `
               <div class="storage-slot" 
@@ -454,8 +455,8 @@ export class HouseSystem {
 
                 const actionBtn = slot.querySelector('.deposit-btn, .withdraw-btn');
                 if (actionBtn) actionBtn.textContent = mode === 'deposit'
-                    ? `depositar (${clamped})`
-                    : `retirar (${clamped})`;
+                    ? t('storage.depositBtn', { qty: clamped })
+                    : t('storage.withdrawBtn', { qty: clamped });
             };
 
             const minus = slot.querySelector('.qty-minus');

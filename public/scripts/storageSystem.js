@@ -6,8 +6,23 @@
  */
 
 import { items } from './item.js';
+import { t } from './i18n/i18n.js';
 import { registerSystem } from './gameState.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
+/**
+ * Obtém nome traduzido do item pelo ID
+ * @param {number} itemId - ID do item
+ * @param {string} fallbackName - Nome padrão se tradução não existir
+ * @returns {string} Nome traduzido
+ */
+function getItemName(itemId, fallbackName = '') {
+  const translatedName = t(`itemNames.${itemId}`);
+  if (translatedName === `itemNames.${itemId}`) {
+    return fallbackName;
+  }
+  return translatedName || fallbackName;
+}
+
 
 /**
  * Sistema de armazenamento para baús e containers
@@ -34,35 +49,40 @@ export class StorageSystem {
   defineCategories() {
     return {
       tools: {
-        name: "Ferramentas",
+        nameKey: "categories.tools",
+        get name() { return t('categories.tools'); },
         icon: "",
         itemTypes: ["tool"],
         maxStacks: 10,
         color: "#FFD166"
       },
       construction: {
-        name: "Construção",
+        nameKey: "categories.construction",
+        get name() { return t('categories.construction'); },
         icon: "",
         itemTypes: ["construction", "decoration", "seed", "material"],
         maxStacks: 20,
         color: "#118AB2"
       },
       animals: {
-        name: "Comida Animal",
+        nameKey: "categories.animals",
+        get name() { return t('categories.animals'); },
         icon: "",
         itemTypes: ["animal_food"],
         maxStacks: 10,
         color: "#FF9E64"
       },
       food: {
-        name: "Comida",
+        nameKey: "categories.food",
+        get name() { return t('categories.food'); },
         icon: "",
         itemTypes: ["food"],
         maxStacks: 15,
         color: "#EF476F"
       },
       resources: {
-        name: "Recursos",
+        nameKey: "categories.resources",
+        get name() { return t('categories.resources'); },
         icon: "",
         itemTypes: ["resource", "crop"],
         maxStacks: 30,
@@ -226,14 +246,14 @@ export class StorageSystem {
       : window.inventorySystem.getItemQuantity(itemId);
 
     if (currentQuantity < qty) {
-      this.showMessage("quantidade insuficiente no inventário");
+      this.showMessage(t('storage.insufficientQuantity'));
       return false;
     }
 
     const storageCategory = this.mapItemTypeToCategory(itemData.type);
     const categoryConfig = this.categories[storageCategory];
     if (!categoryConfig) {
-        this.showMessage("categoria inválida");
+        this.showMessage(t('storage.invalidCategory'));
         return false;
     }
 
@@ -252,7 +272,7 @@ export class StorageSystem {
         deposited += add;
       } else {
         if (this.storage[storageCategory].length >= categoryConfig.maxStacks) {
-          this.showMessage(`armazém de ${categoryConfig.name} cheio`);
+          this.showMessage(t('storage.storageFull', { category: categoryConfig.name }));
           break;
         }
 
@@ -277,11 +297,11 @@ export class StorageSystem {
     // Se falhou remover do inventário, desfaz a adição
     if (!removedOk && removedOk !== undefined) {
       this.removeItem(storageCategory, itemId, deposited);
-      this.showMessage("erro de sincronia com inventário");
+      this.showMessage(t('storage.syncError'));
       return false;
     }
 
-    this.showMessage(`depositado: ${deposited}x ${itemData.name}`);
+    this.showMessage(t('storage.deposited', { qty: deposited, name: getItemName(itemId, itemData.name) }));
     return true;
   }
 
@@ -312,20 +332,20 @@ export class StorageSystem {
 
     const removed = this.removeItem(storageCategory, itemId, qty);
     if (!removed) {
-      this.showMessage("item não encontrado no armazém");
+      this.showMessage(t('storage.itemNotFound'));
       return false;
     }
 
     // Usar qty (sanitizado) em TODAS as etapas
     const added = window.inventorySystem.addItem(itemId, qty);
     if (added) {
-      this.showMessage(`retirado: ${qty}x ${itemData.name}`);
+      this.showMessage(t('storage.withdrawn', { qty, name: getItemName(itemId, itemData.name) }));
       return true;
     }
 
-    // Rollback: usar qty
+    // Devolve o item ao armazenamento se o inventário estiver cheio
     this._addToCategory(storageCategory, itemId, qty);
-    this.showMessage("inventário cheio");
+    this.showMessage(t('storage.inventoryFull'));
     return false;
   }
 

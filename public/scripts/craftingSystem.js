@@ -1,6 +1,7 @@
 import { logger } from "./logger.js";
 import { recipes } from "./recipes.js";
 import { items } from "./item.js";
+import { t } from './i18n/i18n.js';
 
 /**
  * Sistema de crafting do jogo
@@ -115,12 +116,23 @@ export class CraftingSystem {
       return;
     }
 
+
+    /**
+     * Executa o processo de crafting de uma receita
+     * Verifica materiais, remove recursos, adiciona resultado ao inventário
+     * Inclui animação de loading e feedback visual
+     * @async
+     * @param {number} recipeId - ID da receita a ser craftada
+     * @returns {Promise<void>}
+     */
+  
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
       craftBtn.disabled = true;
-      craftBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Craftando...';
+       craftBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('crafting.crafting')}`;
       craftBtn.classList.add("crf-disabled");
     }
+
 
     await new Promise((resolve) => setTimeout(resolve, 800));
 

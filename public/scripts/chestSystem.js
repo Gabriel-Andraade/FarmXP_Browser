@@ -4,6 +4,7 @@ import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { TILE_SIZE } from './worldConstants.js';
 import { registerSystem, getObject } from './gameState.js';
+import { t } from './i18n/i18n.js';
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -137,7 +138,7 @@ export const chestSystem = {
     openChest(chestId) {
         const chest = this.chests[chestId];
         if (!chest) {
-            this.showMessage('❌ Baú não encontrado!', 'error');
+            this.showMessage(`❌ ${t('chest.notFound')}`, 'error');
             return;
         }
         
@@ -179,7 +180,7 @@ export const chestSystem = {
             <div class="cht-content">
                 <!-- Lado esquerdo: Baú -->
                 <div class="cht-side">
-                    <div class="cht-side-title">📦 Armazenamento do Baú</div>
+                    <div class="cht-side-title">📦 ${t('chest.storage')}</div>
                     
                     <div class="cht-categories" id="cht-categories">
                         <!-- Categorias serão injetadas aqui -->
@@ -425,7 +426,7 @@ export const chestSystem = {
         
         // Verificar se há espaço na categoria
         if (chest.storage[toCategory].items.length >= this.slotsPerCategory) {
-            this.showMessage(`❌ Categoria ${toCategory} cheia no baú!`, 'error');
+            this.showMessage(`❌ ${t('chest.categoryFull', { category: toCategory })}`, 'error');
             return;
         }
         
@@ -591,7 +592,7 @@ export const chestSystem = {
             });
         });
         
-        this.showMessage('🔧 Baú organizado!', 'success');
+        this.showMessage(`🔧 ${t('chest.organized')}`, 'success');
         this.renderChestItems(chestId);
         this.saveChests();
     },
