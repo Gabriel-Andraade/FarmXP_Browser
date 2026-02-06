@@ -10,6 +10,8 @@ import { currencyManager } from "./currencyManager.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
 import { getItem, getSellPrice } from "./itemUtils.js";
+import { t } from './i18n/i18n.js';
+import { translateDOM } from './settingsUI.js';
 import { registerSystem, getSystem } from "./gameState.js";
 import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } from './validation.js';
 
@@ -99,12 +101,12 @@ class MerchantSystem {
             {
                 id: 'thomas',
                 name: 'Thomas',
-                profession: 'Vendedor de Materiais',
-                description: 'Dono da loja de materiais de construção.',
+                professionKey: 'materialsSeller',
+                descriptionKey: 'thomas',
                 avatar: 'assets/character/portrait/Thomas_portrait.webp',
-                specialties: ['Recursos', 'Ferramentas', 'Construção'],
+                specialtiesKeys: ['resources', 'tools', 'construction'],
                 schedule: {
-                    daysOpen: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'],
+                    daysOpen: [0, 1, 2, 3, 4], // Segunda a Sexta (índices)
                     openTime: 8 * 60,
                     closeTime: 18 * 60
                 },
@@ -126,12 +128,12 @@ class MerchantSystem {
             {
                 id: 'laila',
                 name: 'Lara',
-                profession: 'Cozinheira',
-                description: 'Vende refeições e ingredientes.',
+                professionKey: 'cook',
+                descriptionKey: 'lara',
                 avatar: 'assets/character/portrait/Laila_portrait.webp',
-                specialties: ['Comida', 'Ingredientes', 'Refeições'],
+                specialtiesKeys: ['food', 'ingredients', 'meals'],
                 schedule: {
-                    daysOpen: ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+                    daysOpen: [0, 1, 2, 3, 4, 5], // Segunda a Sábado (índices)
                     openTime: 6 * 60,
                     closeTime: 20 * 60
                 },
@@ -150,12 +152,12 @@ class MerchantSystem {
             {
                 id: 'rico',
                 name: 'Rico',
-                profession: 'Pecuária',
-                description: 'Vende sementes, ração e animais.',
+                professionKey: 'livestock',
+                descriptionKey: 'rico',
                 avatar: 'assets/character/portrait/Rico_portrait.webp',
-                specialties: ['Sementes', 'Animais', 'Ferramentas'],
+                specialtiesKeys: ['seeds', 'animals', 'tools'],
                 schedule: {
-                    daysOpen: ['Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'],
+                    daysOpen: [1, 2, 3, 4, 5, 6], // Terça a Domingo (índices)
                     openTime: 7 * 60,
                     closeTime: 19 * 60
                 },
@@ -186,6 +188,19 @@ class MerchantSystem {
         this.listenersSetup = true;
 
         const { signal } = this.abortController;
+
+        // Listener para mudança de idioma - re-renderiza interfaces abertas
+        document.addEventListener('languageChanged', () => {
+            const merchantsListModal = document.getElementById('merchantsListModal');
+            const commerceModal = document.getElementById('commerceModal');
+
+            if (merchantsListModal && merchantsListModal.classList.contains('active')) {
+                this.renderMerchantsList();
+            }
+            if (commerceModal && commerceModal.classList.contains('active')) {
+                this.renderCommerceModal();
+            }
+        }, { signal });
 
         document.addEventListener('timeChanged', () => {
             this.checkAndCloseIfMerchantClosed();
@@ -335,6 +350,7 @@ class MerchantSystem {
         if (modal) {
             modal.classList.add('active');
             this.renderMerchantsList();
+            translateDOM();
         }
     }
 
@@ -346,15 +362,20 @@ class MerchantSystem {
         this.hideConfirmModal();
     }
 
+    // retorna o índice do dia atual (0=Segunda, 1=Terça, ..., 6=Domingo)
+    getCurrentDayIndex() {
+        return (WeatherSystem.day - 1) % 7;
+    }
+
     // verifica se mercador está aberto
     isMerchantOpen(merchant) {
         if (!merchant.schedule) return true;
         if (!WeatherSystem) return true;
 
-        const currentDay = WeatherSystem.getWeekday();
+        const currentDayIndex = this.getCurrentDayIndex();
         const currentTime = WeatherSystem.currentTime;
 
-        const isOpenToday = merchant.schedule.daysOpen.includes(currentDay);
+        const isOpenToday = merchant.schedule.daysOpen.includes(currentDayIndex);
         if (!isOpenToday) return false;
 
         const isOpenNow = currentTime >= merchant.schedule.openTime &&
@@ -363,21 +384,57 @@ class MerchantSystem {
         return isOpenNow;
     }
 
+    // obtém nome traduzido do item pelo ID
+    getItemName(itemId, fallbackName = '') {
+        const translatedName = t(`itemNames.${itemId}`);
+        // Se a tradução retornar a própria chave, usar o fallback
+        if (translatedName === `itemNames.${itemId}`) {
+            return fallbackName;
+        }
+        return translatedName || fallbackName;
+    }
+
+    // obtém profissão traduzida do mercador
+    getMerchantProfession(merchant) {
+        const key = `trading.professions.${merchant.professionKey}`;
+        const translated = t(key);
+        // Se a tradução retornar a própria chave, usar o fallback
+        return translated === key ? merchant.professionKey : translated;
+    }
+
+    // obtém descrição traduzida do mercador
+    getMerchantDescription(merchant) {
+        const key = `trading.descriptions.${merchant.descriptionKey}`;
+        const translated = t(key);
+        // Se a tradução retornar a própria chave, usar o fallback
+        return translated === key ? merchant.descriptionKey : translated;
+    }
+
+    // obtém especialidades traduzidas do mercador
+    getMerchantSpecialties(merchant) {
+        if (!merchant.specialtiesKeys) return [];
+        return merchant.specialtiesKeys.map(specialtyKey => {
+            const key = `trading.specialtiesLabels.${specialtyKey}`;
+            const translated = t(key);
+            // Se a tradução retornar a própria chave, usar o fallback
+            return translated === key ? specialtyKey : translated;
+        });
+    }
+
     // obtém status legível do mercador
     getMerchantStatus(merchant) {
-        if (!merchant.schedule) return 'Aberto';
-        if (!WeatherSystem) return 'Status desconhecido';
+        if (!merchant.schedule) return t('trading.open');
+        if (!WeatherSystem) return t('trading.statusUnknown');
 
-        const currentDay = WeatherSystem.getWeekday();
+        const currentDayIndex = this.getCurrentDayIndex();
+        const currentDayName = WeatherSystem.getWeekday(); // nome traduzido para exibição
         const currentTime = WeatherSystem.currentTime;
-        const hours = Math.floor(currentTime / 60);
-        const minutes = Math.floor(currentTime % 60);
-        const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-        const isOpenToday = merchant.schedule.daysOpen.includes(currentDay);
+        const isOpenToday = merchant.schedule.daysOpen.includes(currentDayIndex);
         if (!isOpenToday) {
             const nextOpenDay = this.getNextOpenDay(merchant);
-            return `Fechado (${currentDay} é folga${nextOpenDay ? `, reabre ${nextOpenDay}` : ''})`;
+            const nextDayStr = nextOpenDay ? t('trading.reopens', { day: nextOpenDay }) : '';
+            return t('trading.closedDayOff', { day: currentDayName, nextDay: nextDayStr });
         }
 
         const openHours = Math.floor(merchant.schedule.openTime / 60);
@@ -386,11 +443,11 @@ class MerchantSystem {
         const closeStr = `${String(closeHours).padStart(2, '0')}:00`;
 
         if (currentTime < merchant.schedule.openTime) {
-            return `Ainda não abriu (Abre às ${openStr})`;
+            return t('trading.notOpenYet', { time: openStr });
         } else if (currentTime >= merchant.schedule.closeTime) {
-            return `Já fechou (Fechou às ${closeStr})`;
+            return t('trading.alreadyClosed', { time: closeStr });
         } else {
-            return `Aberto • Fecha às ${closeStr}`;
+            return t('trading.openUntil', { time: closeStr });
         }
     }
 
@@ -402,6 +459,8 @@ class MerchantSystem {
         grid.innerHTML = this.merchants.map(merchant => {
             const isOpen = this.isMerchantOpen(merchant);
             const status = this.getMerchantStatus(merchant);
+            const profession = this.getMerchantProfession(merchant);
+            const specialties = this.getMerchantSpecialties(merchant);
 
             return `
                 <div class="mch-merchant-card ${!isOpen ? 'mch-merchant-closed' : ''}" data-merchant-id="${merchant.id}">
@@ -409,18 +468,18 @@ class MerchantSystem {
                         <img src="${merchant.avatar}" alt="${merchant.name}" class="mch-merchant-card-avatar">
                         <div class="mch-merchant-card-info">
                             <h3>${merchant.name}</h3>
-                            <div class="mch-merchant-card-profession">${merchant.profession}</div>
+                            <div class="mch-merchant-card-profession">${profession}</div>
                         </div>
                     </div>
                     <div class="mch-merchant-card-details">
-                        <div><strong>Especialidades:</strong> ${merchant.specialties.join(', ')}</div>
+                        <div><strong>${t('trading.specialties')}:</strong> ${specialties.join(', ')}</div>
                         <div class="mch-merchant-status ${isOpen ? 'open' : 'closed'}" data-merchant-status="${merchant.id}">
                             <strong>${status}</strong>
                         </div>
                     </div>
                     <div class="mch-merchant-card-items">
                         ${merchant.items.slice(0, 3).map(item => `
-                            <span class="mch-merchant-item-tag">${item.name}</span>
+                            <span class="mch-merchant-item-tag">${this.getItemName(item.id, item.name)}</span>
                         `).join('')}
                     </div>
                 </div>
@@ -441,7 +500,7 @@ class MerchantSystem {
                 card.style.cursor = 'not-allowed';
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
-                    this.showMessage(`${merchant.name} está fechado`);
+                    this.showMessage(t('trading.isClosed', { name: merchant.name }));
                 });
             }
         });
@@ -491,6 +550,7 @@ class MerchantSystem {
         if (modal) {
             modal.classList.add('active');
             this.renderCommerceModal();
+            translateDOM();
         }
     }
 
@@ -503,7 +563,7 @@ class MerchantSystem {
 
         if (!this.isMerchantOpen(this.currentMerchant)) {
             this.closeAllModals();
-            this.showMessage(`${this.currentMerchant.name} fechou. Volte durante o horário de funcionamento.`);
+            this.showMessage(t('trading.merchantClosed', { name: this.currentMerchant.name }));
             setTimeout(() => {
                 this.openMerchantsList();
             }, 500);
@@ -523,15 +583,14 @@ class MerchantSystem {
     getNextOpenDay(merchant) {
         if (!merchant.schedule) return null;
 
-        const currentDay = WeatherSystem.getWeekday();
-        const daysOfWeek = WeatherSystem.daysOfWeek;
-        const currentIndex = daysOfWeek.indexOf(currentDay);
+        const currentDayIndex = this.getCurrentDayIndex();
+        const daysOfWeek = t('time.weekdays');
 
         for (let i = 1; i <= 7; i++) {
-            const nextIndex = (currentIndex + i) % 7;
-            const nextDay = daysOfWeek[nextIndex];
-            if (merchant.schedule.daysOpen.includes(nextDay)) {
-                return nextDay;
+            const nextIndex = (currentDayIndex + i) % 7;
+            if (merchant.schedule.daysOpen.includes(nextIndex)) {
+                // Retorna o nome traduzido do dia
+                return Array.isArray(daysOfWeek) ? daysOfWeek[nextIndex] : null;
             }
         }
 
@@ -568,8 +627,8 @@ class MerchantSystem {
 
         if (avatar) avatar.src = this.currentMerchant.avatar;
         if (name) name.textContent = this.currentMerchant.name;
-        if (profession) profession.textContent = this.currentMerchant.profession;
-        if (specialty) specialty.textContent = this.currentMerchant.specialties.join(', ');
+        if (profession) profession.textContent = this.getMerchantProfession(this.currentMerchant);
+        if (specialty) specialty.textContent = this.getMerchantSpecialties(this.currentMerchant).join(', ');
     }
 
     // renderiza categorias do jogador
@@ -610,16 +669,16 @@ class MerchantSystem {
         if (items.length === 0) {
             grid.innerHTML = `
                 <div class="mch-hexagon-slot empty">
-                    <div class="mch-hexagon-name">Vazio</div>
+                    <div class="mch-hexagon-name">${t('trading.empty')}</div>
                 </div>
             `;
             return;
         }
 
         grid.innerHTML = items.map(item => `
-            <div class="mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}" 
+            <div class="mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}"
                  data-item-id="${item.id}">
-                <div class="mch-hexagon-name">${item.name}</div>
+                <div class="mch-hexagon-name">${this.getItemName(item.id, item.name)}</div>
                 <div class="mch-hexagon-quantity">${item.quantity}</div>
             </div>
         `).join('');
@@ -630,11 +689,11 @@ class MerchantSystem {
         const grid = document.getElementById('merchantItemsGrid');
         if (!grid) return;
 
-        const items = this.getMerchantItems();
-        grid.innerHTML = items.map(item => `
-            <div class="mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}" 
+        const merchantItems = this.getMerchantItems();
+        grid.innerHTML = merchantItems.map(item => `
+            <div class="mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}"
                  data-item-id="${item.id}">
-                <div class="mch-hexagon-name">${item.name}</div>
+                <div class="mch-hexagon-name">${this.getItemName(item.id, item.name)}</div>
                 <div class="mch-merchant-hexagon-price">$${item.price}</div>
             </div>
         `).join('');
@@ -756,7 +815,7 @@ class MerchantSystem {
     updateActionIndicator() {
         const indicator = document.getElementById('actionIndicator');
         if (indicator) {
-            indicator.textContent = this.tradeMode === 'sell' ? 'Vendendo' : 'Comprando';
+            indicator.textContent = this.tradeMode === 'sell' ? t('trading.selling') : t('trading.buying');
         }
     }
 
@@ -785,7 +844,7 @@ class MerchantSystem {
         tradeButton.id = 'tradeButton';
         tradeButton.innerHTML = `
             <span class="mch-trade-button-text">
-                ${this.tradeMode === 'sell' ? 'VENDER' : 'COMPRAR'} x${this.tradeQuantity}
+                ${this.tradeMode === 'sell' ? t('trading.sell').toUpperCase() : t('trading.buy').toUpperCase()} x${this.tradeQuantity}
             </span>
             <span class="mch-trade-button-price">$${totalValue}</span>
         `;
@@ -804,7 +863,7 @@ class MerchantSystem {
     // seleciona item do jogador
     selectPlayerItem(itemId) {
         if (this.tradeMode === 'buy') {
-            this.showMessage('Modo de compra ativo. Selecione um item do mercador.');
+            this.showMessage(t('trading.buyMode'));
             return;
         }
 
@@ -819,7 +878,12 @@ class MerchantSystem {
                 this.tradeValue = Math.floor(originalItem.price * 0.5);
                 this.updateTradeValue();
                 this.renderTradeButton();
-                this.showMessage(`Selecionado: ${item.name} (${item.quantity}x) - Venda: $${this.tradeValue} cada`);
+                this.showMessage(t('trading.selected', {
+                    name: this.getItemName(item.id, item.name),
+                    qty: item.quantity,
+                    action: t('trading.sell'),
+                    price: this.tradeValue
+                }));
             }
         }
 
@@ -830,7 +894,7 @@ class MerchantSystem {
     // seleciona item do mercador
     selectMerchantItem(itemId) {
         if (this.tradeMode === 'sell') {
-            this.showMessage('Modo de venda ativo. Selecione um item do seu inventário.');
+            this.showMessage(t('trading.sellMode'));
             return;
         }
 
@@ -843,7 +907,12 @@ class MerchantSystem {
             this.tradeValue = item.price;
             this.updateTradeValue();
             this.renderTradeButton();
-            this.showMessage(`Selecionado: ${item.name} - Compra: $${item.price} cada`);
+            this.showMessage(t('trading.selected', {
+                name: this.getItemName(item.id, item.name),
+                qty: 1,
+                action: t('trading.buy'),
+                price: item.price
+            }));
         }
 
         this.renderPlayerItems();
@@ -877,12 +946,12 @@ class MerchantSystem {
         let itemName = '';
         if (this.tradeMode === 'sell') {
             const item = this.getPlayerItems().find(i => i.id === this.selectedPlayerItem);
-            itemName = item ? item.name : 'item';
-            messageEl.textContent = `Vender ${this.tradeQuantity}x ${itemName} por $${totalValue}?`;
+            itemName = item ? this.getItemName(item.id, item.name) : 'item';
+            messageEl.textContent = t('trading.confirmSell', {qty: this.tradeQuantity, name: itemName, value: totalValue});
         } else {
             const item = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
-            itemName = item ? item.name : 'item';
-            messageEl.textContent = `Comprar ${this.tradeQuantity}x ${itemName} por $${totalValue}?`;
+            itemName = item ? this.getItemName(item.id, item.name) : 'item';
+            messageEl.textContent = t('trading.confirmBuy', {qty: this.tradeQuantity, name: itemName, value: totalValue});
         }
 
         if (modal) modal.classList.add('active');
@@ -979,24 +1048,24 @@ class MerchantSystem {
             if (inventorySystem && inventorySystem.removeItem) {
                 if (inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
 
-                    // FIX: Usar 'earn' conforme definido em currencyManager.js
+                    // Adiciona o valor da venda ao dinheiro do jogador
                     if (typeof currencyManager.earn === 'function') {
                         currencyManager.earn(totalValue, "Venda ao Mercador");
                     } else {
                         logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
-
-                    this.showMessage(`Venda realizada! +$${totalValue}`, 'success');
+                    
+                    this.showMessage(t('trading.saleSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
                     this.renderPlayerItems();
                     this.clearSelections();
                 } else {
-                    this.showMessage('Erro ao remover item do inventário.', 'error');
+                    this.showMessage(t('trading.removeError'), 'error');
                 }
             }
         } else {
             // Lógica para vender do armazém (implementar no storageSystem se necessário)
-            this.showMessage('Venda direta do armazém não implementada.', 'error');
+            this.showMessage(t('trading.storageNotImplemented'), 'error');
         }
     }
 
@@ -1005,10 +1074,15 @@ class MerchantSystem {
         if (!this.selectedMerchantItem) return;
         const inventorySystem = getSystem('inventory');
 
+        if (currencyManager.getMoney() < totalValue) {
+            this.showMessage(t('trading.notEnoughMoney'), 'error');
+            return;
+        }
+
         // Validar que o item existe no estoque do mercador
         const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
         if (!merchantItem) {
-            this.showMessage('Item não encontrado no mercador', 'error');
+            this.showMessage(t('trading.itemNotFound'), 'error');
             return;
         }
 
@@ -1022,13 +1096,7 @@ class MerchantSystem {
         // Validar valor da transação
         if (!isValidPositiveNumber(totalValue)) {
             logger.error('[Merchant] Invalid buy value:', totalValue);
-            this.showMessage('Valor de compra inválido', 'error');
-            return;
-        }
-
-        // Usar canAfford() em vez de verificação manual (centraliza validação)
-        if (!currencyManager.canAfford(totalValue)) {
-            this.showMessage('Dinheiro insuficiente!', 'error');
+            this.showMessage(t('trading.invalidBuyValue'), 'error');
             return;
         }
 
@@ -1037,30 +1105,24 @@ class MerchantSystem {
                 // Tentar adicionar ao inventário (usando apenas ID e quantidade para mapeamento automático)
                 if (inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
 
-                    // FIX: Usar 'spend' conforme definido em currencyManager.js
+                    // Deduz o valor da compra do dinheiro do jogador
                     if (typeof currencyManager.spend === 'function') {
                         currencyManager.spend(totalValue, "Compra do Mercador");
                     } else {
                         logger.error("Erro: método spend() não encontrado no currencyManager");
                     }
 
-                    // Decrementar estoque do mercador
-                    const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
-                    if (merchantItem) {
-                        merchantItem.quantity -= this.tradeQuantity;
-                    }
-
-                    this.showMessage(`Compra realizada! -$${totalValue}`, 'success');
+                    this.showMessage(t('trading.purchaseSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
                     this.renderPlayerItems();
                     this.renderMerchantItems();
                     this.clearSelections();
                 } else {
-                    this.showMessage('Inventário cheio ou erro ao adicionar item.', 'error');
+                    this.showMessage(t('trading.inventoryFull'), 'error');
                 }
             }
         } else {
-             this.showMessage('Compra direta para o armazém não implementada.', 'error');
+             this.showMessage(t('trading.storageNotImplemented'), 'error');
         }
     }
 
@@ -1102,16 +1164,7 @@ class MerchantSystem {
 
     // obtém nome legível da categoria
     getCategoryName(category) {
-        const names = {
-            'all': 'Todos',
-            'tools': 'Ferramentas',
-            'seeds': 'Sementes',
-            'food': 'Comida',
-            'animal_food': 'Ração',
-            'construction': 'Construção',
-            'resources': 'Recursos'
-        };
-        return names[category] || category;
+        return t(`categories.${category}`) || category;
     }
 
     // exibe mensagem temporária

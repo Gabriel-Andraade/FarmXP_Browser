@@ -131,19 +131,25 @@
     text-align: center;
     border: 1px solid rgba(201, 164, 99, 0.2);
     min-width: 80px;
+    max-width: 100%;
     flex-shrink: 0;
+    overflow: hidden;
 }
 
-.player-stat .label {
+.player-stat .stat-label {
     font-size: 9px;
     color: #c9a463;
     display: block;
     margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.player-stat .value {
+.player-stat .stat-value {
     font-size: 11px;
     color: #f5e9d3;
     font-weight: bold;
     display: block;
+    white-space: nowrap;
 }

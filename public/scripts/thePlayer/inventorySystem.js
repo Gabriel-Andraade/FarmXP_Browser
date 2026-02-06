@@ -2,7 +2,7 @@ import { logger } from '../logger.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsumable, getConsumptionData as itemUtilsGetConsumptionData, getAllItems } from '../itemUtils.js';
-
+import { t } from '../i18n/i18n.js';
 import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
 
@@ -630,7 +630,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.fillUp) {
         const consumeBtn = document.createElement('button');
         consumeBtn.className = 'inv-action-btn inv-consume-btn';
-        consumeBtn.textContent = '🍽️ Consumir';
+        consumeBtn.textContent = '🍽️ ' + t('inventory.actions.consume');
         consumeBtn.onclick = (e) => {
             e.stopPropagation();
             consumeItem(category, itemId, 1);
@@ -641,7 +641,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
     if (item.type === 'tool') {
         const equipBtn = document.createElement('button');
         equipBtn.className = 'inv-action-btn inv-equip-btn';
-        equipBtn.textContent = '⚔️ Equipar';
+        equipBtn.textContent = '⚔️ ' + t('inventory.actions.equip');
         equipBtn.onclick = (e) => {
             e.stopPropagation();
             equipItem(category, itemId);
@@ -651,7 +651,7 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 
     const discardBtn = document.createElement('button');
     discardBtn.className = 'inv-action-btn inv-discard-btn';
-    discardBtn.textContent = '🗑️ Descartar';
+    discardBtn.textContent = '🗑️ ' + t('inventory.actions.discard');
     discardBtn.onclick = (e) => {
         e.stopPropagation();
         discardItem(category, itemId, 1);
