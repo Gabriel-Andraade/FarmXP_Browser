@@ -1,6 +1,6 @@
 import { logger } from '../logger.js';
 import { inventorySystem } from "./inventorySystem.js";
-import { items } from "../item.js";
+import { getItem } from "../itemUtils.js";
 import { t } from '../i18n/i18n.js';
 import { INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getSystem } from "../gameState.js";
@@ -685,7 +685,7 @@ function renderInventory() {
   currentItems = categoryData.items;
 
   currentItems.forEach((slot, index) => {
-    const fullItem = items.find(i => i.id === slot.id);
+    const fullItem = getItem(slot.id);
     if (!fullItem) return;
 
     const itemQuantity = slot.quantity || slot.qty || 1;
@@ -739,7 +739,7 @@ function renderInventory() {
     const slotToSelect = shadowRoot.querySelector(`.inv-slot[data-index="${selectedSlotIndex}"]`);
     if (slotToSelect) {
       slotToSelect.classList.add('selected');
-      const fullItem = items.find(i => i.id === currentItems[selectedSlotIndex].id);
+      const fullItem = getItem(currentItems[selectedSlotIndex].id);
       if (fullItem) {
         updateDetailsPanel(fullItem, currentItems[selectedSlotIndex].quantity);
       }

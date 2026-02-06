@@ -1,13 +1,13 @@
 import { logger } from '../logger.js';
-import { items } from '../item.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
-import { getItem, getStackLimit, isPlaceable } from '../itemUtils.js';
+import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsumable, getConsumptionData as itemUtilsGetConsumptionData, getAllItems } from '../itemUtils.js';
 import { t } from '../i18n/i18n.js';
 import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
 
-export const allItems = items;
+
+export { getAllItems as allItems };
 
 export class InventorySystem {
     constructor() {
@@ -585,27 +585,17 @@ export function removeItemFromInventory(category, itemId, quantity = 1) {
 }
 
 export function isConsumable(itemId) {
-    const item = items.find(i => i.id === itemId);
-    return item && item.fillUp;
+    return itemUtilsIsConsumable(itemId);
 }
 
 export function getConsumptionData(itemId) {
-    const item = items.find(i => i.id === itemId);
-    if (!item || !item.fillUp) return null;
-    
-    return {
-        name: item.name,
-        icon: item.icon,
-        hunger: item.fillUp.hunger || 0,
-        thirst: item.fillUp.thirst || 0,
-        energy: item.fillUp.energy || 0
-    };
+    return itemUtilsGetConsumptionData(itemId);
 }
 
 export function startConsuming(itemId, player) {
-    const item = items.find(i => i.id === itemId);
+    const item = getItem(itemId);
     if (!item || !item.fillUp) return false;
-    
+
     document.dispatchEvent(new CustomEvent('startConsumptionBar', {
         detail: {
             item,
@@ -613,7 +603,7 @@ export function startConsuming(itemId, player) {
             duration: CONSUMPTION_BAR_DURATION_MS
         }
     }));
-    
+
     return true;
 }
 

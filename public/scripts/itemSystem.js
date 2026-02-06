@@ -4,7 +4,7 @@ import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { objectDestroyed, markWorldChanged } from './theWorld.js';
 import { collisionSystem } from './collisionSystem.js';
 import { camera } from './thePlayer/cameraSystem.js';
-import { items } from './item.js';
+import { getItem } from './itemUtils.js';
 import { GAME_BALANCE } from './constants.js';
 
 /**
@@ -359,11 +359,12 @@ export class ItemSystem {
 
     /**
      * Busca dados de um item por ID
+     * Usa a função centralizada getItem() de itemUtils.js
      * @param {number} id - ID do item
-     * @returns {Object|undefined} Dados do item ou undefined se não encontrado
+     * @returns {Object|null} Dados do item ou null se não encontrado
      */
     getItemData(id) {
-        return items.find(i => i.id === id);
+        return getItem(id);
     }
 
     /**
