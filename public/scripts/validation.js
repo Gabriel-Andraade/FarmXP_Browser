@@ -69,25 +69,7 @@ export function isValidPositiveNumber(value) {
            value > 0;
 }
 
-/**
- * Sanitizes a quantity to a positive integer within bounds
- * Returns min value if input is invalid (NaN/Infinity/negative/non-number)
- *
- * @param {any} value - Quantity to sanitize
- * @param {number} [min=1] - Minimum allowed value
- * @param {number} [max=9999] - Maximum allowed value
- * @returns {number} Sanitized quantity (guaranteed valid)
- *
- * @example
- * sanitizeQuantity(5)           // 5
- * sanitizeQuantity(10000)       // 9999 (clamped to max)
- * sanitizeQuantity(-10)         // 1 (invalid, returns min)
- * sanitizeQuantity(NaN)         // 1 (invalid, returns min)
- * sanitizeQuantity(Infinity)    // 1 (invalid, returns min)
- * sanitizeQuantity(5.7)         // 5 (floored)
- * sanitizeQuantity("5")         // 1 (string rejected)
- * sanitizeQuantity(null)        // 1 (null rejected)
- */
+
 export function sanitizeQuantity(value, min = 1, max = 9999) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
         return min;

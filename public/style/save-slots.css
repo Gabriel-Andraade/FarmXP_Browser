@@ -66,16 +66,19 @@
     background: var(--save-bg-overlay);
     backdrop-filter: blur(4px);
     z-index: 10000;
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     transition: opacity 0.3s ease;
 }
 
 .save-modal-overlay.active {
-    display: flex;
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 /* ===== CONTAINER DO MODAL ===== */

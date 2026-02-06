@@ -15,6 +15,7 @@ import { WeatherSystem } from './weather.js';
 import { items } from './item.js';
 import { craftingSystem } from './craftingSystem.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
+import { logger } from './logger.js';
 
 /**
  * Sistema de interação com a casa do jogador
@@ -276,6 +277,7 @@ export class HouseSystem {
             const { saveSlotsUI } = await import('./saveSlotsUI.js');
             saveSlotsUI.open('save');
         } catch (e) {
+            logger.error('HouseSystem:openSaveMenu', e);
             this.showMessage('Sistema de save não disponível');
         }
     }
@@ -286,6 +288,7 @@ export class HouseSystem {
             const { saveSlotsUI } = await import('./saveSlotsUI.js');
             saveSlotsUI.open('load');
         } catch (e) {
+            logger.error('HouseSystem:openLoadMenu', e);
             this.showMessage('Sistema de save não disponível');
         }
     }

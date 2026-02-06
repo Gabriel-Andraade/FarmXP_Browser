@@ -847,7 +847,7 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem) WeatherSystem.update(deltaTime);
       if (merchantSystem) merchantSystem.update(deltaTime);
-      if (saveRef) { saveRef.tick(deltaTime * 1000); saveRef.markDirty(); }
+      if (saveRef) { saveRef.tick(deltaTime * 1000); }
 
       updateAnimals();
 

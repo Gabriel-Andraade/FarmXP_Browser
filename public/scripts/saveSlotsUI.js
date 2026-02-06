@@ -299,34 +299,26 @@ class SaveSlotsUI {
         // 1. Pausar simulação (congela tempo, clima, player, IA)
         document.dispatchEvent(new CustomEvent('game:pause'));
 
-        // 2. Pausar WeatherSystem diretamente
-        const weather = getSystem('weather') || window.WeatherSystem;
-        if (weather && typeof weather.pause === 'function') {
-            weather.pause();
-        }
-
-        // 3. Mostrar loading e bloquear interações
+        // 2. Mostrar loading e bloquear interações
+        // Nota: weather.pause() é chamado internamente por applySaveData -> _applyWeatherData
         showLoadingScreen();
         updateLoadingProgress(0.2, 'Carregando save...');
         blockInteractions();
 
-        // 4. Carregar dados brutos do slot
+        // 3. Carregar dados brutos do slot
         const slot = saveSystem.loadSlot(slotIndex);
 
         if (!slot) {
             this._showMessage('Erro ao carregar save', 'error');
             hideLoadingScreen();
             unblockInteractions();
-            if (weather && typeof weather.resume === 'function') {
-                weather.resume();
-            }
             document.dispatchEvent(new CustomEvent('game:resume'));
             return;
         }
 
         updateLoadingProgress(0.5, 'Aplicando dados...');
 
-        // 5. Aplicar dados (mundo, inventário, posição, clima)
+        // 4. Aplicar dados (mundo, inventário, posição, clima)
         try {
             saveSystem.applySaveData(slot);
         } catch (e) {
@@ -336,7 +328,7 @@ class SaveSlotsUI {
 
         updateLoadingProgress(1, 'Pronto!');
 
-        // 6. Pequeno delay para UI atualizar, depois liberar tudo
+        // 5. Pequeno delay para UI atualizar, depois liberar tudo
         setTimeout(() => {
             hideLoadingScreen();
             unblockInteractions();
@@ -353,9 +345,9 @@ class SaveSlotsUI {
      */
     _overwriteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirm = window.confirm(`Sobrescrever "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito.`);
+        const confirmed = window.confirm(`Sobrescrever "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito.`);
 
-        if (!confirm) return;
+        if (!confirmed) return;
 
         const success = saveSystem.createOrOverwriteSlot(slotIndex);
         if (success) {
@@ -395,9 +387,9 @@ class SaveSlotsUI {
      */
     _deleteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirm = window.confirm(`Deletar "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito!`);
+        const confirmed = window.confirm(`Deletar "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito!`);
 
-        if (!confirm) return;
+        if (!confirmed) return;
 
         const success = saveSystem.deleteSlot(slotIndex);
         if (success) {

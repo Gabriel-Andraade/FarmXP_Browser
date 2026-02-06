@@ -1,9 +1,11 @@
 import { playerSystem } from "./playerSystem.js";
+import { logger } from "../logger.js";
 
 export class CharacterSelection {
     constructor() {
         this.container = null;
         this.selectedCharacter = null;
+        this._loadingInProgress = false;
         this.characters = [
             {
                 id: "stella",
@@ -207,7 +209,7 @@ export class CharacterSelection {
             });
         } catch (e) {
             this.showWarning('Erro ao acessar sistema de saves.');
-            console.error('CharacterSelection:loadGame', e);
+            logger.error('CharacterSelection:loadGame', e);
         } finally {
             this._loadingInProgress = false;
         }

@@ -110,8 +110,10 @@ class SaveSystem {
     _writeRoot(root) {
         try {
             localStorage.setItem(ROOT_KEY, JSON.stringify(root));
+            return true;
         } catch (error) {
             logger.error('Erro ao escrever saves:', error);
+            return false;
         }
     }
 
@@ -242,7 +244,8 @@ class SaveSystem {
             // Coletar dados do jogo
             slot.data = this._gatherGameData();
 
-            this._writeRoot(root);
+            const written = this._writeRoot(root);
+            if (!written) return false;
             this.isDirty = false;
 
             logger.info(`💾 Save ${slotIndex} salvo com sucesso`);
@@ -491,7 +494,7 @@ class SaveSystem {
         return {
             x: player?.x ?? 400,
             y: player?.y ?? 300,
-            direction: player?.direction ?? 0,
+            direction: player?.direction ?? 'down',
             characterId: playerSystem?.activeCharacter?.id ?? 'stella',
             needs: {
                 hunger: playerSystem?.needs?.hunger ?? 100,
@@ -628,12 +631,20 @@ class SaveSystem {
         }
 
         // Restaurar itens
+        const failedItems = [];
         for (const [catName, items] of Object.entries(data.categories)) {
             if (inventory.categories[catName]) {
                 for (const savedItem of items) {
-                    inventory.addItem(savedItem.id, savedItem.quantity);
+                    const added = inventory.addItem(savedItem.id, savedItem.quantity);
+                    if (!added) {
+                        failedItems.push({ id: savedItem.id, quantity: savedItem.quantity, category: catName });
+                    }
                 }
             }
+        }
+
+        if (failedItems.length > 0) {
+            logger.warn('[SaveSystem] Falha ao restaurar itens:', failedItems);
         }
 
         // Restaurar equipados
@@ -651,7 +662,9 @@ class SaveSystem {
         const currency = getSystem('currency') || window.currencyManager;
         if (currency && data.money !== undefined) {
             currency.currentMoney = data.money;
-            currency._notifyChange();
+            if (typeof currency._notifyChange === 'function') {
+                currency._notifyChange();
+            }
         }
     }
 
