@@ -505,7 +505,7 @@ class SaveSystem {
      * Obtém dados do inventário para salvar
      */
     _getInventoryData() {
-        const inventory = window.inventorySystem;
+        const inventory = getSystem('inventory') || window.inventorySystem;
         if (!inventory) return { categories: {}, equipped: null };
 
         const categories = {};
@@ -526,7 +526,7 @@ class SaveSystem {
      * Obtém dados de moeda para salvar
      */
     _getCurrencyData() {
-        const currency = window.currencyManager;
+        const currency = getSystem('currency') || window.currencyManager;
         return {
             money: currency?.currentMoney ?? 1000
         };
@@ -619,7 +619,7 @@ class SaveSystem {
      * Aplica dados do inventário
      */
     _applyInventoryData(data) {
-        const inventory = window.inventorySystem;
+        const inventory = getSystem('inventory') || window.inventorySystem;
         if (!inventory || !data.categories) return;
 
         // Limpar inventário atual
@@ -648,7 +648,7 @@ class SaveSystem {
      * Aplica dados de moeda
      */
     _applyCurrencyData(data) {
-        const currency = window.currencyManager;
+        const currency = getSystem('currency') || window.currencyManager;
         if (currency && data.money !== undefined) {
             currency.currentMoney = data.money;
             currency._notifyChange();

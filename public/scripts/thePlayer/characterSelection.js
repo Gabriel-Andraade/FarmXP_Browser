@@ -178,6 +178,9 @@ export class CharacterSelection {
     }
 
     async loadGame() {
+        if (this._loadingInProgress) return;
+        this._loadingInProgress = true;
+
         try {
             const saveModule = await import('../saveSystem.js');
             const saveSystem = saveModule.saveSystem;
@@ -205,6 +208,8 @@ export class CharacterSelection {
         } catch (e) {
             this.showWarning('Erro ao acessar sistema de saves.');
             console.error('CharacterSelection:loadGame', e);
+        } finally {
+            this._loadingInProgress = false;
         }
     }
 }

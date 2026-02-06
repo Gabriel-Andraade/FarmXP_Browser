@@ -14,6 +14,20 @@ import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen, blockInter
 const MODAL_ID = 'save-slots-modal';
 
 /**
+ * Escapa caracteres HTML especiais para prevenir XSS em templates
+ * @param {string} str - String para escapar
+ * @returns {string} String escapada
+ */
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/**
  * Classe que gerencia a interface de slots de save
  */
 class SaveSlotsUI {
@@ -150,14 +164,14 @@ class SaveSlotsUI {
         return `
             <div class="save-slot-card ${isActive ? 'save-slot-active' : ''}" data-slot="${index}">
                 <div class="save-slot-header">
-                    <span class="save-slot-name" title="${meta.saveName}">${meta.saveName}</span>
+                    <span class="save-slot-name" title="${escapeHtml(meta.saveName)}">${escapeHtml(meta.saveName)}</span>
                     ${isActive ? '<span class="save-slot-badge active">Ativo</span>' : ''}
                 </div>
 
                 <div class="save-slot-meta">
                     <div class="save-meta-row">
                         <span class="save-meta-label">👤 Personagem:</span>
-                        <span class="save-meta-value">${meta.characterName || 'Stella'}</span>
+                        <span class="save-meta-value">${escapeHtml(meta.characterName || 'Stella')}</span>
                     </div>
                     <div class="save-meta-row">
                         <span class="save-meta-label">⏱️ Tempo Total:</span>
@@ -313,7 +327,12 @@ class SaveSlotsUI {
         updateLoadingProgress(0.5, 'Aplicando dados...');
 
         // 5. Aplicar dados (mundo, inventário, posição, clima)
-        saveSystem.applySaveData(slot);
+        try {
+            saveSystem.applySaveData(slot);
+        } catch (e) {
+            logger.error('Erro ao aplicar dados do save:', e);
+            this._showMessage('Erro ao aplicar save', 'error');
+        }
 
         updateLoadingProgress(1, 'Pronto!');
 
