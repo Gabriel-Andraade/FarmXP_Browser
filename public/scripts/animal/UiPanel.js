@@ -79,7 +79,7 @@ class UiPanel {
     document.addEventListener("pointerdown", this._onDocPointerDown, true);
     window.addEventListener("resize", this._onResize);
     
-    // 🌍 OUVINTE IMPORTANTE: Recria a interface quando o idioma mudar
+    //  OUVINTE IMPORTANTE: Recria a interface quando o idioma mudar
     document.addEventListener('languageChanged', () => {
         this.rebuildInterface();
     });
@@ -88,7 +88,7 @@ class UiPanel {
     this._startLoop();
   }
 
-  // 🆕 Método para reconstruir tudo quando o idioma muda
+  //  Método para reconstruir tudo quando o idioma muda
   rebuildInterface() {
       if (this.layer) {
           this.layer.innerHTML = ''; // Limpa o antigo
@@ -108,7 +108,7 @@ class UiPanel {
   }
 
   _createDOM() {
-    // ⚠️ Importante: t() é chamado aqui. Se o idioma mudar, precisamos chamar _createDOM de novo.
+    //  Importante: t() é chamado aqui. Se o idioma mudar, precisamos chamar _createDOM de novo.
     
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.classList.add("aui-lines");
@@ -147,7 +147,7 @@ class UiPanel {
     this.actionsMenu = document.createElement("div");
     this.actionsMenu.className = "aui-menu aui-interactive";
     
-    // 🌍 Tradução dinâmica aplicada aqui
+    //  Tradução dinâmica aplicada aqui
     this.actionsMenu.innerHTML = `
       <h3>${t('animal.ui.interactions')}</h3>
       <div class="aui-actions">
@@ -170,7 +170,7 @@ class UiPanel {
     this.infoMenu = document.createElement("div");
     this.infoMenu.className = "aui-menu aui-interactive";
     
-    // 🌍 Tradução dinâmica aplicada aqui
+    //  Tradução dinâmica aplicada aqui
     this.infoMenu.innerHTML = `
       <h3>${t('animal.ui.info')}</h3>
       <div class="aui-info-header">
