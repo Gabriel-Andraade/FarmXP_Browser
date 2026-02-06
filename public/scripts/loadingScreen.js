@@ -1,4 +1,5 @@
 import { logger } from './logger.js';
+import { getSystem } from './gameState.js';
 
 /**
  * Gerenciador de telas de carregamento do jogo
@@ -222,9 +223,10 @@ class LoadingScreenManager {
         logger.debug("Executando Garbage Collection simulado e Limpeza de Arrays...");
 
         // 1. Limpar arrays de partículas e efeitos
-        if (window.WeatherSystem) {
-            window.WeatherSystem.rainParticles = [];
-            window.WeatherSystem.snowParticles = [];
+        const weather = getSystem('weather') || window.WeatherSystem;
+        if (weather) {
+            weather.rainParticles = [];
+            weather.snowParticles = [];
         }
 
         // 2. Tentar forçar GC se disponível (Chrome flag)

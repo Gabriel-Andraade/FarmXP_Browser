@@ -32,6 +32,7 @@ import { setupAutoCleanup } from "./gameCleanup.js";
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
 let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
 let WeatherSystem, drawWeatherEffects, drawWeatherUI;
+let saveRef;
 
 // =============================================================================
 // VARIÁVEIS GLOBAIS DO JOGO
@@ -463,6 +464,33 @@ function setupSleepListeners() {
 }
 
 // =============================================================================
+// EVENTOS DE PAUSE/RESUME PARA SAVE/LOAD
+// =============================================================================
+
+function setupGamePauseListeners() {
+  document.addEventListener("game:pause", () => {
+    logger.debug("GAME PAUSE: Congelando simulação para load");
+    simulationPaused = true;
+    interactionEnabled = false;
+
+    for (const key of Object.keys(keys)) {
+      keys[key] = false;
+    }
+
+    if (currentPlayer) {
+      currentPlayer.isMoving = false;
+      currentPlayer.wasMoving = false;
+    }
+  });
+
+  document.addEventListener("game:resume", () => {
+    logger.debug("GAME RESUME: Retomando simulação");
+    simulationPaused = false;
+    interactionEnabled = true;
+  });
+}
+
+// =============================================================================
 // EXPOSIÇÃO DE GLOBAIS
 // =============================================================================
 
@@ -568,8 +596,38 @@ async function startFullGameLoad() {
       drawWeatherUI = weatherModule.drawWeatherUI;
 
       if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
+
+      // Registrar WeatherSystem no gameState APÓS import e init
+      // (exposeGlobals() foi chamado antes, quando WeatherSystem ainda era undefined)
+      if (WeatherSystem) {
+        registerSystem('weather', WeatherSystem);
+        window.drawWeatherEffects = drawWeatherEffects;
+        window.drawWeatherUI = drawWeatherUI;
+      }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
+    }
+
+    try {
+      const saveModule = await import('./saveSystem.js');
+      saveRef = saveModule.saveSystem;
+      await import('./saveSlotsUI.js');
+      if (saveRef) saveRef.startAutoSave();
+    } catch (e) {
+      handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
+    }
+
+    // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
+    // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
+    if (window._pendingSaveData && saveRef) {
+      try {
+        updateLoadingProgress(0.95, "restaurando save...");
+        saveRef.applySaveData(window._pendingSaveData);
+        logger.info('📂 Save aplicado do startup');
+      } catch (e) {
+        handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
+      }
+      window._pendingSaveData = null;
     }
 
     updateLoadingProgress(1, "pronto");
@@ -739,7 +797,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         logger.debug("PlayerHUD criado e registrado");
         
         setupSleepListeners();
-        
+        setupGamePauseListeners();
+
         await initGameBootstrap();
     } catch (error) {
         logger.error("Erro na inicialização do jogo:", error);
@@ -788,6 +847,7 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem) WeatherSystem.update(deltaTime);
       if (merchantSystem) merchantSystem.update(deltaTime);
+      if (saveRef) { saveRef.tick(deltaTime * 1000); saveRef.markDirty(); }
 
       updateAnimals();
 

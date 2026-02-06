@@ -184,6 +184,12 @@ export class HouseSystem {
                     <button class="hse-house-option" data-action="customize">
                         <span class="hse-option-text">Customizar</span>
                     </button>
+                    <button class="hse-house-option" data-action="save">
+                        <span class="hse-option-text">💾 Salvar Jogo</span>
+                    </button>
+                    <button class="hse-house-option" data-action="load">
+                        <span class="hse-option-text">📂 Carregar Jogo</span>
+                    </button>
                 </div>
                 <div class="hse-house-footer">
                     <button class="hse-house-close-btn">Fechar</button>
@@ -224,6 +230,12 @@ export class HouseSystem {
             case 'customize':
                 this.openCustomize();
                 break;
+            case 'save':
+                this.openSaveMenu();
+                break;
+            case 'load':
+                this.openLoadMenu();
+                break;
         }
     }
 
@@ -256,6 +268,26 @@ export class HouseSystem {
     openCustomize() {
         this.closeHouseMenu();
         this.showMessage('customização ainda não implementada');
+    }
+
+    async openSaveMenu() {
+        this.closeHouseMenu();
+        try {
+            const { saveSlotsUI } = await import('./saveSlotsUI.js');
+            saveSlotsUI.open('save');
+        } catch (e) {
+            this.showMessage('Sistema de save não disponível');
+        }
+    }
+
+    async openLoadMenu() {
+        this.closeHouseMenu();
+        try {
+            const { saveSlotsUI } = await import('./saveSlotsUI.js');
+            saveSlotsUI.open('load');
+        } catch (e) {
+            this.showMessage('Sistema de save não disponível');
+        }
     }
 
     showStorageModal() {

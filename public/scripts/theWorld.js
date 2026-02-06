@@ -1162,6 +1162,162 @@ export function renderWorld(ctx, player) {
   drawBuildPreview(ctx);
 }
 
+/**
+ * Exports the current world state for serialization (save system)
+ * @returns {Object} Serialized world state with all world object arrays
+ */
+export function exportWorldState() {
+  return {
+    trees: trees.map(t => ({
+      id: t.id, x: t.x, y: t.y,
+      width: t.width, height: t.height,
+      type: t.type, subType: t.subType, hp: t.hp
+    })),
+    rocks: rocks.map(r => ({
+      id: r.id, x: r.x, y: r.y,
+      width: r.width, height: r.height,
+      type: r.type, subType: r.subType, hp: r.hp
+    })),
+    thickets: thickets.map(th => ({
+      id: th.id, x: th.x, y: th.y,
+      width: th.width, height: th.height,
+      type: th.type, subType: th.subType, hp: th.hp
+    })),
+    houses: houses.map(h => ({
+      id: h.id, x: h.x, y: h.y,
+      width: h.width, height: h.height,
+      type: h.type
+    })),
+    placedBuildings: placedBuildings.map(b => ({
+      id: b.id, x: b.x, y: b.y,
+      width: b.width, height: b.height,
+      type: b.type, originalType: b.originalType,
+      name: b.name, icon: b.icon, variant: b.variant,
+      itemId: b.itemId, interactable: b.interactable,
+      storageId: b.storageId
+    })),
+    placedWells: placedWells.map(w => ({
+      id: w.id, x: w.x, y: w.y,
+      width: w.width, height: w.height,
+      originalType: w.originalType, name: w.name
+    })),
+    animals: animals.map(a => ({
+      id: a.id, x: a.x, y: a.y,
+      assetName: a.assetName
+    }))
+  };
+}
+
+/**
+ * Imports world state from saved data (save system)
+ * Clears all existing world objects and restores from serialized data
+ * @param {Object} data - Serialized world state from exportWorldState()
+ */
+export function importWorldState(data) {
+  if (!data) return;
+
+  // Clear existing state
+  collisionSystem.clear();
+  trees.length = 0;
+  rocks.length = 0;
+  thickets.length = 0;
+  houses.length = 0;
+  placedBuildings.length = 0;
+  placedWells.length = 0;
+  animals.length = 0;
+  cacheValid = false;
+
+  // Restore trees
+  if (Array.isArray(data.trees)) {
+    for (const t of data.trees) {
+      trees.push({ ...t });
+      try {
+        collisionSystem.addHitbox(t.id, "TREE", t.x, t.y, t.width, t.height);
+      } catch (e) {
+        handleWarn("Failed to restore tree hitbox", "theWorld:importWorldState", { treeId: t.id, err: e });
+      }
+    }
+  }
+
+  // Restore rocks
+  if (Array.isArray(data.rocks)) {
+    for (const r of data.rocks) {
+      rocks.push({ ...r });
+      try {
+        collisionSystem.addHitbox(r.id, "ROCK", r.x, r.y, r.width, r.height);
+      } catch (e) {
+        handleWarn("Failed to restore rock hitbox", "theWorld:importWorldState", { rockId: r.id, err: e });
+      }
+    }
+  }
+
+  // Restore thickets
+  if (Array.isArray(data.thickets)) {
+    for (const th of data.thickets) {
+      thickets.push({ ...th });
+      try {
+        collisionSystem.addHitbox(th.id, "THICKET", th.x, th.y, th.width, th.height);
+      } catch (e) {
+        handleWarn("Failed to restore thicket hitbox", "theWorld:importWorldState", { thicketId: th.id, err: e });
+      }
+    }
+  }
+
+  // Restore houses
+  if (Array.isArray(data.houses)) {
+    for (const h of data.houses) {
+      houses.push({ ...h });
+      if (h.type === "HOUSE_WALLS") {
+        try {
+          collisionSystem.addHitbox(h.id, "HOUSE_WALLS", h.x, h.y, h.width, h.height);
+        } catch (e) {
+          handleWarn("Failed to restore house hitbox", "theWorld:importWorldState", { houseId: h.id, err: e });
+        }
+      }
+    }
+  }
+
+  // Restore placed buildings
+  if (Array.isArray(data.placedBuildings)) {
+    for (const b of data.placedBuildings) {
+      const building = { ...b };
+      placedBuildings.push(building);
+      const collisionType = (building.originalType || building.type || "construction").toString().toUpperCase();
+      try {
+        collisionSystem.addHitbox(building.id, collisionType, building.x, building.y, building.width, building.height, building);
+      } catch (e) {
+        handleWarn("Failed to restore building hitbox", "theWorld:importWorldState", { buildingId: building.id, err: e });
+      }
+    }
+  }
+
+  // Restore wells
+  if (Array.isArray(data.placedWells)) {
+    for (const w of data.placedWells) {
+      const well = { ...w, originalType: w.originalType || "well" };
+      placedWells.push(well);
+      try {
+        collisionSystem.addHitbox(well.id, "WELL", well.x, well.y, well.width, well.height);
+      } catch (e) {
+        handleWarn("Failed to restore well hitbox", "theWorld:importWorldState", { wellId: well.id, err: e });
+      }
+    }
+  }
+
+  // Restore animals
+  if (Array.isArray(data.animals)) {
+    for (const a of data.animals) {
+      const img = assets.animals?.[a.assetName];
+      if (img) {
+        addAnimal(a.assetName, img, a.x, a.y);
+      }
+    }
+  }
+
+  registerWorldObjects();
+  markWorldChanged();
+}
+
 /* export público do world para outros módulos */
 const theWorld = {
   addWorldObject: window.addWorldObject || null,
@@ -1178,6 +1334,8 @@ const theWorld = {
   placeWell,
   addAnimal,
   updateAnimals,
+  exportWorldState,
+  importWorldState,
   animals,
   worldInitialized,
   trees,

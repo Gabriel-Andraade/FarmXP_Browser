@@ -177,11 +177,34 @@ export class CharacterSelection {
         }));
     }
 
-    loadGame() {
-        this.showWarning('Sistema de save não disponível. Iniciando novo jogo.');
-        if (!this.selectedCharacter) {
-            this.selectedCharacter = this.characters.find(c => c.id === "stella");
+    async loadGame() {
+        try {
+            const saveModule = await import('../saveSystem.js');
+            const saveSystem = saveModule.saveSystem;
+
+            if (!saveSystem.hasAnySave()) {
+                this.showWarning('Nenhum save encontrado. Selecione um personagem para começar.');
+                return;
+            }
+
+            const uiModule = await import('../saveSlotsUI.js');
+            const saveSlotsUI = uiModule.saveSlotsUI;
+
+            // Abrir UI de slots em modo load, com callback para startup
+            saveSlotsUI.open('load', (slot, slotIndex) => {
+                // Guardar dados para aplicar depois que todos os sistemas carregarem
+                window._pendingSaveData = slot;
+
+                // Usar personagem do save (ou Stella como fallback)
+                const charId = slot?.data?.player?.characterId || 'stella';
+                this.selectedCharacter = this.characters.find(c => c.id === charId) || this.characters[0];
+
+                // Iniciar fluxo normal de carregamento do jogo
+                this.startGame();
+            });
+        } catch (e) {
+            this.showWarning('Erro ao acessar sistema de saves.');
+            console.error('CharacterSelection:loadGame', e);
         }
-        this.startGame();
     }
 }

@@ -99,7 +99,7 @@ export const WeatherSystem = {
   year: 1,
   season: "Primavera",
 
-  timeSpeed: (24 * 60) / (2 * 60),
+  timeSpeed: (24 * 60) / (12 * 60),
   ambientDarkness: 1,
 
   weatherType: "clear",
@@ -113,6 +113,7 @@ export const WeatherSystem = {
   sleepTimerAcc: 0,
   sleepTargetDay: null,
   sleepMessage: "",
+  isPaused: false,
 
   sleepDurations: {
     fadeOut: 1500,
@@ -153,7 +154,16 @@ export const WeatherSystem = {
     return this.daysOfWeek[index];
   },
 
+  pause() {
+    this.isPaused = true;
+  },
+
+  resume() {
+    this.isPaused = false;
+  },
+
   update(deltaTime) {
+    if (this.isPaused) return;
     if (this.isSleeping) {
       this._updateSleepTransition(deltaTime * 1000);
       return;

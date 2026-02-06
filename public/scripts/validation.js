@@ -145,13 +145,7 @@ export function validateRange(value, min, max) {
  * isValidItemId(NaN, items)    // false (not a valid integer)
  * isValidItemId(-1, items)     // false (not positive)
  */
-export function isValidItemId(id, items) {
-    if (!Array.isArray(items)) {
-        return false;
-    }
-    return isValidPositiveInteger(id) &&
-           items.some(item => item.id === id);
-}
+
 
 /**
  * Validates trade input (quantity vs available stock)

@@ -63,6 +63,7 @@ export class PlayerHUD {
                     </div>
                 </div>
             </div>
+            <button class="hud-save-btn" id="saveGameBtn" title="Salvar / Carregar">💾</button>
         `;
 
         // Verifica se o container .theGame existe
@@ -98,6 +99,16 @@ export class PlayerHUD {
 
         // Botão retrátil do HUD
         document.getElementById('toggleHudBtn')?.addEventListener('click', () => this.toggleHUD());
+
+        // Botão Save/Load
+        document.getElementById('saveGameBtn')?.addEventListener('click', async () => {
+            try {
+                const { saveSlotsUI } = await import('../saveSlotsUI.js');
+                saveSlotsUI.open('menu');
+            } catch (e) {
+                logger.warn('Save system não disponível', e);
+            }
+        });
 
         // 🆕 LISTENER PARA ATUALIZAÇÃO DE DINHEIRO EM TEMPO REAL
         document.addEventListener("moneyChanged", (e) => {
