@@ -139,7 +139,7 @@ class SaveSystem {
      * @returns {Array} Array de slots (null para vazios, objeto para preenchidos)
      */
     listSlots() {
-        return this._readRoot().slots;
+        return [...this._readRoot().slots];
     }
 
     /**
@@ -359,10 +359,7 @@ class SaveSystem {
             this._applyCurrencyData(data.currency);
         }
 
-        // Aplicar clima/tempo
-        if (data.weather) {
-            this._applyWeatherData(data.weather);
-        }
+
 
         // Aplicar mundo (buildings, wells)
         if (data.world) {
@@ -372,6 +369,11 @@ class SaveSystem {
         // Aplicar baús
         if (data.chests) {
             this._applyChestsData(data.chests);
+        }
+        
+                // Aplicar clima/tempo
+        if (data.weather) {
+            this._applyWeatherData(data.weather);
         }
 
         logger.info('✅ Dados do save aplicados');
@@ -672,6 +674,8 @@ class SaveSystem {
                         failedItems.push({ id: savedItem.id, quantity: savedItem.quantity, category: catName });
                     }
                 }
+                      } else {
++                logger.warn(`[SaveSystem] Category "${catName}" not found in inventory, ${items.length} items skipped`);
             }
         }
 
@@ -702,7 +706,7 @@ class SaveSystem {
      */
     _applyCurrencyData(data) {
         const currency = getSystem('currency') || window.currencyManager;
-        if (currency && data.money !== undefined) {
+         if (currency && typeof data.money === 'number' && data.money >= 0) {
             currency.currentMoney = data.money;
             if (typeof currency._notifyChange === 'function') {
                 currency._notifyChange();

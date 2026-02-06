@@ -670,13 +670,11 @@ function setupStateChangeListenersForSave() {
   if (!saveRef) return;
 
   // 1. Mudanças no mundo (animais spawnados, construções, etc.)
-  const originalMarkWorldChanged = window.theWorld?.markWorldChanged;
-  if (originalMarkWorldChanged) {
-    window.theWorld.markWorldChanged = function() {
-      saveRef.markDirty();
-      return originalMarkWorldChanged.apply(this, arguments);
-    };
-  }
+  //    Agora usando evento customizado 'worldChanged' que deve ser disparado
+  //    pela função markWorldChanged em theWorld.js
+  document.addEventListener('worldChanged', () => {
+    saveRef.markDirty();
+  });
 
   // 2. Mudanças no inventário
   document.addEventListener('inventoryChanged', () => {
@@ -694,13 +692,11 @@ function setupStateChangeListenersForSave() {
   });
 
   // 5. Adicionar animais via debug ou sistemas
-  const originalAddAnimal = window.theWorld?.addAnimal;
-  if (originalAddAnimal) {
-    window.theWorld.addAnimal = function(...args) {
-      saveRef.markDirty();
-      return originalAddAnimal.apply(this, args);
-    };
-  }
+  //    Agora usando evento customizado 'animalAdded' que deve ser disparado
+  //    pela função addAnimal em theWorld.js
+  document.addEventListener('animalAdded', () => {
+    saveRef.markDirty();
+  });
 
   // 6. Eventos de sono (mudam o tempo do jogo)
   document.addEventListener('sleepEnded', () => {
