@@ -155,8 +155,12 @@ class SaveSystem {
             return;
         }
 
-        this.activeSlot = slotIndex;
+    this.activeSlot = slotIndex;
+    try {
         localStorage.setItem(ACTIVE_SLOT_KEY, String(slotIndex));
+    } catch (error) {
+        logger.error('Erro ao salvar slot ativo:', error);
+    }
         this.sessionStartAt = Date.now();
         this.sessionMs = 0;
 
@@ -369,7 +373,7 @@ class SaveSystem {
         if (!root.slots[slotIndex]?.meta) return false;
 
         root.slots[slotIndex].meta.saveName = newName.trim().substring(0, 30);
-        this._writeRoot(root);
+        if (!this._writeRoot(root)) return false;
 
         logger.info(`Slot ${slotIndex} renomeado para "${newName}"`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'rename' });
@@ -387,7 +391,7 @@ class SaveSystem {
 
         const root = this._readRoot();
         root.slots[slotIndex] = null;
-        this._writeRoot(root);
+        if (!this._writeRoot(root)) return false;
 
         // Se era o slot ativo, desativar
         if (this.activeSlot === slotIndex) {
@@ -676,7 +680,7 @@ class SaveSystem {
         if (!weather || !data) return;
 
         // Pausar o sistema enquanto aplica os dados
-        weather.pause();
+        if (typeof weather.pause === 'function') weather.pause();
 
         // Restaurar valores de tempo/data
         weather.currentTime = data.currentTime ?? 360;
@@ -722,7 +726,7 @@ class SaveSystem {
         }));
 
         // Resumir o sistema
-        weather.resume();
+        if (typeof weather.resume === 'function') weather.resume();
 
         logger.info(`⛅ Clima restaurado: ${weather.weatherType}, Dia ${weather.day}, ${weather.getTimeString()}`);
     }

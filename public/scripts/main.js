@@ -573,7 +573,9 @@ async function startFullGameLoad() {
     allAssetsLoaded = true;
     updateLoadingProgress(0.55, "preparando mundo...");
 
-    spawnGameAnimals();
+       if (!window._pendingSaveData) {
+       spawnGameAnimals();
+    }
     updateLoadingProgress(0.65, "carregando sistemas...");
 
     await exposeGlobals();
