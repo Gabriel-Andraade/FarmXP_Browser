@@ -123,6 +123,7 @@ class SaveSystem {
             return true;
         } catch (error) {
             logger.error('Erro ao escrever saves:', error);
+            this._cachedRoot = null;
             return false;
         }
     }
@@ -370,8 +371,8 @@ class SaveSystem {
         if (data.chests) {
             this._applyChestsData(data.chests);
         }
-        
-                // Aplicar clima/tempo
+
+        // Aplicar clima/tempo
         if (data.weather) {
             this._applyWeatherData(data.weather);
         }
@@ -675,8 +676,8 @@ class SaveSystem {
                     }
                 }
                       } else {
-+                logger.warn(`[SaveSystem] Category "${catName}" not found in inventory, ${items.length} items skipped`);
-            }
+                        logger.warn(`[SaveSystem] Category "${catName}" not found in inventory, ${items.length} items skipped`);
+                      }
         }
 
         if (failedItems.length > 0) {
