@@ -112,7 +112,7 @@ export class CraftingSystem {
     if (!recipe) return;
 
     if (!this.canCraft(recipe)) {
-      this.showMessage("❌ Faltam materiais!", "error");
+      this.showMessage(`❌ ${t('crafting.notEnoughMaterials')}`, "error");
       return;
     }
 
@@ -143,23 +143,23 @@ export class CraftingSystem {
       }
       
     } catch (error) {
-      this.showMessage("❌ Erro ao craftar!", "error");
+      this.showMessage(`❌ ${t('crafting.craftError')}`, "error");
       logger.error("Craft failed:", error);
       if (craftBtn) {
         craftBtn.disabled = false;
-        craftBtn.innerHTML = '<i class="fas fa-hammer"></i> Craftar';
+        craftBtn.innerHTML = `<i class="fas fa-hammer"></i> ${t('crafting.craft')}`;
         craftBtn.classList.remove("crf-disabled");
       }
       return;
     }
 
-    this.showMessage(`🔨 Craftado: ${recipe.name}!`, "success");
+    this.showMessage(`🔨 ${t('crafting.crafted', { name: recipe.name })}`, "success");
     this.renderRecipeList();
 
     if (craftBtn) {
       setTimeout(() => {
         craftBtn.disabled = false;
-        craftBtn.innerHTML = '<i class="fas fa-hammer"></i> Craftar';
+        craftBtn.innerHTML = `<i class="fas fa-hammer"></i> ${t('crafting.craft')}`;
         craftBtn.classList.remove("crf-disabled");
       }, 1000);
     }
@@ -224,10 +224,10 @@ export class CraftingSystem {
     panel.className = "crf-panel";
 
     panel.innerHTML = `
-      <button class="crf-close-btn" aria-label="Fechar">&times;</button>
+      <button class="crf-close-btn" aria-label="${t('ui.close')}">&times;</button>
 
       <div class="crf-header">
-        <h2>⚒️ Sistema de Crafting</h2>
+        <h2>⚒️ ${t('crafting.title')}</h2>
       </div>
 
       <div class="crf-categories" id="crf-categories"></div>
@@ -360,7 +360,7 @@ export class CraftingSystem {
               ? `
                 <div class="crf-missing">
                   <i class="fas fa-exclamation-triangle"></i>
-                  Faltando:
+                  ${t('crafting.missing')}:
                   ${missing
                     .map((m) => {
                       const data = items.find((i) => i.id === m.itemId);
@@ -380,7 +380,7 @@ export class CraftingSystem {
           ${can ? "" : "disabled"}
         >
           <i class="fas fa-hammer"></i>
-          Craftar
+          ${t('crafting.craft')}
         </button>
       `;
 

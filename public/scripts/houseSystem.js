@@ -187,10 +187,10 @@ export class HouseSystem {
                         <span class="hse-option-text">${t('house.customize')}</span>
                     </button>
                     <button class="hse-house-option" data-action="save">
-                        <span class="hse-option-text">💾 Salvar Jogo</span>
+                        <span class="hse-option-text">💾 ${t('house.saveGame')}</span>
                     </button>
                     <button class="hse-house-option" data-action="load">
-                        <span class="hse-option-text">📂 Carregar Jogo</span>
+                        <span class="hse-option-text">📂 ${t('house.loadGame')}</span>
                     </button>
                 </div>
                 <div class="hse-house-footer">
@@ -279,7 +279,7 @@ export class HouseSystem {
             saveSlotsUI.open('save');
         } catch (e) {
             logger.error('HouseSystem:openSaveMenu', e);
-            this.showMessage('Sistema de save não disponível');
+            this.showMessage(t('house.saveNotAvailable'));
         }
     }
 
@@ -290,7 +290,7 @@ export class HouseSystem {
             saveSlotsUI.open('load');
         } catch (e) {
             logger.error('HouseSystem:openLoadMenu', e);
-            this.showMessage('Sistema de save não disponível');
+            this.showMessage(t('house.saveNotAvailable'));
         }
     }
 

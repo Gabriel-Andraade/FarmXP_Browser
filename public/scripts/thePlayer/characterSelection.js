@@ -181,7 +181,7 @@ export class CharacterSelection {
             const saveSystem = saveModule.saveSystem;
 
             if (!saveSystem.hasAnySave()) {
-                this.showWarning('Nenhum save encontrado. Selecione um personagem para começar.');
+                this.showWarning(t('characterSelection.noSavesFound'));
                 return;
             }
 
@@ -201,9 +201,11 @@ export class CharacterSelection {
                 this.startGame();
             });
         } catch (e) {
-            this.showWarning('Erro ao acessar sistema de saves.');
+            this.showWarning(t('characterSelection.saveSystemError'));
             logger.error('CharacterSelection:loadGame', e);
         } finally {
+            // Guard reset: protege apenas contra imports concorrentes.
+            // O fluxo do jogo continua dentro do callback de saveSlotsUI.open().
             this._loadingInProgress = false;
         }
     }

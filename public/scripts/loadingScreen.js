@@ -1,5 +1,6 @@
 import { logger } from './logger.js';
 import { getSystem } from './gameState.js';
+import { t } from './i18n/i18n.js';
 
 /**
  * Gerenciador de telas de carregamento do jogo
@@ -20,12 +21,6 @@ class LoadingScreenManager {
 
     /**
      * Exibe a tela de carregamento inicial do jogo
-     * Cria interface com barra de progresso, mensagens e animações
-     * Previne criação duplicada verificando existência
-     * @returns {HTMLElement|undefined} Elemento da tela de loading ou undefined se já existe
-     */
-    /**
-     * Exibe a tela de carregamento inicial do jogo
      * CSS carregado externamente via style/loading.css
      */
     showInitialLoading() {
@@ -38,7 +33,7 @@ class LoadingScreenManager {
         loadingScreen.innerHTML = `
             <div class="ldg-content">
                 <h1>FarmingXP</h1>
-                <p class="ldg-subtitle">Preparando sua fazenda...</p>
+                <p class="ldg-subtitle">${t('loading.preparingFarm')}</p>
                 <div class="ldg-progress-container">
                     <div id="ldg-initial-progress-bar"></div>
                 </div>
@@ -88,13 +83,6 @@ class LoadingScreenManager {
 
     /**
      * Exibe tela de carregamento durante o sono do jogador
-     * Cria interface animada com barra de progresso, timer e status de otimizações
-     * Inicia automaticamente simulação de otimizações sincronizada com duração
-     * @param {number} [durationSeconds=5] - Duração do sono em segundos
-     * @returns {HTMLElement} Elemento da tela de sono
-     */
-    /**
-     * Exibe tela de carregamento durante o sono do jogador
      * CSS carregado externamente via style/loading.css
      */
     showSleepLoading(durationSeconds = 5) {
@@ -106,11 +94,11 @@ class LoadingScreenManager {
         this.sleepScreen.innerHTML = `
             <div class="ldg-sleep-content">
                 <div class="ldg-sleep-emoji">💤</div>
-                <h2 class="ldg-sleep-title">Repouso Restaurador</h2>
+                <h2 class="ldg-sleep-title">${t('sleep.title')}</h2>
 
                 <div class="ldg-sleep-progress-container">
                     <div class="ldg-sleep-progress-header">
-                        <span>Progresso</span>
+                        <span>${t('sleep.progress')}</span>
                         <span id="ldg-sleep-time-remaining">${durationSeconds}s</span>
                     </div>
                     <div class="ldg-sleep-progress-bar">
@@ -119,18 +107,18 @@ class LoadingScreenManager {
                 </div>
 
                 <div class="ldg-sleep-message-container">
-                    <p id="ldg-sleep-main-message">Adormecendo...</p>
-                    <p id="ldg-sleep-detail-message">Fechando os olhos...</p>
+                    <p id="ldg-sleep-main-message">${t('sleep.fallingAsleep')}</p>
+                    <p id="ldg-sleep-detail-message">${t('sleep.closingEyes')}</p>
                 </div>
 
                 <div class="ldg-sleep-optimizations">
                     <div class="ldg-optimization-card">
-                        <div class="ldg-card-title">Cache</div>
-                        <div id="cache-status" class="ldg-card-status">Aguardando...</div>
+                        <div class="ldg-card-title">${t('sleep.cache')}</div>
+                        <div id="cache-status" class="ldg-card-status">${t('sleep.waiting')}</div>
                     </div>
                     <div class="ldg-optimization-card">
-                        <div class="ldg-card-title">Memória</div>
-                        <div id="memory-status" class="ldg-card-status">Aguardando...</div>
+                        <div class="ldg-card-title">${t('sleep.memory')}</div>
+                        <div id="memory-status" class="ldg-card-status">${t('sleep.waiting')}</div>
                     </div>
                 </div>
             </div>
@@ -160,7 +148,7 @@ class LoadingScreenManager {
         const progressBar = document.getElementById('ldg-sleep-progress-bar');
         const mainMsgEl = document.getElementById('ldg-sleep-main-message');
         const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
-        
+
         if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
         if (detailMsgEl && detailMessage) detailMsgEl.textContent = detailMessage;
@@ -176,11 +164,11 @@ class LoadingScreenManager {
      */
     startSleepOptimizations(durationSeconds) {
         const steps = [
-            { t: 0.1, main: "Adormecendo...", detail: "O mundo fica silencioso", cache: "Aguardando", mem: "Aguardando" },
-            { t: 0.3, main: "Sono Profundo", detail: "Recuperando energia...", cache: "Limpando...", mem: "Analisando..." },
-            { t: 0.6, main: "Otimizando", detail: "Reorganizando pensamentos...", cache: "Liberando...", mem: "Compactando..." },
-            { t: 0.9, main: "Quase lá", detail: "O sol está nascendo...", cache: "Limpo", mem: "Otimizado" },
-            { t: 1.0, main: "Despertando", detail: "Bom dia!", cache: "Pronto", mem: "Pronto" }
+            { t: 0.1, main: t('sleep.fallingAsleep'), detail: t('sleep.worldQuiet'), cache: t('sleep.waiting'), mem: t('sleep.waiting') },
+            { t: 0.3, main: t('sleep.deepSleep'), detail: t('sleep.recoveringEnergy'), cache: t('sleep.cleaning'), mem: t('sleep.analyzing') },
+            { t: 0.6, main: t('sleep.optimizing'), detail: t('sleep.reorganizing'), cache: t('sleep.freeing'), mem: t('sleep.compacting') },
+            { t: 0.9, main: t('sleep.almostThere'), detail: t('sleep.sunRising'), cache: t('sleep.clean'), mem: t('sleep.optimized') },
+            { t: 1.0, main: t('sleep.awakening'), detail: t('sleep.goodMorning'), cache: t('sleep.ready'), mem: t('sleep.ready') }
         ];
 
         let currentStepIndex = 0;
@@ -192,10 +180,10 @@ class LoadingScreenManager {
                 this.performFinalOptimizations();
                 return;
             }
-            
+
             const s = steps[currentStepIndex];
             this.updateSleepProgress(s.t, s.main, s.detail);
-            
+
             const cacheEl = document.getElementById('cache-status');
             const memEl = document.getElementById('memory-status');
             if (cacheEl) cacheEl.textContent = s.cache;

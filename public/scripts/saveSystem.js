@@ -418,7 +418,11 @@ class SaveSystem {
         // Se era o slot ativo, desativar
         if (this.activeSlot === slotIndex) {
             this.activeSlot = null;
-            localStorage.removeItem(ACTIVE_SLOT_KEY);
+            try {
+                localStorage.removeItem(ACTIVE_SLOT_KEY);
+            } catch (error) {
+                logger.error('Erro ao remover slot ativo:', error);
+            }
         }
 
         logger.info(`🗑️ Slot ${slotIndex} deletado`);

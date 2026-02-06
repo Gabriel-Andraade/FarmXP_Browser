@@ -8,6 +8,7 @@
 import { saveSystem, formatPlayTime, formatDateTime } from './saveSystem.js';
 import { logger } from './logger.js';
 import { getSystem } from './gameState.js';
+import { t } from './i18n/i18n.js';
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen, blockInteractions, unblockInteractions } from './loadingScreen.js';
 
 
@@ -57,8 +58,8 @@ class SaveSlotsUI {
         this.modal.innerHTML = `
             <div class="save-modal-container">
                 <div class="save-modal-header">
-                    <h2 class="save-modal-title">💾 Salvar / Carregar</h2>
-                    <button class="save-modal-close" aria-label="Fechar">&times;</button>
+                    <h2 class="save-modal-title">💾 ${t('saveSlots.titleSaveLoad')}</h2>
+                    <button class="save-modal-close" aria-label="${t('ui.close')}">&times;</button>
                 </div>
                 <div class="save-modal-body">
                     <div class="save-slots-grid"></div>
@@ -88,11 +89,11 @@ class SaveSlotsUI {
         // Atualizar título baseado no modo
         const title = this.modal.querySelector('.save-modal-title');
         if (mode === 'save') {
-            title.textContent = '💾 Salvar Jogo';
+            title.textContent = '💾 ' + t('saveSlots.titleSave');
         } else if (mode === 'load') {
-            title.textContent = '📂 Carregar Jogo';
+            title.textContent = '📂 ' + t('saveSlots.titleLoad');
         } else {
-            title.textContent = '💾 Salvar / Carregar';
+            title.textContent = '💾 ' + t('saveSlots.titleSaveLoad');
         }
 
         this.render();
@@ -142,17 +143,17 @@ class SaveSlotsUI {
             return `
                 <div class="save-slot-card save-slot-empty" data-slot="${index}">
                     <div class="save-slot-header">
-                        <span class="save-slot-number">Slot ${index + 1}</span>
-                        <span class="save-slot-badge empty">Vazio</span>
+                        <span class="save-slot-number">${t('saveSlots.slotNumber', { number: index + 1 })}</span>
+                        <span class="save-slot-badge empty">${t('saveSlots.empty')}</span>
                     </div>
                     <div class="save-slot-empty-content">
                         <div class="save-slot-empty-icon">📁</div>
-                        <p>Nenhum save neste slot</p>
+                        <p>${t('saveSlots.noSaveInSlot')}</p>
                     </div>
                     <div class="save-slot-actions">
                         ${this.mode !== 'load' ? `
                             <button class="save-btn save-btn-create" data-action="create" data-slot="${index}">
-                                ✨ Criar Save
+                                ✨ ${t('saveSlots.createSave')}
                             </button>
                         ` : ''}
                     </div>
@@ -165,28 +166,28 @@ class SaveSlotsUI {
             <div class="save-slot-card ${isActive ? 'save-slot-active' : ''}" data-slot="${index}">
                 <div class="save-slot-header">
                     <span class="save-slot-name" title="${escapeHtml(meta.saveName)}">${escapeHtml(meta.saveName)}</span>
-                    ${isActive ? '<span class="save-slot-badge active">Ativo</span>' : ''}
+                    ${isActive ? `<span class="save-slot-badge active">${t('saveSlots.active')}</span>` : ''}
                 </div>
 
                 <div class="save-slot-meta">
                     <div class="save-meta-row">
-                        <span class="save-meta-label">👤 Personagem:</span>
+                        <span class="save-meta-label">👤 ${t('saveSlots.character')}</span>
                         <span class="save-meta-value">${escapeHtml(meta.characterName || 'Stella')}</span>
                     </div>
                     <div class="save-meta-row">
-                        <span class="save-meta-label">⏱️ Tempo Total:</span>
+                        <span class="save-meta-label">⏱️ ${t('saveSlots.totalTime')}</span>
                         <span class="save-meta-value">${formatPlayTime(meta.totalPlayTimeMs)}</span>
                     </div>
                     <div class="save-meta-row">
-                        <span class="save-meta-label">📅 Criado em:</span>
+                        <span class="save-meta-label">📅 ${t('saveSlots.createdAt')}</span>
                         <span class="save-meta-value">${formatDateTime(meta.createdAt)}</span>
                     </div>
                     <div class="save-meta-row">
-                        <span class="save-meta-label">💾 Último save:</span>
+                        <span class="save-meta-label">💾 ${t('saveSlots.lastSave')}</span>
                         <span class="save-meta-value">${formatDateTime(meta.lastSavedAt)}</span>
                     </div>
                     <div class="save-meta-row">
-                        <span class="save-meta-label">🎮 Última sessão:</span>
+                        <span class="save-meta-label">🎮 ${t('saveSlots.lastSession')}</span>
                         <span class="save-meta-value">${formatPlayTime(meta.lastSessionMs)}</span>
                     </div>
                 </div>
@@ -194,12 +195,12 @@ class SaveSlotsUI {
                 <div class="save-slot-actions">
                     ${this.mode !== 'save' ? `
                         <button class="save-btn save-btn-load" data-action="load" data-slot="${index}">
-                            ▶️ Jogar
+                            ▶️ ${t('saveSlots.play')}
                         </button>
                     ` : ''}
                     ${this.mode !== 'load' ? `
                         <button class="save-btn save-btn-save" data-action="save" data-slot="${index}">
-                            💾 Salvar
+                            💾 ${t('saveSlots.save')}
                         </button>
                     ` : ''}
                     <button class="save-btn save-btn-rename" data-action="rename" data-slot="${index}">
@@ -257,19 +258,20 @@ class SaveSlotsUI {
      * @param {number} slotIndex - Índice do slot
      */
     _createSave(slotIndex) {
-        const name = prompt('Nome do save:', `Save ${slotIndex + 1}`);
+        const defaultName = t('saveSlots.defaultName', { number: slotIndex + 1 });
+        const name = prompt(t('saveSlots.saveName'), defaultName);
         if (name === null) return; // Cancelou
 
         const success = saveSystem.createOrOverwriteSlot(slotIndex, {
-            saveName: name || `Save ${slotIndex + 1}`
+            saveName: name || defaultName
         });
 
         if (success) {
             saveSystem.selectActiveSlot(slotIndex);
-            this._showMessage('Save criado com sucesso!', 'success');
+            this._showMessage(t('saveSlots.createSuccess'), 'success');
             this.render();
         } else {
-            this._showMessage('Erro ao criar save', 'error');
+            this._showMessage(t('saveSlots.createError'), 'error');
         }
     }
 
@@ -289,7 +291,7 @@ class SaveSlotsUI {
                 this.onLoadCallback(slot, slotIndex);
                 this.close();
             } else {
-                this._showMessage('Erro ao carregar save', 'error');
+                this._showMessage(t('saveSlots.loadError'), 'error');
             }
             return;
         }
@@ -302,38 +304,38 @@ class SaveSlotsUI {
         // 2. Mostrar loading e bloquear interações
         // Nota: weather.pause() é chamado internamente por applySaveData -> _applyWeatherData
         showLoadingScreen();
-        updateLoadingProgress(0.2, 'Carregando save...');
+        updateLoadingProgress(0.2, t('saveSlots.loading'));
         blockInteractions();
 
         // 3. Carregar dados brutos do slot
         const slot = saveSystem.loadSlot(slotIndex);
 
         if (!slot) {
-            this._showMessage('Erro ao carregar save', 'error');
+            this._showMessage(t('saveSlots.loadError'), 'error');
             hideLoadingScreen();
             unblockInteractions();
             document.dispatchEvent(new CustomEvent('game:resume'));
             return;
         }
 
-        updateLoadingProgress(0.5, 'Aplicando dados...');
+        updateLoadingProgress(0.5, t('saveSlots.applying'));
 
         // 4. Aplicar dados (mundo, inventário, posição, clima)
         try {
             saveSystem.applySaveData(slot);
         } catch (e) {
             logger.error('Erro ao aplicar dados do save:', e);
-            this._showMessage('Erro ao aplicar save', 'error');
+            this._showMessage(t('saveSlots.applyError'), 'error');
         }
 
-        updateLoadingProgress(1, 'Pronto!');
+        updateLoadingProgress(1, t('saveSlots.ready'));
 
         // 5. Pequeno delay para UI atualizar, depois liberar tudo
         setTimeout(() => {
             hideLoadingScreen();
             unblockInteractions();
             document.dispatchEvent(new CustomEvent('game:resume'));
-            this._showMessage('Save carregado!', 'success');
+            this._showMessage(t('saveSlots.loadSuccess'), 'success');
         }, 600);
 
         this.close();
@@ -345,16 +347,16 @@ class SaveSlotsUI {
      */
     _overwriteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirmed = window.confirm(`Sobrescrever "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito.`);
+        const confirmed = window.confirm(t('saveSlots.confirmOverwrite', { name: meta?.saveName || 'Save' }));
 
         if (!confirmed) return;
 
         const success = saveSystem.createOrOverwriteSlot(slotIndex);
         if (success) {
-            this._showMessage('Save atualizado!', 'success');
+            this._showMessage(t('saveSlots.overwriteSuccess'), 'success');
             this.render();
         } else {
-            this._showMessage('Erro ao salvar', 'error');
+            this._showMessage(t('saveSlots.saveError'), 'error');
         }
     }
 
@@ -364,20 +366,20 @@ class SaveSlotsUI {
      */
     _renameSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const newName = prompt('Novo nome:', meta?.saveName || '');
+        const newName = prompt(t('saveSlots.newName'), meta?.saveName || '');
 
         if (newName === null) return; // Cancelou
         if (!newName.trim()) {
-            this._showMessage('Nome não pode ser vazio', 'error');
+            this._showMessage(t('saveSlots.emptyNameError'), 'error');
             return;
         }
 
         const success = saveSystem.renameSlot(slotIndex, newName);
         if (success) {
-            this._showMessage('Save renomeado!', 'success');
+            this._showMessage(t('saveSlots.renameSuccess'), 'success');
             this.render();
         } else {
-            this._showMessage('Erro ao renomear', 'error');
+            this._showMessage(t('saveSlots.renameError'), 'error');
         }
     }
 
@@ -387,16 +389,16 @@ class SaveSlotsUI {
      */
     _deleteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirmed = window.confirm(`Deletar "${meta?.saveName || 'Save'}"?\nIsso não pode ser desfeito!`);
+        const confirmed = window.confirm(t('saveSlots.confirmDelete', { name: meta?.saveName || 'Save' }));
 
         if (!confirmed) return;
 
         const success = saveSystem.deleteSlot(slotIndex);
         if (success) {
-            this._showMessage('Save deletado', 'success');
+            this._showMessage(t('saveSlots.deleteSuccess'), 'success');
             this.render();
         } else {
-            this._showMessage('Erro ao deletar', 'error');
+            this._showMessage(t('saveSlots.deleteError'), 'error');
         }
     }
 

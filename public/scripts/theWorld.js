@@ -1310,8 +1310,8 @@ export function importWorldState(data) {
       const img = assets.animals?.[a.assetName];
       if (img) {
         addAnimal(a.assetName, img, a.x, a.y);
-         } else {
-           handleWarn("Animal asset not found during import, skipping", "theWorld:importWorldState", { assetName: a.assetName, id: a.id }); 
+      } else {
+        handleWarn("Animal asset not found during import, skipping", "theWorld:importWorldState", { assetName: a.assetName, id: a.id });
       }
     }
   }

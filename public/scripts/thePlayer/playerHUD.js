@@ -1,6 +1,6 @@
 import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
-import { t, getItemName } from '../i18n/i18n.js';
+import { t } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
 /**
  * Obtém nome traduzido do item pelo ID
@@ -80,7 +80,7 @@ export class PlayerHUD {
                     </div>
                 </div>
             </div>
-            <button class="hud-save-btn" id="saveGameBtn" title="Salvar / Carregar">💾</button>
+            <button class="hud-save-btn" id="saveGameBtn" title="${t('saveSlots.titleSaveLoad')}">💾</button>
         `;
 
         const gameContainer = document.querySelector('.theGame');
