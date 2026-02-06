@@ -56,6 +56,7 @@ class SaveSystem {
         this.sessionMs = 0;
         this.autoSaveInterval = null;
         this.isDirty = false;
+        this._cachedRoot = null; // Cache para otimização
 
         // Registrar no gameState
         registerSystem('save', this);
@@ -79,14 +80,20 @@ class SaveSystem {
     }
 
     /**
-     * Lê os dados raiz do localStorage
+     * Lê os dados raiz do localStorage (com cache)
      * @returns {Object} Dados raiz com version e slots
      */
     _readRoot() {
+        // Retornar cache se disponível
+        if (this._cachedRoot !== null) {
+            return this._cachedRoot;
+        }
+
         try {
             const raw = localStorage.getItem(ROOT_KEY);
             if (!raw) {
-                return { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+                this._cachedRoot = { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+                return this._cachedRoot;
             }
             const parsed = JSON.parse(raw);
             if (!parsed.slots || !Array.isArray(parsed.slots)) {
@@ -96,25 +103,35 @@ class SaveSystem {
             while (parsed.slots.length < MAX_SLOTS) {
                 parsed.slots.push(null);
             }
-            return parsed;
+            this._cachedRoot = parsed;
+            return this._cachedRoot;
         } catch (error) {
             logger.error('Erro ao ler saves:', error);
-            return { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+            this._cachedRoot = { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+            return this._cachedRoot;
         }
     }
 
     /**
-     * Escreve os dados raiz no localStorage
+     * Escreve os dados raiz no localStorage e atualiza cache
      * @param {Object} root - Dados raiz para salvar
      */
     _writeRoot(root) {
         try {
             localStorage.setItem(ROOT_KEY, JSON.stringify(root));
+            this._cachedRoot = root; // Atualizar cache
             return true;
         } catch (error) {
             logger.error('Erro ao escrever saves:', error);
             return false;
         }
+    }
+
+    /**
+     * Limpa o cache (usar quando precisar forçar recarregamento)
+     */
+    _clearCache() {
+        this._cachedRoot = null;
     }
 
     /**
@@ -126,22 +143,22 @@ class SaveSystem {
     }
 
     /**
-     * Verifica se um slot está vazio
+     * Verifica se um slot está vazio (otimizado usando cache)
      * @param {number} slotIndex - Índice do slot (0-2)
      * @returns {boolean} True se vazio
      */
     isSlotEmpty(slotIndex) {
-        const slots = this.listSlots();
+        const slots = this._readRoot().slots;
         return slots[slotIndex] === null;
     }
 
     /**
-     * Obtém os metadados de um slot específico
+     * Obtém os metadados de um slot específico (otimizado usando cache)
      * @param {number} slotIndex - Índice do slot (0-2)
      * @returns {Object|null} Metadados do slot ou null se vazio
      */
     getSlotMeta(slotIndex) {
-        const slots = this.listSlots();
+        const slots = this._readRoot().slots;
         return slots[slotIndex]?.meta || null;
     }
 
@@ -155,12 +172,12 @@ class SaveSystem {
             return;
         }
 
-    this.activeSlot = slotIndex;
-    try {
-        localStorage.setItem(ACTIVE_SLOT_KEY, String(slotIndex));
-    } catch (error) {
-        logger.error('Erro ao salvar slot ativo:', error);
-    }
+        this.activeSlot = slotIndex;
+        try {
+            localStorage.setItem(ACTIVE_SLOT_KEY, String(slotIndex));
+        } catch (error) {
+            logger.error('Erro ao salvar slot ativo:', error);
+        }
         this.sessionStartAt = Date.now();
         this.sessionMs = 0;
 
@@ -193,7 +210,7 @@ class SaveSystem {
     /**
      * Cria ou sobrescreve um slot com os dados atuais do jogo
      * @param {number} slotIndex - Índice do slot (0-2)
-     * @param {Object} options - Opções (saveName, characterId, characterName)
+     * @param {Object} options - Opções (saveName, characterId, characterName, reason)
      * @returns {boolean} True se salvou com sucesso
      */
     createOrOverwriteSlot(slotIndex, options = {}) {
@@ -224,7 +241,8 @@ class SaveSystem {
                         lastSavedAt: now,
                         lastPlayedAt: now,
                         totalPlayTimeMs: 0,
-                        lastSessionMs: 0
+                        lastSessionMs: 0,
+                        lastSaveReason: options.reason || 'manual'
                     },
                     data: {}
                 };
@@ -236,6 +254,7 @@ class SaveSystem {
             slot.meta.lastSavedAt = now;
             slot.meta.lastSessionMs = this.sessionMs;
             slot.meta.totalPlayTimeMs = (slot.meta.totalPlayTimeMs || 0) + this.sessionMs;
+            slot.meta.lastSaveReason = options.reason || slot.meta.lastSaveReason || 'manual';
 
             if (options.saveName) {
                 slot.meta.saveName = options.saveName;
@@ -252,8 +271,8 @@ class SaveSystem {
             if (!written) return false;
             this.isDirty = false;
 
-            logger.info(`💾 Save ${slotIndex} salvo com sucesso`);
-            this._dispatchEvent('save:changed', { slotIndex, action: 'save' });
+            logger.info(`💾 Save ${slotIndex} salvo com sucesso (razão: ${slot.meta.lastSaveReason})`);
+            this._dispatchEvent('save:changed', { slotIndex, action: 'save', reason: slot.meta.lastSaveReason });
 
             return true;
         } catch (error) {
@@ -273,7 +292,7 @@ class SaveSystem {
             return false;
         }
 
-        const result = this.createOrOverwriteSlot(this.activeSlot);
+        const result = this.createOrOverwriteSlot(this.activeSlot, { reason });
         if (result) {
             logger.debug(`Save automático (${reason})`);
         }
@@ -425,6 +444,9 @@ class SaveSystem {
         if (typeof weather.reset === 'function') {
             weather.reset();
         } else {
+            // Fallback manual com aviso de acoplamento
+            logger.warn('WeatherSystem.reset() não disponível - usando fallback acoplado');
+            
             // Fallback manual
             weather.currentTime = 6 * 60;
             weather.day = 1;
@@ -438,12 +460,18 @@ class SaveSystem {
             weather.fogLayers = [];
             weather.snowParticles = [];
             weather.lightningFlashes = [];
-            weather.updateAmbientLight();
+            if (typeof weather.updateAmbientLight === 'function') {
+                weather.updateAmbientLight();
+            }
         }
 
         // Disparar evento para atualizar UI
         document.dispatchEvent(new CustomEvent('timeChanged', {
-            detail: { day: weather.day, time: weather.currentTime, weekday: weather.getWeekday() }
+            detail: { 
+                day: weather.day, 
+                time: weather.currentTime, 
+                weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null 
+            }
         }));
 
         logger.info('⏰ Tempo do jogo resetado para novo jogo');
@@ -651,9 +679,19 @@ class SaveSystem {
             logger.warn('[SaveSystem] Falha ao restaurar itens:', failedItems);
         }
 
-        // Restaurar equipados
+        // Restaurar equipados apenas se o item existir no inventário
         if (data.equipped) {
-            inventory.equipped = data.equipped;
+            // Only restore equipped if the item was successfully added
+            const equippedId = data.equipped?.id ?? data.equipped;
+            const isInInventory = Object.values(inventory.categories).some(cat =>
+                cat.items?.some(item => item.id === equippedId && item.quantity > 0)
+            );
+            if (isInInventory) {
+                inventory.equipped = data.equipped;
+            } else {
+                logger.warn('[SaveSystem] Equipped item not found in restored inventory, skipping');
+                inventory.equipped = null; // Limpar equipado inválido
+            }
         }
 
         inventory.scheduleUIUpdate();
@@ -706,29 +744,33 @@ class SaveSystem {
         weather.snowParticles = [];
         weather.lightningFlashes = [];
 
-        // Definir tipo de clima e regenerar partículas
+        // Definir tipo de clima e regenerar partículas (com verificações de segurança)
         weather.weatherType = data.weatherType ?? 'clear';
 
         if (weather.weatherType === 'rain' || weather.weatherType === 'storm') {
-            weather.generateRainParticles();
+            if (typeof weather.generateRainParticles === 'function') weather.generateRainParticles();
         } else if (weather.weatherType === 'fog') {
-            weather.generateFogLayers();
+            if (typeof weather.generateFogLayers === 'function') weather.generateFogLayers();
         } else if (weather.weatherType === 'blizzard') {
-            weather.generateSnowParticles();
+            if (typeof weather.generateSnowParticles === 'function') weather.generateSnowParticles();
         }
 
         // Atualizar iluminação ambiente baseado no horário
-        weather.updateAmbientLight();
+        if (typeof weather.updateAmbientLight === 'function') weather.updateAmbientLight();
 
         // Disparar eventos para atualizar UI
         document.dispatchEvent(new CustomEvent('timeChanged', {
-            detail: { day: weather.day, time: weather.currentTime, weekday: weather.getWeekday() }
+            detail: { 
+                day: weather.day, 
+                time: weather.currentTime, 
+                weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null 
+            }
         }));
 
         // Resumir o sistema
         if (typeof weather.resume === 'function') weather.resume();
 
-        logger.info(`⛅ Clima restaurado: ${weather.weatherType}, Dia ${weather.day}, ${weather.getTimeString()}`);
+        logger.info(`⛅ Clima restaurado: ${weather.weatherType}, Dia ${weather.day}, ${typeof weather.getTimeString === 'function' ? weather.getTimeString() : ''}`);
     }
 
     /**
@@ -755,10 +797,34 @@ class SaveSystem {
 
         // Restaurar baús
         for (const [chestId, chestData] of Object.entries(data)) {
-            if (chestSystem.chests[chestId]) {
-                chestSystem.chests[chestId].contents = chestData.contents || {};
+            // Verificar se o baú já existe no sistema
+            if (!chestSystem.chests[chestId]) {
+                // Criar o baú no sistema se não existir
+                // Usar o método addChest se disponível, caso contrário criar manualmente
+                if (typeof chestSystem.addChest === 'function') {
+                    chestSystem.addChest(chestId, {
+                        id: chestId,
+                        x: chestData.x,
+                        y: chestData.y,
+                        contents: {}
+                    });
+                } else {
+                    // Fallback: criar manualmente
+                    chestSystem.chests[chestId] = {
+                        id: chestId,
+                        x: chestData.x,
+                        y: chestData.y,
+                        contents: {}
+                    };
+                }
+                logger.debug(`[SaveSystem] Baú ${chestId} criado durante restauração`);
             }
+            
+            // Restaurar os conteúdos
+            chestSystem.chests[chestId].contents = chestData.contents || {};
         }
+        
+        logger.info(`[SaveSystem] ${Object.keys(data).length} baús restaurados`);
     }
 
     /**

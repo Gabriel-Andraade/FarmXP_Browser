@@ -573,8 +573,8 @@ async function startFullGameLoad() {
     allAssetsLoaded = true;
     updateLoadingProgress(0.55, "preparando mundo...");
 
-       if (!window._pendingSaveData) {
-       spawnGameAnimals();
+    if (!window._pendingSaveData) {
+      spawnGameAnimals();
     }
     updateLoadingProgress(0.65, "carregando sistemas...");
 
@@ -614,7 +614,11 @@ async function startFullGameLoad() {
       const saveModule = await import('./saveSystem.js');
       saveRef = saveModule.saveSystem;
       await import('./saveSlotsUI.js');
-      if (saveRef) saveRef.startAutoSave();
+      if (saveRef) {
+        // Configurar listeners para chamar markDirty() em mudanças de estado importantes
+        setupStateChangeListenersForSave();
+        saveRef.startAutoSave();
+      }
     } catch (e) {
       handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
     }
@@ -651,6 +655,59 @@ async function startFullGameLoad() {
   } finally {
     gameStartInProgress = false;
   }
+}
+
+// =============================================================================
+// CONFIGURAÇÃO DE LISTENERS PARA AUTO-SAVE
+// =============================================================================
+
+/**
+ * Configura listeners para chamar markDirty() quando o estado do jogo mudar
+ * Isso resolve o problema do auto-save ser "dead code"
+ * @returns {void}
+ */
+function setupStateChangeListenersForSave() {
+  if (!saveRef) return;
+
+  // 1. Mudanças no mundo (animais spawnados, construções, etc.)
+  const originalMarkWorldChanged = window.theWorld?.markWorldChanged;
+  if (originalMarkWorldChanged) {
+    window.theWorld.markWorldChanged = function() {
+      saveRef.markDirty();
+      return originalMarkWorldChanged.apply(this, arguments);
+    };
+  }
+
+  // 2. Mudanças no inventário
+  document.addEventListener('inventoryChanged', () => {
+    saveRef.markDirty();
+  });
+
+  // 3. Mudanças na moeda
+  document.addEventListener('currencyChanged', () => {
+    saveRef.markDirty();
+  });
+
+  // 4. Player spawnado/atualizado
+  document.addEventListener('playerReady', () => {
+    saveRef.markDirty();
+  });
+
+  // 5. Adicionar animais via debug ou sistemas
+  const originalAddAnimal = window.theWorld?.addAnimal;
+  if (originalAddAnimal) {
+    window.theWorld.addAnimal = function(...args) {
+      saveRef.markDirty();
+      return originalAddAnimal.apply(this, args);
+    };
+  }
+
+  // 6. Eventos de sono (mudam o tempo do jogo)
+  document.addEventListener('sleepEnded', () => {
+    saveRef.markDirty();
+  });
+
+  logger.debug("Listeners de auto-save configurados");
 }
 
 // =============================================================================
