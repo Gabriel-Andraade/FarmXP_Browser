@@ -86,6 +86,7 @@ export class CraftingSystem {
       if (this.useInventory && window.inventorySystem) {
         const invQty = window.inventorySystem.getItemQuantity?.(req.itemId) || 0;
         const invRemove = Math.min(invQty, amountToRemove);
+
         if (invRemove > 0) {
           const success = window.inventorySystem.removeItem(req.itemId, invRemove);
           if (!success) throw new Error(`Falha ao remover item ${req.itemId} do inventário`);
@@ -107,7 +108,8 @@ export class CraftingSystem {
    * @returns {Promise<void>}
    */
   async craft(recipeId) {
-    const recipe = recipes.find((r) => r.id === recipeId);
+    // dataset vem como string: manter robusto
+    const recipe = recipes.find((r) => String(r.id) === String(recipeId));
     if (!recipe) return;
 
     if (!this.canCraft(recipe)) {
@@ -126,13 +128,14 @@ export class CraftingSystem {
 
     try {
       this.removeRequiredItems(recipe);
+
       if (window.inventorySystem) {
         window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
       }
-      
     } catch (error) {
       this.showMessage("❌ Erro ao craftar!", "error");
       logger.error("Craft failed:", error);
+
       if (craftBtn) {
         craftBtn.disabled = false;
         craftBtn.innerHTML = '<i class="fas fa-hammer"></i> Craftar';
@@ -224,7 +227,7 @@ export class CraftingSystem {
 
     document.body.appendChild(panel);
 
-    panel.querySelector(".crf-close-btn").addEventListener("click", () => this.close());
+    panel.querySelector(".crf-close-btn")?.addEventListener("click", () => this.close());
     overlay.addEventListener("click", () => this.close());
 
     this.handleEscapeBound = this.handleEscape.bind(this);
@@ -240,6 +243,24 @@ export class CraftingSystem {
     if (e.key === "Escape" && this.isOpen) {
       this.close();
     }
+  }
+
+  /**
+   * Retorna o ícone apropriado para cada categoria
+   * @param {string} category
+   * @returns {string}
+   */
+  getCategoryIcon(category) {
+    const icons = {
+      tools: "hammer",
+      weapons: "gun",
+      food: "apple-alt",
+      material: "box",
+      construction: "hammer",
+      animal_food: "paw",
+      all: "star",
+    };
+    return icons[category] || "question";
   }
 
   /**
@@ -270,76 +291,10 @@ export class CraftingSystem {
 
     catBox.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("click", () => {
-        this.activeCategory = btn.dataset.cat;
-        this.renderCategories();
-<<<<<<< issue/21-code-duplication-item-LookUp
-
-        const filtered = this.activeCategory === "all"
-            ? recipes
-            : recipes.filter(r => r.category === this.activeCategory);
-
-        list.innerHTML = "";
-
-        filtered.forEach(recipe => {
-            const can = this.canCraft(recipe);
-            const missing = this.getMissing(recipe);
-
-            const div = document.createElement("div");
-            div.className = "crafting-item";
-
-            div.innerHTML = `
-                <div class="crafting-info">
-                    <div class="crafting-name">
-                        <i class="fas fa-${recipe.icon || 'hammer'}"></i>
-                        ${recipe.name}
-                    </div>
-
-                    <div class="crafting-requirements">
-                        ${recipe.requiredItems.map(req => {
-                            const data = getItem(req.itemId);
-                            const hasEnough = this.getTotalItemQuantity(req.itemId) >= req.qty;
-                            return `
-                                <div class="requirement ${hasEnough ? 'has-enough' : 'not-enough'}">
-                                    <span class="req-icon">${data?.icon || '📦'}</span>
-                                    <span class="req-qty">${req.qty}x</span>
-                                    <span class="req-name">${data?.name || req.itemId}</span>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-
-                    ${missing.length > 0 ? `
-                        <div class="craft-missing">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Faltando:
-                            ${missing.map(m => {
-                                const data = getItem(m.itemId);
-                                return `${m.missing}x ${data?.name}`;
-                            }).join(", ")}
-                        </div>
-                    ` : ""}
-=======
+        this.activeCategory = btn.dataset.cat || "all";
         this.renderRecipeList();
       });
     });
-  }
-
-  /**
-   * Retorna o ícone apropriado para cada categoria
-   * @param {string} category
-   * @returns {string}
-   */
-  getCategoryIcon(category) {
-    const icons = {
-      tools: "hammer",
-      weapons: "gun",
-      food: "apple-alt",
-      material: "box",
-      construction: "hammer",
-      animal_food: "paw",
-      all: "star",
-    };
-    return icons[category] || "question";
   }
 
   /**
@@ -376,11 +331,13 @@ export class CraftingSystem {
           <div class="crf-requirements">
             ${recipe.requiredItems
               .map((req) => {
-                const data = items.find((i) => i.id === req.itemId);
+                const data = getItem(req.itemId);
                 const hasEnough = this.getTotalItemQuantity(req.itemId) >= req.qty;
 
                 return `
-                  <div class="crf-requirement ${hasEnough ? "crf-has-enough" : "crf-not-enough"}">
+                  <div class="crf-requirement ${
+                    hasEnough ? "crf-has-enough" : "crf-not-enough"
+                  }">
                     <span class="crf-req-icon">${data?.icon || "📦"}</span>
                     <span class="crf-req-qty">${req.qty}x</span>
                     <span class="crf-req-name">${data?.name || req.itemId}</span>
@@ -398,11 +355,10 @@ export class CraftingSystem {
                   Faltando:
                   ${missing
                     .map((m) => {
-                      const data = items.find((i) => i.id === m.itemId);
+                      const data = getItem(m.itemId);
                       return `${m.missing}x ${data?.name || m.itemId}`;
                     })
                     .join(", ")}
->>>>>>> main
                 </div>
               `
               : ""

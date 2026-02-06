@@ -4,12 +4,8 @@ import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { objectDestroyed, markWorldChanged } from './theWorld.js';
 import { collisionSystem } from './collisionSystem.js';
 import { camera } from './thePlayer/cameraSystem.js';
-<<<<<<< issue/21-code-duplication-item-LookUp
 import { getItem } from './itemUtils.js';
-=======
-import { items } from './item.js';
 import { GAME_BALANCE } from './constants.js';
->>>>>>> main
 
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
