@@ -1,5 +1,6 @@
 import { playerSystem } from "./playerSystem.js";
 import { logger } from "../logger.js";
+import { t } from '../i18n/i18n.js';
 
 export class CharacterSelection {
     constructor() {
@@ -10,19 +11,16 @@ export class CharacterSelection {
             {
                 id: "stella",
                 name: "Stella",
-                description: "Adventurous and courageous, Stella grew up on the family farm and knows all the secrets of rural life.",
                 portrait: "./assets/character/portrait/Stella_portrait.webp",
             },
             {
                 id: "ben",
                 name: "Ben",
-                description: "A small guy with big brain! The technician for the computers in the fields.",
                 portrait: "./assets/character/portrait/Ben_portrait.webp",
             },
             {
                 id: "graham",
                 name: "Graham",
-                description: "A big guy, fearless, serious and protective man, the best for field work.",
                 portrait: "./assets/character/portrait/Graham_portrait.webp",
             }
         ];
@@ -40,8 +38,8 @@ export class CharacterSelection {
         this.container.className = 'chs-character-selection';
         this.container.innerHTML = `
             <div class="chs-character-selection-header">
-                <h1>FarmingXP</h1>
-                <p>Selecione seu personagem para começar</p>
+                <h1>${t('characterSelection.title')}</h1>
+                <p>${t('characterSelection.subtitle')}</p>
             </div>
             <div class="chs-characters-grid"></div>
             <div class="chs-character-details" style="display: none;">
@@ -51,11 +49,11 @@ export class CharacterSelection {
                 <h2 class="chs-character-name"></h2>
                 <p class="chs-character-description"></p>
 
-                <button class="chs-start-game-btn">Iniciar Jogo</button>
+                <button class="chs-start-game-btn">${t('characterSelection.startGame')}</button>
             </div>
             <div class="chs-load-game-section">
-                <h2>Ou continue sua aventura</h2>
-                <button class="chs-load-game-btn">Carregar Jogo Salvo</button>
+                <h2>${t('characterSelection.continueAdventure')}</h2>
+                <button class="chs-load-game-btn">${t('characterSelection.loadGame')}</button>
             </div>
         `;
 
@@ -72,7 +70,7 @@ export class CharacterSelection {
                 </div>
                 <h3>${character.name}</h3>
                 <p>${this.getCharacterSubtitle(character.id)}</p>
-                ${character.id !== "stella" ? '<div class="chs-character-warning">🚧 Em Desenvolvimento</div>' : ''}
+                ${character.id !== "stella" ? `<div class="chs-character-warning">${t('characterSelection.inDevelopment')}</div>` : ''}
             `;
 
             charactersGrid.appendChild(characterCard);
@@ -82,12 +80,7 @@ export class CharacterSelection {
     }
 
     getCharacterSubtitle(characterId) {
-        const subtitles = {
-            "stella": "A jovem fazendeira",
-            "ben": "O fazendeiro esperto",
-            "graham": "O braço da agricultura"
-        };
-        return subtitles[characterId] || "Fazendeiro";
+        return t(`characterSelection.subtitles.${characterId}`) || t('characterSelection.subtitles.default');
     }
 
     bindEvents() {
@@ -96,7 +89,7 @@ export class CharacterSelection {
                 const characterId = card.dataset.characterId;
 
                 if (characterId !== "stella") {
-                    this.showWarning("🚧 Apenas a Stella está disponível no momento!");
+                    this.showWarning(t('characterSelection.onlyStellaAvailable'));
                     return;
                 }
 
@@ -112,12 +105,12 @@ export class CharacterSelection {
         this.container.querySelector('.chs-start-game-btn').addEventListener('click', () => {
             if (this.selectedCharacter) {
                 if (this.selectedCharacter.id !== "stella") {
-                    this.showWarning("Selecione a Stella para jogar.");
+                    this.showWarning(t('characterSelection.selectStellaToPlay'));
                     return;
                 }
                 this.startGame();
             } else {
-                this.showWarning('Por favor, selecione um personagem primeiro.');
+                this.showWarning(t('characterSelection.selectCharacterFirst'));
             }
         });
 
@@ -159,7 +152,7 @@ export class CharacterSelection {
 
         detailsSection.querySelector('.chs-character-portrait-img').src = this.selectedCharacter.portrait;
         detailsSection.querySelector('.chs-character-name').textContent = this.selectedCharacter.name;
-        detailsSection.querySelector('.chs-character-description').textContent = this.selectedCharacter.description;
+        detailsSection.querySelector('.chs-character-description').textContent = t(`characterSelection.descriptions.${this.selectedCharacter.id}`);
 
         this.updatePlayerInfo();
     }
@@ -168,7 +161,7 @@ export class CharacterSelection {
         this.container.style.display = 'none';
 
         if (this.selectedCharacter.id !== "stella") {
-            this.showWarning("Apenas a Stella está disponível. Redirecionando...");
+            this.showWarning(t('characterSelection.redirecting'));
             this.selectedCharacter = this.characters.find(c => c.id === "stella");
         }
 

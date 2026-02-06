@@ -5,6 +5,8 @@
 // Centraliza todo o mapeamento de tipos de item → categorias do inventário
 // Garante consistência em todo o sistema
 
+import { t } from './i18n/i18n.js';
+
 export const CATEGORY_MAP = {
     // Mapeamento TIPO do item → CATEGORIA do inventário
     tool: 'tools',
@@ -25,46 +27,47 @@ export const CATEGORY_MAP = {
 };
 
 // Configuração de cada categoria
+// NOTA: labels são funções para suportar mudança dinâmica de idioma
 export const INVENTORY_CATEGORIES = {
-    tools: { 
-        label: 'Ferramentas', 
-        icon: '⚒️', 
-        limit: 10, 
+    tools: {
+        label: () => t('inventory.categories.tools'),
+        icon: '⚒️',
+        limit: 10,
         stackLimit: 1,  // Ferramentas não stackam
         color: '#FF6B6B'
     },
-    seeds: { 
-        label: 'Sementes', 
-        icon: '🌱', 
-        limit: 10, 
+    seeds: {
+        label: () => t('inventory.categories.seeds'),
+        icon: '🌱',
+        limit: 10,
         stackLimit: 99,
         color: '#51CF66'
     },
-    construction: { 
-        label: 'Construção', 
-        icon: '🏗️', 
-        limit: 15, 
+    construction: {
+        label: () => t('inventory.categories.construction'),
+        icon: '🏗️',
+        limit: 15,
         stackLimit: 99,
         color: '#FFA94D'
     },
-    animal_food: { 
-        label: 'Comida de Animais', 
-        icon: '🐔', 
-        limit: 10, 
+    animal_food: {
+        label: () => t('inventory.categories.animal_food'),
+        icon: '🐔',
+        limit: 10,
         stackLimit: 99,
         color: '#B197FC'
     },
-    food: { 
-        label: 'Comidas', 
-        icon: '🍎', 
-        limit: 15, 
+    food: {
+        label: () => t('inventory.categories.food'),
+        icon: '🍎',
+        limit: 15,
         stackLimit: 99,
         color: '#FF922B'
     },
-    resources: { 
-        label: 'Recursos', 
-        icon: '🪵', 
-        limit: 20, 
+    resources: {
+        label: () => t('inventory.categories.resources'),
+        icon: '🪵',
+        limit: 20,
         stackLimit: 99,
         color: '#748FFC'
     }

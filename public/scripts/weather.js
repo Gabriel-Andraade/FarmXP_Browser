@@ -7,6 +7,7 @@
 
 import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
+import { t } from './i18n/i18n.js';
 
 const WEATHER_UI_ID = "weather-ui-panel";
 
@@ -22,9 +23,9 @@ function ensureWeatherUIPanel() {
     el.innerHTML = `
       <div class="wui-time" data-role="time">00:00</div>
       <div class="wui-weekday" data-role="weekday">-</div>
-      <div class="wui-row"><span>dia:</span><span data-role="day">1</span></div>
-      <div class="wui-row"><span>estação:</span><span data-role="season">-</span></div>
-      <div class="wui-row"><span>clima:</span><span data-role="weather">-</span></div>
+      <div class="wui-row"><span data-role="dayLabel">${t('time.dayLabel')}:</span><span data-role="day">1</span></div>
+      <div class="wui-row"><span data-role="seasonLabel">${t('time.seasonLabel')}:</span><span data-role="season">-</span></div>
+      <div class="wui-row"><span data-role="weatherLabel">${t('time.weatherLabel')}:</span><span data-role="weather">-</span></div>
     `;
     document.body.appendChild(el);
   }
@@ -58,11 +59,19 @@ function updateWeatherUIPanelContent() {
   const dayEl = panel.querySelector('[data-role="day"]');
   const seasonEl = panel.querySelector('[data-role="season"]');
   const weatherEl = panel.querySelector('[data-role="weather"]');
+  const dayLabelEl = panel.querySelector('[data-role="dayLabel"]');
+  const seasonLabelEl = panel.querySelector('[data-role="seasonLabel"]');
+  const weatherLabelEl = panel.querySelector('[data-role="weatherLabel"]');
 
   if (timeEl) timeEl.textContent = WeatherSystem.getTimeString();
   if (weekdayEl) weekdayEl.textContent = WeatherSystem.getWeekday();
   if (dayEl) dayEl.textContent = String(WeatherSystem.day);
-  if (seasonEl) seasonEl.textContent = WeatherSystem.season;
+  if (seasonEl) seasonEl.textContent = WeatherSystem.getSeasonName();
+
+  // Update labels for language changes
+  if (dayLabelEl) dayLabelEl.textContent = `${t('time.dayLabel')}:`;
+  if (seasonLabelEl) seasonLabelEl.textContent = `${t('time.seasonLabel')}:`;
+  if (weatherLabelEl) weatherLabelEl.textContent = `${t('time.weatherLabel')}:`;
 
   let icon = "☀️";
   if (WeatherSystem.weatherType === "rain") icon = "🌧️";
@@ -92,12 +101,13 @@ export const WeatherSystem = {
   /** Dia atual do mês */
   day: 1,
 
-  /** Nomes dos dias da semana em português */
-  daysOfWeek: ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"],
+  /** Chaves internas das estações (não traduzidas) */
+  seasonKeys: ["spring", "summer", "autumn", "winter"],
+  /** Estação atual (chave interna) */
+  seasonKey: "spring",
 
   month: 1,
   year: 1,
-  season: "Primavera",
 
   timeSpeed: (24 * 60) / (12 * 60),
   ambientDarkness: 1,
@@ -146,12 +156,25 @@ export const WeatherSystem = {
       document.addEventListener("dayChanged", () => {
         updateWeatherUIPanelContent();
       });
+
+      document.addEventListener("languageChanged", () => {
+        updateWeatherUIPanelContent();
+      });
     }
   },
 
   getWeekday() {
     const index = (this.day - 1) % 7;
-    return this.daysOfWeek[index];
+    const weekdays = t('time.weekdays');
+    if (Array.isArray(weekdays) && weekdays[index]) {
+      return weekdays[index];
+    }
+    // Fallback to index if translation unavailable
+    return `Day ${index + 1}`;
+  },
+
+  getSeasonName() {
+    return t(`seasons.${this.seasonKey}`);
   },
 
   pause() {
@@ -226,7 +249,7 @@ export const WeatherSystem = {
         this.advanceDate();
         this.randomizeWeather();
 
-        this.sleepMessage = `Dormindo profundamente: Dia ${this.day - 1} → Dia ${this.day} (${this.getWeekday()})`;
+        this.sleepMessage = t('time.sleeping', { fromDay: this.day - 1, toDay: this.day, weekday: this.getWeekday() });
 
         document.dispatchEvent(new CustomEvent("dayChanged", { detail: { day: this.day } }));
       }
@@ -322,16 +345,16 @@ export const WeatherSystem = {
   },
 
   updateSeason() {
-    if (this.month >= 3 && this.month <= 5) this.season = "Primavera";
-    else if (this.month >= 6 && this.month <= 8) this.season = "Verão";
-    else if (this.month >= 9 && this.month <= 11) this.season = "Outono";
-    else this.season = "Inverno";
+    if (this.month >= 3 && this.month <= 5) this.seasonKey = "spring";
+    else if (this.month >= 6 && this.month <= 8) this.seasonKey = "summer";
+    else if (this.month >= 9 && this.month <= 11) this.seasonKey = "autumn";
+    else this.seasonKey = "winter";
   },
 
   randomizeWeather() {
     const rand = Math.random();
 
-    if (this.season === "Inverno") {
+    if (this.seasonKey === "winter") {
       this.weatherType = rand < 0.4 ? "clear" : "blizzard";
     } else {
       if (rand < 0.30) this.weatherType = "clear";
@@ -577,7 +600,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.fillText(WeatherSystem.sleepMessage, width / 2, height / 2 - 10);
 
     ctx.font = "14px 'Courier New', monospace";
-    ctx.fillText("Aguarde...", width / 2, height / 2 + 28);
+    ctx.fillText(t('time.wait'), width / 2, height / 2 + 28);
 
     ctx.restore();
   }

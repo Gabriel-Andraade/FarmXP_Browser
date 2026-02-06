@@ -42,11 +42,19 @@
         <div class="modal" id="configModal">
             <div class="store-container">
                 <div class="modal-header">
-                    <h2>⚙️ Configurações</h2>
+                    <h2 data-i18n="settings.title">⚙️ Configurações</h2>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div id="config-content">
-                    <p>Configurações do jogo em desenvolvimento...</p>
+                    <div class="setting-row" style="margin: 20px; display: flex; align-items: center; gap: 15px;">
+                        <label for="languageSelect" data-i18n="settings.language" style="font-size: 18px; font-weight: 500; color: #fff;">Idioma:</label>
+                        <select id="languageSelect" class="setting-select" style="padding: 8px 12px; font-size: 16px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 5px; cursor: pointer;">
+                            <option value="pt-BR">Português (Brasil)</option>
+                            <option value="en">English</option>
+                            <option value="es">Español</option>
+                        </select>
+                    </div>
+                    <p data-i18n="ui.otherSettings" style="margin: 20px; color: #aaa;"></p>
                 </div>
             </div>
         </div>
@@ -56,7 +64,7 @@
     <div id="merchantsListModal" class="mch-merchant-commerce-system">
         <div class="mch-merchants-list-screen">
             <div class="mch-commerce-header">
-                <div class="mch-commerce-title">🏪 Mercadores da Região</div>
+                <div class="mch-commerce-title" data-i18n="ui.merchants">🏪 Mercadores da Região</div>
             </div>
             
             <div class="mch-merchants-grid" id="merchantsGrid">
@@ -64,7 +72,7 @@
             </div>
             
             <div class="mch-commerce-controls">
-               <button class="mch-close-button" onclick="closeCommerceSystem()">Fechar</button>
+               <button class="mch-close-button" onclick="closeCommerceSystem()" data-i18n="ui.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -73,7 +81,7 @@
     <div id="commerceModal" class="mch-merchant-commerce-system">
         <div class="mch-commerce-container">
             <div class="mch-commerce-header">
-                <div class="mch-commerce-title">💼 Comércio</div>
+                <div class="mch-commerce-title" data-i18n="ui.commerce">💼 Comércio</div>
             </div>
             
             <div class="mch-commerce-layout">
@@ -81,8 +89,8 @@
                 <div class="mch-commerce-player-panel">
                     <div class="mch-player-panel-header">
                         <div class="mch-storage-toggle-buttons">
-                            <button class="mch-storage-toggle-btn active" data-storage="inventory">🎒 Inventário</button>
-                            <button class="mch-storage-toggle-btn" data-storage="storage">📦 Armazém</button>
+                            <button class="mch-storage-toggle-btn active" data-storage="inventory" data-i18n="ui.inventoryTab">🎒 Inventário</button>
+                            <button class="mch-storage-toggle-btn" data-storage="storage" data-i18n="ui.storageTab">📦 Armazém</button>
                         </div>
                         <div class="mch-player-categories" id="playerCategories">
                             <!-- Categorias serão inseridas via JavaScript -->
@@ -123,8 +131,8 @@
             </div>
             
             <div class="mch-commerce-controls">
-                <button class="mch-back-button" onclick="backToMerchantsList()">← Voltar aos Mercadores</button>
-                <button class="mch-close-button" onclick="closeCommerceSystem()">Fechar</button>
+                <button class="mch-back-button" onclick="backToMerchantsList()" data-i18n="ui.backToMerchants">← Voltar aos Mercadores</button>
+                <button class="mch-close-button" onclick="closeCommerceSystem()" data-i18n="ui.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -133,26 +141,26 @@
     <div class="mch-trade-confirm-modal" id="tradeConfirmModal">
         <div class="mch-confirm-content">
             <!-- Mensagem da Transação -->
-            <div class="mch-confirm-message" id="confirmMessage">Confirmar transação?</div>
-            
+            <div class="mch-confirm-message" id="confirmMessage"></div>
+
             <!-- Controles de Quantidade -->
             <div class="mch-quantity-controls">
                 <button class="mch-quantity-btn mch-quantity-decrease" id="quantityDecreaseBtn" onclick="decreaseQuantity()">
                     <span>−</span>
                 </button>
                 <div class="mch-quantity-display">
-                    <span>Quantidade:</span>
+                    <span data-i18n="trading.quantity">Quantidade</span>:
                     <span id="tradeQuantityDisplay" class="mch-quantity-value">1</span>
                 </div>
                 <button class="mch-quantity-btn mch-quantity-increase" id="quantityIncreaseBtn" onclick="increaseQuantity()">
                     <span>+</span>
                 </button>
             </div>
-            
+
             <!-- Botões de Confirmação -->
             <div class="mch-confirm-buttons">
-                <button class="mch-confirm-btn mch-confirm-yes" onclick="confirmTrade()">✓ Confirmar</button>
-                <button class="mch-confirm-btn mch-confirm-no" onclick="cancelTrade()">✕ Cancelar</button>
+                <button class="mch-confirm-btn mch-confirm-yes" onclick="confirmTrade()" data-i18n="trading.confirm">✓ Confirmar</button>
+                <button class="mch-confirm-btn mch-confirm-no" onclick="cancelTrade()" data-i18n="ui.cancel">✕ Cancelar</button>
             </div>
         </div>
     </div>
