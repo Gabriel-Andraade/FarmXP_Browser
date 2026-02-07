@@ -173,7 +173,7 @@ export const chestSystem = {
         
         panel.innerHTML = `
             <div class="cht-header">
-                <h2><span>📦</span> Baú - ${chest.name}</h2>
+                <h2><span>📦</span> ${t('chest.title')} - ${chest.name}</h2>
                 <button class="cht-close-btn">&times;</button>
             </div>
             
@@ -193,7 +193,7 @@ export const chestSystem = {
                 
                 <!-- Lado direito: Inventário do Jogador -->
                 <div class="cht-side">
-                    <div class="cht-side-title">🎒 Seu Inventário</div>
+                    <div class="cht-side-title">🎒 ${t('chest.inventory')}</div>
                     
                     <div class="cht-player-inventory" id="cht-player-inventory">
                         <!-- Itens do inventário serão injetados aqui -->
@@ -203,13 +203,13 @@ export const chestSystem = {
             
             <div class="cht-controls">
                 <button class="cht-btn take-all" id="take-all-btn">
-                    <span>⬇️</span> Pegar Tudo
+                    <span>⬇️</span> ${t('chest.takeAll')}
                 </button>
                 <button class="cht-btn store-all" id="store-all-btn">
-                    <span>⬆️</span> Guardar Tudo
+                    <span>⬆️</span> ${t('chest.storeAll')}
                 </button>
                 <button class="cht-btn" id="organize-btn">
-                    <span>🔧</span> Organizar
+                    <span>🔧</span> ${t('chest.organize')}
                 </button>
             </div>
         `;
@@ -321,7 +321,7 @@ export const chestSystem = {
         });
         
         if (totalItems === 0) {
-            html = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">📦 O baú está vazio</div>';
+            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">📦 ${t('chest.empty')}</div>`;
         } else {
             // Mostrar todos os itens de todas as categorias
             this.categories.forEach(category => {
@@ -367,7 +367,7 @@ export const chestSystem = {
         if (!container) return;
         
         if (!window.inventorySystem) {
-            container.innerHTML = '<div style="color: #aaa; text-align: center;">🎒 Sistema de inventário não disponível</div>';
+            container.innerHTML = `<div style="color: #aaa; text-align: center;">${t('ui.inventoryNotAvailable')}</div>`;
             return;
         }
         
@@ -390,7 +390,7 @@ export const chestSystem = {
         });
         
         if (itemCount === 0) {
-            html = '<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">🎒 Inventário vazio</div>';
+            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">🎒 ${t('inventory.empty')}</div>`;
         }
         
         container.innerHTML = html;
@@ -443,7 +443,7 @@ export const chestSystem = {
                 });
             }
             
-            this.showMessage(`✅ ${itemData.name} guardado no baú`, 'success');
+            this.showMessage(`✅ ${t('chest.stored', { name: itemData.name })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);
@@ -480,7 +480,7 @@ export const chestSystem = {
                 categoryData.items.splice(itemIndex, 1);
             }
             
-            this.showMessage(`✅ ${item.name} retirado do baú`, 'success');
+            this.showMessage(`✅ ${t('chest.taken', { name: item.name })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);
@@ -518,7 +518,7 @@ export const chestSystem = {
         });
         
         if (takenCount > 0) {
-            this.showMessage(`✅ ${takenCount} itens retirados do baú`, 'success');
+            this.showMessage(`✅ ${t('chest.takenAll', { count: takenCount })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);
@@ -566,7 +566,7 @@ export const chestSystem = {
         });
         
         if (storedCount > 0) {
-            this.showMessage(`✅ ${storedCount} itens guardados no baú`, 'success');
+            this.showMessage(`✅ ${t('chest.storedAll', { count: storedCount })}`, 'success');
             this.renderChestItems(chestId);
             this.renderPlayerInventory(chestId);
             this.renderChestCategories(chestId);

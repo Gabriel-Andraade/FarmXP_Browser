@@ -447,7 +447,9 @@ export default {
       stella: 'Aventureira e corajosa, Stella cresceu na fazenda da família e conhece todos os segredos da vida rural.',
       ben: 'Um cara pequeno com um grande cérebro! O técnico dos computadores nos campos.',
       graham: 'Um cara grande, destemido, sério e protetor, o melhor para o trabalho no campo.'
-    }
+    },
+    noSavesFound: 'Nenhum save encontrado. Selecione um personagem para começar.',
+    saveSystemError: 'Erro ao acessar sistema de saves.'
   },
 
   // House System
@@ -461,7 +463,10 @@ export default {
     close: 'Fechar',
     entering: 'Entrando na casa...',
     craftingNotAvailable: 'Sistema de crafting não disponível',
-    customizeNotImplemented: 'Customização ainda não implementada'
+    customizeNotImplemented: 'Customização ainda não implementada',
+    saveGame: 'Salvar Jogo',
+    loadGame: 'Carregar Jogo',
+    saveNotAvailable: 'Sistema de save não disponível'
   },
 
   // Storage System
@@ -512,12 +517,84 @@ export default {
     craft: 'Criar',
     crafting: 'Craftando...',
     crafted: 'Craftado: {name}!',
+    craftError: 'Erro ao craftar!',
     ingredients: 'Ingredientes',
     result: 'Resultado',
     notEnoughMaterials: 'Faltam materiais!',
     success: 'Item criado com sucesso!',
     recipes: 'Receitas',
     missing: 'Faltando'
+  },
+
+  // Save Slots UI
+  saveSlots: {
+    titleSaveLoad: 'Salvar / Carregar',
+    titleSave: 'Salvar Jogo',
+    titleLoad: 'Carregar Jogo',
+    slotNumber: 'Slot {number}',
+    empty: 'Vazio',
+    active: 'Ativo',
+    noSaveInSlot: 'Nenhum save neste slot',
+    createSave: 'Criar Save',
+    character: 'Personagem:',
+    totalTime: 'Tempo Total:',
+    createdAt: 'Criado em:',
+    lastSave: 'Último save:',
+    lastSession: 'Última sessão:',
+    play: 'Jogar',
+    save: 'Salvar',
+    saveName: 'Nome do save:',
+    defaultName: 'Save {number}',
+    newName: 'Novo nome:',
+    createSuccess: 'Save criado com sucesso!',
+    createError: 'Erro ao criar save',
+    loadError: 'Erro ao carregar save',
+    loading: 'Carregando save...',
+    applying: 'Aplicando dados...',
+    applyError: 'Erro ao aplicar save',
+    ready: 'Pronto!',
+    loadSuccess: 'Save carregado!',
+    confirmOverwrite: 'Sobrescrever "{name}"?\nIsso não pode ser desfeito.',
+    overwriteSuccess: 'Save atualizado!',
+    saveError: 'Erro ao salvar',
+    emptyNameError: 'Nome não pode ser vazio',
+    renameSuccess: 'Save renomeado!',
+    renameError: 'Erro ao renomear',
+    confirmDelete: 'Deletar "{name}"?\nIsso não pode ser desfeito!',
+    deleteSuccess: 'Save deletado',
+    deleteError: 'Erro ao deletar'
+  },
+
+  // Sleep / Loading Screen
+  sleep: {
+    title: 'Repouso Restaurador',
+    progress: 'Progresso',
+    fallingAsleep: 'Adormecendo...',
+    closingEyes: 'Fechando os olhos...',
+    cache: 'Cache',
+    memory: 'Memória',
+    waiting: 'Aguardando...',
+    worldQuiet: 'O mundo fica silencioso',
+    deepSleep: 'Sono Profundo',
+    recoveringEnergy: 'Recuperando energia...',
+    cleaning: 'Limpando...',
+    analyzing: 'Analisando...',
+    optimizing: 'Otimizando',
+    reorganizing: 'Reorganizando pensamentos...',
+    freeing: 'Liberando...',
+    compacting: 'Compactando...',
+    almostThere: 'Quase lá',
+    sunRising: 'O sol está nascendo...',
+    clean: 'Limpo',
+    optimized: 'Otimizado',
+    awakening: 'Despertando',
+    goodMorning: 'Bom dia!',
+    ready: 'Pronto'
+  },
+
+  // Loading Screen
+  loading: {
+    preparingFarm: 'Preparando sua fazenda...'
   },
 
   // Build System

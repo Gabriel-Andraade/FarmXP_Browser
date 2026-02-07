@@ -34,6 +34,7 @@ import { setupAutoCleanup } from "./gameCleanup.js";
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
 let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
 let WeatherSystem, drawWeatherEffects, drawWeatherUI;
+let saveRef;
 
 // =============================================================================
 // VARIÁVEIS GLOBAIS DO JOGO
@@ -465,6 +466,33 @@ function setupSleepListeners() {
 }
 
 // =============================================================================
+// EVENTOS DE PAUSE/RESUME PARA SAVE/LOAD
+// =============================================================================
+
+function setupGamePauseListeners() {
+  document.addEventListener("game:pause", () => {
+    logger.debug("GAME PAUSE: Congelando simulação para load");
+    simulationPaused = true;
+    interactionEnabled = false;
+
+    for (const key of Object.keys(keys)) {
+      keys[key] = false;
+    }
+
+    if (currentPlayer) {
+      currentPlayer.isMoving = false;
+      currentPlayer.wasMoving = false;
+    }
+  });
+
+  document.addEventListener("game:resume", () => {
+    logger.debug("GAME RESUME: Retomando simulação");
+    simulationPaused = false;
+    interactionEnabled = true;
+  });
+}
+
+// =============================================================================
 // EXPOSIÇÃO DE GLOBAIS
 // =============================================================================
 
@@ -547,7 +575,9 @@ async function startFullGameLoad() {
     allAssetsLoaded = true;
     updateLoadingProgress(0.55, "preparando mundo...");
 
-    spawnGameAnimals();
+    if (!window._pendingSaveData) {
+      spawnGameAnimals();
+    }
     updateLoadingProgress(0.65, "carregando sistemas...");
 
     await exposeGlobals();
@@ -570,8 +600,42 @@ async function startFullGameLoad() {
       drawWeatherUI = weatherModule.drawWeatherUI;
 
       if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
+
+      // Registrar WeatherSystem no gameState APÓS import e init
+      // (exposeGlobals() foi chamado antes, quando WeatherSystem ainda era undefined)
+      if (WeatherSystem) {
+        registerSystem('weather', WeatherSystem);
+        window.drawWeatherEffects = drawWeatherEffects;
+        window.drawWeatherUI = drawWeatherUI;
+      }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
+    }
+
+    try {
+      const saveModule = await import('./saveSystem.js');
+      saveRef = saveModule.saveSystem;
+      await import('./saveSlotsUI.js');
+      if (saveRef) {
+        // Configurar listeners para chamar markDirty() em mudanças de estado importantes
+        setupStateChangeListenersForSave();
+        saveRef.startAutoSave();
+      }
+    } catch (e) {
+      handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
+    }
+
+    // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
+    // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
+    if (window._pendingSaveData && saveRef) {
+      try {
+        updateLoadingProgress(0.95, "restaurando save...");
+        saveRef.applySaveData(window._pendingSaveData);
+        logger.info('📂 Save aplicado do startup');
+      } catch (e) {
+        handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
+      }
+      window._pendingSaveData = null;
     }
 
     updateLoadingProgress(1, "pronto");
@@ -593,6 +657,55 @@ async function startFullGameLoad() {
   } finally {
     gameStartInProgress = false;
   }
+}
+
+// =============================================================================
+// CONFIGURAÇÃO DE LISTENERS PARA AUTO-SAVE
+// =============================================================================
+
+/**
+ * Configura listeners para chamar markDirty() quando o estado do jogo mudar
+ * Isso resolve o problema do auto-save ser "dead code"
+ * @returns {void}
+ */
+function setupStateChangeListenersForSave() {
+  if (!saveRef) return;
+
+  // 1. Mudanças no mundo (animais spawnados, construções, etc.)
+  //    Agora usando evento customizado 'worldChanged' que deve ser disparado
+  //    pela função markWorldChanged em theWorld.js
+  document.addEventListener('worldChanged', () => {
+    saveRef.markDirty();
+  });
+
+  // 2. Mudanças no inventário
+  document.addEventListener('inventoryChanged', () => {
+    saveRef.markDirty();
+  });
+
+  // 3. Mudanças na moeda
+  document.addEventListener('currencyChanged', () => {
+    saveRef.markDirty();
+  });
+
+  // 4. Player spawnado/atualizado
+  document.addEventListener('playerReady', () => {
+    saveRef.markDirty();
+  });
+
+  // 5. Adicionar animais via debug ou sistemas
+  //    Agora usando evento customizado 'animalAdded' que deve ser disparado
+  //    pela função addAnimal em theWorld.js
+  document.addEventListener('animalAdded', () => {
+    saveRef.markDirty();
+  });
+
+  // 6. Eventos de sono (mudam o tempo do jogo)
+  document.addEventListener('sleepEnded', () => {
+    saveRef.markDirty();
+  });
+
+  logger.debug("Listeners de auto-save configurados");
 }
 
 // =============================================================================
@@ -750,6 +863,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         logger.debug("PlayerHUD criado e registrado");
 
         setupSleepListeners();
+        setupGamePauseListeners();
 
         await initGameBootstrap();
     } catch (error) {
@@ -799,6 +913,7 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem) WeatherSystem.update(deltaTime);
       if (merchantSystem) merchantSystem.update(deltaTime);
+      if (saveRef) { saveRef.tick(deltaTime * 1000); }
 
       updateAnimals();
 

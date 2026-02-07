@@ -447,7 +447,9 @@ export default {
       stella: 'Aventurera y valiente, Stella creció en la granja familiar y conoce todos los secretos de la vida rural.',
       ben: '¡Un tipo pequeño con un gran cerebro! El técnico de las computadoras en los campos.',
       graham: 'Un tipo grande, intrépido, serio y protector, el mejor para el trabajo de campo.'
-    }
+    },
+    noSavesFound: 'No se encontraron guardados. Selecciona un personaje para comenzar.',
+    saveSystemError: 'Error al acceder al sistema de guardado.'
   },
 
   // House System
@@ -461,7 +463,10 @@ export default {
     close: 'Cerrar',
     entering: 'Entrando a la casa...',
     craftingNotAvailable: 'Sistema de fabricación no disponible',
-    customizeNotImplemented: 'Personalización aún no implementada'
+    customizeNotImplemented: 'Personalización aún no implementada',
+    saveGame: 'Guardar Juego',
+    loadGame: 'Cargar Juego',
+    saveNotAvailable: 'Sistema de guardado no disponible'
   },
 
   // Storage System
@@ -512,12 +517,84 @@ export default {
     craft: 'Crear',
     crafting: 'Fabricando...',
     crafted: '¡Fabricado: {name}!',
+    craftError: '¡Error al fabricar!',
     ingredients: 'Ingredientes',
     result: 'Resultado',
     notEnoughMaterials: '¡Faltan materiales!',
     success: '¡Artículo creado con éxito!',
     recipes: 'Recetas',
     missing: 'Faltando'
+  },
+
+  // Save Slots UI
+  saveSlots: {
+    titleSaveLoad: 'Guardar / Cargar',
+    titleSave: 'Guardar Juego',
+    titleLoad: 'Cargar Juego',
+    slotNumber: 'Slot {number}',
+    empty: 'Vacío',
+    active: 'Activo',
+    noSaveInSlot: 'Sin guardado en este slot',
+    createSave: 'Crear Guardado',
+    character: 'Personaje:',
+    totalTime: 'Tiempo Total:',
+    createdAt: 'Creado:',
+    lastSave: 'Último guardado:',
+    lastSession: 'Última sesión:',
+    play: 'Jugar',
+    save: 'Guardar',
+    saveName: 'Nombre del guardado:',
+    defaultName: 'Guardado {number}',
+    newName: 'Nuevo nombre:',
+    createSuccess: '¡Guardado creado con éxito!',
+    createError: 'Error al crear guardado',
+    loadError: 'Error al cargar guardado',
+    loading: 'Cargando guardado...',
+    applying: 'Aplicando datos...',
+    applyError: 'Error al aplicar guardado',
+    ready: '¡Listo!',
+    loadSuccess: '¡Guardado cargado!',
+    confirmOverwrite: '¿Sobrescribir "{name}"?\nEsto no se puede deshacer.',
+    overwriteSuccess: '¡Guardado actualizado!',
+    saveError: 'Error al guardar',
+    emptyNameError: 'El nombre no puede estar vacío',
+    renameSuccess: '¡Guardado renombrado!',
+    renameError: 'Error al renombrar',
+    confirmDelete: '¿Eliminar "{name}"?\n¡Esto no se puede deshacer!',
+    deleteSuccess: 'Guardado eliminado',
+    deleteError: 'Error al eliminar'
+  },
+
+  // Sleep / Loading Screen
+  sleep: {
+    title: 'Descanso Reparador',
+    progress: 'Progreso',
+    fallingAsleep: 'Quedándose dormido...',
+    closingEyes: 'Cerrando los ojos...',
+    cache: 'Caché',
+    memory: 'Memoria',
+    waiting: 'Esperando...',
+    worldQuiet: 'El mundo se queda en silencio',
+    deepSleep: 'Sueño Profundo',
+    recoveringEnergy: 'Recuperando energía...',
+    cleaning: 'Limpiando...',
+    analyzing: 'Analizando...',
+    optimizing: 'Optimizando',
+    reorganizing: 'Reorganizando pensamientos...',
+    freeing: 'Liberando...',
+    compacting: 'Compactando...',
+    almostThere: 'Casi listo',
+    sunRising: 'El sol está saliendo...',
+    clean: 'Limpio',
+    optimized: 'Optimizado',
+    awakening: 'Despertando',
+    goodMorning: '¡Buenos días!',
+    ready: 'Listo'
+  },
+
+  // Loading Screen
+  loading: {
+    preparingFarm: 'Preparando tu granja...'
   },
 
   // Build System

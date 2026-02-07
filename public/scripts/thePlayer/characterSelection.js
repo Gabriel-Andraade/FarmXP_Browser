@@ -1,10 +1,12 @@
 import { playerSystem } from "./playerSystem.js";
+import { logger } from "../logger.js";
 import { t } from '../i18n/i18n.js';
 
 export class CharacterSelection {
     constructor() {
         this.container = null;
         this.selectedCharacter = null;
+        this._loadingInProgress = false;
         this.characters = [
             {
                 id: "stella",
@@ -170,11 +172,41 @@ export class CharacterSelection {
         }));
     }
 
-    loadGame() {
-        this.showWarning(t('characterSelection.saveNotAvailable'));
-        if (!this.selectedCharacter) {
-            this.selectedCharacter = this.characters.find(c => c.id === "stella");
+    async loadGame() {
+        if (this._loadingInProgress) return;
+        this._loadingInProgress = true;
+
+        try {
+            const saveModule = await import('../saveSystem.js');
+            const saveSystem = saveModule.saveSystem;
+
+            if (!saveSystem.hasAnySave()) {
+                this.showWarning(t('characterSelection.noSavesFound'));
+                return;
+            }
+
+            const uiModule = await import('../saveSlotsUI.js');
+            const saveSlotsUI = uiModule.saveSlotsUI;
+
+            // Abrir UI de slots em modo load, com callback para startup
+            saveSlotsUI.open('load', (slot, slotIndex) => {
+                // Guardar dados para aplicar depois que todos os sistemas carregarem
+                window._pendingSaveData = slot;
+
+                // Usar personagem do save (ou Stella como fallback)
+                const charId = slot?.data?.player?.characterId || 'stella';
+                this.selectedCharacter = this.characters.find(c => c.id === charId) || this.characters[0];
+
+                // Iniciar fluxo normal de carregamento do jogo
+                this.startGame();
+            });
+        } catch (e) {
+            this.showWarning(t('characterSelection.saveSystemError'));
+            logger.error('CharacterSelection:loadGame', e);
+        } finally {
+            // Guard reset: protege apenas contra imports concorrentes.
+            // O fluxo do jogo continua dentro do callback de saveSlotsUI.open().
+            this._loadingInProgress = false;
         }
-        this.startGame();
     }
 }

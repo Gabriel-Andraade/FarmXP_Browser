@@ -1,0 +1,453 @@
+/**
+ * @file save-slots.css - Estilos do Sistema de Save
+ * @description Estilização do modal de save/load com 3 slots.
+ * Paleta: madeira/couro/dourado/bege (tema do jogo)
+ */
+
+/* ===== VARIÁVEIS DO TEMA ===== */
+:root {
+    --save-bg-overlay: rgba(20, 15, 5, 0.95);
+    --save-bg-modal: #1a1208;
+    --save-bg-card: linear-gradient(145deg, #3b2612, #2c1e12);
+    --save-bg-card-hover: linear-gradient(145deg, #4a3018, #3a2816);
+    --save-bg-card-empty: linear-gradient(145deg, #2a1c10, #1f150c);
+    --save-header-bg: linear-gradient(135deg, #8b5a2b, #6b4513);
+    --save-border-gold: #c9a463;
+    --save-border-brown: #5a3b1f;
+    --save-text-light: #f5e9d3;
+    --save-text-muted: #a89070;
+    --save-accent-success: linear-gradient(135deg, #4ecca3, #3da58a);
+    --save-accent-danger: linear-gradient(135deg, #e74c3c, #c0392b);
+    --save-accent-primary: linear-gradient(135deg, #c9a463, #a88942);
+    --save-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+    --save-radius: 12px;
+    --save-radius-sm: 8px;
+}
+
+/* ===== BOTÃO SAVE NO HUD ===== */
+.hud-save-btn {
+    position: absolute;
+    top: 12px;
+    right: 200px;
+    width: 42px;
+    height: 42px;
+    background: linear-gradient(135deg, #5a3b1f, #3b2612);
+    border: 2px solid #c9a463;
+    border-radius: 10px;
+    color: #f5e9d3;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 102;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
+}
+
+.hud-save-btn:hover {
+    background: linear-gradient(135deg, #6b4513, #4a3018);
+    border-color: #e0bc87;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(201, 164, 99, 0.4);
+}
+
+.hud-save-btn:active {
+    transform: scale(0.95);
+}
+
+/* ===== OVERLAY DO MODAL ===== */
+.save-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--save-bg-overlay);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.save-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* ===== CONTAINER DO MODAL ===== */
+.save-modal-container {
+    width: 95%;
+    max-width: 900px;
+    max-height: 90vh;
+    background: var(--save-bg-modal);
+    border: 3px solid var(--save-border-gold);
+    border-radius: var(--save-radius);
+    box-shadow: var(--save-shadow), 0 0 60px rgba(201, 164, 99, 0.15);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ===== HEADER DO MODAL ===== */
+.save-modal-header {
+    background: var(--save-header-bg);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--save-border-gold);
+}
+
+.save-modal-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--save-text-light);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.save-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--save-border-gold);
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--save-text-light);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.save-modal-close:hover {
+    background: var(--save-accent-danger);
+    border-color: #e74c3c;
+    transform: rotate(90deg);
+}
+
+/* ===== BODY DO MODAL ===== */
+.save-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ===== GRID DE SLOTS ===== */
+.save-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+/* ===== CARD DE SLOT ===== */
+.save-slot-card {
+    background: var(--save-bg-card);
+    border: 2px solid var(--save-border-brown);
+    border-radius: var(--save-radius);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s ease;
+    min-height: 280px;
+}
+
+.save-slot-card:hover {
+    border-color: var(--save-border-gold);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.save-slot-card.save-slot-active {
+    border-color: var(--save-border-gold);
+    box-shadow: 0 0 20px rgba(201, 164, 99, 0.3);
+}
+
+.save-slot-card.save-slot-empty {
+    background: var(--save-bg-card-empty);
+    border-style: dashed;
+}
+
+/* ===== HEADER DO SLOT ===== */
+.save-slot-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--save-border-brown);
+}
+
+.save-slot-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--save-text-light);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.save-slot-number {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--save-text-muted);
+}
+
+.save-slot-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.save-slot-badge.active {
+    background: var(--save-accent-success);
+    color: #fff;
+}
+
+.save-slot-badge.empty {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--save-text-muted);
+}
+
+/* ===== CONTEÚDO DE SLOT VAZIO ===== */
+.save-slot-empty-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--save-text-muted);
+    text-align: center;
+}
+
+.save-slot-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 8px;
+    opacity: 0.5;
+}
+
+/* ===== METADADOS DO SLOT ===== */
+.save-slot-meta {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.save-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+
+.save-meta-label {
+    color: var(--save-text-muted);
+}
+
+.save-meta-value {
+    color: var(--save-text-light);
+    font-weight: 500;
+}
+
+/* ===== AÇÕES DO SLOT ===== */
+.save-slot-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 1px solid var(--save-border-brown);
+}
+
+/* ===== BOTÕES ===== */
+.save-btn {
+    padding: 8px 12px;
+    border: 2px solid var(--save-border-brown);
+    border-radius: var(--save-radius-sm);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--save-text-light);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.save-btn:hover {
+    border-color: var(--save-border-gold);
+    transform: translateY(-1px);
+}
+
+.save-btn-load {
+    flex: 1;
+    justify-content: center;
+    background: var(--save-accent-success);
+    border-color: #3da58a;
+}
+
+.save-btn-load:hover {
+    background: linear-gradient(135deg, #5fd9b3, #4ecca3);
+    border-color: #4ecca3;
+}
+
+.save-btn-save {
+    flex: 1;
+    justify-content: center;
+    background: var(--save-accent-primary);
+    border-color: #a88942;
+}
+
+.save-btn-save:hover {
+    background: linear-gradient(135deg, #d9b46f, #c9a463);
+    border-color: #c9a463;
+}
+
+.save-btn-create {
+    width: 100%;
+    justify-content: center;
+    background: var(--save-accent-primary);
+    border-color: #a88942;
+    padding: 12px;
+    font-size: 1rem;
+}
+
+.save-btn-create:hover {
+    background: linear-gradient(135deg, #d9b46f, #c9a463);
+}
+
+.save-btn-rename,
+.save-btn-delete {
+    padding: 8px;
+    min-width: 36px;
+    justify-content: center;
+}
+
+.save-btn-delete:hover {
+    background: var(--save-accent-danger);
+    border-color: #e74c3c;
+}
+
+/* ===== TOAST DE MENSAGEM ===== */
+.save-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 12px 24px;
+    border-radius: var(--save-radius-sm);
+    font-weight: 600;
+    z-index: 10001;
+    animation: toastSlideUp 0.3s ease;
+}
+
+.save-toast-success {
+    background: var(--save-accent-success);
+    color: #fff;
+}
+
+.save-toast-error {
+    background: var(--save-accent-danger);
+    color: #fff;
+}
+
+.save-toast.fade-out {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+    transition: all 0.3s ease;
+}
+
+@keyframes toastSlideUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+/* ===== RESPONSIVO ===== */
+@media (max-width: 768px) {
+    .save-slots-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .save-modal-container {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        border: none;
+    }
+
+    .save-slot-card {
+        min-height: auto;
+    }
+
+    .save-modal-header {
+        padding: 12px 16px;
+    }
+
+    .save-modal-title {
+        font-size: 1.2rem;
+    }
+
+    .save-modal-body {
+        padding: 16px;
+    }
+
+    .save-btn {
+        padding: 10px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .save-slot-actions {
+        flex-direction: column;
+    }
+
+    .save-btn-load,
+    .save-btn-save {
+        flex: none;
+        width: 100%;
+    }
+
+    .save-slot-actions > .save-btn-rename,
+    .save-slot-actions > .save-btn-delete {
+        flex: 1;
+    }
+
+    .save-meta-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+}

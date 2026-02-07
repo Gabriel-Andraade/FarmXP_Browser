@@ -16,6 +16,7 @@ import { getItem } from './itemUtils.js';
 import { craftingSystem } from './craftingSystem.js';
 import { t } from './i18n/i18n.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
+import { logger } from './logger.js';
 
 /**
  * Sistema de interação com a casa do jogador
@@ -185,6 +186,12 @@ export class HouseSystem {
                     <button class="hse-house-option" data-action="customize">
                         <span class="hse-option-text">${t('house.customize')}</span>
                     </button>
+                    <button class="hse-house-option" data-action="save">
+                        <span class="hse-option-text">💾 ${t('house.saveGame')}</span>
+                    </button>
+                    <button class="hse-house-option" data-action="load">
+                        <span class="hse-option-text">📂 ${t('house.loadGame')}</span>
+                    </button>
                 </div>
                 <div class="hse-house-footer">
                     <button class="hse-house-close-btn">${t('house.close')}</button>
@@ -225,6 +232,12 @@ export class HouseSystem {
             case 'customize':
                 this.openCustomize();
                 break;
+            case 'save':
+                this.openSaveMenu();
+                break;
+            case 'load':
+                this.openLoadMenu();
+                break;
         }
     }
 
@@ -257,6 +270,28 @@ export class HouseSystem {
     openCustomize() {
         this.closeHouseMenu();
         this.showMessage(t('house.customizeNotImplemented'));
+    }
+
+    async openSaveMenu() {
+        this.closeHouseMenu();
+        try {
+            const { saveSlotsUI } = await import('./saveSlotsUI.js');
+            saveSlotsUI.open('save');
+        } catch (e) {
+            logger.error('HouseSystem:openSaveMenu', e);
+            this.showMessage(t('house.saveNotAvailable'));
+        }
+    }
+
+    async openLoadMenu() {
+        this.closeHouseMenu();
+        try {
+            const { saveSlotsUI } = await import('./saveSlotsUI.js');
+            saveSlotsUI.open('load');
+        } catch (e) {
+            logger.error('HouseSystem:openLoadMenu', e);
+            this.showMessage(t('house.saveNotAvailable'));
+        }
     }
 
     showStorageModal() {

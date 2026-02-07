@@ -70,23 +70,20 @@ export function isValidPositiveNumber(value) {
 }
 
 /**
- * Sanitizes a quantity to a positive integer within bounds
- * Returns min value if input is invalid (NaN/Infinity/negative/non-number)
+ * Sanitizes a quantity value by flooring and clamping to a valid range.
+ * Returns min for non-number or non-finite inputs.
  *
- * @param {any} value - Quantity to sanitize
- * @param {number} [min=1] - Minimum allowed value
- * @param {number} [max=9999] - Maximum allowed value
- * @returns {number} Sanitized quantity (guaranteed valid)
+ * `@param` {any} value - Value to sanitize
+ * `@param` {number} [min=1] - Minimum allowed value
+ * `@param` {number} [max=9999] - Maximum allowed value
+ * `@returns` {number} Sanitized integer in range [min, max]
  *
- * @example
- * sanitizeQuantity(5)           // 5
- * sanitizeQuantity(10000)       // 9999 (clamped to max)
- * sanitizeQuantity(-10)         // 1 (invalid, returns min)
- * sanitizeQuantity(NaN)         // 1 (invalid, returns min)
- * sanitizeQuantity(Infinity)    // 1 (invalid, returns min)
- * sanitizeQuantity(5.7)         // 5 (floored)
- * sanitizeQuantity("5")         // 1 (string rejected)
- * sanitizeQuantity(null)        // 1 (null rejected)
+ * `@example`
+ * sanitizeQuantity(5.7)          // 5
+ * sanitizeQuantity(0)            // 1 (clamped to min)
+ * sanitizeQuantity(99999)        // 9999 (clamped to max)
+ * sanitizeQuantity(NaN)          // 1 (invalid, returns min)
+ * sanitizeQuantity('hello')      // 1 (invalid, returns min)
  */
 export function sanitizeQuantity(value, min = 1, max = 9999) {
     if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -131,27 +128,7 @@ export function validateRange(value, min, max) {
     return Math.max(min, Math.min(max, num));
 }
 
-/**
- * Validates that an item ID exists in the items array
- *
- * @param {any} id - Item ID to validate
- * @param {Array<Object>} items - Array of items to check against
- * @returns {boolean} Whether the item ID is valid and exists
- *
- * @example
- * const items = [{id: 1, name: 'Apple'}, {id: 2, name: 'Sword'}];
- * isExistingItemId(1, items)      // true
- * isExistingItemId(999, items)    // false (doesn't exist)
- * isExistingItemId(NaN, items)    // false (not a valid integer)
- * isExistingItemId(-1, items)     // false (not positive)
- */
-export function isExistingItemId(id, items) {
-    if (!Array.isArray(items)) {
-        return false;
-    }
-    return isValidItemId(id) &&
-           items.some(item => item.id === id);
-}
+
 
 /**
  * Validates trade input (quantity vs available stock)

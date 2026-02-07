@@ -447,7 +447,9 @@ export default {
       stella: 'Adventurous and courageous, Stella grew up on the family farm and knows all the secrets of rural life.',
       ben: 'A small guy with big brain! The technician for the computers in the fields.',
       graham: 'A big guy, fearless, serious and protective man, the best for field work.'
-    }
+    },
+    noSavesFound: 'No saves found. Select a character to begin.',
+    saveSystemError: 'Error accessing save system.'
   },
 
   // House System
@@ -461,7 +463,10 @@ export default {
     close: 'Close',
     entering: 'Entering house...',
     craftingNotAvailable: 'Crafting system not available',
-    customizeNotImplemented: 'Customization not yet implemented'
+    customizeNotImplemented: 'Customization not yet implemented',
+    saveGame: 'Save Game',
+    loadGame: 'Load Game',
+    saveNotAvailable: 'Save system not available'
   },
 
   // Storage System
@@ -512,12 +517,84 @@ export default {
     craft: 'Craft',
     crafting: 'Crafting...',
     crafted: 'Crafted: {name}!',
+    craftError: 'Craft failed!',
     ingredients: 'Ingredients',
     result: 'Result',
     notEnoughMaterials: 'Missing materials!',
     success: 'Item crafted successfully!',
     recipes: 'Recipes',
     missing: 'Missing'
+  },
+
+  // Save Slots UI
+  saveSlots: {
+    titleSaveLoad: 'Save / Load',
+    titleSave: 'Save Game',
+    titleLoad: 'Load Game',
+    slotNumber: 'Slot {number}',
+    empty: 'Empty',
+    active: 'Active',
+    noSaveInSlot: 'No save in this slot',
+    createSave: 'Create Save',
+    character: 'Character:',
+    totalTime: 'Total Time:',
+    createdAt: 'Created:',
+    lastSave: 'Last save:',
+    lastSession: 'Last session:',
+    play: 'Play',
+    save: 'Save',
+    saveName: 'Save name:',
+    defaultName: 'Save {number}',
+    newName: 'New name:',
+    createSuccess: 'Save created successfully!',
+    createError: 'Error creating save',
+    loadError: 'Error loading save',
+    loading: 'Loading save...',
+    applying: 'Applying data...',
+    applyError: 'Error applying save',
+    ready: 'Ready!',
+    loadSuccess: 'Save loaded!',
+    confirmOverwrite: 'Overwrite "{name}"?\nThis cannot be undone.',
+    overwriteSuccess: 'Save updated!',
+    saveError: 'Error saving',
+    emptyNameError: 'Name cannot be empty',
+    renameSuccess: 'Save renamed!',
+    renameError: 'Error renaming',
+    confirmDelete: 'Delete "{name}"?\nThis cannot be undone!',
+    deleteSuccess: 'Save deleted',
+    deleteError: 'Error deleting'
+  },
+
+  // Sleep / Loading Screen
+  sleep: {
+    title: 'Restorative Rest',
+    progress: 'Progress',
+    fallingAsleep: 'Falling asleep...',
+    closingEyes: 'Closing eyes...',
+    cache: 'Cache',
+    memory: 'Memory',
+    waiting: 'Waiting...',
+    worldQuiet: 'The world goes quiet',
+    deepSleep: 'Deep Sleep',
+    recoveringEnergy: 'Recovering energy...',
+    cleaning: 'Cleaning...',
+    analyzing: 'Analyzing...',
+    optimizing: 'Optimizing',
+    reorganizing: 'Reorganizing thoughts...',
+    freeing: 'Freeing...',
+    compacting: 'Compacting...',
+    almostThere: 'Almost there',
+    sunRising: 'The sun is rising...',
+    clean: 'Clean',
+    optimized: 'Optimized',
+    awakening: 'Awakening',
+    goodMorning: 'Good morning!',
+    ready: 'Ready'
+  },
+
+  // Loading Screen
+  loading: {
+    preparingFarm: 'Preparing your farm...'
   },
 
   // Build System

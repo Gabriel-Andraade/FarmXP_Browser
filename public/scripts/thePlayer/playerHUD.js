@@ -1,6 +1,6 @@
 import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
-import { t, getItemName } from '../i18n/i18n.js';
+import { t } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
 /**
  * Obtém nome traduzido do item pelo ID
@@ -80,6 +80,7 @@ export class PlayerHUD {
                     </div>
                 </div>
             </div>
+            <button class="hud-save-btn" id="saveGameBtn" title="${t('saveSlots.titleSaveLoad')}">💾</button>
         `;
 
         const gameContainer = document.querySelector('.theGame');
@@ -114,6 +115,20 @@ export class PlayerHUD {
             if (e.target.classList.contains('modal')) this.closeModals();
         });
 
+        // Botão retrátil do HUD
+        document.getElementById('toggleHudBtn')?.addEventListener('click', () => this.toggleHUD());
+
+        // Botão Save/Load
+        document.getElementById('saveGameBtn')?.addEventListener('click', async () => {
+            try {
+                const { saveSlotsUI } = await import('../saveSlotsUI.js');
+                saveSlotsUI.open('menu');
+            } catch (e) {
+                logger.warn('Save system não disponível', e);
+            }
+        });
+
+        // 🆕 LISTENER PARA ATUALIZAÇÃO DE DINHEIRO EM TEMPO REAL
         document.addEventListener("moneyChanged", (e) => {
             const el = document.getElementById("hudPlayerMoney");
             if (el) el.textContent = `$${e.detail.money}`;
