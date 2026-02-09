@@ -14,7 +14,9 @@ const WEATHER_UI_ID = "weather-ui-panel";
 function ensureWeatherUIPanel() {
   if (typeof document === "undefined") return null;
 
-  // CSS agora esta em style/weather.css
+  // Painel agora fica fora do canvas, como o HUD do player.
+  // Ancoramos no container principal do jogo para manter a mesma "camada" de UI.
+  const container = document.querySelector(".theGame") || document.body;
 
   let el = document.getElementById(WEATHER_UI_ID);
   if (!el) {
@@ -27,27 +29,21 @@ function ensureWeatherUIPanel() {
       <div class="wui-row"><span data-role="seasonLabel">${t('time.seasonLabel')}:</span><span data-role="season">-</span></div>
       <div class="wui-row"><span data-role="weatherLabel">${t('time.weatherLabel')}:</span><span data-role="weather">-</span></div>
     `;
-    document.body.appendChild(el);
+    container.appendChild(el);
+  } else if (el.parentElement !== container) {
+    // Se já existia em outro lugar (ex.: body), move pro container correto
+    container.appendChild(el);
   }
+
+  //  deixa o CSS controlar posição (remove inline style antigo que ancorava no canvas)
+  el.style.left = "";
+  el.style.top = "";
 
   return el;
 }
 
 function updateWeatherUIPanelPosition() {
-  const panel = ensureWeatherUIPanel();
-  if (!panel) return;
-
-  const canvas = document.getElementById("gameCanvas");
-  if (!canvas) return;
-
-  const rect = canvas.getBoundingClientRect();
-
-  const pad = 16;
-  const left = Math.round(rect.left + pad);
-  const top = Math.round(rect.top + pad);
-
-  panel.style.left = `${left}px`;
-  panel.style.top = `${top}px`;
+  ensureWeatherUIPanel();
 }
 
 function updateWeatherUIPanelContent() {

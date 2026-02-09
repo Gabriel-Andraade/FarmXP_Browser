@@ -23,7 +23,7 @@ import { cssManager } from "./cssManager.js";
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./loadingScreen.js";
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
-import "./settingsUI.js";
+import { a11y } from './accessibility.js';
 import { setupAutoCleanup } from "./gameCleanup.js";
 
 // =============================================================================
@@ -814,62 +814,78 @@ document.addEventListener("playerReady", async (e) => {
     handleWarn("falha ao expor globais no playerReady", "main:playerReady:exposeGlobals", e);
   }
 });
-
 document.addEventListener("DOMContentLoaded", async () => {
-    // Criar canvas se não existir
-    canvas = document.getElementById("gameCanvas");
-    if (!canvas) {
-        canvas = document.createElement("canvas");
-        canvas.id = "gameCanvas";
-        document.body.appendChild(canvas);
-    }
+  // Criar canvas se não existir
+  canvas = document.getElementById("gameCanvas");
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.id = "gameCanvas";
+    document.body.appendChild(canvas);
+  }
 
-    // Configurar canvas
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.round(INTERNAL_WIDTH * dpr);
-    canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
-    ctx = canvas.getContext("2d", { alpha: false });
+  // Configurar canvas
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(INTERNAL_WIDTH * dpr);
+  canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
+  ctx = canvas.getContext("2d", { alpha: false });
 
-    try {
-        // Inicializa o sistema de idiomas antes de qualquer UI que use traduções
-        logger.debug("Inicializando sistema de idiomas...");
-        await i18n.init();
-        logger.debug("Sistema i18n inicializado");
-    } catch (error) {
-        logger.error("Erro na inicialização do i18n:", error);
-    }
+  // Verifica se o contexto 2D está disponível no navegador
+  if (!ctx) {
+    handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
+    return;
+  }
 
-    // Verifica se o contexto 2D está disponível no navegador
-    if (!ctx) {
-        handleError(new Error("2D context indisponível"), "main:DOMContentLoaded");
-        return;
-    }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // Aplica otimizações específicas para dispositivos móveis
+  if (IS_MOBILE) {
+    applyMobileOptimizations();
+  }
 
-    // Aplica otimizações específicas para dispositivos móveis
-    if (IS_MOBILE) {
-        applyMobileOptimizations();
-    }
+  // 1) i18n primeiro (pra settings já nascer traduzido)
+  try {
+    logger.debug("Inicializando sistema de idiomas...");
+    await i18n.init();
+    logger.debug("Sistema i18n inicializado");
+  } catch (error) {
+    logger.error("Erro na inicialização do i18n:", error);
+  }
 
-    try {
-        logger.debug("Carregando estilos CSS...");
-        await cssManager.loadAll();
-        logger.debug("Todos os estilos CSS carregados");
+  // 2) a11y depois (pra settings ler configs salvas + aplicar classes/filtros)
+  try {
+    a11y.init();
+    logger.debug("AccessibilityManager inicializado");
+  } catch (error) {
+    logger.error("Erro na inicialização do AccessibilityManager:", error);
+  }
 
-        logger.debug("Criando PlayerHUD...");
-        const hud = new PlayerHUD();
-        registerSystem('hud', hud);
-        logger.debug("PlayerHUD criado e registrado");
+  // 3) settings UI depois do i18n + a11y (ordem correta)
+  try {
+    await import("./settingsUI.js");
+    logger.debug("settingsUI carregado (após i18n + a11y)");
+  } catch (error) {
+    handleWarn("falha ao carregar settingsUI", "main:DOMContentLoaded:settingsUI", error);
+  }
 
-        setupSleepListeners();
-        setupGamePauseListeners();
+  try {
+    logger.debug("Carregando estilos CSS...");
+    await cssManager.loadAll();
+    logger.debug("Todos os estilos CSS carregados");
 
-        await initGameBootstrap();
-    } catch (error) {
-        logger.error("Erro na inicialização do jogo:", error);
-    }
+    logger.debug("Criando PlayerHUD...");
+    const hud = new PlayerHUD();
+    registerSystem("hud", hud);
+    logger.debug("PlayerHUD criado e registrado");
+
+    setupSleepListeners();
+    setupGamePauseListeners();
+
+    await initGameBootstrap();
+  } catch (error) {
+    logger.error("Erro na inicialização do jogo:", error);
+  }
 });
+
 
 // =============================================================================
 // GAME LOOP PRINCIPAL

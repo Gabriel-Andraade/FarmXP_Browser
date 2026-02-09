@@ -11,6 +11,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
+import { t } from "./i18n/i18n.js";
 
 /**
  * Configurações do sistema de poços
@@ -236,26 +237,26 @@ export const wellSystem = {
         <div class="well-close-btn" id="well-close">X</div>
 
         <div class="well-col">
-          <h3>Mochila</h3>
+          <h3>${t('well.backpack')}</h3>
           <div class="well-item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
           <div class="well-item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
         </div>
 
         <div class="well-col">
-          <h3>Acoes</h3>
-          <button class="well-main-btn well-btn-blue" id="btn-drink">Beber</button>
-          <button class="well-main-btn well-btn-red" id="btn-transfer-menu">Coletar</button>
+          <h3>${t('well.actions')}</h3>
+          <button class="well-main-btn well-btn-blue" id="btn-drink">${t('well.drink')}</button>
+          <button class="well-main-btn well-btn-red" id="btn-transfer-menu">${t('well.collect')}</button>
           <div id="transfer-options" hidden>
-            <button class="well-main-btn" id="btn-fill-bottle">Encher garrafa</button>
+            <button class="well-main-btn" id="btn-fill-bottle">${t('well.fillBottle')}</button>
           </div>
         </div>
 
         <div class="well-col">
-          <h3>Poco</h3>
+          <h3>${t('well.well')}</h3>
           <div class="well-bucket-container">
             <div class="well-water-fill" id="well-water-level"></div>
           </div>
-          <button class="well-main-btn well-btn-green" id="btn-pull-water">Descer balde</button>
+          <button class="well-main-btn well-btn-green" id="btn-pull-water">${t('well.lowerBucket')}</button>
           <div id="well-timer" hidden>00:00</div>
         </div>
       </div>
@@ -333,7 +334,7 @@ export const wellSystem = {
 
   drinkFromWell() {
     if (wellState.waterLevel < 5) {
-      console.warn("⚠️ Água insuficiente no poço");
+      console.warn(`⚠️ ${t('well.insufficientWater')}`);
       return;
     }
 
@@ -342,7 +343,7 @@ export const wellSystem = {
       playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
       wellState.waterLevel -= 5;
     } else {
-      console.warn("⚠️ Sistema do jogador não disponível");
+      console.warn(`⚠️ ${t('well.playerNotAvailable')}`);
     }
     this.updateUI();
   },
@@ -361,12 +362,12 @@ export const wellSystem = {
     }
 
     if (!catFound) {
-      console.warn("⚠️ Nenhuma garrafa vazia no inventário");
+      console.warn(`⚠️ ${t('well.noEmptyBottle')}`);
       return;
     }
 
     if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
-      console.warn("⚠️ Água insuficiente no poço");
+      console.warn(`⚠️ ${t('well.insufficientWater')}`);
       return;
     }
 

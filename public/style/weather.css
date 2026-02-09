@@ -3,23 +3,45 @@
  * Extracted from: scripts/weather.js
  */
 
+ #weather-ui-panel {
+  --wui-scale: 1.65;
+
+  padding: calc(15px * var(--wui-scale)) calc(18px * var(--wui-scale));
+  min-width: calc(195px * var(--wui-scale));
+  font-size: calc(18px * var(--wui-scale));
+  border-radius: calc(12px * var(--wui-scale));
+}
+
+#weather-ui-panel .wui-time {
+  font-size: calc(25px * var(--wui-scale));
+}
+
+#weather-ui-panel .wui-weekday {
+  font-size: calc(22px * var(--wui-scale));
+}
+
+#weather-ui-panel .wui-row {
+  gap: calc(12px * var(--wui-scale));
+}
+
 #weather-ui-panel {
-  position: fixed;
+  position: absolute; /* fora do canvas, ancorado na UI */
   z-index: var(--z-weather, 2600);
-  left: 0;
-  top: 0;
-  padding: 10px 12px;
-  min-width: 180px;
+  left: 12px;
+  top: 12px;
+  padding: calc(10px * var(--wui-scale)) calc(12px * var(--wui-scale));
+  min-width: calc(180px * var(--wui-scale));
   color: var(--color-text-primary, #ffffff);
   background: var(--color-surface, rgba(0, 0, 0, 0.6));
   font-family: var(--font-family-mono, "Courier New", monospace);
-  font-size: var(--font-size-sm, 14px);
+  font-size: calc(14px * var(--wui-scale));
   line-height: var(--line-height-tight, 1.25);
   border-radius: var(--radius-sm, 6px);
   pointer-events: none;
   user-select: none;
   transform: translateZ(0);
 }
+
 
 #weather-ui-panel .wui-time {
   font-weight: var(--font-weight-black, 800);

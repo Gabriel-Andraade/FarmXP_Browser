@@ -56,6 +56,10 @@ export class PlayerHUD {
         const oldHUD = document.getElementById('playerPanel');
         if (oldHUD) oldHUD.remove();
 
+        // Remove container de botões antigo (recriado junto com o HUD)
+        const oldActionBtns = document.querySelector('.hud-action-buttons');
+        if (oldActionBtns) oldActionBtns.remove();
+
         // Remove também classes antigas se houver lixo no DOM
         const oldTopBar = document.querySelector('.top-bar');
         if (oldTopBar) oldTopBar.remove();
@@ -80,7 +84,12 @@ export class PlayerHUD {
                     </div>
                 </div>
             </div>
-            <button class="hud-save-btn" id="saveGameBtn" title="${t('saveSlots.titleSaveLoad')}">💾</button>
+            <div class="hud-action-buttons">
+                <button class="hud-action-btn" id="saveGameBtn" title="${t('hud.saveTooltip')}">💾</button>
+                <button class="hud-action-btn" id="settingsBtn" title="${t('hud.settingsTooltip')}">⚙️</button>
+                <button class="hud-action-btn" id="inventoryBtn" title="${t('hud.inventoryTooltip')}">🎒</button>
+                <button class="hud-action-btn" id="commerceBtn" title="${t('hud.commerceTooltip')}">🛒</button>
+            </div>
         `;
 
         const gameContainer = document.querySelector('.theGame');
@@ -95,18 +104,13 @@ export class PlayerHUD {
             gameDiv.insertAdjacentHTML('afterbegin', hudHTML);
         }
 
-        // Reatribuir listeners específicos do HUD se necessário (ex: botão de recolher)
-        const toggleBtn = document.getElementById('toggleHudBtn');
-        if(toggleBtn) toggleBtn.addEventListener('click', () => this.toggleHUD());
+        // Rebindeia os listeners nos botões do HUD (necessário após recriação do HTML)
+        this.bindHUDButtons();
 
         document.dispatchEvent(new Event("hudReady"));
     }
 
     bindEvents() {
-        document.getElementById('inventoryBtn')?.addEventListener('click', () => this.openModal('inventoryModal'));
-        document.getElementById('storeBtn')?.addEventListener('click', () => this.openModal('inventoryModal'));
-        document.getElementById('configBtn')?.addEventListener('click', () => this.openModal('configModal'));
-
         document.querySelectorAll('.modal-close').forEach(btn =>
             btn.addEventListener('click', () => this.closeModals())
         );
@@ -115,6 +119,18 @@ export class PlayerHUD {
             if (e.target.classList.contains('modal')) this.closeModals();
         });
 
+        // Listener para atualização de dinheiro em tempo real (documento, roda 1x)
+        document.addEventListener("moneyChanged", (e) => {
+            const el = document.getElementById("hudPlayerMoney");
+            if (el) el.textContent = `$${e.detail.money}`;
+        });
+    }
+
+    /**
+     * Bindeia listeners nos botões do HUD.
+     * Chamado sempre que createHUDStructure() recria o HTML.
+     */
+    bindHUDButtons() {
         // Botão retrátil do HUD
         document.getElementById('toggleHudBtn')?.addEventListener('click', () => this.toggleHUD());
 
@@ -128,10 +144,45 @@ export class PlayerHUD {
             }
         });
 
-        // 🆕 LISTENER PARA ATUALIZAÇÃO DE DINHEIRO EM TEMPO REAL
-        document.addEventListener("moneyChanged", (e) => {
-            const el = document.getElementById("hudPlayerMoney");
-            if (el) el.textContent = `$${e.detail.money}`;
+        // Botão Configurações (mesma lógica da tecla O)
+        document.getElementById('settingsBtn')?.addEventListener('click', () => {
+            const modal = document.getElementById('configModal');
+            if (!modal) return;
+
+            const closeBtn = modal.querySelector?.('.modal-close');
+            if (closeBtn && !closeBtn.__boundClose) {
+                closeBtn.__boundClose = true;
+                closeBtn.addEventListener('click', () => modal.classList.remove('active'));
+            }
+
+            if (modal.classList.contains('active')) modal.classList.remove('active');
+            else modal.classList.add('active');
+        });
+
+        // Botão Inventário (mesma lógica da tecla I)
+        document.getElementById('inventoryBtn')?.addEventListener('click', () => {
+            const host = document.getElementById('inventory-ui-host');
+            const modal = host?.shadowRoot?.getElementById('inventoryModal');
+            if (modal?.classList.contains('open')) window.closeInventory?.();
+            else window.openInventory?.();
+        });
+
+        // Botão Comércio (mesma lógica da tecla U)
+        document.getElementById('commerceBtn')?.addEventListener('click', () => {
+            if (typeof window.openStore === 'function') {
+                window.openStore();
+                return;
+            }
+            if (typeof window.openMerchantsList === 'function') {
+                window.openMerchantsList();
+                return;
+            }
+            if (window.merchantSystem && typeof window.merchantSystem.openMerchantsList === 'function') {
+                window.merchantSystem.openMerchantsList();
+                return;
+            }
+            const merchantsList = document.getElementById('merchantsList');
+            merchantsList?.classList?.add('active');
         });
     }
 

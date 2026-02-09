@@ -8,6 +8,7 @@
     overflow-y: auto;
 }
 
+/* Container por seção */
 .config-section {
     background: rgba(90, 58, 31, 0.7);
     border-radius: 10px;
@@ -23,11 +24,17 @@
     font-size: 18px;
 }
 
+/* Linha de opção */
 .config-option {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    gap: 12px;
+}
+
+.config-option:last-child {
+    margin-bottom: 0;
 }
 
 .config-label {
@@ -35,17 +42,33 @@
     font-size: 14px;
 }
 
+/* Texto auxiliar (opcional) */
+.config-hint {
+    color: rgba(245, 233, 211, 0.8);
+    font-size: 12px;
+    margin-top: 6px;
+    line-height: 1.35;
+}
+
+/* Toggle */
 .config-toggle {
     position: relative;
     display: inline-block;
     width: 50px;
     height: 24px;
+    flex: 0 0 auto;
 }
 
 .config-toggle input {
     opacity: 0;
     width: 0;
     height: 0;
+}
+
+.config-toggle input:focus-visible + .config-slider {
+    outline: 3px solid #4a90d9;
+    outline-offset: 2px;
+    border-radius: 24px;
 }
 
 .config-slider {
@@ -80,6 +103,7 @@ input:checked + .config-slider:before {
     transform: translateX(26px);
 }
 
+/* Select */
 .config-select {
     background: rgba(46, 28, 15, 0.8);
     border: 2px solid #8b5a2b;
@@ -88,8 +112,15 @@ input:checked + .config-slider:before {
     color: #f5e9d3;
     font-size: 14px;
     width: 150px;
+    outline: none;
 }
 
+.config-select:focus-visible {
+    outline: 3px solid rgba(201, 164, 99, 0.75);
+    outline-offset: 2px;
+}
+
+/* Botões */
 .config-button {
     background: linear-gradient(90deg, #c9a463, #e0bc87);
     color: #2e1c0f;
@@ -100,6 +131,8 @@ input:checked + .config-slider:before {
     transition: all 0.3s ease;
     font-weight: bold;
     margin-top: 10px;
+    outline: none;
+    white-space: nowrap;
 }
 
 .config-button:hover {
@@ -107,17 +140,252 @@ input:checked + .config-slider:before {
     transform: translateY(-2px);
 }
 
-/* ===== SCROLLBAR ===== */
-#config-content::-webkit-scrollbar { 
-    width: 8px; 
+.config-button:active {
+    transform: translateY(0);
 }
 
-#config-content::-webkit-scrollbar-thumb { 
-    background: #4ecca3; 
-    border-radius: 4px; 
+.config-button:focus-visible {
+    outline: 3px solid rgba(201, 164, 99, 0.75);
+    outline-offset: 2px;
 }
 
-#config-content::-webkit-scrollbar-track { 
-    background: rgba(255,255,255,0.05); 
+/* Variação secundária (pra "Cancelar", "Voltar", etc.) */
+.config-button--secondary {
+    background: rgba(46, 28, 15, 0.85);
+    color: #f5e9d3;
+    border: 2px solid #8b5a2b;
+}
+
+.config-button--secondary:hover {
+    background: rgba(46, 28, 15, 0.95);
+    transform: translateY(-2px);
+}
+
+/* ===== NOVO: REMAPEAR TECLAS (menu + modal) ===== */
+
+/* Linha do menu de remapeamento */
+.config-option--keybinds {
+    align-items: flex-start;
+}
+
+/* "Keycap" estilo botão de interação (tipo o "E") */
+.ui-keycap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+
+    border-radius: 8px;
+    border: 2px solid #c9a463;
+
+    background: linear-gradient(180deg, rgba(245, 233, 211, 0.12), rgba(46, 28, 15, 0.65));
+    color: #f5e9d3;
+
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 14px;
+
+    box-shadow:
+        0 2px 0 rgba(46, 28, 15, 0.55),
+        inset 0 1px 0 rgba(245, 233, 211, 0.15);
+
+    user-select: none;
+}
+
+.ui-keycap--small {
+    min-width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    font-size: 13px;
+}
+
+.ui-keycap--ghost {
+    background: rgba(46, 28, 15, 0.55);
+    border-color: rgba(201, 164, 99, 0.75);
+    box-shadow: inset 0 1px 0 rgba(245, 233, 211, 0.12);
+}
+
+.ui-keycap--listening {
+    border-color: #f5e9d3;
+    box-shadow:
+        0 0 0 3px rgba(201, 164, 99, 0.35),
+        inset 0 1px 0 rgba(245, 233, 211, 0.18);
+}
+
+/* Overlay */
+#keybinds-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none; /* configUI.js liga/desliga */
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 18px;
+}
+
+#keybinds-overlay.is-open {
+    display: flex;
+}
+
+/* Modal */
+#keybinds-modal {
+    width: min(720px, 100%);
+    background: rgba(90, 58, 31, 0.92);
+    border: 2px solid #c9a463;
+    border-radius: 12px;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+/* Header do modal */
+#keybinds-modal .keybinds-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding: 14px 16px;
+    border-bottom: 2px solid rgba(201, 164, 99, 0.75);
+    background: rgba(46, 28, 15, 0.55);
+}
+
+#keybinds-modal .keybinds-title {
+    color: #f5e9d3;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+#keybinds-modal .keybinds-subtitle {
+    color: rgba(245, 233, 211, 0.8);
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+/* Corpo */
+#keybinds-modal .keybinds-body {
+    padding: 14px 16px;
+    max-height: min(62vh, 520px);
+    overflow: auto;
+}
+
+/* Lista de binds */
+#keybinds-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.keybind-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    padding: 10px 12px;
+    border-radius: 10px;
+
+    background: rgba(46, 28, 15, 0.55);
+    border: 2px solid rgba(201, 164, 99, 0.55);
+}
+
+.keybind-action {
+    color: #f5e9d3;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.keybind-desc {
+    color: rgba(245, 233, 211, 0.75);
+    font-size: 12px;
+    margin-top: 4px;
+    line-height: 1.25;
+}
+
+.keybind-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.keybind-sep {
+    color: rgba(245, 233, 211, 0.55);
+    font-weight: 800;
+    font-size: 12px;
+    user-select: none;
+}
+
+/* Footer do modal */
+#keybinds-modal .keybinds-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+
+    padding: 14px 16px;
+    border-top: 2px solid rgba(201, 164, 99, 0.75);
+    background: rgba(46, 28, 15, 0.55);
+}
+
+/* Botão específico do menu */
+#open-keybinds-btn {
+    margin-top: 0;
+}
+
+/* Scrollbars internas do modal */
+#keybinds-modal .keybinds-body::-webkit-scrollbar {
+    width: 8px;
+}
+#keybinds-modal .keybinds-body::-webkit-scrollbar-thumb {
+    background: #c9a463;
+    border-radius: 4px;
+}
+#keybinds-modal .keybinds-body::-webkit-scrollbar-thumb:hover {
+    background: #e0bc87;
+}
+#keybinds-modal .keybinds-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+/* Responsivo: empilha ação/teclas se ficar apertado */
+@media (max-width: 520px) {
+    .config-option {
+        align-items: flex-start;
+    }
+
+    .keybind-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .keybind-keys {
+        width: 100%;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+}
+
+/* ===== SCROLLBAR (Config) ===== */
+#config-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#config-content::-webkit-scrollbar-thumb {
+    background: #c9a463;
+    border-radius: 4px;
+}
+
+#config-content::-webkit-scrollbar-thumb:hover {
+    background: #e0bc87;
+}
+
+#config-content::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
     border-radius: 4px;
 }
