@@ -3,6 +3,7 @@ import { collisionSystem } from "../collisionSystem.js";
 import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
 import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
+import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -17,13 +18,11 @@ export const keys = {
 // ─────────────────────────────────────────────
 // Remap (Config) -> farmxp_controls
 // ─────────────────────────────────────────────
-const CONTROLS_STORAGE_KEY = "farmxp_controls";
-
 // tenta ler binds também do config/settings geral (se teu configUI usar outra key)
 const CONFIG_STORAGE_KEYS = ["farmxp_config", "farmxp_settings", "farmxp_options"];
 
 // caminho do configUI.js (control/control.js -> ../configUI.js)
-const CONFIG_UI_MODULE_PATH = "../configUI.js";
+const CONFIG_UI_MODULE_PATH = "../settingsUI.js";
 
 function extractKeybindsFromConfig(candidate) {
     if (!candidate || typeof candidate !== "object") return null;
@@ -122,19 +121,6 @@ window.FarmXPControls = window.FarmXPControls || {};
 window.FarmXPControls.getKeybinds = getKeybinds;
 window.FarmXPControls.setKeybinds = setKeybinds;
 
-
-const DEFAULT_KEYBINDS = {
-    moveUp: ["KeyW", "ArrowUp"],
-    moveDown: ["KeyS", "ArrowDown"],
-    moveLeft: ["KeyA", "ArrowLeft"],
-    moveRight: ["KeyD", "ArrowRight"],
-    interact: ["KeyE"],
-    jump: ["Space"],
-
-    inventory: ["KeyI"],
-    merchants: ["KeyU"],
-    config: ["KeyO"],
-};
 
 let keybinds = loadKeybinds();
 
@@ -465,11 +451,6 @@ export class PlayerInteractionSystem {
                     }
                 }
             }
-        }, { signal });
-
-        document.addEventListener('keyup', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
-            // A interação agora é baseada em actions, não precisa mais do KeyE
         }, { signal });
 
         if (!this.mobile) {
@@ -827,18 +808,18 @@ export function setupControls(player) {
 
     // aplica remap quando o Config salva/aplica
     document.addEventListener("controlsChanged", (e) => {
-    const next = e?.detail?.keybinds || e?.detail?.controls || e?.detail;
-    const extracted = extractKeybindsFromConfig(next) || next;
-    if (!extracted) return;
-    setKeybinds(extracted, { persist: true });
-}, { signal });
+        const next = e?.detail?.keybinds || e?.detail?.controls || e?.detail;
+        const extracted = extractKeybindsFromConfig(next) || next;
+        if (!extracted) return;
+        setKeybinds(extracted, { persist: true });
+    }, { signal });
 
-// bônus: se configUI disparar algo mais genérico
-document.addEventListener("configChanged", (e) => {
-    const extracted = extractKeybindsFromConfig(e?.detail);
-    if (!extracted) return;
-    setKeybinds(extracted, { persist: true });
-}, { signal });
+    // bônus: se configUI disparar algo mais genérico
+    document.addEventListener("configChanged", (e) => {
+        const extracted = extractKeybindsFromConfig(e?.detail);
+        if (!extracted) return;
+        setKeybinds(extracted, { persist: true });
+    }, { signal });
 
 
     document.addEventListener('keydown', (e) => {

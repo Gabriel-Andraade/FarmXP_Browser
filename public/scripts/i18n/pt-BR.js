@@ -315,7 +315,6 @@ export default {
     save: 'Salvar',
     cancel: 'Cancelar',
     graphics: 'Gráficos',
-    controls: 'Controles',
     accessibility: 'Acessibilidade',
     highContrast: 'Alto contraste',
     reducedMotion: 'Reduzir animações',
@@ -330,7 +329,6 @@ export default {
     cvDeuteranopia: 'Deuteranopia (verde-vermelho)',
     cvTritanopia: 'Tritanopia (azul-amarelo)',
     cvAchromatopsia: 'Acromatopsia (sem cores)',
-    // Controles - Añadidas desde settingsUI.js
     controls: {
       title: 'Controles',
       remap: 'Remapear teclas',
@@ -482,12 +480,12 @@ export default {
     done: 'Concluir' // Añadido desde settingsUI.js
   },
 
-  // HUD Action Buttons
+  // HUD Action Buttons - MODIFICADO: usando marcadores dinâmicos {key}
   hud: {
     saveTooltip: 'Salvar / Carregar (💾)',
-    settingsTooltip: 'Configurações (O)',
-    inventoryTooltip: 'Inventário (I)',
-    commerceTooltip: 'Comércio (U)'
+    settingsTooltip: 'Configurações ({key})',
+    inventoryTooltip: 'Inventário ({key})',
+    commerceTooltip: 'Comércio ({key})'
   },
 
   // Tutorials/Help

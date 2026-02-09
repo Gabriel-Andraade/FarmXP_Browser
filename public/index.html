@@ -40,11 +40,11 @@
             <canvas id="gameCanvas" aria-label="Farm game view" role="img"></canvas>
         </div>
         <!-- CONFIGURAÇÕES -->
-        <div class="modal" id="configModal" role="dialog" aria-modal="true">
+        <div class="modal" id="configModal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
             <div class="store-container">
                 <div class="modal-header">
-                    <h2 data-i18n="settings.title">⚙️ Configurações</h2>
-                    <button class="modal-close">&times;</button>
+                    <h2 id="configModalTitle" data-i18n="settings.title">⚙️ Configurações</h2>
+                    <button class="modal-close" aria-label="Close">&times;</button>
                 </div>
                 <div id="config-content">
                     <div class="setting-row" style="margin: 20px; display: flex; align-items: center; gap: 15px;">

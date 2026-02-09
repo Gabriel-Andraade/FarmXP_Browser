@@ -73,7 +73,7 @@ class AccessibilityManager {
     this._ensureInjectedStyles();
     this._ensureColorVisionSvgFilters();
 
-    this._applyAllSettings();
+    this._applyAllSettings({ emitEvents: false });
     this._setupKeyboardDetection();
     this._createSkipLink();
     this._createAnnouncer();
@@ -181,13 +181,13 @@ class AccessibilityManager {
     }
   }
 
-  _applyAllSettings() {
+  _applyAllSettings({ emitEvents = true } = {}) {
     for (const [key, value] of Object.entries(this.settings)) {
-      this._applySetting(key, value);
+      this._applySetting(key, value, { emitEvents });
     }
   }
 
-  _applySetting(key, value) {
+  _applySetting(key, value, { emitEvents = true } = {}) {
     switch (key) {
       case 'highContrast':
         document.body.classList.toggle('high-contrast', !!value);
@@ -235,7 +235,9 @@ class AccessibilityManager {
         const zoom = Number(value || 1);
         this._applyCssGameZoom(zoom);
 
-        document.dispatchEvent(new CustomEvent('gameZoomChanged', { detail: { zoom } }));
+        if (emitEvents) {
+          document.dispatchEvent(new CustomEvent('gameZoomChanged', { detail: { zoom } }));
+        }
         break;
       }
 
@@ -243,7 +245,9 @@ class AccessibilityManager {
         const mode = String(value || 'off');
         this._applyColorVisionFilter(mode);
 
-        document.dispatchEvent(new CustomEvent('colorVisionChanged', { detail: { mode } }));
+        if (emitEvents) {
+          document.dispatchEvent(new CustomEvent('colorVisionChanged', { detail: { mode } }));
+        }
         break;
       }
 
@@ -369,7 +373,9 @@ class AccessibilityManager {
       container.removeEventListener('keydown', handler);
       this._trapHandlers.delete(container);
     }
-    this._previousFocus?.focus();
+    if (this._previousFocus?.isConnected) {
+      this._previousFocus.focus();
+    }
     this._previousFocus = null;
   }
 

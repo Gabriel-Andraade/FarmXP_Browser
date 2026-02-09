@@ -184,7 +184,7 @@ export class CraftingSystem {
       return;
     }
 
-    this.showMessage(`🔨 ${t('crafting.crafted', { name: recipe.name })}`, "success");
+    this.showMessage(`🔨 ${t('crafting.crafted', { name: getRecipeName(recipe)})}`, "success");
     this.renderRecipeList();
 
     if (craftBtn) {

@@ -9,6 +9,7 @@
     margin: -1px;
     overflow: hidden;
     clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
     white-space: nowrap;
     border: 0;
 }
@@ -35,13 +36,13 @@
 
 /* ===== KEYBOARD FOCUS INDICATOR ===== */
 
-:focus {
-    outline: none;
-}
-
-body.using-keyboard :focus-visible {
+:focus-visible {
     outline: 3px solid #4a90d9;
     outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
 }
 
 
@@ -320,7 +321,7 @@ body.high-contrast .mch-confirm-message {
 }
 
 body.high-contrast .mch-merchant-header,
-body.high-contrast .mch-comerce\.mch-player-panel-header {
+body.high-contrast .mch-commerce.mch-player-panel-header {
     background: #0a0a0a !important;
     border-bottom: 2px solid #ffffff !important;
 }

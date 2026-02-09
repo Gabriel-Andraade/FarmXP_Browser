@@ -88,7 +88,7 @@ export default {
     notEnoughMoney: '¡Dinero insuficiente!',
     inventoryFull: 'Inventario lleno o error al añadir artículo.',
     purchaseSuccess: '¡Compra realizada! -{value}',
-    saleSuccess: '¡Venda realizada! +{value}',
+    saleSuccess: '¡Venta realizada! +{value}',
     confirm: 'Confirmar',
     open: 'Abierto',
     closed: 'Cerrado',
@@ -315,7 +315,6 @@ export default {
     save: 'Guardar',
     cancel: 'Cancelar',
     graphics: 'Gráficos',
-    controls: 'Controles',
     accessibility: 'Accesibilidad',
     highContrast: 'Alto contraste',
     reducedMotion: 'Reducir animaciones',
@@ -330,7 +329,7 @@ export default {
     cvDeuteranopia: 'Deuteranopía (verde-rojo)',
     cvTritanopia: 'Tritanopía (azul-amarillo)',
     cvAchromatopsia: 'Acromatopsia (sin colores)',
-    // Controles - Añadidas desde settingsUI.js
+    
     controls: {
       title: 'Controles',
       remap: 'Remapear teclas',
@@ -485,9 +484,9 @@ export default {
   // HUD Action Buttons
   hud: {
     saveTooltip: 'Guardar / Cargar (💾)',
-    settingsTooltip: 'Configuración (O)',
-    inventoryTooltip: 'Inventario (I)',
-    commerceTooltip: 'Comercio (U)'
+    settingsTooltip: 'Configuración ({key})',
+    inventoryTooltip: 'Inventario ({key})',
+    commerceTooltip: 'Comercio ({key})'
   },
 
   // Tutorials/Help

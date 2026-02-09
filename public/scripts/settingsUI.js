@@ -6,24 +6,11 @@
 import { i18n, t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 import { a11y } from './accessibility.js';
+import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from './keybindDefaults.js';
 
 /* ─────────────────────────────────────────────
  * Keybinds (Remap)
  * ───────────────────────────────────────────── */
-const CONTROLS_STORAGE_KEY = 'farmxp_controls';
-
-const DEFAULT_KEYBINDS = {
-  moveUp: ['KeyW', 'ArrowUp'],
-  moveDown: ['KeyS', 'ArrowDown'],
-  moveLeft: ['KeyA', 'ArrowLeft'],
-  moveRight: ['KeyD', 'ArrowRight'],
-  interact: ['KeyE'],
-  jump: ['Space'],
-
-  inventory: ['KeyI'],
-  merchants: ['KeyU'],
-  config: ['KeyO'],
-};
 
 const ACTION_META = [
   { action: 'moveUp', fallbackLabel: 'Mover para cima', fallbackDesc: 'Andar para cima' },
@@ -413,7 +400,7 @@ function rerenderKeybindsList() {
       if (slot === 0 && slots === 2) {
         const sep = document.createElement('span');
         sep.className = 'keybind-sep';
-        sep.textContent = '+';
+        sep.textContent = '/';
         right.appendChild(sep);
       }
     }
@@ -520,7 +507,7 @@ function startListening(action, slot) {
       const compact = arr.filter(Boolean);
       // mantém slot 0 sempre
       if (!compact.length) {
-        compact.push(DEFAULT_KEYBINDS[listening.action]?.[0] || 'KeyE');
+        compact.push(DEFAULT_KEYBINDS[listening.action]?.[0]);
       }
 
       next[listening.action] = compact;
@@ -573,7 +560,7 @@ function applyBind(action, slot, code) {
     next[k] = next[k].filter((c) => c !== code);
     // garante que não zere (pra não voltar no default pelo sanitize do control.js)
     if (!next[k].length) {
-      next[k] = [DEFAULT_KEYBINDS[k]?.[0] || 'KeyE'];
+      next[k] = [DEFAULT_KEYBINDS[k]?.[0]];
     }
   }
 
@@ -582,7 +569,7 @@ function applyBind(action, slot, code) {
 
   // compacta (mas mantém slot 0 sempre)
   const compact = arr.filter(Boolean);
-  if (!compact.length) compact.push(DEFAULT_KEYBINDS[action]?.[0] || 'KeyE');
+  if (!compact.length) compact.push(DEFAULT_KEYBINDS[action]?.[0]);
 
   // limita quantidade por tipo
   next[action] = compact.slice(0, maxSlots);

@@ -866,20 +866,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     handleWarn("falha ao carregar settingsUI", "main:DOMContentLoaded:settingsUI", error);
   }
-
   try {
     logger.debug("Carregando estilos CSS...");
     await cssManager.loadAll();
     logger.debug("Todos os estilos CSS carregados");
+  } catch (error) {
+    logger.error("Erro ao carregar CSS:", error);
+  }
 
+  try {
     logger.debug("Criando PlayerHUD...");
     const hud = new PlayerHUD();
     registerSystem("hud", hud);
     logger.debug("PlayerHUD criado e registrado");
+  } catch (error) {
+    logger.error("Erro ao criar PlayerHUD:", error);
+  }
 
-    setupSleepListeners();
-    setupGamePauseListeners();
+  setupSleepListeners();
+  setupGamePauseListeners();
 
+  try {
     await initGameBootstrap();
   } catch (error) {
     logger.error("Erro na inicialização do jogo:", error);

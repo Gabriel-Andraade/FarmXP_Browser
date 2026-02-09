@@ -2,6 +2,32 @@ import { logger } from '../logger.js';
 import { currencyManager } from "../currencyManager.js";
 import { t } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
+import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
+
+/**
+ * Retorna a label da tecla atual para uma ação de keybind
+ * @param {string} action - Nome da ação (config, inventory, merchants)
+ * @returns {string} Label da tecla (ex: 'O', 'I', 'U')
+ */
+function getKeyForAction(action) {
+    try {
+        const raw = localStorage.getItem(CONTROLS_STORAGE_KEY);
+        if (raw) {
+            const binds = JSON.parse(raw);
+            if (binds[action]?.[0]) {
+                const code = binds[action][0];
+                const m = /^Key([A-Z])$/.exec(code);
+                if (m) return m[1];
+                return code.replace(/^Key/, '').replace(/^Digit/, '');
+            }
+        }
+    } catch {}
+    const code = DEFAULT_KEYBINDS[action]?.[0] || '';
+    const m = /^Key([A-Z])$/.exec(code);
+    if (m) return m[1];
+    return code.replace(/^Key/, '').replace(/^Digit/, '');
+}
+
 /**
  * Obtém nome traduzido do item pelo ID
  * @param {number} itemId - ID do item
@@ -85,10 +111,10 @@ export class PlayerHUD {
                 </div>
             </div>
             <div class="hud-action-buttons">
-                <button class="hud-action-btn" id="saveGameBtn" title="${t('hud.saveTooltip')}">💾</button>
-                <button class="hud-action-btn" id="settingsBtn" title="${t('hud.settingsTooltip')}">⚙️</button>
-                <button class="hud-action-btn" id="inventoryBtn" title="${t('hud.inventoryTooltip')}">🎒</button>
-                <button class="hud-action-btn" id="commerceBtn" title="${t('hud.commerceTooltip')}">🛒</button>
+                <button class="hud-action-btn" id="saveGameBtn" title="${t('hud.saveTooltip')}" aria-label="${t('hud.saveTooltip')}">💾</button>
+                <button class="hud-action-btn" id="settingsBtn" title="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}" aria-label="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}">⚙️</button>
+                <button class="hud-action-btn" id="inventoryBtn" title="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}" aria-label="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}">🎒</button>
+                <button class="hud-action-btn" id="commerceBtn" title="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}" aria-label="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}">🛒</button>
             </div>
         `;
 

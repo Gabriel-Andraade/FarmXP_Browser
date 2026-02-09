@@ -315,7 +315,6 @@ export default {
     save: 'Save',
     cancel: 'Cancel',
     graphics: 'Graphics',
-    controls: 'Controls',
     accessibility: 'Accessibility',
     highContrast: 'High contrast',
     reducedMotion: 'Reduce animations',
@@ -330,7 +329,7 @@ export default {
     cvDeuteranopia: 'Deuteranopia (green-red)',
     cvTritanopia: 'Tritanopia (blue-yellow)',
     cvAchromatopsia: 'Achromatopsia (no colors)',
-    // Control remapping specific translations
+
     controls: {
       title: 'Controls',
       remap: 'Remap keys',
@@ -445,9 +444,9 @@ export default {
   // HUD Action Buttons
   hud: {
     saveTooltip: 'Save / Load (💾)',
-    settingsTooltip: 'Settings (O)',
-    inventoryTooltip: 'Inventory (I)',
-    commerceTooltip: 'Commerce (U)'
+    settingsTooltip: 'Settings ({key})',
+    inventoryTooltip: 'Inventory ({key})',
+    commerceTooltip: 'Commerce ({key})'
   },
 
   // Tutorials/Help
