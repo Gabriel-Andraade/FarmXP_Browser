@@ -84,7 +84,7 @@ export class PlayerHUD {
         if (oldHUD) oldHUD.remove();
 
         // Remove container de botões antigo (recriado junto com o HUD)
-        document.querySelectorAll('.hud-action-buttons').forEach((el) => el.remove());
+       document.querySelectorAll('.hud-action-buttons').forEach((el) => { el.remove(); });
 
         // Remove também classes antigas se houver lixo no DOM
         const oldTopBar = document.querySelector('.top-bar');

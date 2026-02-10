@@ -542,19 +542,12 @@ function onHudReady() {
   rerenderAll();
 }
 
-function onDocumentClick(e) {
-  const btn = e?.target?.closest?.(`#${IDS.btn}`);
-  if (!btn) return;
-  e.preventDefault();
-  toggleHelpPanel();
-}
 
 function bindEvents() {
   if (eventsBound) return;
   eventsBound = true;
 
   document.addEventListener('keydown', onGlobalKeydown, true);
-  document.addEventListener('click', onDocumentClick, true);
   document.addEventListener('controlsChanged', onControlsChanged);
   document.addEventListener('languageChanged', onLanguageChanged);
   document.addEventListener('hudReady', onHudReady);
