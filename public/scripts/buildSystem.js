@@ -117,7 +117,7 @@ export const BuildSystem = {
     _showBuildHelpPanel() {
       this._ensureBuildHelpUI();
       const label = this.selectedItem?.name ? this.selectedItem.name : '-';
-      const nameEl = this._helpPanelEl?.querySelector('#bld-item-name');
+      const nameEl = this._helpPanelEl?.querySelector('#bhp-item-name');
       if (nameEl) nameEl.textContent = label;
       this._helpPanelEl?.classList.add('open');
     },
@@ -582,7 +582,7 @@ export const BuildSystem = {
         this.debugElement = document.createElement('div');
         this.debugElement.id = 'buildSystem-debug';
         // Estilos via build.css (#buildSystem-debug)
-        this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg" style="color:yellow; margin-top:5px;"></div>`;
+        this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg"></div>`;
         document.body.appendChild(this.debugElement);
     },
 

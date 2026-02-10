@@ -4,7 +4,7 @@
  * Prefix: bld-
  */
 
-#bld-help-panel {
+#bhp-help-panel {
   position: fixed;
   left: 18px;
   top: 18px;
@@ -23,12 +23,12 @@
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-#bld-help-panel.open {
+#bhp-help-panel.open {
   opacity: 1;
   transform: translateY(0);
 }
 
-#bld-help-panel .bld-header {
+#bhp-help-panel .bld-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -38,7 +38,7 @@
   border-radius: 12px 12px 0 0;
 }
 
-#bld-help-panel .bld-title {
+#bhp-help-panel .bld-title {
   font-weight: var(--font-weight-black, 800);
   font-size: 13px;
   letter-spacing: 0.5px;
@@ -47,19 +47,19 @@
   gap: 8px;
 }
 
-#bld-help-panel .bld-sub {
+#bhp-help-panel .bld-sub {
   font-size: 11px;
   color: var(--color-text-muted, #c9a463);
   font-weight: var(--font-weight-bold, 700);
 }
 
-#bld-help-panel .bld-body {
+#bhp-help-panel .bld-body {
   padding: 12px;
   display: grid;
   gap: 8px;
 }
 
-#bld-help-panel .bld-row {
+#bhp-help-panel .bld-row {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -70,18 +70,18 @@
   border: 1px solid rgba(201, 164, 99, 0.18);
 }
 
-#bld-help-panel .bld-row strong {
+#bhp-help-panel .bld-row strong {
   color: var(--color-beige, #f5e9d3);
   font-size: 12px;
 }
 
-#bld-help-panel .bld-row span {
+#bhp-help-panel .bld-row span {
   color: var(--color-text-muted, #c9a463);
   font-size: 11px;
   font-weight: var(--font-weight-bold, 700);
 }
 
-#bld-help-panel kbd {
+#bhp-help-panel kbd {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-size: 11px;
   font-weight: 900;

@@ -24,8 +24,7 @@ const createInventoryUI = () => {
       box-sizing: border-box;
     }
 
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Roboto:wght@300,400,500,700&display=swap');
-
+    
     :host {
       --bg: #17160A;
       --panel-deep: #27180E;
