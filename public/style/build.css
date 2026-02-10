@@ -99,7 +99,8 @@
 /* ================= DEBUG OVERLAY ================= */
 #buildSystem-debug {
   position: fixed;
-  top: 10px;
+  top: auto;
+  bottom: 10px;
   left: 10px;
   background: rgba(0, 0, 0, 0.8);
   color: lime;
@@ -108,3 +109,4 @@
   font-family: monospace;
   pointer-events: none;
 }
+
