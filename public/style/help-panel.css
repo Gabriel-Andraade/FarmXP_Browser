@@ -1,0 +1,249 @@
+/* ==========================================================================
+   Help Panel (Drawer) — prefixo: khp-
+   Paleta alinhada ao tema: madeira / couro / dourado
+   ========================================================================== */
+
+:root {
+  --khp-z: 9500;
+  --khp-right: 16px;
+  --khp-top: 110px;
+  --khp-width: 360px;
+
+  /* Paleta base (coesa com o jogo) */
+  --khp-bg-main: linear-gradient(135deg, #3b2612, #2e1c0f);
+  --khp-bg-header: linear-gradient(135deg, #6b4513, #8b5a2b);
+  --khp-bg-soft: rgba(46, 28, 15, 0.95);
+
+  --khp-border-gold: #c9a463;
+  --khp-border-brown: #8b5a2b;
+
+  --khp-text-main: #f5e9d3;
+  --khp-text-muted: #a89070;
+
+  --khp-radius: 14px;
+  --khp-shadow: 0 12px 35px rgba(0, 0, 0, 0.55);
+}
+
+/* ===== OVERLAY ===== */
+.khp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--khp-z);
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+  transition: opacity 0.2s ease, background 0.2s ease;
+}
+
+.khp-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 900px) {
+  .khp-overlay.is-open {
+    background: rgba(20, 15, 5, 0.6);
+  }
+}
+
+/* ===== PAINEL (DRAWER) ===== */
+.khp-panel {
+  position: fixed;
+  top: var(--khp-top);
+  right: var(--khp-right);
+  width: var(--khp-width);
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - var(--khp-top) - 16px);
+
+  display: flex;
+  flex-direction: column;
+
+  background: var(--khp-bg-main);
+  color: var(--khp-text-main);
+
+  border: 3px solid var(--khp-border-gold);
+  border-radius: var(--khp-radius);
+  box-shadow: var(--khp-shadow);
+
+  overflow: hidden;
+
+  /* começa fora da tela */
+  transform: translateX(calc(100% + 24px));
+  transition: transform 0.25s ease;
+}
+
+.khp-panel.is-open {
+  transform: translateX(0);
+}
+
+/* ===== HEADER ===== */
+.khp-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+
+  background: var(--khp-bg-header);
+  padding: 14px 16px;
+
+  border-bottom: 2px solid var(--khp-border-gold);
+}
+
+.khp-title {
+  margin: 0 36px 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--khp-text-main);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.khp-subtitle {
+  margin: 0 36px 6px 0;
+  font-size: 12.5px;
+  color: var(--khp-text-muted);
+}
+
+.khp-hint {
+  margin: 0 36px 0 0;
+  font-size: 12px;
+  color: #c9a463;
+}
+
+/* ===== BOTÃO FECHAR ===== */
+.khp-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+
+  width: 32px;
+  height: 32px;
+
+  border-radius: 50%;
+  border: 2px solid var(--khp-border-gold);
+
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--khp-text-main);
+
+  font-size: 18px;
+  font-weight: bold;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.khp-close:hover {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border-color: #e74c3c;
+  transform: rotate(90deg);
+}
+
+/* ===== BODY ===== */
+.khp-body {
+  flex: 1;
+  padding: 14px 16px;
+  overflow-y: auto;
+
+  background:
+    radial-gradient(circle at 80% 20%, rgba(201, 164, 99, 0.08), transparent 55%),
+    radial-gradient(circle at 20% 80%, rgba(139, 90, 43, 0.08), transparent 55%),
+    var(--khp-bg-soft);
+}
+
+/* ===== SEÇÕES ===== */
+.khp-section {
+  margin-bottom: 18px;
+}
+
+.khp-sectionTitle {
+  margin: 10px 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--khp-text-main);
+  border-bottom: 1px solid rgba(201, 164, 99, 0.3);
+  padding-bottom: 4px;
+}
+
+/* ===== LINHAS ===== */
+.khp-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(201, 164, 99, 0.15);
+}
+
+.khp-row:last-child {
+  border-bottom: none;
+}
+
+.khp-rowText {
+  flex: 1;
+  min-width: 0;
+}
+
+.khp-rowLabel {
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--khp-text-main);
+}
+
+.khp-rowDesc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--khp-text-muted);
+}
+
+/* ===== TECLAS ===== */
+.khp-keys {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.khp-kbd {
+  min-width: 26px;
+  padding: 4px 8px;
+
+  border-radius: 8px;
+  border: 2px solid var(--khp-border-gold);
+
+  background: linear-gradient(135deg, #c9a463, #e0bc87);
+  color: #2e1c0f;
+
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: bold;
+
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+.khp-sep {
+  font-size: 12px;
+  color: var(--khp-text-muted);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 520px) {
+  :root {
+    --khp-top: 10px;
+    --khp-right: 10px;
+    --khp-width: 92vw;
+  }
+
+  .khp-panel {
+    max-height: calc(100vh - 20px);
+  }
+
+  .khp-row {
+    flex-direction: column;
+  }
+}
+
+/* ===== ACESSIBILIDADE ===== */
+@media (prefers-reduced-motion: reduce) {
+  .khp-panel,
+  .khp-overlay {
+    transition: none;
+  }
+}

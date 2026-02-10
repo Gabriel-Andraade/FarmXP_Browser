@@ -364,10 +364,6 @@ export default {
       label: 'Interactuar',
       desc: 'Interacción / usar'
     },
-    jump: {
-      label: 'Saltar',
-      desc: 'Salto'
-    },
     inventory: {
       label: 'Inventario',
       desc: 'Abrir/cerrar inventario'
@@ -379,6 +375,10 @@ export default {
     config: {
       label: 'Configuración',
       desc: 'Abrir/cerrar configuración'
+    },
+    help: {
+      label: 'Ayuda',
+      desc: 'Abrir/cerrar atajos'
     }
   },
 
@@ -486,7 +486,8 @@ export default {
     saveTooltip: 'Guardar / Cargar (💾)',
     settingsTooltip: 'Configuración ({key})',
     inventoryTooltip: 'Inventario ({key})',
-    commerceTooltip: 'Comercio ({key})'
+    commerceTooltip: 'Comercio ({key})',
+    helpTooltip: 'Atajos ({key})'
   },
 
   // Tutorials/Help
@@ -717,5 +718,18 @@ export default {
     notAvailable: 'Función de construcción no disponible.',
     notAvailableAfter: 'Función de construcción no disponible después de cargar.',
     buildError: 'Error al entrar en modo de construcción. Consulta la consola.'
+  },
+
+  // Panel de atajos
+  shortcutsPanel: {
+    title: '⌨️ Atajos de Teclado',
+    subtitle: 'Las teclas de abajo reflejan tu configuración actual.',
+    hintToggle: 'Pulsa {key} para abrir/cerrar.',
+    unbound: 'Sin asignar',
+    sections: {
+      movement: '🏃 Movimiento',
+      actions: '🎮 Acciones',
+      menus: '📦 Menús'
+    }
   }
 };

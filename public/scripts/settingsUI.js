@@ -18,7 +18,6 @@ const ACTION_META = [
   { action: 'moveLeft', fallbackLabel: 'Mover para esquerda', fallbackDesc: 'Andar para esquerda' },
   { action: 'moveRight', fallbackLabel: 'Mover para direita', fallbackDesc: 'Andar para direita' },
   { action: 'interact', fallbackLabel: 'Interagir', fallbackDesc: 'Interação / usar' },
-  { action: 'jump', fallbackLabel: 'Pular', fallbackDesc: 'Pulo' },
   { action: 'inventory', fallbackLabel: 'Inventário', fallbackDesc: 'Abrir/fechar inventário' },
   { action: 'merchants', fallbackLabel: 'Mercadores', fallbackDesc: 'Abrir/fechar mercadores' },
   { action: 'config', fallbackLabel: 'Configurações', fallbackDesc: 'Abrir/fechar configurações' },
