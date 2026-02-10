@@ -492,13 +492,13 @@ const createInventoryUI = () => {
     }
   `;
 
-  // Aplicar CSS ao Shadow DOM
-  const style = document.createElement('style');
-  style.textContent = css;
-  shadow.appendChild(style);
+  // Aplicar CSS ao Shadow DOM via adoptedStyleSheets
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync(css);
+  shadow.adoptedStyleSheets = [sheet];
 
   // Estrutura HTML
-  shadow.innerHTML += `
+  shadow.innerHTML = `
     <div class="inv-overlay" id="inventoryModal">
       <div class="inv-container">
         <div class="inv-header">

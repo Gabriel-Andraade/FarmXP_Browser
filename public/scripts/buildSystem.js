@@ -581,7 +581,7 @@ export const BuildSystem = {
         this.removeDebugOverlay();
         this.debugElement = document.createElement('div');
         this.debugElement.id = 'buildSystem-debug';
-        this.debugElement.style.cssText = "position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.8); color:lime; padding:10px; z-index:9999; font-family:monospace; pointer-events:none;";
+        // Estilos via build.css (#buildSystem-debug)
         this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg" style="color:yellow; margin-top:5px;"></div>`;
         document.body.appendChild(this.debugElement);
     },

@@ -95,3 +95,16 @@
   margin-right: 6px;
   white-space: nowrap;
 }
+
+/* ================= DEBUG OVERLAY ================= */
+#buildSystem-debug {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  color: lime;
+  padding: 10px;
+  z-index: 9999;
+  font-family: monospace;
+  pointer-events: none;
+}

@@ -505,13 +505,6 @@ export class PlayerInteractionSystem {
         const button = document.createElement('button');
         button.id = 'mobile-interact-btn';
         button.innerHTML = 'E';
-        button.style.cssText = `
-            position: fixed; bottom: 100px; right: 30px; width: 70px; height: 70px;
-            border-radius: 50%; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-            color: white; font-size: 24px; font-weight: bold; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-            z-index: 1000; display: none; cursor: pointer; opacity: 0.9; transition: all 0.2s;
-        `;
-
         button.addEventListener('touchstart', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
@@ -535,18 +528,8 @@ export class PlayerInteractionSystem {
 
         const joystickArea = document.createElement('div');
         joystickArea.id = 'joystick-area';
-        joystickArea.style.cssText = `
-            position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px;
-            border-radius: 50%; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.5);
-            z-index: 999; touch-action: none; display: ${isMobile() ? 'block' : 'none'};
-        `;
-
         const joystick = document.createElement('div');
         joystick.id = 'joystick';
-        joystick.style.cssText = `
-            position: absolute; width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.85);
-            top: 50%; left: 50%; transform: translate(-50%,-50%); touch-action: none;
-        `;
         joystickArea.appendChild(joystick);
         document.body.appendChild(joystickArea);
 

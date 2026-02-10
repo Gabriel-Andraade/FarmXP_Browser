@@ -439,34 +439,10 @@ export class PlayerSystem {
         if (energy > 0) text += `+${energy}`;
         
         feedback.textContent = text;
-        feedback.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 200, 0, 0.8);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 24px;
-            z-index: 10000;
-            animation: fadeUp 1.5s ease-out forwards;
-        `;
-        
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeUp {
-                0% { opacity: 1; transform: translate(-50%, -50%); }
-                100% { opacity: 0; transform: translate(-50%, -150%); }
-            }
-        `;
-        document.head.appendChild(style);
-        
         document.body.appendChild(feedback);
 
         setTimeout(() => {
             feedback.remove();
-            style.remove();
         }, FEEDBACK_MESSAGE_DURATION_MS);
     }
 
