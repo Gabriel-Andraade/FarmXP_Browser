@@ -5,6 +5,7 @@
 
 
 import { t } from '../i18n/i18n.js';
+import { registerSystem } from '../gameState.js';
 
 /**
  * limita um numero dentro de um intervalo
@@ -430,7 +431,4 @@ class UiPanel {
 
 export default UiPanel;
 export const animalUiPanel = new UiPanel();
-if (typeof window !== "undefined") {
-  window.UiPanel = UiPanel;
-  window.animalUiPanel = animalUiPanel;
-}
+registerSystem('animalUI', animalUiPanel);

@@ -12,7 +12,7 @@ import { logger } from "./logger.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
-import { registerSystem, setObject, getObject, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
+import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebugFlag, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
@@ -317,10 +317,10 @@ function setupInteractionSystem() {
   document.addEventListener("keydown", (e) => {
     if (!interactionEnabled) return;
     if (sleepBlockedControls) return;
-    if (window.interactionsBlocked) return;
+    if (checkGameFlag('interactionsBlocked')) return;
 
     if (e.code === "KeyE") {
-      window.playerInteractionSystem?.tryInteract?.();
+      playerInteractionSystem?.tryInteract?.();
     }
   });
 
@@ -448,8 +448,9 @@ function setupSleepListeners() {
 
       window.theWorld?.markWorldChanged?.();
 
-      if (window.playerHUD) {
-        window.playerHUD.showNotification("Bom dia! Energias renovadas.", "success", 4000);
+      const hud = getSystem('hud');
+      if (hud) {
+        hud.showNotification("Bom dia! Energias renovadas.", "success", 4000);
       }
 
       preSleepInteractionState = null;
@@ -984,7 +985,7 @@ function gameLoop(timestamp) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);
   }
 
-  if (window.DEBUG_HITBOXES && camera && allAssetsLoaded) {
+  if (getDebugFlag('hitboxes') && camera && allAssetsLoaded) {
     try {
       collisionSystem.drawHitboxes(ctx, camera);
       playerInteractionSystem?.drawInteractionRange?.(ctx, camera);
@@ -1015,8 +1016,9 @@ function gameLoop(timestamp) {
   }
 
   try {
-    if (window.playerHUD && currentPlayer) {
-      window.playerHUD.render();
+    const playerHUD = getSystem('hud');
+    if (playerHUD && currentPlayer) {
+      playerHUD.render();
     }
   } catch (e) {
     handleWarn("falha ao renderizar player hud", "main:gameLoop:playerHUD", e);

@@ -7,6 +7,7 @@
  */
 
 import { WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
+import { registerSystem } from "./gameState.js";
 
 /**
  * Configurações de performance para carregamento de assets
@@ -465,6 +466,5 @@ export const assets = {
     }
 };
 
-/* expõe para debug */
-window.assetManager = assets;
-window.PERFORMANCE_CONFIG = PERFORMANCE_CONFIG;
+/* registra no gameState */
+registerSystem('assetManager', assets);

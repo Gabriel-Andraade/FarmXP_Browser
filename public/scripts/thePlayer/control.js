@@ -4,6 +4,7 @@ import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
 import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
+import { getSystem, getDebugFlag } from '../gameState.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -422,6 +423,7 @@ export class PlayerInteractionSystem {
             }
 
             if ((e.key === 'k' || e.key === 'K')) {
+                const animalUI = getSystem('animalUI');
                 if (self.lastMouseScreenX !== null && self.lastMouseScreenY !== null) {
                     const obj = collisionSystem.getObjectAtMouse(
                         self.lastMouseScreenX,
@@ -431,24 +433,16 @@ export class PlayerInteractionSystem {
                     );
 
                     if (obj && obj.originalType === 'animal') {
-                        if (window.animalUiPanel && typeof window.animalUiPanel.selectAnimal === 'function') {
-                            window.animalUiPanel.selectAnimal(obj.object);
-                        }
-                        else if (window.animalUI && typeof window.animalUI.selectAnimal === 'function') {
-                            window.animalUI.selectAnimal(obj.object);
-                        }
-                        else if (window.animalUI && typeof window.animalUI.showStats === 'function') {
-                            window.animalUI.showStats(obj.object);
+                        if (animalUI?.selectAnimal) {
+                            animalUI.selectAnimal(obj.object);
+                        } else if (animalUI?.showStats) {
+                            animalUI.showStats(obj.object);
                         }
                     } else {
-                        if (window.animalUI && typeof window.animalUI.inspectAnimal === 'function') {
-                            window.animalUI.inspectAnimal();
-                        }
+                        animalUI?.inspectAnimal?.();
                     }
                 } else {
-                    if (window.animalUI && typeof window.animalUI.inspectAnimal === 'function') {
-                        window.animalUI.inspectAnimal();
-                    }
+                    animalUI?.inspectAnimal?.();
                 }
             }
         }, { signal });
@@ -658,13 +652,12 @@ export class PlayerInteractionSystem {
 
         if (clickedAny && clickedAny.originalType === 'animal') {
             const animal = clickedAny.object;
+            const animalUI = getSystem('animalUI');
 
-            if (window.animalUiPanel && typeof window.animalUiPanel.selectAnimal === 'function') {
-                window.animalUiPanel.selectAnimal(animal, camera);
-            } else if (window.animalUI && typeof window.animalUI.selectAnimal === 'function') {
-                window.animalUI.selectAnimal(animal);
-            } else if (window.animalUI && typeof window.animalUI.showStats === 'function') {
-                window.animalUI.showStats(animal);
+            if (animalUI?.selectAnimal) {
+                animalUI.selectAnimal(animal, camera);
+            } else if (animalUI?.showStats) {
+                animalUI.showStats(animal);
             }
             return;
         }
@@ -690,14 +683,13 @@ export class PlayerInteractionSystem {
             });
 
            if (clickedAnimal) {
-    if (window.animalUiPanel && typeof window.animalUiPanel.selectAnimal === "function") {
-        window.animalUiPanel.selectAnimal(clickedAnimal, camera);
-    } else if (window.animalUI && typeof window.animalUI.selectAnimal === 'function') {
-        window.animalUI.selectAnimal(clickedAnimal);
-    } else if (window.animalUI && typeof window.animalUI.showStats === 'function') {
-        window.animalUI.showStats(clickedAnimal);
-    } else if (window.animalUI && typeof window.animalUI.showById === 'function') {
-        window.animalUI.showById(clickedAnimal.id);
+    const animalUI = getSystem('animalUI');
+    if (animalUI?.selectAnimal) {
+        animalUI.selectAnimal(clickedAnimal, camera);
+    } else if (animalUI?.showStats) {
+        animalUI.showStats(clickedAnimal);
+    } else if (animalUI?.showById) {
+        animalUI.showById(clickedAnimal.id);
     }
 
     return;
@@ -705,12 +697,8 @@ export class PlayerInteractionSystem {
 
         }
 
-        if (window.animalUiPanel && typeof window.animalUiPanel.closeAll === 'function') {
-            window.animalUiPanel.closeAll();
-        }
-        if (window.animalUI && typeof window.animalUI.closeAll === 'function') {
-            window.animalUI.closeAll();
-        }
+        const animalUI = getSystem('animalUI');
+        animalUI?.closeAll?.();
 
         if (this.mobile) {
             this.touchMoveSystem.setDestination(worldX, worldY);
@@ -770,7 +758,7 @@ export class PlayerInteractionSystem {
     }
 
     drawInteractionRange(ctx, camera) {
-        if (isSleeping || !this.interactionRange || !window.DEBUG_HITBOXES) return;
+        if (isSleeping || !this.interactionRange || !getDebugFlag('hitboxes')) return;
 
         ctx.strokeStyle = "cyan";
         ctx.lineWidth = 2;
@@ -962,8 +950,9 @@ function setupUIShortcuts() {
                 window.openMerchantsList();
                 return;
             }
-            if (window.merchantSystem && typeof window.merchantSystem.openMerchantsList === 'function') {
-                window.merchantSystem.openMerchantsList();
+            const merchant = getSystem('merchant');
+            if (merchant && typeof merchant.openMerchantsList === 'function') {
+                merchant.openMerchantsList();
                 return;
             }
 
@@ -999,7 +988,7 @@ function setupBuildControls() {
         if (e.key === "Escape" && BuildSystem.active) { BuildSystem.stopBuilding(); return; }
 
         if ((e.key === 'b' || e.key === 'B') && !BuildSystem.active) {
-            const selectedItem = window.inventorySystem?.getSelectedItem?.();
+            const selectedItem = getSystem('inventory')?.getSelectedItem?.();
             if (selectedItem && selectedItem.placeable) BuildSystem.startBuilding(selectedItem);
         }
 

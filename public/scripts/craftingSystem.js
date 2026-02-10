@@ -3,6 +3,7 @@ import { recipes } from "./recipes.js";
 import { getItem } from "./itemUtils.js";
 import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
+import { registerSystem, getSystem } from "./gameState.js";
 
 /**
  * Retorna o nome traduzido de uma receita, com fallback para o nome original
@@ -60,12 +61,12 @@ export class CraftingSystem {
   getTotalItemQuantity(itemId) {
     let total = 0;
 
-    if (this.useInventory && window.inventorySystem) {
-      total += window.inventorySystem.getItemQuantity(itemId) || 0;
+    if (this.useInventory && getSystem('inventory')) {
+      total += getSystem('inventory').getItemQuantity(itemId) || 0;
     }
 
-    if (this.useStorage && window.storageSystem) {
-      total += window.storageSystem.getItemQuantity(itemId) || 0;
+    if (this.useStorage && getSystem('storage')) {
+      total += getSystem('storage').getItemQuantity(itemId) || 0;
     }
 
     return total;
@@ -112,19 +113,19 @@ export class CraftingSystem {
     for (const req of recipe.requiredItems) {
       let amountToRemove = req.qty;
 
-      if (this.useInventory && window.inventorySystem) {
-        const invQty = window.inventorySystem.getItemQuantity?.(req.itemId) || 0;
+      if (this.useInventory && getSystem('inventory')) {
+        const invQty = getSystem('inventory').getItemQuantity?.(req.itemId) || 0;
         const invRemove = Math.min(invQty, amountToRemove);
 
         if (invRemove > 0) {
-          const success = window.inventorySystem.removeItem(req.itemId, invRemove);
+          const success = getSystem('inventory').removeItem(req.itemId, invRemove);
           if (!success) throw new Error(`Falha ao remover item ${req.itemId} do inventário`);
           amountToRemove -= invRemove;
         }
       }
 
-      if (amountToRemove > 0 && this.useStorage && window.storageSystem) {
-        const success = window.storageSystem.removeItem(req.itemId, amountToRemove);
+      if (amountToRemove > 0 && this.useStorage && getSystem('storage')) {
+        const success = getSystem('storage').removeItem(req.itemId, amountToRemove);
         if (!success) throw new Error(`Falha ao remover item ${req.itemId} do armazenamento`);
       }
     }
@@ -169,8 +170,8 @@ export class CraftingSystem {
     try {
       this.removeRequiredItems(recipe);
 
-      if (window.inventorySystem) {
-        window.inventorySystem.addItem(recipe.result.itemId, recipe.result.qty);
+      if (getSystem('inventory')) {
+        getSystem('inventory').addItem(recipe.result.itemId, recipe.result.qty);
       }
     } catch (error) {
       this.showMessage(`❌ ${t('crafting.craftError')}`, "error");
@@ -456,4 +457,4 @@ export class CraftingSystem {
 
 // Instancia e exporta o sistema de crafting
 export const craftingSystem = new CraftingSystem();
-window.craftingSystem = craftingSystem;
+registerSystem('crafting', craftingSystem);

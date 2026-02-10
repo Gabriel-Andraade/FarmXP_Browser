@@ -1,5 +1,5 @@
 import { logger } from './logger.js';
-import { getSystem } from './gameState.js';
+import { getSystem, setGameFlag } from './gameState.js';
 import { t } from './i18n/i18n.js';
 
 /**
@@ -249,7 +249,7 @@ class LoadingScreenManager {
      */
     blockInteractions() {
         document.body.style.pointerEvents = 'none';
-        window.interactionsBlocked = true;
+        setGameFlag('interactionsBlocked', true);
     }
 
     /**
@@ -259,7 +259,7 @@ class LoadingScreenManager {
      */
     unblockInteractions() {
         document.body.style.pointerEvents = 'all';
-        window.interactionsBlocked = false;
+        setGameFlag('interactionsBlocked', false);
     }
 }
 

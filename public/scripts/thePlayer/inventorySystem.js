@@ -5,6 +5,7 @@ import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsuma
 import { t } from '../i18n/i18n.js';
 import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
+import { registerSystem, getDebugFlag } from '../gameState.js';
 
 
 export { getAllItems as allItems };
@@ -37,8 +38,7 @@ export class InventorySystem {
         
         this.init();
         this.setupGlobalListeners();
-        
-        window.inventorySystem = this;
+
         logger.info('🎒 InventorySystem inicializado com categorias centralizadas');
     }
     
@@ -422,7 +422,7 @@ export class InventorySystem {
             };
         }
         
-        if (window.DEBUG_MODE) {
+        if (getDebugFlag('debug')) {
             logger.debug('💾 (Simulado) Salvando inventário:', saveData);
         }
         
@@ -449,7 +449,7 @@ export class InventorySystem {
         // }
         
         // Para testes, adicionar alguns itens padrão
-        if (window.DEBUG_MODE || window.TEST_MODE) {
+        if (getDebugFlag('debug')) {
             logger.debug('🧪 Adicionando itens de teste...');
             
             // Ferramentas
@@ -567,6 +567,7 @@ export class InventorySystem {
 }
 
 export const inventorySystem = new InventorySystem();
+registerSystem('inventory', inventorySystem);
 
 // ====================================================================
 // FUNÇÕES DE EXPORTAÇÃO (Interface pública)
@@ -709,12 +710,4 @@ window.addTestItems = () => {
     inventorySystem.debug();
 };
 
-// Inicializar quando carregado
-if (typeof window !== 'undefined') {
-    window.inventorySystem = inventorySystem;
-    window.getInventory = getInventory;
-    window.addItemToInventory = addItemToInventory;
-    window.removeItemFromInventory = removeItemFromInventory;
-
-    logger.info('🎒 InventorySystem carregado e pronto!');
-}
+logger.info('🎒 InventorySystem carregado e pronto!');
