@@ -2,13 +2,14 @@
  * @file helpPanel.js - Keyboard Shortcuts Help Panel (dynamic from remap config)
  * Prefix CSS: khp-
  *
- * - Button: #helpBtn (HUD)
+ * - Button: #helpBtn (HUD)  -> criado/recriado pelo PlayerHUD
  * - Overlay: #khp-help-overlay
  * - Panel:   #khp-help-panel
  *
  * Observa:
  * - "controlsChanged" (emitido pelo settingsUI) para refletir remaps em tempo real.
  * - "languageChanged" para atualizar textos via i18n.
+ * - "hudReady" (emitido pelo PlayerHUD) para re-sincronizar tooltips após recriar o HUD.
  */
 
 import { t } from './i18n/i18n.js';
@@ -73,7 +74,11 @@ const rowRefs = new Map(); // action -> { labelEl, descEl, keysEl }
 let overlayEl = null;
 let panelEl = null;
 let closeBtnEl = null;
-let btnEl = null;
+let eventsBound = false;
+
+function getHelpBtn() {
+  return document.getElementById(IDS.btn);
+}
 
 function safeT(key, fallback) {
   try {
@@ -86,7 +91,6 @@ function safeT(key, fallback) {
 }
 
 function sanitizeKeybinds(raw) {
-  // merge profundo simples com DEFAULT_KEYBINDS
   const merged = JSON.parse(JSON.stringify(DEFAULT_KEYBINDS || {}));
   if (!raw || typeof raw !== 'object') return merged;
 
@@ -110,6 +114,7 @@ function loadKeybinds() {
       w?.gameConfig?.keybinds ||
       w?.config?.keybinds ||
       w?.settings?.keybinds;
+
     if (fromWindow && typeof fromWindow === 'object') return sanitizeKeybinds(fromWindow);
   } catch {}
 
@@ -176,7 +181,6 @@ function isInputActive() {
   const el = document.activeElement;
   if (!el) return false;
 
-  // inputs/textareas/select/contenteditable
   if (el.matches?.('input, textarea, select, [contenteditable="true"], [contenteditable=""]')) return true;
 
   // se o remap do settingsUI estiver escutando tecla, não abre/fecha com H
@@ -186,45 +190,63 @@ function isInputActive() {
   return false;
 }
 
-function findHudContainer() {
+function getFocusableEls(container) {
+  if (!container) return [];
   const selectors = [
-    '#hudButtons',
-    '#hud-buttons',
-    '#hudActions',
-    '.hud-buttons',
-    '.hud-actions',
-    '#playerHUD',
-    '#player-hud',
-    '#hud',
-    '.hud-action-buttons',
+    'a[href]',
+    'button:not([disabled])',
+    'input:not([disabled]):not([type="hidden"])',
+    'select:not([disabled])',
+    'textarea:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
   ];
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el) return el;
-  }
-  return null;
+  const nodes = Array.from(container.querySelectorAll(selectors.join(',')));
+  return nodes.filter((el) => {
+    if (el.hasAttribute('disabled')) return false;
+    const style = window.getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return false;
+    return el.getClientRects().length > 0;
+  });
 }
 
-function ensureHelpButton() {
-  btnEl = document.getElementById(IDS.btn);
-  if (btnEl) return btnEl;
+function trapFocusTab(e) {
+  if (!isOpen || e.key !== 'Tab') return false;
+  if (!panelEl) return false;
 
-  const container = findHudContainer();
-  btnEl = document.createElement('button');
-  btnEl.id = IDS.btn;
-  btnEl.type = 'button';
-  btnEl.className = `hud-action-btn ${CLS.btn}`;
-  btnEl.textContent = '❓';
+  const focusables = getFocusableEls(panelEl);
 
-  if (container) {
-    container.appendChild(btnEl);
-  } else {
-    // fallback: não quebra; só coloca no body
-    document.body.appendChild(btnEl);
-    logger?.warn?.('⚠️ HUD container not found; help button appended to body.');
+  // sem focáveis: mantém foco no painel
+  if (!focusables.length) {
+    e.preventDefault();
+    panelEl.focus?.();
+    return true;
   }
 
-  return btnEl;
+  const first = focusables[0];
+  const last = focusables[focusables.length - 1];
+  const active = document.activeElement;
+  const isInPanel = active && panelEl.contains(active);
+
+  // se o foco escapou por qualquer motivo, puxa de volta
+  if (!isInPanel) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus?.();
+    return true;
+  }
+
+  // loop
+  if (e.shiftKey && active === first) {
+    e.preventDefault();
+    last.focus?.();
+    return true;
+  }
+  if (!e.shiftKey && active === last) {
+    e.preventDefault();
+    first.focus?.();
+    return true;
+  }
+
+  return false;
 }
 
 function ensurePanel() {
@@ -244,20 +266,27 @@ function ensurePanel() {
   panelEl.setAttribute('role', 'dialog');
   panelEl.setAttribute('aria-modal', 'true');
   panelEl.setAttribute('aria-hidden', 'true');
+  panelEl.tabIndex = -1;
 
   const header = document.createElement('div');
   header.className = CLS.header;
 
   const title = document.createElement('h2');
   title.className = CLS.title;
+  title.id = `${PREFIX}-help-title`;
   title.textContent = safeT('shortcutsPanel.title', '⌨️ Atalhos de Teclado');
 
   const subtitle = document.createElement('p');
   subtitle.className = CLS.subtitle;
+  subtitle.id = `${PREFIX}-help-subtitle`;
   subtitle.textContent = safeT('shortcutsPanel.subtitle', 'As teclas abaixo refletem suas configurações atuais.');
 
   const hint = document.createElement('p');
   hint.className = CLS.hint;
+  hint.id = `${PREFIX}-help-hint`;
+
+  panelEl.setAttribute('aria-labelledby', title.id);
+  panelEl.setAttribute('aria-describedby', `${subtitle.id} ${hint.id}`);
 
   closeBtnEl = document.createElement('button');
   closeBtnEl.type = 'button';
@@ -286,8 +315,7 @@ function ensurePanel() {
   closeBtnEl.addEventListener('click', closeHelpPanel);
 
   buildSections(body);
-
-  rerenderAll(); // textos + teclas
+  rerenderAll();
 }
 
 function buildSections(bodyEl) {
@@ -300,7 +328,6 @@ function buildSections(bodyEl) {
     const h3 = document.createElement('h3');
     h3.className = CLS.sectionTitle;
     h3.textContent = safeT(sectionMeta.titleKey, sectionMeta.titleKey);
-
     section.appendChild(h3);
 
     for (const action of sectionMeta.actions) {
@@ -327,7 +354,6 @@ function buildSections(bodyEl) {
 
       row.appendChild(text);
       row.appendChild(keys);
-
       section.appendChild(row);
 
       rowRefs.set(action, { labelEl: label, descEl: desc, keysEl: keys });
@@ -385,14 +411,8 @@ function rerenderTexts(keybinds) {
   // close aria
   if (closeBtnEl) closeBtnEl.setAttribute('aria-label', safeT('ui.close', 'Fechar'));
 
-  // section titles
-  const sectionTitles = panelEl?.querySelectorAll?.(`.${CLS.sectionTitle}`) || [];
-  sectionTitles.forEach((h3) => {
-    // não temos o key guardado no element; re-aplica via texto atual não é confiável
-    // então recalculamos percorrendo SECTIONS e batendo por ordem
-  });
-  // aplica por ordem (robusto o suficiente porque SECTIONS é fixo)
-  const titlesArr = Array.from(sectionTitles);
+  // section titles — apply by index (safe because SECTIONS is fixed)
+  const titlesArr = Array.from(panelEl?.querySelectorAll?.(`.${CLS.sectionTitle}`) || []);
   SECTIONS.forEach((sec, i) => {
     const h3 = titlesArr[i];
     if (h3) h3.textContent = safeT(sec.titleKey, sec.titleKey);
@@ -404,13 +424,18 @@ function rerenderTexts(keybinds) {
     refs.descEl.textContent = safeT(`controls.${action}.desc`, '');
   }
 
-  // tooltip do botão HUD
-  if (btnEl) {
+  // tooltip do botão HUD (RE-QUERY: HUD recria o DOM no languageChanged)
+  const currentHelpBtn = getHelpBtn();
+  if (currentHelpBtn) {
     const tipTpl = safeT('hud.helpTooltip', 'Atalhos ({key})');
     const keyLabel = getHelpKeyLabel(keybinds);
     const tip = formatTemplate(tipTpl, { key: keyLabel });
-    btnEl.title = tip;
-    btnEl.setAttribute('aria-label', tip);
+
+    currentHelpBtn.title = tip;
+    currentHelpBtn.setAttribute('aria-label', tip);
+
+    // garante a classe do prefixo (caso o HUD recrie sem ela)
+    if (!currentHelpBtn.classList.contains(CLS.btn)) currentHelpBtn.classList.add(CLS.btn);
   }
 }
 
@@ -439,8 +464,13 @@ function openHelpPanel() {
   overlayEl.setAttribute('aria-hidden', 'false');
   panelEl.setAttribute('aria-hidden', 'false');
 
-  // foco
-  closeBtnEl?.focus?.();
+  const focusables = getFocusableEls(panelEl);
+  const toFocus = (closeBtnEl && typeof closeBtnEl.focus === 'function')
+    ? closeBtnEl
+    : (focusables[0] || panelEl);
+
+  // garante que o foco entra no diálogo
+  queueMicrotask(() => toFocus?.focus?.());
 }
 
 function closeHelpPanel() {
@@ -453,8 +483,10 @@ function closeHelpPanel() {
   overlayEl.setAttribute('aria-hidden', 'true');
   panelEl.setAttribute('aria-hidden', 'true');
 
-  // restaura foco
-  const toFocus = lastFocusEl && lastFocusEl.focus ? lastFocusEl : btnEl;
+  // restaura foco (RE-QUERY do botão atual)
+  const currentHelpBtn = getHelpBtn();
+  const canFocusLast = lastFocusEl && typeof lastFocusEl.focus === 'function' && document.contains(lastFocusEl);
+  const toFocus = canFocusLast ? lastFocusEl : currentHelpBtn;
   toFocus?.focus?.();
   lastFocusEl = null;
 }
@@ -472,6 +504,9 @@ export function toggleHelpPanel(force) {
 function onGlobalKeydown(e) {
   if (e.defaultPrevented) return;
 
+  // focus-trap (quando aberto e aria-modal=true)
+  if (trapFocusTab(e)) return;
+
   // ESC fecha quando aberto
   if (isOpen && e.key === 'Escape') {
     e.preventDefault();
@@ -479,11 +514,13 @@ function onGlobalKeydown(e) {
     return;
   }
 
-  // H abre/fecha (sem ctrl/alt/meta e sem input ativo)
+  // atalho do Help (sem ctrl/alt/meta e sem input ativo)
   if (e.ctrlKey || e.altKey || e.metaKey) return;
   if (isInputActive()) return;
 
-  if (String(e.key || '').toLowerCase() === 'h') {
+  const helpCodes = getCodesForAction(HELP_ACTION, loadKeybinds());
+  const pressedCode = String(e.code || '');
+  if (helpCodes.includes(pressedCode)) {
     e.preventDefault();
     toggleHelpPanel();
   }
@@ -496,34 +533,41 @@ function onControlsChanged(e) {
 }
 
 function onLanguageChanged() {
-  // re-render completo pra pegar novas traduções
+  // HUD pode ser recriado: rerenderAll já re-query o #helpBtn
   rerenderAll();
 }
 
+function onHudReady() {
+  // HUD recriado: atualiza tooltip/aria do novo #helpBtn
+  rerenderAll();
+}
+
+function onDocumentClick(e) {
+  const btn = e?.target?.closest?.(`#${IDS.btn}`);
+  if (!btn) return;
+  e.preventDefault();
+  toggleHelpPanel();
+}
+
 function bindEvents() {
-  // botão HUD
-  btnEl?.addEventListener('click', () => toggleHelpPanel(true));
+  if (eventsBound) return;
+  eventsBound = true;
 
-  // teclado global
   document.addEventListener('keydown', onGlobalKeydown, true);
-
-  // remap ao vivo (settingsUI dispara este evento)
+  document.addEventListener('click', onDocumentClick, true);
   document.addEventListener('controlsChanged', onControlsChanged);
-
-  // i18n
   document.addEventListener('languageChanged', onLanguageChanged);
+  document.addEventListener('hudReady', onHudReady);
 }
 
 export function initHelpPanel() {
   if (mounted) return;
 
-  btnEl = ensureHelpButton();
   ensurePanel();
   bindEvents();
 
   mounted = true;
 
-  // expõe uma API pequena pra debug
   try {
     window.FarmXPHelpPanel = {
       open: () => toggleHelpPanel(true),
@@ -535,11 +579,7 @@ export function initHelpPanel() {
   logger?.info?.('✅ HelpPanel initialized');
 }
 
-// Auto-init
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initHelpPanel);
-  } else {
-    initHelpPanel();
-  }
-}
+// Lazy event wiring (não cria DOM até o primeiro uso)
+bindEvents();
+// Sincroniza tooltip/aria do botão caso o HUD já exista
+queueMicrotask(() => rerenderAll());

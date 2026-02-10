@@ -3,6 +3,7 @@ import { currencyManager } from "../currencyManager.js";
 import { t } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
+import { toggleHelpPanel } from '../helpPanel.js';
 
 /**
  * Retorna a label da tecla atual para uma ação de keybind
@@ -78,13 +79,12 @@ export class PlayerHUD {
     }
 
     createHUDStructure() {
-        // 🛠️ CORREÇÃO: Remover o HUD antigo corretamente usando o ID
+        // fix: Remover o HUD antigo corretamente usando o ID
         const oldHUD = document.getElementById('playerPanel');
         if (oldHUD) oldHUD.remove();
 
         // Remove container de botões antigo (recriado junto com o HUD)
-        const oldActionBtns = document.querySelector('.hud-action-buttons');
-        if (oldActionBtns) oldActionBtns.remove();
+        document.querySelectorAll('.hud-action-buttons').forEach((el) => el.remove());
 
         // Remove também classes antigas se houver lixo no DOM
         const oldTopBar = document.querySelector('.top-bar');
@@ -211,6 +211,14 @@ export class PlayerHUD {
             const merchantsList = document.getElementById('merchantsList');
             merchantsList?.classList?.add('active');
         });
+
+        // fix: Botão Ajuda sempre rebind após recriar HUD
+        const helpBtns = document.querySelectorAll('#helpBtn');
+        const helpBtn = helpBtns[helpBtns.length - 1];
+        if (helpBtn && !helpBtn.__boundHelp) {
+            helpBtn.__boundHelp = true;
+            helpBtn.addEventListener('click', () => toggleHelpPanel());
+        }
     }
 
     openModal(modalId) {
@@ -249,7 +257,6 @@ export class PlayerHUD {
         const thirst = needs.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs.energy ?? this.currentPlayer.energy ?? 100;
 
-        // fix: Fixed indentation on setHUDValue calls (L148-150)
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
@@ -263,7 +270,7 @@ export class PlayerHUD {
         const thirst = needs?.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;
 
-        this.setHUDValue('hudPlayerName', this.currentPlayer.name || t('player.noCharacter')); // Traduz "Sem Personagem"
+        this.setHUDValue('hudPlayerName', this.currentPlayer.name || t('player.noCharacter'));
         this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
         this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
