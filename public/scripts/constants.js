@@ -5,9 +5,24 @@
  */
 
 // ============================================================
+// DEFAULTS / FALLBACKS
+// ============================================================
+
+/**
+ * Named fallbacks to avoid raw literals like 32 across the codebase.
+ * Use DEFAULTS.SPRITE_SIZE_PX instead of hardcoded "32".
+ */
+export const DEFAULTS = {
+  SPRITE_SIZE_PX: 32
+};
+
+// Back-compat re-export (optional)
+export const DEFAULT_SPRITE_SIZE_PX = DEFAULTS.SPRITE_SIZE_PX;
+
+// ============================================================
 // TIMING CONSTANTS (in milliseconds)
 // ============================================================
-// fix: Centralized timing constants into grouped TIMING object (L11-27)
+
 export const TIMING = {
   UI_UPDATE_DELAY_MS: 50,
   UI_MIN_UPDATE_INTERVAL_MS: 30,
@@ -18,7 +33,7 @@ export const TIMING = {
   FEEDBACK_MESSAGE_DURATION_MS: 1500,
   CONSUMPTION_BAR_DURATION_MS: 2000,
   INIT_DELAY_MS: 100,
-  
+
   // Animal AI timing
   IDLE_STATE_MIN_MS: 1000,
   IDLE_STATE_MAX_MS: 3000,
@@ -26,7 +41,6 @@ export const TIMING = {
   MOVE_STATE_MAX_MS: 2000
 };
 
-// fix: Re-exports for backward compatibility (L29-42)
 // Re-export commonly used timing constants for backward compatibility
 export const UI_UPDATE_DELAY_MS = TIMING.UI_UPDATE_DELAY_MS;
 export const UI_MIN_UPDATE_INTERVAL_MS = TIMING.UI_MIN_UPDATE_INTERVAL_MS;
@@ -46,7 +60,6 @@ export const MOVE_STATE_MAX_MS = TIMING.MOVE_STATE_MAX_MS;
 // GAME BALANCE CONSTANTS
 // ============================================================
 
-// fix: Removed duplicate DAMAGE_COOLDOWN_MS - only GAME_BALANCE.DAMAGE.COOLDOWN_MS remains (L48-55)
 export const GAME_BALANCE = {
   DAMAGE: {
     COOLDOWN_MS: 300,
@@ -179,11 +192,9 @@ export const VISUAL = {
     PULSE_AMPLITUDE: 0.2
   },
 
-  KEY_PROMPT: {
-  },
+  KEY_PROMPT: {},
 
-  GRID: {
-  }
+  GRID: {}
 };
 
 // ============================================================
@@ -196,7 +207,33 @@ export const HITBOX_CONFIGS = {
     ROCK: { width: 32, height: 27 },
     THICKET: { width: 30, height: 18, offsetY: 7, offsetX: 7 },
     CHEST: { width: 31, height: 31 },
-    HOUSE_WALLS: { width: 1, height: 1, offsetX: 0.0, offsetY: 0.0 },
+
+    /**
+     * HOUSE_WALLS was placeholder (1x1). Use ratios to avoid guessing absolute sprite px.
+     * Interpretação: colisão sólida fica na “base” da casa (parte de baixo), com leve padding lateral.
+     * Se você tiver as medidas reais do sprite, pode trocar pra width/height absolutos.
+     */
+   HOUSE_WALLS: {
+  width: 20,
+  height: 20,
+  offsetX: 35,
+  offsetY: -50
+},
+
+    /**
+     * HOUSE_ROOF collision config (previously hardcoded in collisionSystem.js):
+     * x = object.x + object.width - 265
+     * y = object.y + object.height - 200
+     * width = 200
+     * height = 190
+     */
+    HOUSE_ROOF: {
+      width: 200,
+      height: 190,
+      offsetFromRight: 265,
+      offsetFromBottom: 200
+    },
+
     WELL: { width: 63, height: 30, offsetY: 56 },
     FENCEX: { width: 28, height: 5, offsetX: 0, offsetY: 24 },
     FENCEY: { width: 4, height: 63, offsetX: 0, offsetY: 0 }
