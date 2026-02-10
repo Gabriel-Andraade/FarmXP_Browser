@@ -134,7 +134,6 @@ const actions = {
     moveLeft: false,
     moveRight: false,
     interact: false,
-    jump: false,
     inventory: false,
     merchants: false,
     config: false,

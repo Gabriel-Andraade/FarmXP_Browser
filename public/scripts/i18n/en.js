@@ -446,7 +446,8 @@ export default {
     saveTooltip: 'Save / Load (💾)',
     settingsTooltip: 'Settings ({key})',
     inventoryTooltip: 'Inventory ({key})',
-    commerceTooltip: 'Commerce ({key})'
+    commerceTooltip: 'Commerce ({key})',
+    helpTooltip: 'Shortcuts ({key})'
   },
 
   // Tutorials/Help
@@ -701,10 +702,6 @@ export default {
       label: 'Interact',
       desc: 'Interaction / use'
     },
-    jump: {
-      label: 'Jump',
-      desc: 'Jump'
-    },
     inventory: {
       label: 'Inventory',
       desc: 'Open/close inventory'
@@ -716,6 +713,23 @@ export default {
     config: {
       label: 'Settings',
       desc: 'Open/close settings'
+    },
+    help: {
+      label: 'Help',
+      desc: 'Open/close shortcuts'
+    }
+  },
+
+  // Shortcuts panel
+  shortcutsPanel: {
+    title: '⌨️ Keyboard Shortcuts',
+    subtitle: 'Keys below reflect your current settings.',
+    hintToggle: 'Press {key} to open/close.',
+    unbound: 'Not set',
+    sections: {
+      movement: '🏃 Movement',
+      actions: '🎮 Actions',
+      menus: '📦 Menus'
     }
   }
 };

@@ -12,9 +12,9 @@ export const DEFAULT_KEYBINDS = {
   moveLeft: ['KeyA', 'ArrowLeft'],
   moveRight: ['KeyD', 'ArrowRight'],
   interact: ['KeyE'],
-  jump: ['Space'],
 
   inventory: ['KeyI'],
   merchants: ['KeyU'],
   config: ['KeyO'],
+  help: ['KeyH'],
 };

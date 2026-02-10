@@ -115,6 +115,7 @@ export class PlayerHUD {
                 <button class="hud-action-btn" id="settingsBtn" title="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}" aria-label="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}">⚙️</button>
                 <button class="hud-action-btn" id="inventoryBtn" title="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}" aria-label="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}">🎒</button>
                 <button class="hud-action-btn" id="commerceBtn" title="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}" aria-label="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}">🛒</button>
+                <button class="hud-action-btn" id="helpBtn" title="${t('hud.helpTooltip', { key: getKeyForAction('help') })}" aria-label="${t('hud.helpTooltip', { key: getKeyForAction('help') })}">❓</button>
             </div>
         `;
 

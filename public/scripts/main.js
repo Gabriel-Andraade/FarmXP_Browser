@@ -866,6 +866,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     handleWarn("falha ao carregar settingsUI", "main:DOMContentLoaded:settingsUI", error);
   }
+
   try {
     logger.debug("Carregando estilos CSS...");
     await cssManager.loadAll();
@@ -881,6 +882,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     logger.debug("PlayerHUD criado e registrado");
   } catch (error) {
     logger.error("Erro ao criar PlayerHUD:", error);
+  }
+
+  try {
+    await import("./helpPanel.js");
+    logger.debug("helpPanel carregado");
+  } catch (error) {
+    handleWarn("falha ao carregar helpPanel", "main:DOMContentLoaded:helpPanel", error);
   }
 
   setupSleepListeners();
