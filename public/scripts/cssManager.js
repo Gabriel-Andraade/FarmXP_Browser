@@ -94,9 +94,9 @@ export const cssManager = {
    * // In game initialization
    * try {
    *   await cssManager.loadAll();
-   *   console.log('All styles loaded');
+   *   logger.info('All styles loaded');
    * } catch (err) {
-   *   console.error('Failed to load styles:', err);
+   *   logger.error('Failed to load styles:', err);
    * }
    */
   async loadAll() {
