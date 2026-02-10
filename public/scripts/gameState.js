@@ -1,4 +1,4 @@
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 /**
  * @file gameState.js - Centralized Game State Manager
  * @description Single source of truth for all game systems and state.

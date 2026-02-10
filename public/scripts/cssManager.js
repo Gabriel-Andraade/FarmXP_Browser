@@ -92,6 +92,7 @@ export const cssManager = {
    *
    * @example
    * // In game initialization
+   * import { logger } from './logger.js';
    * try {
    *   await cssManager.loadAll();
    *   logger.info('All styles loaded');
