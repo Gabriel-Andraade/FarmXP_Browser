@@ -59,13 +59,14 @@ export class ItemSystem {
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 if (signal.aborted) return;
-                if (window.theWorld) {
+                const world = getObject('world');
+                if (world) {
                     const registerWorldObjects = () => {
                         try {
                             if (signal.aborted) return;
                             const player = getObject('currentPlayer');
                             if (player) {
-                                const objects = window.theWorld.getSortedWorldObjects?.(player) || [];
+                                const objects = world.getSortedWorldObjects?.(player) || [];
                                 this.registerInteractiveObjects(objects);
 
                                 if (this.interactiveObjects.size === 0) {
@@ -86,8 +87,9 @@ export class ItemSystem {
                 if (signal.aborted) return;
                 try {
                     const currentPlayer = getObject('currentPlayer');
-                    if (window.theWorld && currentPlayer) {
-                        const objects = window.theWorld.getSortedWorldObjects?.(currentPlayer) || [];
+                    const world = getObject('world');
+                    if (world && currentPlayer) {
+                        const objects = world.getSortedWorldObjects?.(currentPlayer) || [];
                         this.registerInteractiveObjects(objects);
                     }
                 } catch (err) {

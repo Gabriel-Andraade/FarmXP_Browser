@@ -5,7 +5,7 @@
 
 
 import { t } from '../i18n/i18n.js';
-import { registerSystem } from '../gameState.js';
+import { getObject, registerSystem } from '../gameState.js';
 
 /**
  * limita um numero dentro de um intervalo
@@ -340,7 +340,7 @@ class UiPanel {
 
   updatePositions(force = false) {
     if (!this.visible || !this.target) return;
-    const cam = this.camera || window.camera;
+    const cam = this.camera || getObject('camera');
     if (!cam || typeof cam.worldToScreen !== "function") return;
     const tr = this._getCanvasTransform();
     if (!tr) return;

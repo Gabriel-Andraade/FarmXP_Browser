@@ -446,7 +446,7 @@ function setupSleepListeners() {
 
       canvas.style.cursor = "default";
 
-      window.theWorld?.markWorldChanged?.();
+      getObject('world')?.markWorldChanged?.();
 
       const hud = getSystem('hud');
       if (hud) {
@@ -514,23 +514,10 @@ async function exposeGlobals() {
         setObject('currentPlayer', currentPlayer);
         setObject('keys', keys);
 
-        // Registrar sistemas principais
-        if (currencyManager) registerSystem('currency', currencyManager);
-        if (merchantSystem) registerSystem('merchant', merchantSystem);
-        if (inventorySystem) registerSystem('inventory', inventorySystem);
+        // Registrar sistemas que não se auto-registram
         if (playerSystem) registerSystem('player', playerSystem);
-
-        // Registrar sistemas de interação
-        if (itemSystem) registerSystem('item', itemSystem);
         if (worldUI) registerSystem('worldUI', worldUI);
         if (BuildSystem) registerSystem('build', BuildSystem);
-
-        // Registrar sistema de clima
-        if (WeatherSystem) registerSystem('weather', WeatherSystem);
-
-        // Funções de clima ainda precisam ser expostas globalmente para compatibilidade
-        window.drawWeatherEffects = drawWeatherEffects;
-        window.drawWeatherUI = drawWeatherUI;
 
         // Instalar bridge de compatibilidade para window.* acessos legados
         installLegacyGlobals();
@@ -606,8 +593,6 @@ async function startFullGameLoad() {
       // (exposeGlobals() foi chamado antes, quando WeatherSystem ainda era undefined)
       if (WeatherSystem) {
         registerSystem('weather', WeatherSystem);
-        window.drawWeatherEffects = drawWeatherEffects;
-        window.drawWeatherUI = drawWeatherUI;
       }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
@@ -802,9 +787,9 @@ document.addEventListener("playerReady", async (e) => {
 
   logger.debug("Jogador spawnado e pronto!");
 
-  if (itemSystem && window.theWorld) {
+  if (itemSystem && getObject('world')) {
     setTimeout(() => {
-      const worldObjects = window.theWorld.getSortedWorldObjects?.(currentPlayer) || [];
+      const worldObjects = getObject('world')?.getSortedWorldObjects?.(currentPlayer) || [];
       itemSystem.registerInteractiveObjects?.(worldObjects);
     }, 100);
   }

@@ -61,12 +61,14 @@ export class CraftingSystem {
   getTotalItemQuantity(itemId) {
     let total = 0;
 
-    if (this.useInventory && getSystem('inventory')) {
-      total += getSystem('inventory').getItemQuantity(itemId) || 0;
+    const inventory = getSystem('inventory');
+    if (this.useInventory && inventory) {
+      total += inventory.getItemQuantity(itemId) || 0;
     }
 
-    if (this.useStorage && getSystem('storage')) {
-      total += getSystem('storage').getItemQuantity(itemId) || 0;
+    const storage = getSystem('storage');
+    if (this.useStorage && storage) {
+      total += storage.getItemQuantity(itemId) || 0;
     }
 
     return total;
@@ -110,22 +112,25 @@ export class CraftingSystem {
    * @returns {void}
    */
   removeRequiredItems(recipe) {
+    const inventory = this.useInventory ? getSystem('inventory') : null;
+    const storage = this.useStorage ? getSystem('storage') : null;
+
     for (const req of recipe.requiredItems) {
       let amountToRemove = req.qty;
 
-      if (this.useInventory && getSystem('inventory')) {
-        const invQty = getSystem('inventory').getItemQuantity?.(req.itemId) || 0;
+      if (inventory) {
+        const invQty = inventory.getItemQuantity?.(req.itemId) || 0;
         const invRemove = Math.min(invQty, amountToRemove);
 
         if (invRemove > 0) {
-          const success = getSystem('inventory').removeItem(req.itemId, invRemove);
+          const success = inventory.removeItem(req.itemId, invRemove);
           if (!success) throw new Error(`Falha ao remover item ${req.itemId} do inventário`);
           amountToRemove -= invRemove;
         }
       }
 
-      if (amountToRemove > 0 && this.useStorage && getSystem('storage')) {
-        const success = getSystem('storage').removeItem(req.itemId, amountToRemove);
+      if (amountToRemove > 0 && storage) {
+        const success = storage.removeItem(req.itemId, amountToRemove);
         if (!success) throw new Error(`Falha ao remover item ${req.itemId} do armazenamento`);
       }
     }
@@ -148,15 +153,6 @@ export class CraftingSystem {
     }
 
 
-    /**
-     * Executa o processo de crafting de uma receita
-     * Verifica materiais, remove recursos, adiciona resultado ao inventário
-     * Inclui animação de loading e feedback visual
-     * @async
-     * @param {number} recipeId - ID da receita a ser craftada
-     * @returns {Promise<void>}
-     */
-  
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
       craftBtn.disabled = true;
@@ -435,8 +431,9 @@ export class CraftingSystem {
    * @returns {void}
    */
   showMessage(text, type = "success") {
-    if (window.showMessage) {
-      window.showMessage(text);
+    const hud = getSystem('hud');
+    if (hud?.showMessage) {
+      hud.showMessage(text);
       return;
     }
 

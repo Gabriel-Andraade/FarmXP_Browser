@@ -211,7 +211,7 @@ class LoadingScreenManager {
         logger.debug("Executando Garbage Collection simulado e Limpeza de Arrays...");
 
         // 1. Limpar arrays de partículas e efeitos
-        const weather = getSystem('weather') || window.WeatherSystem;
+        const weather = getSystem('weather');
         if (weather) {
             weather.rainParticles = [];
             weather.snowParticles = [];

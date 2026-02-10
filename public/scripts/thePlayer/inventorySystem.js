@@ -666,14 +666,12 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 // FUNÇÕES GLOBAIS DE DEBUG/TESTE
 // ====================================================================
 
-window.testInventoryCategorization = () => {
+inventorySystem.testCategorization = () => {
     logger.debug('🧪 TESTANDO CATEGORIZAÇÃO DE ITENS');
     logger.debug('='.repeat(60));
 
-    // Limpar inventário primeiro
     inventorySystem.clear();
 
-    // Testar diferentes tipos de itens
     const testCases = [
         { id: 0, expected: 'tools', name: 'Tesoura (ferramenta)' },
         { id: 1, expected: 'tools', name: 'Enxada (ferramenta)' },
@@ -691,14 +689,12 @@ window.testInventoryCategorization = () => {
         logger.debug(`   ✅ Sucesso: ${success}, Esperado: ${test.expected}`);
     });
 
-    // Mostrar resultado
     setTimeout(() => {
         inventorySystem.debug();
     }, 100);
 };
 
-window.addTestItems = () => {
-    // Adiciona um de cada tipo para teste
+inventorySystem.addTestItems = () => {
     inventorySystem.addItem(0, 1);  // Tesoura (tools)
     inventorySystem.addItem(3, 5);  // Semente (seeds)
     inventorySystem.addItem(5, 3);  // Maçã (food)

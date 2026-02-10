@@ -682,18 +682,17 @@ export class PlayerInteractionSystem {
                 return worldX >= ax && worldX <= ax + aw && worldY >= ay && worldY <= ay + ah;
             });
 
-           if (clickedAnimal) {
-    const animalUI = getSystem('animalUI');
-    if (animalUI?.selectAnimal) {
-        animalUI.selectAnimal(clickedAnimal, camera);
-    } else if (animalUI?.showStats) {
-        animalUI.showStats(clickedAnimal);
-    } else if (animalUI?.showById) {
-        animalUI.showById(clickedAnimal.id);
-    }
-
-    return;
-}
+            if (clickedAnimal) {
+                const animalUI = getSystem('animalUI');
+                if (animalUI?.selectAnimal) {
+                    animalUI.selectAnimal(clickedAnimal, camera);
+                } else if (animalUI?.showStats) {
+                    animalUI.showStats(clickedAnimal);
+                } else if (animalUI?.showById) {
+                    animalUI.showById(clickedAnimal.id);
+                }
+                return;
+            }
 
         }
 
@@ -942,14 +941,6 @@ function setupUIShortcuts() {
                 return;
             }
 
-            if (typeof window.openStore === 'function') {
-                window.openStore();
-                return;
-            }
-            if (typeof window.openMerchantsList === 'function') {
-                window.openMerchantsList();
-                return;
-            }
             const merchant = getSystem('merchant');
             if (merchant && typeof merchant.openMerchantsList === 'function') {
                 merchant.openMerchantsList();
