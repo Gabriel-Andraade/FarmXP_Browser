@@ -511,7 +511,7 @@ const createInventoryUI = () => {
             <div class="inv-grid" id="invGrid"></div>
             <div class="inv-details" id="invDetails" style="display: none;">
               <div class="inv-item-info">
-                <span class="inv-item-name" id="detailName">Selecione um item</span>
+                <span class="inv-item-name" id="detailName">${t('inventory.selectItem')}</span>
                 <span class="inv-item-desc" id="detailDesc"></span>
               </div>
               <div class="inv-actions" id="detailActions"></div>

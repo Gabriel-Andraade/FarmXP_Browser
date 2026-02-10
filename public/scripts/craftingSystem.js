@@ -5,6 +5,33 @@ import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
 
 /**
+ * Retorna o nome traduzido de uma receita, com fallback para o nome original
+ */
+function getRecipeName(recipe) {
+  const key = `recipeNames.${recipe.id}`;
+  const translated = t(key);
+  return translated !== key ? translated : recipe.name;
+}
+
+/**
+ * Retorna o nome traduzido de um item pelo ID, com fallback
+ */
+function getTranslatedItemName(itemId, fallback = '') {
+  const key = `itemNames.${itemId}`;
+  const translated = t(key);
+  return translated !== key ? translated : fallback;
+}
+
+/**
+ * Retorna o nome traduzido de uma categoria, com fallback capitalizado
+ */
+function getCategoryLabel(cat) {
+  const key = `categories.${cat}`;
+  const translated = t(key);
+  return translated !== key ? translated : cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
+/**
  * Sistema de crafting do jogo
  * Gerencia a criação de itens através da combinação de materiais
  * Integra-se com sistemas de inventário e armazenamento para obter recursos
@@ -157,7 +184,7 @@ export class CraftingSystem {
       return;
     }
 
-    this.showMessage(`🔨 ${t('crafting.crafted', { name: recipe.name })}`, "success");
+    this.showMessage(`🔨 ${t('crafting.crafted', { name: getRecipeName(recipe)})}`, "success");
     this.renderRecipeList();
 
     if (craftBtn) {
@@ -296,7 +323,7 @@ export class CraftingSystem {
             data-cat="${cat}"
           >
             <i class="fas fa-${this.getCategoryIcon(cat)}"></i>
-            ${cat.charAt(0).toUpperCase() + cat.slice(1)}
+            ${getCategoryLabel(cat)}
           </button>
         `;
       })
@@ -338,7 +365,7 @@ export class CraftingSystem {
         <div class="crf-info">
           <div class="crf-name">
             <i class="fas fa-${recipe.icon || "hammer"}"></i>
-            ${recipe.name}
+            ${getRecipeName(recipe)}
           </div>
 
           <div class="crf-requirements">
@@ -353,7 +380,7 @@ export class CraftingSystem {
                   }">
                     <span class="crf-req-icon">${data?.icon || "📦"}</span>
                     <span class="crf-req-qty">${req.qty}x</span>
-                    <span class="crf-req-name">${data?.name || req.itemId}</span>
+                    <span class="crf-req-name">${getTranslatedItemName(req.itemId, data?.name || String(req.itemId))}</span>
                   </div>
                 `;
               })
@@ -369,7 +396,7 @@ export class CraftingSystem {
                   ${missing
                     .map((m) => {
                       const data = getItem(m.itemId);
-                      return `${m.missing}x ${data?.name || m.itemId}`;
+                      return `${m.missing}x ${getTranslatedItemName(m.itemId, data?.name || String(m.itemId))}`;
                     })
                     .join(", ")}
                 </div>

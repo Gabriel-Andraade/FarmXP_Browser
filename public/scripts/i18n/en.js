@@ -56,7 +56,8 @@ export default {
       build: 'Build',
       use: 'Use'
     },
-    confirmDiscard: 'Discard {name}?'
+    confirmDiscard: 'Discard {name}?',
+    selectItem: 'Select an item'
   },
 
   // Player HUD
@@ -314,7 +315,31 @@ export default {
     save: 'Save',
     cancel: 'Cancel',
     graphics: 'Graphics',
-    controls: 'Controls'
+    accessibility: 'Accessibility',
+    highContrast: 'High contrast',
+    reducedMotion: 'Reduce animations',
+    textSize: 'Text size',
+    textNormal: 'Normal',
+    textLarge: 'Large',
+    textExtraLarge: 'Extra Large',
+    screenReader: 'Screen reader announcements',
+    colorVision: 'Color vision mode',
+    cvOff: 'Off',
+    cvProtanopia: 'Protanopia (red-green)',
+    cvDeuteranopia: 'Deuteranopia (green-red)',
+    cvTritanopia: 'Tritanopia (blue-yellow)',
+    cvAchromatopsia: 'Achromatopsia (no colors)',
+
+    controls: {
+      title: 'Controls',
+      remap: 'Remap keys',
+      remapHint: 'Customize keyboard keys (WASD, arrows, shortcuts).',
+      openRemap: 'Open',
+      remapTitle: 'Remap Keys',
+      remapSubtitle: 'Click a key to change. ESC cancels.',
+      pressKey: 'Press a key... (ESC cancels, Backspace deletes secondary)',
+      reset: 'Default'
+    }
   },
 
   // Actions
@@ -412,7 +437,16 @@ export default {
     otherSettings: 'Other settings in development...',
     inventoryTab: 'Inventory',
     storageTab: 'Storage',
-    inventoryNotAvailable: '🎒 Inventory system not available'
+    inventoryNotAvailable: '🎒 Inventory system not available',
+    done: 'Done'
+  },
+
+  // HUD Action Buttons
+  hud: {
+    saveTooltip: 'Save / Load (💾)',
+    settingsTooltip: 'Settings ({key})',
+    inventoryTooltip: 'Inventory ({key})',
+    commerceTooltip: 'Commerce ({key})'
   },
 
   // Tutorials/Help
@@ -509,6 +543,20 @@ export default {
     organized: 'Chest organized!',
     notFound: 'Chest not found!',
     categoryFull: '{category} category full in chest!'
+  },
+
+  // Well System
+  well: {
+    backpack: 'Backpack',
+    actions: 'Actions',
+    drink: 'Drink',
+    collect: 'Collect',
+    fillBottle: 'Fill bottle',
+    well: 'Well',
+    lowerBucket: 'Lower bucket',
+    insufficientWater: 'Insufficient water in the well',
+    playerNotAvailable: 'Player system not available',
+    noEmptyBottle: 'No empty bottle in inventory',
   },
 
   // Crafting System
@@ -629,5 +677,45 @@ export default {
     notAvailable: 'Build function not available.',
     notAvailableAfter: 'Build function not available after loading.',
     buildError: 'Error entering build mode. Check the console.'
+  },
+
+  // Controls for keybind remapping
+  controls: {
+    moveUp: {
+      label: 'Move up',
+      desc: 'Walk up'
+    },
+    moveDown: {
+      label: 'Move down',
+      desc: 'Walk down'
+    },
+    moveLeft: {
+      label: 'Move left',
+      desc: 'Walk left'
+    },
+    moveRight: {
+      label: 'Move right',
+      desc: 'Walk right'
+    },
+    interact: {
+      label: 'Interact',
+      desc: 'Interaction / use'
+    },
+    jump: {
+      label: 'Jump',
+      desc: 'Jump'
+    },
+    inventory: {
+      label: 'Inventory',
+      desc: 'Open/close inventory'
+    },
+    merchants: {
+      label: 'Merchants',
+      desc: 'Open/close merchants'
+    },
+    config: {
+      label: 'Settings',
+      desc: 'Open/close settings'
+    }
   }
 };

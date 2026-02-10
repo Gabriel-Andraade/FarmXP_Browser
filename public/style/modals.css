@@ -56,3 +56,8 @@
     background: #e0bc87;
     transform: scale(1.1);
 }
+
+.modal-close:focus-visible {
+    outline: 3px solid #4a90d9;
+    outline-offset: 2px;
+}

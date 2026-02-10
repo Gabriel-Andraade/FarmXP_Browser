@@ -1,0 +1,682 @@
+/* ===== ACCESSIBILITY (a11y) ===== */
+
+/* Screen-reader only: visually hidden but accessible */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Skip link: visible only on focus */
+.skip-link {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 8px 16px;
+    background: #000;
+    color: #fff;
+    z-index: 99999;
+    text-decoration: none;
+    font-size: 14px;
+    border-radius: 0 0 4px 4px;
+    transition: top 0.3s;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* ===== KEYBOARD FOCUS INDICATOR ===== */
+
+:focus-visible {
+    outline: 3px solid #4a90d9;
+    outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+
+/* ==========================================================================
+   HIGH CONTRAST MODE
+   Override ALL hardcoded colors across the entire game UI.
+   ========================================================================== */
+
+/* --- CSS Variables override --- */
+body.high-contrast {
+    --color-bg-dark: #000000;
+    --color-bg-medium: #000000;
+    --color-bg-light: #000000;
+    --color-panel-deep: #000000;
+    --color-panel: #0a0a0a;
+    --color-panel-light: #0a0a0a;
+    --color-header: #ffffff;
+    --color-accent: #ffffff;
+    --color-beige: #ffffff;
+    --color-gold: #ffff00;
+    --color-gold-light: #ffff00;
+    --color-success: #00ff88;
+    --color-warning: #ffff00;
+    --color-error: #ff4444;
+    --color-info: #44aaff;
+    --color-text-primary: #ffffff;
+    --color-text-secondary: #ffffff;
+    --color-text-muted: #cccccc;
+    --color-text-dark: #cccccc;
+    --color-surface: rgba(0, 0, 0, 0.9);
+    --color-surface-hover: rgba(0, 0, 0, 0.95);
+    --color-overlay: rgba(0, 0, 0, 0.95);
+    --border-color: #ffffff;
+    --border-color-accent: #ffffff;
+    --save-bg-overlay: rgba(0, 0, 0, 0.98);
+    --save-bg-modal: #000000;
+    --save-bg-card: #0a0a0a;
+    --save-bg-card-hover: #111111;
+    --save-bg-card-empty: #050505;
+    --save-header-bg: #1a1a1a;
+    --save-border-gold: #ffffff;
+    --save-border-brown: #888888;
+    --save-text-light: #ffffff;
+    --save-text-muted: #cccccc;
+}
+
+/* --- Body --- */
+body.high-contrast {
+    background: #000000 !important;
+    color: #ffffff !important;
+}
+
+/* --- Canvas border --- */
+body.high-contrast #gameCanvas {
+    border-color: #ffffff !important;
+    background: #222222 !important;
+}
+
+/* --- ALL modals --- */
+body.high-contrast .modal {
+    background: rgba(0, 0, 0, 0.98) !important;
+}
+
+body.high-contrast .store-container {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
+/* --- Modal header --- */
+body.high-contrast .modal-header {
+    background: #1a1a1a !important;
+    border-bottom: 3px solid #ffffff !important;
+}
+
+body.high-contrast .modal-header h2 {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+body.high-contrast .modal-close {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
+/* --- Config panel --- */
+body.high-contrast .config-section {
+    background: #0a0a0a !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .config-section h3 {
+    color: #ffffff !important;
+    border-bottom-color: #ffffff !important;
+}
+
+body.high-contrast .config-label {
+    color: #ffffff !important;
+}
+
+body.high-contrast .config-select {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .config-select option {
+    background: #000000;
+    color: #ffffff;
+}
+
+body.high-contrast .config-slider {
+    background-color: #555555 !important;
+    border: 1px solid #ffffff !important;
+}
+
+body.high-contrast input:checked + .config-slider {
+    background-color: #4a90d9 !important;
+}
+
+body.high-contrast .config-slider:before {
+    background-color: #ffffff !important;
+}
+
+body.high-contrast .config-button {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* --- Language select (inline styles need !important) --- */
+body.high-contrast .setting-select,
+body.high-contrast #languageSelect {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .setting-row label {
+    color: #ffffff !important;
+}
+
+/* --- HUD top bar --- */
+body.high-contrast .hud-top-bar {
+    background: #000000 !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+body.high-contrast .hud-top-btn,
+body.high-contrast .hud-toggle-hud-btn,
+body.high-contrast .hud-center-toggle {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #ffffff !important;
+}
+
+/* --- HUD action buttons (save, settings, etc.) --- */
+body.high-contrast .hud-action-btn {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .hud-action-btn:hover {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* --- Player panel --- */
+body.high-contrast .player-panel {
+    background: #000000 !important;
+    border-left: 2px solid #ffffff !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+body.high-contrast .player-panel::after {
+    color: #ffffff !important;
+}
+
+body.high-contrast .player-portrait {
+    background: #1a1a1a !important;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3) !important;
+}
+
+body.high-contrast .player-info h3 {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+body.high-contrast .player-stat {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 1px solid #ffffff !important;
+}
+
+body.high-contrast .player-stat .stat-label {
+    color: #cccccc !important;
+}
+
+body.high-contrast .player-stat .stat-value {
+    color: #ffffff !important;
+}
+
+/* --- Commerce system --- */
+body.high-contrast .mch-merchant-commerce-system {
+    background: #000000 !important;
+}
+
+body.high-contrast .mch-commerce-container,
+body.high-contrast .mch-merchants-list-screen {
+    background: #000000 !important;
+    border: 3px solid #ffffff !important;
+    box-shadow: none !important;
+}
+
+body.high-contrast .mch-commerce-container::before {
+    display: none !important;
+}
+
+body.high-contrast .mch-commerce-header {
+    background: #1a1a1a !important;
+    border-bottom: 3px solid #ffffff !important;
+}
+
+body.high-contrast .mch-commerce-title {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+body.high-contrast .mch-commerce-controls {
+    background: #0a0a0a !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-back-button {
+    background: #000000 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-close-button {
+    background: #ff4444 !important;
+    color: #ffffff !important;
+    border: 2px solid #ff4444 !important;
+}
+
+body.high-contrast .mch-merchant-panel,
+body.high-contrast .mch-merchant-commerce-system .mch-player-panel {
+    background: #000000 !important;
+    border-color: #ffffff !important;
+}
+
+body.high-contrast .mch-action-panel {
+    background: #0a0a0a !important;
+    border-left: 2px solid #ffffff !important;
+    border-right: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-action-indicator {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-hexagon-slot,
+body.high-contrast .mch-merchant-hexagon {
+    background: #1a1a1a !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-hexagon-name,
+body.high-contrast .mch-merchant-name,
+body.high-contrast .mch-merchant-profession,
+body.high-contrast .mch-merchant-specialty,
+body.high-contrast .mch-confirm-message {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+body.high-contrast .mch-merchant-header,
+body.high-contrast .mch-commerce.mch-player-panel-header {
+    background: #0a0a0a !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-merchant-avatar {
+    border-color: #ffffff !important;
+}
+
+body.high-contrast .mch-storage-toggle-btn,
+body.high-contrast .mch-player-category-btn,
+body.high-contrast .mch-merchant-category-btn {
+    background: #000000 !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .mch-storage-toggle-btn.active,
+body.high-contrast .mch-player-category-btn.active,
+body.high-contrast .mch-merchant-category-btn.active {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+body.high-contrast .mch-merchant-card {
+    background: #0a0a0a !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .mch-merchant-card-info h3,
+body.high-contrast .mch-merchant-card-details,
+body.high-contrast .mch-merchant-card-details div {
+    color: #ffffff !important;
+}
+
+body.high-contrast .mch-merchant-card-profession {
+    color: #cccccc !important;
+}
+
+body.high-contrast .mch-merchant-item-tag {
+    background: rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    border: 1px solid #ffffff !important;
+}
+
+body.high-contrast .mch-trade-confirm-modal {
+    background: #000000 !important;
+    border: 3px solid #ffffff !important;
+}
+
+body.high-contrast .mch-confirm-btn {
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+    font-weight: bold !important;
+}
+
+body.high-contrast .mch-confirm-yes {
+    background: #00aa55 !important;
+}
+
+body.high-contrast .mch-confirm-no {
+    background: #cc3333 !important;
+}
+
+body.high-contrast .mch-trade-button {
+    border: 2px solid #ffffff !important;
+}
+
+/* --- Save slots modal --- */
+body.high-contrast .save-modal-overlay {
+    background: rgba(0, 0, 0, 0.98) !important;
+}
+
+body.high-contrast .save-modal-container {
+    background: #000000 !important;
+    border: 3px solid #ffffff !important;
+    box-shadow: none !important;
+}
+
+body.high-contrast .save-modal-header {
+    background: #1a1a1a !important;
+    border-bottom: 2px solid #ffffff !important;
+}
+
+body.high-contrast .save-modal-title {
+    color: #ffffff !important;
+    text-shadow: none !important;
+}
+
+body.high-contrast .save-modal-close {
+    background: #ffffff !important;
+    color: #000000 !important;
+    border-color: #ffffff !important;
+}
+
+body.high-contrast .save-slot-card {
+    background: #0a0a0a !important;
+    border: 2px solid #888888 !important;
+}
+
+body.high-contrast .save-slot-card:hover,
+body.high-contrast .save-slot-card.save-slot-active {
+    border-color: #ffffff !important;
+}
+
+body.high-contrast .save-slot-name,
+body.high-contrast .save-meta-value {
+    color: #ffffff !important;
+}
+
+body.high-contrast .save-slot-number,
+body.high-contrast .save-meta-label {
+    color: #cccccc !important;
+}
+
+body.high-contrast .save-btn {
+    background: #1a1a1a !important;
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+body.high-contrast .save-btn-load {
+    background: #00aa55 !important;
+}
+
+body.high-contrast .save-btn-save {
+    background: #4a90d9 !important;
+}
+
+body.high-contrast .save-btn-delete:hover {
+    background: #cc3333 !important;
+}
+
+/* --- Character selection --- */
+body.high-contrast .chs-character-selection {
+    background: #000000 !important;
+}
+
+body.high-contrast .chs-character-card {
+    background: #0a0a0a !important;
+    border: 3px solid #888888 !important;
+    backdrop-filter: none !important;
+}
+
+body.high-contrast .chs-character-card:hover,
+body.high-contrast .chs-character-card.selected {
+    border-color: #ffffff !important;
+    background: #1a1a1a !important;
+}
+
+body.high-contrast .chs-character-details {
+    background: #0a0a0a !important;
+    border: 2px solid #ffffff !important;
+    backdrop-filter: none !important;
+}
+
+body.high-contrast .chs-start-game-btn {
+    background: #00aa55 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .chs-load-game-btn {
+    background: #cc5500 !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .chs-load-game-section {
+    background: #0a0a0a !important;
+    border: 1px solid #ffffff !important;
+}
+
+/* --- Inventory actions --- */
+body.high-contrast .inv-action-btn {
+    border: 2px solid #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* --- Notifications / toasts --- */
+body.high-contrast .hud-need-feedback {
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: #ffffff !important;
+    border: 2px solid #ffffff !important;
+}
+
+body.high-contrast .save-toast {
+    border: 2px solid #ffffff !important;
+}
+
+/* --- Scrollbars high contrast --- */
+body.high-contrast ::-webkit-scrollbar-thumb {
+    background: #ffffff !important;
+}
+
+body.high-contrast ::-webkit-scrollbar-track {
+    background: #333333 !important;
+}
+
+
+/* ==========================================================================
+   REDUCED MOTION
+   Disable ALL CSS animations and transitions.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+body.reduced-motion *,
+body.reduced-motion *::before,
+body.reduced-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+}
+
+/* Disable specific transforms that animate on hover */
+body.reduced-motion .mch-merchant-card:hover,
+body.reduced-motion .mch-hexagon-slot:hover,
+body.reduced-motion .mch-merchant-hexagon:hover,
+body.reduced-motion .hud-top-btn:hover,
+body.reduced-motion .hud-toggle-hud-btn:hover,
+body.reduced-motion .modal-close:hover,
+body.reduced-motion .config-button:hover,
+body.reduced-motion .mch-back-button:hover,
+body.reduced-motion .mch-close-button:hover,
+body.reduced-motion .mch-trade-arrow:hover,
+body.reduced-motion .chs-character-card:hover,
+body.reduced-motion .save-slot-card:hover,
+body.reduced-motion .hud-action-btn:hover {
+    transform: none !important;
+}
+
+/* Disable player panel expand animation */
+body.reduced-motion .player-panel,
+body.reduced-motion .player-panel:hover,
+body.reduced-motion .player-panel:not(:hover) {
+    transition: none !important;
+}
+
+/* Disable commerce slide-in animations */
+body.reduced-motion .mch-merchant-commerce-system .mch-player-panel,
+body.reduced-motion .mch-merchant-commerce-system .mch-merchant-panel {
+    animation: none !important;
+}
+
+/* Disable sleep transition animation */
+body.reduced-motion .sleep-transition {
+    transition: none !important;
+}
+
+/* Disable save modal slide-in */
+body.reduced-motion .save-modal-container {
+    animation: none !important;
+}
+
+/* Disable character selection animations */
+body.reduced-motion .chs-character-selection-header,
+body.reduced-motion .chs-character-details,
+body.reduced-motion .chs-load-game-section,
+body.reduced-motion .chs-character-warning-message {
+    animation: none !important;
+}
+
+
+/* ==========================================================================
+   TEXT SIZE SCALING
+   Uses CSS zoom with compensated container dimensions.
+   Container height is divided by the zoom factor so the rendered result ≈ original viewport footprint.
+   Internal grids (.mch-*-items-grid, .cht-slots) already have overflow-y: auto.
+   The canvas is NOT zoomed — only overlaid UI elements.
+   ========================================================================== */
+
+/* --- Large text (zoom 1.12) --- */
+
+/* Commerce / Merchants — original height: 85vh → 85/1.12 ≈ 76vh */
+html.text-large .mch-commerce-container,
+html.text-large .mch-merchants-list-screen {
+    zoom: 1.12;
+    height: 76vh;
+}
+
+/* Save modal — original max-height: 90vh → 90/1.12 ≈ 80vh */
+html.text-large .save-modal-container {
+    zoom: 1.12;
+    max-height: 80vh;
+}
+
+/* Chest panel — original max-height: 85vh → 85/1.12 ≈ 76vh */
+html.text-large .cht-panel {
+    zoom: 1.12;
+    max-height: 76vh;
+}
+
+/* Well modal, config panel, character select — auto-height, just zoom */
+html.text-large #well-modal,
+html.text-large .store-container,
+html.text-large .chs-character-selection {
+    zoom: 1.12;
+}
+
+/* Trade confirm modal (position:fixed, centered) */
+html.text-large .mch-trade-confirm-modal {
+    zoom: 1.12;
+}
+
+/* HUD elements (gentler zoom to keep compact) */
+html.text-large .player-panel,
+html.text-large .hud-action-buttons {
+    zoom: 1.08;
+}
+
+/* --- Extra large text (zoom 1.22) --- */
+
+/* Commerce / Merchants — 85/1.22 ≈ 70vh */
+html.text-extra-large .mch-commerce-container,
+html.text-extra-large .mch-merchants-list-screen {
+    zoom: 1.22;
+    height: 70vh;
+}
+
+/* Save modal — 90/1.22 ≈ 74vh */
+html.text-extra-large .save-modal-container {
+    zoom: 1.22;
+    max-height: 74vh;
+}
+
+/* Chest panel — 85/1.22 ≈ 70vh */
+html.text-extra-large .cht-panel {
+    zoom: 1.22;
+    max-height: 70vh;
+}
+
+/* Well modal, config panel, character select */
+html.text-extra-large #well-modal,
+html.text-extra-large .store-container,
+html.text-extra-large .chs-character-selection {
+    zoom: 1.22;
+}
+
+/* Trade confirm modal */
+html.text-extra-large .mch-trade-confirm-modal {
+    zoom: 1.22;
+}
+
+/* HUD elements */
+html.text-extra-large .player-panel,
+html.text-extra-large .hud-action-buttons {
+    zoom: 1.15;
+}

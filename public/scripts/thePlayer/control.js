@@ -1,9 +1,9 @@
-
 import { camera } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
 import { BuildSystem } from "../buildSystem.js";
 import { animals } from "../theWorld.js";
 import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
+import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -15,6 +15,217 @@ export const keys = {
     KeyE: false, Space: false
 };
 
+// ─────────────────────────────────────────────
+// Remap (Config) -> farmxp_controls
+// ─────────────────────────────────────────────
+// tenta ler binds também do config/settings geral (se teu configUI usar outra key)
+const CONFIG_STORAGE_KEYS = ["farmxp_config", "farmxp_settings", "farmxp_options"];
+
+// caminho do configUI.js (control/control.js -> ../configUI.js)
+const CONFIG_UI_MODULE_PATH = "../settingsUI.js";
+
+function extractKeybindsFromConfig(candidate) {
+    if (!candidate || typeof candidate !== "object") return null;
+
+    // formatos mais comuns:
+    if (candidate.keybinds && typeof candidate.keybinds === "object") return candidate.keybinds;
+    if (candidate.controls && typeof candidate.controls === "object") return candidate.controls;
+
+    // às vezes vem dentro de settings / config
+    if (candidate.settings && typeof candidate.settings === "object") {
+        if (candidate.settings.keybinds && typeof candidate.settings.keybinds === "object") return candidate.settings.keybinds;
+        if (candidate.settings.controls && typeof candidate.settings.controls === "object") return candidate.settings.controls;
+    }
+
+    if (candidate.config && typeof candidate.config === "object") {
+        if (candidate.config.keybinds && typeof candidate.config.keybinds === "object") return candidate.config.keybinds;
+        if (candidate.config.controls && typeof candidate.config.controls === "object") return candidate.config.controls;
+    }
+
+    return null;
+}
+
+function tryReadKeybindsFromOtherStorage() {
+    for (const k of CONFIG_STORAGE_KEYS) {
+        try {
+            const raw = localStorage.getItem(k);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            const extracted = extractKeybindsFromConfig(parsed);
+            if (extracted) return extracted;
+        } catch {}
+    }
+    return null;
+}
+
+// API pública (útil pro configUI chamar também, se quiser)
+export function getKeybinds() {
+    try { return JSON.parse(JSON.stringify(keybinds)); } catch { return sanitizeKeybinds(keybinds); }
+}
+
+export function setKeybinds(next, { persist = true, clearState = false } = {}) {
+    keybinds = sanitizeKeybinds(next);
+    if (persist) saveKeybinds(keybinds);
+    if (clearState) clearAllInputState();
+    recalcActions();
+}
+
+// tenta puxar do configUI.js (sem depender de nomes fixos de export)
+async function bootstrapKeybindsFromConfigUI() {
+    // 1) window (se configUI expõe algo global)
+    try {
+        const w = window;
+        const fromWindow =
+            extractKeybindsFromConfig(w?.FarmXPConfig) ||
+            extractKeybindsFromConfig(w?.gameConfig) ||
+            extractKeybindsFromConfig(w?.config) ||
+            extractKeybindsFromConfig(w?.settings);
+
+        if (fromWindow) {
+            setKeybinds(fromWindow, { persist: true });
+            return;
+        }
+    } catch {}
+
+    // 2) módulo configUI (caminho: ../configUI.js)
+    try {
+        const mod = await import(CONFIG_UI_MODULE_PATH);
+
+        // tenta achar binds em exports comuns (sem exigir que exista)
+        const fromExports =
+            (typeof mod.getKeybinds === "function" ? mod.getKeybinds() : null) ||
+            (typeof mod.getControlsKeybinds === "function" ? mod.getControlsKeybinds() : null) ||
+            (typeof mod.getConfig === "function" ? mod.getConfig() : null) ||
+            mod.keybinds ||
+            mod.controls ||
+            mod.config ||
+            mod.settings ||
+            mod.default;
+
+        const extracted = extractKeybindsFromConfig(fromExports) || (fromExports && typeof fromExports === "object" ? fromExports : null);
+        if (extracted) {
+            setKeybinds(extracted, { persist: true });
+            return;
+        }
+    } catch {
+        // ignore: não quebra o jogo se configUI não estiver pronto ainda
+    }
+
+    // 3) fallback: tenta ler de uma storage “geral” (se existir)
+    const fromOtherStorage = tryReadKeybindsFromOtherStorage();
+    if (fromOtherStorage) setKeybinds(fromOtherStorage, { persist: true });
+}
+
+// deixa acessível pra debug/ponte rápida (sem poluir muito)
+window.FarmXPControls = window.FarmXPControls || {};
+window.FarmXPControls.getKeybinds = getKeybinds;
+window.FarmXPControls.setKeybinds = setKeybinds;
+
+
+let keybinds = loadKeybinds();
+
+// pressed state por CODE (KeyW, ArrowLeft, Space, etc)
+const pressed = Object.create(null);
+
+// estado final por ação (já considerando joystick também)
+const actions = {
+    moveUp: false,
+    moveDown: false,
+    moveLeft: false,
+    moveRight: false,
+    interact: false,
+    jump: false,
+    inventory: false,
+    merchants: false,
+    config: false,
+};
+
+// estado de movimento vindo do joystick (pra não quebrar mobile)
+const joystickActions = { moveUp: false, moveDown: false, moveLeft: false, moveRight: false };
+
+function sanitizeKeybinds(raw) {
+    const merged = JSON.parse(JSON.stringify(DEFAULT_KEYBINDS));
+    if (!raw || typeof raw !== "object") return merged;
+
+    for (const action of Object.keys(merged)) {
+        if (Array.isArray(raw[action]) && raw[action].length) {
+            merged[action] = raw[action]
+                .slice(0, 2)
+                .map(String)
+                .filter(Boolean);
+        }
+    }
+    return merged;
+}
+
+function loadKeybinds() {
+    // prioridade 1: storage dedicada dos controles
+    try {
+        const raw = localStorage.getItem(CONTROLS_STORAGE_KEY);
+        if (raw) return sanitizeKeybinds(JSON.parse(raw));
+    } catch {}
+
+    // prioridade 2: algum storage “geral” 
+    const fromOther = tryReadKeybindsFromOtherStorage();
+    if (fromOther) return sanitizeKeybinds(fromOther);
+
+    // fallback
+    return sanitizeKeybinds(null);
+}
+
+
+function saveKeybinds(next) {
+    try {
+        localStorage.setItem(CONTROLS_STORAGE_KEY, JSON.stringify(next));
+    } catch {}
+}
+
+function getEventCode(e) {
+    return e.code || e.key; // prefer e.code
+}
+
+function isActionKeyEvent(e, action) {
+    const code = getEventCode(e);
+    return (keybinds[action] || []).includes(code);
+}
+
+function recalcActions() {
+    for (const action of Object.keys(actions)) {
+        const binds = keybinds[action] || [];
+        let down = false;
+        for (const code of binds) {
+            if (pressed[code]) { down = true; break; }
+        }
+
+        // OR com joystick apenas para movimento
+        if (action in joystickActions) {
+            down = down || joystickActions[action];
+        }
+
+        actions[action] = down;
+    }
+}
+
+function clearAllInputState() {
+    for (const k of Object.keys(keys)) keys[k] = false;
+    for (const k of Object.keys(pressed)) pressed[k] = false;
+    for (const k of Object.keys(actions)) actions[k] = false;
+    joystickActions.moveUp = joystickActions.moveDown = joystickActions.moveLeft = joystickActions.moveRight = false;
+}
+
+function setPressedFromEvent(e, isDown) {
+    const code = getEventCode(e);
+    if (!code) return;
+
+    pressed[code] = isDown;
+
+    // compat: manter teu objeto keys atualizado pros codes que ele já conhece
+    if (code in keys) keys[code] = isDown;
+    if (e.key in keys) keys[e.key] = isDown;
+
+    recalcActions();
+}
+
 // Sleep state that blocks all inputs
 let isSleeping = false;
 let isSleepingGlobal = false;
@@ -24,6 +235,7 @@ document.addEventListener("sleepStarted", () => {
     isSleepingGlobal = true;
 
     Object.keys(keys).forEach(key => { keys[key] = false; });
+    clearAllInputState();
 
     const mobileBtn = document.getElementById('mobile-interact-btn');
     const joystickArea = document.getElementById('joystick-area');
@@ -205,8 +417,7 @@ export class PlayerInteractionSystem {
         document.addEventListener('keydown', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
-            if ((e.key === 'e' || e.key === 'E') && !keys.KeyE) {
-                keys.KeyE = true;
+            if (isActionKeyEvent(e, "interact") && !e.repeat) {
                 this.handleInteraction();
             }
 
@@ -239,13 +450,6 @@ export class PlayerInteractionSystem {
                         window.animalUI.inspectAnimal();
                     }
                 }
-            }
-        }, { signal });
-
-        document.addEventListener('keyup', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
-            if (e.key === 'e' || e.key === 'E') {
-                keys.KeyE = false;
             }
         }, { signal });
 
@@ -301,7 +505,6 @@ export class PlayerInteractionSystem {
         const button = document.createElement('button');
         button.id = 'mobile-interact-btn';
         button.innerHTML = 'E';
-        // fix: Reverted CSS layout values inline (L301)
         button.style.cssText = `
             position: fixed; bottom: 100px; right: 30px; width: 70px; height: 70px;
             border-radius: 50%; background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
@@ -332,7 +535,6 @@ export class PlayerInteractionSystem {
 
         const joystickArea = document.createElement('div');
         joystickArea.id = 'joystick-area';
-        // fix: Reverted CSS layout values inline (L331)
         joystickArea.style.cssText = `
             position: fixed; bottom: 30px; left: 30px; width: 150px; height: 150px;
             border-radius: 50%; background: rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.5);
@@ -403,19 +605,45 @@ export class PlayerInteractionSystem {
     resetJoystick(joystick) {
         joystick.style.left = '50%';
         joystick.style.top = '50%';
+
+        // legado
         keys.ArrowLeft = keys.KeyA = false;
         keys.ArrowRight = keys.KeyD = false;
         keys.ArrowUp = keys.KeyW = false;
         keys.ArrowDown = keys.KeyS = false;
+
+        // novo (remap-friendly)
+        joystickActions.moveLeft = false;
+        joystickActions.moveRight = false;
+        joystickActions.moveUp = false;
+        joystickActions.moveDown = false;
+
+        recalcActions();
     }
 
     updateKeysFromJoystick(x, y) {
         if (isSleeping) return;
+
         const threshold = MOBILE.JOYSTICK_THRESHOLD;
-        keys.ArrowLeft = keys.KeyA = Math.abs(x) > threshold && x < 0;
-        keys.ArrowRight = keys.KeyD = Math.abs(x) > threshold && x > 0;
-        keys.ArrowUp = keys.KeyW = Math.abs(y) > threshold && y < 0;
-        keys.ArrowDown = keys.KeyS = Math.abs(y) > threshold && y > 0;
+
+        const left  = Math.abs(x) > threshold && x < 0;
+        const right = Math.abs(x) > threshold && x > 0;
+        const up    = Math.abs(y) > threshold && y < 0;
+        const down  = Math.abs(y) > threshold && y > 0;
+
+        // legado (pra não quebrar nada existente)
+        keys.ArrowLeft = keys.KeyA = left;
+        keys.ArrowRight = keys.KeyD = right;
+        keys.ArrowUp = keys.KeyW = up;
+        keys.ArrowDown = keys.KeyS = down;
+
+        // novo (remap)
+        joystickActions.moveLeft = left;
+        joystickActions.moveRight = right;
+        joystickActions.moveUp = up;
+        joystickActions.moveDown = down;
+
+        recalcActions();
     }
 
     handleCanvasClick(worldX, worldY, screenX, screenY) {
@@ -578,18 +806,33 @@ export const PLAYER_INTERACTION_CONFIG = {
 export function setupControls(player) {
     const { signal } = controlsAbortController;
 
+    // aplica remap quando o Config salva/aplica
+    document.addEventListener("controlsChanged", (e) => {
+        const next = e?.detail?.keybinds || e?.detail?.controls || e?.detail;
+        const extracted = extractKeybindsFromConfig(next) || next;
+        if (!extracted) return;
+        setKeybinds(extracted, { persist: true });
+    }, { signal });
+
+    // bônus: se configUI disparar algo mais genérico
+    document.addEventListener("configChanged", (e) => {
+        const extracted = extractKeybindsFromConfig(e?.detail);
+        if (!extracted) return;
+        setKeybinds(extracted, { persist: true });
+    }, { signal });
+
+
     document.addEventListener('keydown', (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
-
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
-        if (e.key in keys) keys[e.key] = true;
-        else if (e.code in keys) keys[e.code] = true;
+        setPressedFromEvent(e, true);
 
         if (player) {
-            const movementKeys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyW','KeyS','KeyD'];
-            const isMovementKey = movementKeys.includes(e.key) || movementKeys.includes(e.code);
-            if (isMovementKey && !player.isMoving) {
+            const isMovement =
+                actions.moveLeft || actions.moveRight || actions.moveUp || actions.moveDown;
+
+            if (isMovement && !player.isMoving) {
                 player.isMoving = true;
                 player.wasMoving = true;
                 player.frame = 0;
@@ -600,12 +843,12 @@ export function setupControls(player) {
     document.addEventListener('keyup', (e) => {
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
-        if (e.key in keys) keys[e.key] = false;
-        else if (e.code in keys) keys[e.code] = false;
+        setPressedFromEvent(e, false);
 
-        const movementKeys = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyA','KeyW','KeyS','KeyD'];
-        const anyMovementKeyPressed = movementKeys.some(k => keys[k]);
-        if (!anyMovementKeyPressed && player) {
+        const anyMovement =
+            actions.moveLeft || actions.moveRight || actions.moveUp || actions.moveDown;
+
+        if (!anyMovement && player) {
             player.isMoving = false;
             player.wasMoving = false;
         }
@@ -628,7 +871,7 @@ function setupInventoryControls() {
             if (modal?.classList.contains('open')) { e.preventDefault(); window.closeInventory?.(); return; }
         }
 
-        if ((e.key.toLowerCase() === 'i') && !isInputActive) {
+        if (isActionKeyEvent(e, "inventory") && !isInputActive && !e.repeat) {
             e.preventDefault();
             const host = document.getElementById('inventory-ui-host');
             const modal = host?.shadowRoot?.getElementById('inventoryModal');
@@ -685,7 +928,7 @@ function setupUIShortcuts() {
             }
         }
 
-        if (key === 'u') {
+        if (isActionKeyEvent(e, "merchants") && !e.repeat) {
             if (BuildSystem?.active) return;
 
             e.preventDefault();
@@ -728,7 +971,7 @@ function setupUIShortcuts() {
             return;
         }
 
-        if (key === 'o') {
+        if (isActionKeyEvent(e, "config") && !e.repeat) {
             e.preventDefault();
 
             const modal = document.getElementById('configModal');
@@ -797,10 +1040,10 @@ export function getMovementDirection() {
     if (playerInteractionSystem.touchMoveSystem.isActive()) return { x: 0, y: 0 };
 
     let x = 0, y = 0;
-    if (keys.ArrowLeft || keys.KeyA) x -= 1;
-    if (keys.ArrowRight || keys.KeyD) x += 1;
-    if (keys.ArrowUp || keys.KeyW) y -= 1;
-    if (keys.ArrowDown || keys.KeyS) y += 1;
+    if (actions.moveLeft) x -= 1;
+    if (actions.moveRight) x += 1;
+    if (actions.moveUp) y -= 1;
+    if (actions.moveDown) y += 1;
 
     if (x !== 0 && y !== 0) { x *= MOVEMENT.DIAGONAL_MULTIPLIER; y *= MOVEMENT.DIAGONAL_MULTIPLIER; }
     return { x, y };
@@ -808,6 +1051,9 @@ export function getMovementDirection() {
 
 // Initialize controls when the dom is ready
 document.addEventListener('DOMContentLoaded', () => {
+    // puxa binds do configUI (se existir) e alinha com storage/eventos
+    bootstrapKeybindsFromConfigUI();
+
     setupInventoryControls();
     setupUIShortcuts();
 
@@ -818,6 +1064,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }, { signal: controlsAbortController.signal });
+
 
 /**
  * Limpa todos os event listeners do sistema de controles

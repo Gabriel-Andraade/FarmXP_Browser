@@ -24,11 +24,19 @@
     --save-radius-sm: 8px;
 }
 
-/* ===== BOTÃO SAVE NO HUD ===== */
-.hud-save-btn {
+/* ===== CONTAINER DOS BOTÕES DE AÇÃO NO HUD ===== */
+.hud-action-buttons {
     position: absolute;
-    top: 12px;
+    top: 8px;
     right: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 102;
+}
+
+/* ===== BOTÃO DE AÇÃO GENÉRICO ===== */
+.hud-action-btn {
     width: 42px;
     height: 42px;
     background: linear-gradient(135deg, #5a3b1f, #3b2612);
@@ -40,19 +48,18 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 102;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
     transition: all 0.3s ease;
 }
 
-.hud-save-btn:hover {
+.hud-action-btn:hover {
     background: linear-gradient(135deg, #6b4513, #4a3018);
     border-color: #e0bc87;
     transform: scale(1.1);
     box-shadow: 0 4px 12px rgba(201, 164, 99, 0.4);
 }
 
-.hud-save-btn:active {
+.hud-action-btn:active {
     transform: scale(0.95);
 }
 

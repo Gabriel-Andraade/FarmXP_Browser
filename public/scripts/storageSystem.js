@@ -9,20 +9,8 @@ import { getItem } from "./itemUtils.js";
 import { t } from './i18n/i18n.js';
 import { registerSystem } from './gameState.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
-/**
-/**
- * Helpers locais (evitam duplicação e garantem validação consistente)
- */
-function isValidItemId(itemId) {
-  return Number.isInteger(itemId) && itemId > 0;
-}
 
-function sanitizeQuantity(value, min = 1, max = 9999) {
-  const n = Math.floor(value);
-  if (!Number.isFinite(n)) return min;
-  return Math.max(min, Math.min(max, n));
-}
-
+/**
  * Obtém nome traduzido do item pelo ID
  * @param {number} itemId - ID do item
  * @param {string} fallbackName - Nome padrão se tradução não existir

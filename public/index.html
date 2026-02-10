@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="./style/storage.css">
   <link rel="stylesheet" href="./style/commerce.css">
   <link rel="stylesheet" href="./style/config.css">
+  <link rel="stylesheet" href="./style/accessibility.css">
   <link rel="stylesheet" href="./style/animal-ui.css">
   <link rel="stylesheet" href="./style/chest.css">
   <link rel="stylesheet" href="./style/build.css">
@@ -36,14 +37,14 @@
 <body>
     <div class="theGame">
         <div class="game">
-            <canvas id="gameCanvas"></canvas>
+            <canvas id="gameCanvas" aria-label="Farm game view" role="img"></canvas>
         </div>
         <!-- CONFIGURAÇÕES -->
-        <div class="modal" id="configModal">
+        <div class="modal" id="configModal" role="dialog" aria-modal="true" aria-labelledby="configModalTitle">
             <div class="store-container">
                 <div class="modal-header">
-                    <h2 data-i18n="settings.title">⚙️ Configurações</h2>
-                    <button class="modal-close">&times;</button>
+                    <h2 id="configModalTitle" data-i18n="settings.title">⚙️ Configurações</h2>
+                    <button class="modal-close" aria-label="Close">&times;</button>
                 </div>
                 <div id="config-content">
                     <div class="setting-row" style="margin: 20px; display: flex; align-items: center; gap: 15px;">
@@ -54,7 +55,48 @@
                             <option value="es">Español</option>
                         </select>
                     </div>
-                    <p data-i18n="ui.otherSettings" style="margin: 20px; color: #aaa;"></p>
+                    <div class="config-section">
+                        <h3 data-i18n="settings.accessibility">Acessibilidade</h3>
+                        <div class="config-option">
+                            <span class="config-label" data-i18n="settings.highContrast">Alto contraste</span>
+                            <label class="config-toggle">
+                                <input type="checkbox" id="a11yHighContrast">
+                                <span class="config-slider"></span>
+                            </label>
+                        </div>
+                        <div class="config-option">
+                            <span class="config-label" data-i18n="settings.reducedMotion">Reduzir animações</span>
+                            <label class="config-toggle">
+                                <input type="checkbox" id="a11yReducedMotion">
+                                <span class="config-slider"></span>
+                            </label>
+                        </div>
+                        <div class="config-option">
+                            <span class="config-label" data-i18n="settings.textSize">Tamanho do texto</span>
+                            <select id="a11yTextSize" class="config-select">
+                                <option value="normal" data-i18n="settings.textNormal">Normal</option>
+                                <option value="large" data-i18n="settings.textLarge">Grande</option>
+                                <option value="extra-large" data-i18n="settings.textExtraLarge">Extra Grande</option>
+                            </select>
+                        </div>
+                        <div class="config-option">
+                            <span class="config-label" data-i18n="settings.colorVision">Modo de visão de cor</span>
+                            <select id="a11yColorVision" class="config-select">
+                                <option value="off" data-i18n="settings.cvOff">Desligado</option>
+                                <option value="protanopia" data-i18n="settings.cvProtanopia">Protanopia</option>
+                                <option value="deuteranopia" data-i18n="settings.cvDeuteranopia">Deuteranopia</option>
+                                <option value="tritanopia" data-i18n="settings.cvTritanopia">Tritanopia</option>
+                                <option value="achromatopsia" data-i18n="settings.cvAchromatopsia">Acromatopsia</option>
+                            </select>
+                        </div>
+                        <div class="config-option">
+                            <span class="config-label" data-i18n="settings.screenReader">Anúncios para leitor de tela</span>
+                            <label class="config-toggle">
+                                <input type="checkbox" id="a11yScreenReader">
+                                <span class="config-slider"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

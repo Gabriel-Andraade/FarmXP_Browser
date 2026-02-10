@@ -56,7 +56,8 @@ export default {
       build: 'Construir',
       use: 'Usar'
     },
-    confirmDiscard: '¿Descartar {name}?'
+    confirmDiscard: '¿Descartar {name}?',
+    selectItem: 'Selecciona un artículo'
   },
 
   // Player HUD
@@ -314,7 +315,71 @@ export default {
     save: 'Guardar',
     cancel: 'Cancelar',
     graphics: 'Gráficos',
-    controls: 'Controles'
+    accessibility: 'Accesibilidad',
+    highContrast: 'Alto contraste',
+    reducedMotion: 'Reducir animaciones',
+    textSize: 'Tamaño del texto',
+    textNormal: 'Normal',
+    textLarge: 'Grande',
+    textExtraLarge: 'Extra Grande',
+    screenReader: 'Anuncios para lector de pantalla',
+    colorVision: 'Modo de visión de color',
+    cvOff: 'Desactivado',
+    cvProtanopia: 'Protanopía (rojo-verde)',
+    cvDeuteranopia: 'Deuteranopía (verde-rojo)',
+    cvTritanopia: 'Tritanopía (azul-amarillo)',
+    cvAchromatopsia: 'Acromatopsia (sin colores)',
+    
+    controls: {
+      title: 'Controles',
+      remap: 'Remapear teclas',
+      remapHint: 'Personaliza las teclas del teclado (WASD, flechas, atajos).',
+      openRemap: 'Abrir',
+      remapTitle: 'Remapear teclas',
+      remapSubtitle: 'Haz clic en una tecla para cambiarla. ESC cancela.',
+      pressKey: 'Presiona una tecla… (ESC cancela, Retroceso borra el secundario)',
+      reset: 'Restablecer'
+    }
+  },
+
+  // Controls - Añadidas desde settingsUI.js
+  controls: {
+    moveUp: {
+      label: 'Mover arriba',
+      desc: 'Caminar hacia arriba'
+    },
+    moveDown: {
+      label: 'Mover abajo',
+      desc: 'Caminar hacia abajo'
+    },
+    moveLeft: {
+      label: 'Mover izquierda',
+      desc: 'Caminar hacia la izquierda'
+    },
+    moveRight: {
+      label: 'Mover derecha',
+      desc: 'Caminar hacia la derecha'
+    },
+    interact: {
+      label: 'Interactuar',
+      desc: 'Interacción / usar'
+    },
+    jump: {
+      label: 'Saltar',
+      desc: 'Salto'
+    },
+    inventory: {
+      label: 'Inventario',
+      desc: 'Abrir/cerrar inventario'
+    },
+    merchants: {
+      label: 'Mercaderes',
+      desc: 'Abrir/cerrar mercaderes'
+    },
+    config: {
+      label: 'Configuración',
+      desc: 'Abrir/cerrar configuración'
+    }
   },
 
   // Actions
@@ -412,7 +477,16 @@ export default {
     otherSettings: 'Otros ajustes en desarrollo...',
     inventoryTab: 'Inventario',
     storageTab: 'Almacén',
-    inventoryNotAvailable: '🎒 Sistema de inventario no disponible'
+    inventoryNotAvailable: '🎒 Sistema de inventario no disponible',
+    done: 'Hecho' // Añadido desde settingsUI.js
+  },
+
+  // HUD Action Buttons
+  hud: {
+    saveTooltip: 'Guardar / Cargar (💾)',
+    settingsTooltip: 'Configuración ({key})',
+    inventoryTooltip: 'Inventario ({key})',
+    commerceTooltip: 'Comercio ({key})'
   },
 
   // Tutorials/Help
@@ -509,6 +583,20 @@ export default {
     organized: '¡Cofre organizado!',
     notFound: '¡Cofre no encontrado!',
     categoryFull: '¡Categoría {category} llena en el cofre!'
+  },
+
+  // Well System
+  well: {
+    backpack: 'Mochila',
+    actions: 'Acciones',
+    drink: 'Beber',
+    collect: 'Recolectar',
+    fillBottle: 'Llenar botella',
+    well: 'Pozo',
+    lowerBucket: 'Bajar balde',
+    insufficientWater: 'Agua insuficiente en el pozo',
+    playerNotAvailable: 'Sistema del jugador no disponible',
+    noEmptyBottle: 'Ninguna botella vacía en el inventario',
   },
 
   // Crafting System
