@@ -51,18 +51,9 @@ const HELP_FALLBACK_CODE = 'KeyH';
 
 // Meta de seções/ações (mostra o que vem do config/remap)
 const SECTIONS = [
-  {
-    titleKey: 'shortcutsPanel.sections.movement',
-    actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'],
-  },
-  {
-    titleKey: 'shortcutsPanel.sections.actions',
-    actions: ['interact'],
-  },
-  {
-    titleKey: 'shortcutsPanel.sections.menus',
-    actions: ['inventory', 'merchants', 'config', HELP_ACTION],
-  },
+  { titleKey: 'shortcutsPanel.sections.movement', actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'] },
+  { titleKey: 'shortcutsPanel.sections.actions', actions: ['interact'] },
+  { titleKey: 'shortcutsPanel.sections.menus', actions: ['inventory', 'merchants', 'config', HELP_ACTION] },
 ];
 
 let mounted = false;
@@ -74,7 +65,12 @@ const rowRefs = new Map(); // action -> { labelEl, descEl, keysEl }
 let overlayEl = null;
 let panelEl = null;
 let closeBtnEl = null;
-let eventsBound = false;
+
+// keybind cache
+let cachedKeybinds = null;
+
+// global events guard
+let globalEventsBound = false;
 
 function getHelpBtn() {
   return document.getElementById(IDS.btn);
@@ -126,6 +122,11 @@ function loadKeybinds() {
 
   // 3) fallback default
   return sanitizeKeybinds(null);
+}
+
+function getCachedKeybinds() {
+  if (!cachedKeybinds) cachedKeybinds = loadKeybinds();
+  return cachedKeybinds;
 }
 
 function formatTemplate(str, vars) {
@@ -249,12 +250,22 @@ function trapFocusTab(e) {
   return false;
 }
 
-function ensurePanel() {
-  overlayEl = document.getElementById(IDS.overlay);
-  panelEl = document.getElementById(IDS.panel);
+function onOverlayClick(e) {
+  if (e.target === overlayEl) closeHelpPanel();
+}
 
-  if (overlayEl && panelEl) return;
+function bindPanelInternalEvents() {
+  if (overlayEl && !overlayEl.__khpOverlayBound) {
+    overlayEl.__khpOverlayBound = true;
+    overlayEl.addEventListener('click', onOverlayClick);
+  }
+  if (closeBtnEl && !closeBtnEl.__khpCloseBound) {
+    closeBtnEl.__khpCloseBound = true;
+    closeBtnEl.addEventListener('click', closeHelpPanel);
+  }
+}
 
+function createPanelDOM() {
   overlayEl = document.createElement('div');
   overlayEl.id = IDS.overlay;
   overlayEl.className = CLS.overlay;
@@ -307,15 +318,113 @@ function ensurePanel() {
   overlayEl.appendChild(panelEl);
   document.body.appendChild(overlayEl);
 
-  // click fora fecha
-  overlayEl.addEventListener('click', (e) => {
-    if (e.target === overlayEl) closeHelpPanel();
-  });
-
-  closeBtnEl.addEventListener('click', closeHelpPanel);
-
+  bindPanelInternalEvents();
   buildSections(body);
-  rerenderAll();
+  rerenderAll(getCachedKeybinds());
+}
+
+function ensureHeaderStructure() {
+  // garante que o panel tenha header/title/subtitle/hint/close, mesmo se vier “pré-existente”
+  let header = panelEl.querySelector(`.${CLS.header}`);
+  if (!header) {
+    header = document.createElement('div');
+    header.className = CLS.header;
+    panelEl.prepend(header);
+  }
+
+  let title = panelEl.querySelector(`.${CLS.title}`);
+  if (!title) {
+    title = document.createElement('h2');
+    title.className = CLS.title;
+    title.id = `${PREFIX}-help-title`;
+    header.prepend(title);
+  } else if (!title.id) {
+    title.id = `${PREFIX}-help-title`;
+  }
+
+  let subtitle = panelEl.querySelector(`.${CLS.subtitle}`);
+  if (!subtitle) {
+    subtitle = document.createElement('p');
+    subtitle.className = CLS.subtitle;
+    subtitle.id = `${PREFIX}-help-subtitle`;
+    header.appendChild(subtitle);
+  } else if (!subtitle.id) {
+    subtitle.id = `${PREFIX}-help-subtitle`;
+  }
+
+  let hint = panelEl.querySelector(`.${CLS.hint}`);
+  if (!hint) {
+    hint = document.createElement('p');
+    hint.className = CLS.hint;
+    hint.id = `${PREFIX}-help-hint`;
+    header.appendChild(hint);
+  } else if (!hint.id) {
+    hint.id = `${PREFIX}-help-hint`;
+  }
+
+  closeBtnEl = panelEl.querySelector(`.${CLS.close}`);
+  if (!closeBtnEl) {
+    closeBtnEl = document.createElement('button');
+    closeBtnEl.type = 'button';
+    closeBtnEl.className = CLS.close;
+    closeBtnEl.textContent = '×';
+    header.appendChild(closeBtnEl);
+  }
+
+  // aria wiring
+  panelEl.setAttribute('aria-labelledby', title.id);
+  panelEl.setAttribute('aria-describedby', `${subtitle.id} ${hint.id}`);
+}
+
+function ensureBodyStructure() {
+  let body = panelEl.querySelector(`.${CLS.body}`);
+  if (!body) {
+    body = document.createElement('div');
+    body.className = CLS.body;
+    panelEl.appendChild(body);
+  }
+  return body;
+}
+
+function ensurePanel() {
+  overlayEl = document.getElementById(IDS.overlay);
+  panelEl = document.getElementById(IDS.panel);
+
+  // se estiver parcial/inconsistente, recria tudo
+  const invalid =
+    !overlayEl ||
+    !panelEl ||
+    !(overlayEl.contains(panelEl));
+
+  if (invalid) {
+    overlayEl?.remove();
+    panelEl?.remove();
+    overlayEl = null;
+    panelEl = null;
+    closeBtnEl = null;
+    createPanelDOM();
+    return;
+  }
+
+  // hidrata o DOM existente (sem early return)
+  if (!overlayEl.classList.contains(CLS.overlay)) overlayEl.classList.add(CLS.overlay);
+  overlayEl.setAttribute('aria-hidden', overlayEl.getAttribute('aria-hidden') ?? 'true');
+
+  if (!panelEl.classList.contains(CLS.panel)) panelEl.classList.add(CLS.panel);
+  panelEl.setAttribute('role', 'dialog');
+  panelEl.setAttribute('aria-modal', 'true');
+  panelEl.setAttribute('aria-hidden', panelEl.getAttribute('aria-hidden') ?? 'true');
+  panelEl.tabIndex = (panelEl.tabIndex ?? -1);
+
+  ensureHeaderStructure();
+  const body = ensureBodyStructure();
+
+  // rebuild content sempre (garante rowRefs e estrutura coerentes)
+  body.innerHTML = '';
+  buildSections(body);
+
+  bindPanelInternalEvents();
+  rerenderAll(getCachedKeybinds());
 }
 
 function buildSections(bodyEl) {
@@ -394,6 +503,20 @@ function getHelpKeyLabel(keybinds) {
   return (codes && codes.length) ? codeToLabel(codes[0]) : 'H';
 }
 
+function updateHelpBtnTooltip(keybinds = getCachedKeybinds()) {
+  const currentHelpBtn = getHelpBtn();
+  if (!currentHelpBtn) return;
+
+  const tipTpl = safeT('hud.helpTooltip', 'Atalhos ({key})');
+  const keyLabel = getHelpKeyLabel(keybinds);
+  const tip = formatTemplate(tipTpl, { key: keyLabel });
+
+  currentHelpBtn.title = tip;
+  currentHelpBtn.setAttribute('aria-label', tip);
+
+  if (!currentHelpBtn.classList.contains(CLS.btn)) currentHelpBtn.classList.add(CLS.btn);
+}
+
 function rerenderTexts(keybinds) {
   // header
   const titleEl = panelEl?.querySelector?.(`.${CLS.title}`);
@@ -424,19 +547,8 @@ function rerenderTexts(keybinds) {
     refs.descEl.textContent = safeT(`controls.${action}.desc`, '');
   }
 
-  // tooltip do botão HUD (RE-QUERY: HUD recria o DOM no languageChanged)
-  const currentHelpBtn = getHelpBtn();
-  if (currentHelpBtn) {
-    const tipTpl = safeT('hud.helpTooltip', 'Atalhos ({key})');
-    const keyLabel = getHelpKeyLabel(keybinds);
-    const tip = formatTemplate(tipTpl, { key: keyLabel });
-
-    currentHelpBtn.title = tip;
-    currentHelpBtn.setAttribute('aria-label', tip);
-
-    // garante a classe do prefixo (caso o HUD recrie sem ela)
-    if (!currentHelpBtn.classList.contains(CLS.btn)) currentHelpBtn.classList.add(CLS.btn);
-  }
+  // HUD tooltip/aria (re-query)
+  updateHelpBtnTooltip(keybinds);
 }
 
 function rerenderKeys(keybinds) {
@@ -446,13 +558,13 @@ function rerenderKeys(keybinds) {
   }
 }
 
-function rerenderAll() {
-  const keybinds = loadKeybinds();
+function rerenderAll(keybinds = getCachedKeybinds()) {
   rerenderTexts(keybinds);
   rerenderKeys(keybinds);
 }
 
 function openHelpPanel() {
+  if (!overlayEl || !panelEl) ensurePanel();
   if (!overlayEl || !panelEl) return;
   if (isOpen) return;
 
@@ -465,11 +577,11 @@ function openHelpPanel() {
   panelEl.setAttribute('aria-hidden', 'false');
 
   const focusables = getFocusableEls(panelEl);
-  const toFocus = (closeBtnEl && typeof closeBtnEl.focus === 'function')
-    ? closeBtnEl
-    : (focusables[0] || panelEl);
+  const toFocus =
+    (closeBtnEl && typeof closeBtnEl.focus === 'function')
+      ? closeBtnEl
+      : (focusables[0] || panelEl);
 
-  // garante que o foco entra no diálogo
   queueMicrotask(() => toFocus?.focus?.());
 }
 
@@ -483,7 +595,6 @@ function closeHelpPanel() {
   overlayEl.setAttribute('aria-hidden', 'true');
   panelEl.setAttribute('aria-hidden', 'true');
 
-  // restaura foco (RE-QUERY do botão atual)
   const currentHelpBtn = getHelpBtn();
   const canFocusLast = lastFocusEl && typeof lastFocusEl.focus === 'function' && document.contains(lastFocusEl);
   const toFocus = canFocusLast ? lastFocusEl : currentHelpBtn;
@@ -518,8 +629,10 @@ function onGlobalKeydown(e) {
   if (e.ctrlKey || e.altKey || e.metaKey) return;
   if (isInputActive()) return;
 
-  const helpCodes = getCodesForAction(HELP_ACTION, loadKeybinds());
+  const keybinds = getCachedKeybinds();
+  const helpCodes = getCodesForAction(HELP_ACTION, keybinds);
   const pressedCode = String(e.code || '');
+
   if (helpCodes.includes(pressedCode)) {
     e.preventDefault();
     toggleHelpPanel();
@@ -527,27 +640,38 @@ function onGlobalKeydown(e) {
 }
 
 function onControlsChanged(e) {
+  // invalida cache e reaproveita o payload (evita reload do storage)
+  cachedKeybinds = null;
   const next = sanitizeKeybinds(e?.detail?.keybinds);
-  rerenderTexts(next);
-  rerenderKeys(next);
+  cachedKeybinds = next;
+
+  updateHelpBtnTooltip(next);
+  if (mounted) {
+    rerenderTexts(next);
+    rerenderKeys(next);
+  }
 }
 
 function onLanguageChanged() {
-  // HUD pode ser recriado: rerenderAll já re-query o #helpBtn
-  rerenderAll();
+  const keybinds = getCachedKeybinds();
+  updateHelpBtnTooltip(keybinds);
+  if (mounted) rerenderTexts(keybinds);
 }
 
 function onHudReady() {
-  // HUD recriado: atualiza tooltip/aria do novo #helpBtn
-  rerenderAll();
+  const keybinds = getCachedKeybinds();
+  updateHelpBtnTooltip(keybinds);
+  if (mounted) rerenderTexts(keybinds);
 }
 
+function bindGlobalEvents() {
+  if (globalEventsBound) return;
+  globalEventsBound = true;
 
-function bindEvents() {
-  if (eventsBound) return;
-  eventsBound = true;
-
+  // precisa existir sempre (pra tecla funcionar antes de abrir o painel)
   document.addEventListener('keydown', onGlobalKeydown, true);
+
+  // leves: só invalida cache + atualiza tooltip; rerender só se painel existir
   document.addEventListener('controlsChanged', onControlsChanged);
   document.addEventListener('languageChanged', onLanguageChanged);
   document.addEventListener('hudReady', onHudReady);
@@ -557,8 +681,6 @@ export function initHelpPanel() {
   if (mounted) return;
 
   ensurePanel();
-  bindEvents();
-
   mounted = true;
 
   try {
@@ -572,7 +694,6 @@ export function initHelpPanel() {
   logger?.info?.('✅ HelpPanel initialized');
 }
 
-// Lazy event wiring (não cria DOM até o primeiro uso)
-bindEvents();
-// Sincroniza tooltip/aria do botão caso o HUD já exista
-queueMicrotask(() => rerenderAll());
+// Eventos globais (atalho sempre funciona) + tooltip inicial (sem criar DOM)
+bindGlobalEvents();
+queueMicrotask(() => updateHelpBtnTooltip(getCachedKeybinds()));
