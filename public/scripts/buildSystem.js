@@ -78,8 +78,8 @@ export const BuildSystem = {
     
     _gridDrawnThisFrame: false,
     
-    _helpStyleId: 'bld-help-style',
-    _helpPanelId: 'bld-help-panel',
+    _helpStyleId: 'bhp-help-style',
+    _helpPanelId: 'bhp-help-panel',
     _helpPanelEl: null,
 
     /**
@@ -117,7 +117,7 @@ export const BuildSystem = {
     _showBuildHelpPanel() {
       this._ensureBuildHelpUI();
       const label = this.selectedItem?.name ? this.selectedItem.name : '-';
-      const nameEl = this._helpPanelEl?.querySelector('#bld-item-name');
+      const nameEl = this._helpPanelEl?.querySelector('#bhp-item-name');
       if (nameEl) nameEl.textContent = label;
       this._helpPanelEl?.classList.add('open');
     },
@@ -581,8 +581,8 @@ export const BuildSystem = {
         this.removeDebugOverlay();
         this.debugElement = document.createElement('div');
         this.debugElement.id = 'buildSystem-debug';
-        this.debugElement.style.cssText = "position:fixed; top:10px; left:10px; background:rgba(0,0,0,0.8); color:lime; padding:10px; z-index:9999; font-family:monospace; pointer-events:none;";
-        this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg" style="color:yellow; margin-top:5px;"></div>`;
+        // Estilos via build.css (#buildSystem-debug)
+        this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg"></div>`;
         document.body.appendChild(this.debugElement);
     },
 
