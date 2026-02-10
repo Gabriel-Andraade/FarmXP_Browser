@@ -26,7 +26,7 @@ export const chestSystem = {
         this.injectStyles();
         this.loadChests();
         registerSystem('chest', this);
-        console.log('📦 Sistema de baús inicializado');
+        logger.info('📦 Sistema de baús inicializado');
         return this;
     },
     
@@ -732,7 +732,7 @@ export const chestSystem = {
                     }
                 }
 
-                console.log('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
+                logger.debug('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
             }
         } catch (e) {
             logger.error('❌ Erro ao carregar baús:', e);

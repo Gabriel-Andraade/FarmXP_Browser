@@ -1,3 +1,4 @@
+
 /**
  * @file validationTests.js - Validation Test Suite
  * @description Test suite to verify input validation is working correctly across all systems
@@ -5,11 +6,12 @@
  * WARNING: These tests mutate live game state. Always run in a controlled environment.
  */
 
+
 import { currencyManager } from './currencyManager.js';
 import { storageSystem } from './storageSystem.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { playerSystem } from './thePlayer/playerSystem.js';
-
+import { logger } from './logger.js';
 /**
  * Creates a snapshot of critical game state for restoration
  */
@@ -230,10 +232,10 @@ export function runValidationTests() {
     // Summary
     console.groupEnd();
     console.group('📊 TEST SUMMARY');
-    console.log(`Total Tests: ${results.passed + results.failed}`);
-    console.log(`Passed: ${results.passed}`);
-    console.log(`Failed: ${results.failed}`);
-    console.log(`Success Rate: ${((results.passed / (results.passed + results.failed)) * 100).toFixed(1)}%`);
+    logger.info(`Total Tests: ${results.passed + results.failed}`);
+    logger.info(`Passed: ${results.passed}`);
+    logger.info(`Failed: ${results.failed}`);
+    logger.info(`Success Rate: ${((results.passed / (results.passed + results.failed)) * 100).toFixed(1)}%`);
     console.groupEnd();
 
     return results;
@@ -242,5 +244,5 @@ export function runValidationTests() {
 // Auto-run tests if this script is loaded
 if (typeof window !== 'undefined') {
     window.runValidationTests = runValidationTests;
-    console.log('💡 Validation tests loaded. Run runValidationTests() in console to execute.');
+    logger.info('💡 Validation tests loaded. Run runValidationTests() in console to execute.');
 }

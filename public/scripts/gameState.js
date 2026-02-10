@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 /**
  * @file gameState.js - Centralized Game State Manager
  * @description Single source of truth for all game systems and state.
@@ -38,7 +39,7 @@ const gameState = {
 export function registerSystem(systemName, systemInstance) {
   gameState.systems[systemName] = systemInstance;
   if (getDebugFlag('debug')) {
-    console.log(`✅ Registered system: ${systemName}`);
+    logger.debug(`✅ Registered system: ${systemName}`);
   }
   // fix: Event-driven registration instead of polling (L40) - dispatch event for systems waiting on registration
   document.dispatchEvent(new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
@@ -238,7 +239,7 @@ export function installLegacyGlobals() {
     configurable: true,
   });
 
-  console.log('🔗 Legacy globals bridge installed');
+  logger.debug('🔗 Legacy globals bridge installed');
 }
 
 // Expose gameState for debugging in console (lazy - only when ?debug=1)
