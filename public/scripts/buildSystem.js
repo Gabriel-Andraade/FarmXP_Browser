@@ -78,8 +78,8 @@ export const BuildSystem = {
     
     _gridDrawnThisFrame: false,
     
-    _helpStyleId: 'bld-help-style',
-    _helpPanelId: 'bld-help-panel',
+    _helpStyleId: 'bhp-help-style',
+    _helpPanelId: 'bhp-help-panel',
     _helpPanelEl: null,
 
     /**
