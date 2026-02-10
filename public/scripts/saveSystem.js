@@ -444,7 +444,7 @@ class SaveSystem {
      * Reseta o tempo/clima para valores iniciais de um novo jogo
      */
     resetWeatherForNewGame() {
-        const weather = getSystem('weather') || window.WeatherSystem;
+        const weather = getSystem('weather');
         if (!weather) return;
 
         // Usar o método reset() do WeatherSystem se disponível
@@ -578,7 +578,7 @@ class SaveSystem {
      * Obtém dados de clima/tempo para salvar
      */
     _getWeatherData() {
-        const weather = getSystem('weather') || window.WeatherSystem;
+        const weather = getSystem('weather');
         if (!weather) return null;
 
         return {
@@ -723,7 +723,7 @@ class SaveSystem {
      * Aplica dados de clima/tempo
      */
     _applyWeatherData(data) {
-        const weather = getSystem('weather') || window.WeatherSystem;
+        const weather = getSystem('weather');
         if (!weather || !data) return;
 
         // Pausar o sistema enquanto aplica os dados

@@ -12,7 +12,7 @@ import { logger } from "./logger.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
-import { registerSystem, setObject, getObject, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
+import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebugFlag, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
@@ -317,10 +317,10 @@ function setupInteractionSystem() {
   document.addEventListener("keydown", (e) => {
     if (!interactionEnabled) return;
     if (sleepBlockedControls) return;
-    if (window.interactionsBlocked) return;
+    if (checkGameFlag('interactionsBlocked')) return;
 
     if (e.code === "KeyE") {
-      window.playerInteractionSystem?.tryInteract?.();
+      playerInteractionSystem?.tryInteract?.();
     }
   });
 
@@ -446,10 +446,11 @@ function setupSleepListeners() {
 
       canvas.style.cursor = "default";
 
-      window.theWorld?.markWorldChanged?.();
+      getObject('world')?.markWorldChanged?.();
 
-      if (window.playerHUD) {
-        window.playerHUD.showNotification("Bom dia! Energias renovadas.", "success", 4000);
+      const hud = getSystem('hud');
+      if (hud) {
+        hud.showNotification("Bom dia! Energias renovadas.", "success", 4000);
       }
 
       preSleepInteractionState = null;
@@ -513,23 +514,10 @@ async function exposeGlobals() {
         setObject('currentPlayer', currentPlayer);
         setObject('keys', keys);
 
-        // Registrar sistemas principais
-        if (currencyManager) registerSystem('currency', currencyManager);
-        if (merchantSystem) registerSystem('merchant', merchantSystem);
-        if (inventorySystem) registerSystem('inventory', inventorySystem);
+        // Registrar sistemas que não se auto-registram
         if (playerSystem) registerSystem('player', playerSystem);
-
-        // Registrar sistemas de interação
-        if (itemSystem) registerSystem('item', itemSystem);
         if (worldUI) registerSystem('worldUI', worldUI);
         if (BuildSystem) registerSystem('build', BuildSystem);
-
-        // Registrar sistema de clima
-        if (WeatherSystem) registerSystem('weather', WeatherSystem);
-
-        // Funções de clima ainda precisam ser expostas globalmente para compatibilidade
-        window.drawWeatherEffects = drawWeatherEffects;
-        window.drawWeatherUI = drawWeatherUI;
 
         // Instalar bridge de compatibilidade para window.* acessos legados
         installLegacyGlobals();
@@ -605,8 +593,6 @@ async function startFullGameLoad() {
       // (exposeGlobals() foi chamado antes, quando WeatherSystem ainda era undefined)
       if (WeatherSystem) {
         registerSystem('weather', WeatherSystem);
-        window.drawWeatherEffects = drawWeatherEffects;
-        window.drawWeatherUI = drawWeatherUI;
       }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
@@ -801,9 +787,9 @@ document.addEventListener("playerReady", async (e) => {
 
   logger.debug("Jogador spawnado e pronto!");
 
-  if (itemSystem && window.theWorld) {
+  if (itemSystem && getObject('world')) {
     setTimeout(() => {
-      const worldObjects = window.theWorld.getSortedWorldObjects?.(currentPlayer) || [];
+      const worldObjects = getObject('world')?.getSortedWorldObjects?.(currentPlayer) || [];
       itemSystem.registerInteractiveObjects?.(worldObjects);
     }, 100);
   }
@@ -984,7 +970,7 @@ function gameLoop(timestamp) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);
   }
 
-  if (window.DEBUG_HITBOXES && camera && allAssetsLoaded) {
+  if (getDebugFlag('hitboxes') && camera && allAssetsLoaded) {
     try {
       collisionSystem.drawHitboxes(ctx, camera);
       playerInteractionSystem?.drawInteractionRange?.(ctx, camera);
@@ -1015,8 +1001,9 @@ function gameLoop(timestamp) {
   }
 
   try {
-    if (window.playerHUD && currentPlayer) {
-      window.playerHUD.render();
+    const playerHUD = getSystem('hud');
+    if (playerHUD && currentPlayer) {
+      playerHUD.render();
     }
   } catch (e) {
     handleWarn("falha ao renderizar player hud", "main:gameLoop:playerHUD", e);

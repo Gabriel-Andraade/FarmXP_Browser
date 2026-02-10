@@ -5,6 +5,7 @@
 
 
 import { t } from '../i18n/i18n.js';
+import { getObject, registerSystem } from '../gameState.js';
 
 /**
  * limita um numero dentro de um intervalo
@@ -339,7 +340,7 @@ class UiPanel {
 
   updatePositions(force = false) {
     if (!this.visible || !this.target) return;
-    const cam = this.camera || window.camera;
+    const cam = this.camera || getObject('camera');
     if (!cam || typeof cam.worldToScreen !== "function") return;
     const tr = this._getCanvasTransform();
     if (!tr) return;
@@ -430,7 +431,4 @@ class UiPanel {
 
 export default UiPanel;
 export const animalUiPanel = new UiPanel();
-if (typeof window !== "undefined") {
-  window.UiPanel = UiPanel;
-  window.animalUiPanel = animalUiPanel;
-}
+registerSystem('animalUI', animalUiPanel);

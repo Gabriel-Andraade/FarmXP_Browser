@@ -6,6 +6,7 @@ import { collisionSystem } from './collisionSystem.js';
 import { camera } from './thePlayer/cameraSystem.js';
 import { getItem } from './itemUtils.js';
 import { GAME_BALANCE } from './constants.js';
+import { registerSystem, getSystem, getObject } from './gameState.js';
 
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
@@ -58,12 +59,14 @@ export class ItemSystem {
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 if (signal.aborted) return;
-                if (window.theWorld) {
+                const world = getObject('world');
+                if (world) {
                     const registerWorldObjects = () => {
                         try {
                             if (signal.aborted) return;
-                            if (window.currentPlayer) {
-                                const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                            const player = getObject('currentPlayer');
+                            if (player) {
+                                const objects = world.getSortedWorldObjects?.(player) || [];
                                 this.registerInteractiveObjects(objects);
 
                                 if (this.interactiveObjects.size === 0) {
@@ -83,8 +86,10 @@ export class ItemSystem {
             setTimeout(() => {
                 if (signal.aborted) return;
                 try {
-                    if (window.theWorld && window.currentPlayer) {
-                        const objects = window.theWorld.getSortedWorldObjects?.(window.currentPlayer) || [];
+                    const currentPlayer = getObject('currentPlayer');
+                    const world = getObject('world');
+                    if (world && currentPlayer) {
+                        const objects = world.getSortedWorldObjects?.(currentPlayer) || [];
                         this.registerInteractiveObjects(objects);
                     }
                 } catch (err) {
@@ -414,10 +419,9 @@ export class ItemSystem {
      * @returns {void}
      */
     showActionMessage(text) {
-        if (window.playerHUD?.showMessage) {
-            window.playerHUD.showMessage(text);
-        } else if (window.showMessage) {
-            window.showMessage(text);
+        const hud = getSystem('hud');
+        if (hud?.showMessage) {
+            hud.showMessage(text);
         }
     }
 
@@ -468,4 +472,4 @@ export class ItemSystem {
 
 // Instancia e exporta o sistema de itens
 export const itemSystem = new ItemSystem();
-window.itemSystem = itemSystem;
+registerSystem('item', itemSystem);

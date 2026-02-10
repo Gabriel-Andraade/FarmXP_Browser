@@ -1,4 +1,5 @@
 import { HITBOX_CONFIGS, MOVEMENT, DEFAULTS } from './constants.js';
+import { registerSystem, getDebugFlag, getObject } from './gameState.js';
 
 /**
  * Verifica colisão entre duas caixas delimitadoras usando o algoritmo AABB (Axis-Aligned Bounding Box)
@@ -553,7 +554,7 @@ export class CollisionSystem {
     }
 
     drawHitboxes(ctx, camera) {
-        if (!window.DEBUG_HITBOXES) return;
+        if (!getDebugFlag('hitboxes')) return;
 
         ctx.lineWidth = 2;
         const zoom = (camera && camera.zoom) ? camera.zoom : 1;
@@ -583,8 +584,8 @@ export class CollisionSystem {
         }
 
         ctx.strokeStyle = "blue";
-        if (window.currentPlayer) {
-            const player = window.currentPlayer;
+        const player = getObject('currentPlayer');
+        if (player) {
             const playerHitbox = this.createPlayerHitbox(player.x, player.y, player.width, player.height);
             const screenPos = camera.worldToScreen(playerHitbox.x, playerHitbox.y);
             ctx.strokeRect(screenPos.x, screenPos.y, playerHitbox.width * zoom, playerHitbox.height * zoom);
@@ -599,5 +600,4 @@ export class CollisionSystem {
 }
 
 export const collisionSystem = new CollisionSystem();
-window.collisionSystem = collisionSystem;
-const DEBUG_HITBOXES = false;
+registerSystem('collision', collisionSystem);

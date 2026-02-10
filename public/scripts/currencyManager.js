@@ -1,5 +1,6 @@
 import { GAME_BALANCE } from './constants.js';
 import { isValidPositiveNumber, MAX_CURRENCY } from './validation.js';
+import { registerSystem } from './gameState.js';
 
 /**
  * Sistema de gerenciamento de moeda do jogo
@@ -209,4 +210,4 @@ export class CurrencyManager {
 
 // Instancia e exporta o gerenciador de moeda
 export const currencyManager = new CurrencyManager();
-window.currencyManager = currencyManager;
+registerSystem('currency', currencyManager);
