@@ -1,4 +1,4 @@
-import { HITBOX_CONFIGS, MOVEMENT } from './constants.js';
+import { HITBOX_CONFIGS, MOVEMENT, DEFAULTS } from './constants.js';
 
 /**
  * Verifica colisão entre duas caixas delimitadoras usando o algoritmo AABB (Axis-Aligned Bounding Box)
@@ -206,13 +206,19 @@ export class CollisionSystem {
 
     registerPhysicalHitbox(object) {
         if (object.type === "HOUSE_ROOF") {
-            const hitbox = {
-                id: object.id, type: object.type,
-                x: object.x + object.width - 265, y: object.y + object.height - 200,
-                width: 200, height: 190
-            };
-            this.hitboxes.set(object.id, hitbox);
-            return;
+            const config = CollisionSystem.CONFIG_SIZES.HOUSE_ROOF;
+            if (config) {
+                const hitbox = {
+                    id: object.id,
+                    type: object.type,
+                    x: object.x + object.width - config.offsetFromRight,
+                    y: object.y + object.height - config.offsetFromBottom,
+                    width: config.width,
+                    height: config.height
+                };
+                this.hitboxes.set(object.id, hitbox);
+                return;
+            }
         }
 
         const cfg = this.getConfigForObject(object);
@@ -239,8 +245,8 @@ export class CollisionSystem {
             hitboxX = object.x + (cfg.offsetX || 0);
             hitboxY = object.y + (cfg.offsetY || 0);
         } else {
-            const baseW = object.width || (object.original && object.original.width) || 32;
-            const baseH = object.height || (object.original && object.original.height) || 32;
+            const baseW = object.width || (object.original && object.original.width) || DEFAULTS.SPRITE_SIZE_PX;
+            const baseH = object.height || (object.original && object.original.height) || DEFAULTS.SPRITE_SIZE_PX;
 
             const wRatio = (typeof cfg.widthRatio === "number") ? cfg.widthRatio : 1.0;
             const hRatio = (typeof cfg.heightRatio === "number") ? cfg.heightRatio : 1.0;
@@ -473,8 +479,7 @@ export class CollisionSystem {
     /**
      * resolve sobreposicao empurrando 'rect' para fora das hitboxes fisicas
      */
-    // fix: Default parameter uses literal (L476) instead of import-dependent value
-    resolveOverlap(rect, ignoreId = null, { maxIters = 6 } = {}) {  // 6 = MOVEMENT.MAX_COLLISION_ITERATIONS
+    resolveOverlap(rect, ignoreId = null, { maxIters = MOVEMENT.MAX_COLLISION_ITERATIONS } = {}) {
         let r = _rect(rect.x, rect.y, rect.width, rect.height);
 
         for (let i = 0; i < maxIters; i++) {
