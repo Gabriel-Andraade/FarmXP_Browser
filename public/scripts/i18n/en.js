@@ -330,6 +330,15 @@ export default {
     cvTritanopia: 'Tritanopia (blue-yellow)',
     cvAchromatopsia: 'Achromatopsia (no colors)',
 
+    audio: {
+      title: 'Sound',
+      musicVolume: 'Music Volume',
+      musicVolumeHint: 'Adjust the background music volume.',
+      ambientVolume: 'Ambient Volume',
+      ambientVolumeHint: 'Environment sounds: stone, wood, construction, weather.',
+      animalVolume: 'Animal Volume',
+      animalVolumeHint: 'Animal sounds: mooing, clucking, etc.',
+    },
     controls: {
       title: 'Controls',
       remap: 'Remap keys',

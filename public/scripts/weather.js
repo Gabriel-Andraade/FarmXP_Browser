@@ -369,6 +369,10 @@ export const WeatherSystem = {
     if (this.weatherType === "blizzard") this.generateSnowParticles();
 
     updateWeatherUIPanelContent();
+
+    document.dispatchEvent(new CustomEvent('weatherChanged', {
+      detail: { type: this.weatherType }
+    }));
   },
 
   generateRainParticles() {
@@ -424,6 +428,8 @@ export const WeatherSystem = {
       phase: "in",
       timer: 0
     });
+
+    document.dispatchEvent(new CustomEvent('lightningFlash'));
   },
 
   updateRainParticles() {

@@ -599,6 +599,13 @@ async function startFullGameLoad() {
     }
 
     try {
+      const audioModule = await import('./audioManager.js');
+      audioModule.audioManager.init();
+    } catch (e) {
+      handleWarn("falha ao carregar audioManager", "main:startFullGameLoad:audio", e);
+    }
+
+    try {
       const saveModule = await import('./saveSystem.js');
       saveRef = saveModule.saveSystem;
       await import('./saveSlotsUI.js');
@@ -937,6 +944,16 @@ function gameLoop(timestamp) {
       if (currentPlayer && updatePlayer && !sleepBlockedControls) {
         updatePlayer(deltaTime * 1000, keys);
         updatePlayerInteraction(currentPlayer.x, currentPlayer.y, currentPlayer.width, currentPlayer.height);
+
+        const audioSys = getSystem('audio');
+        if (audioSys && audioSys.setListenerPosition) {
+          const dir = currentPlayer.direction || 'right';
+          const rad = dir === 'right' ? 0
+            : dir === 'down' ? Math.PI * 0.5
+            : dir === 'left' ? Math.PI
+            : -Math.PI * 0.5; // up
+          audioSys.setListenerPosition(currentPlayer.x, currentPlayer.y, rad);
+        }
       }
     } catch (e) {
       handleError(e, "main:gameLoop:logicUpdate", "erro no loop de update");

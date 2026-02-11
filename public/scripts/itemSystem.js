@@ -277,7 +277,7 @@ export class ItemSystem {
         obj.health -= dmg;
 
         document.dispatchEvent(new CustomEvent('objectDamaged', {
-            detail: { id, x: obj.x, y: obj.y, dmg }
+            detail: { id, type: obj.type, x: obj.x, y: obj.y, dmg }
         }));
 
         if (obj.health <= 0) {
