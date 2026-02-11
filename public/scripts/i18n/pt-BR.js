@@ -329,6 +329,15 @@ export default {
     cvDeuteranopia: 'Deuteranopia (verde-vermelho)',
     cvTritanopia: 'Tritanopia (azul-amarelo)',
     cvAchromatopsia: 'Acromatopsia (sem cores)',
+    audio: {
+      title: 'Som',
+      musicVolume: 'Volume da Música',
+      musicVolumeHint: 'Ajuste o volume da música de fundo.',
+      ambientVolume: 'Volume Ambiente',
+      ambientVolumeHint: 'Sons do ambiente: pedra, madeira, construção, clima.',
+      animalVolume: 'Volume dos Animais',
+      animalVolumeHint: 'Sons dos animais: mugido, cacarejo, etc.',
+    },
     controls: {
       title: 'Controles',
       remap: 'Remapear teclas',

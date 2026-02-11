@@ -6,6 +6,7 @@
 
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
+import { getSystem } from '../gameState.js';
 // fix: Direct constant imports instead of ANIMAL_CONFIG wrapper (L9)
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 
@@ -85,6 +86,11 @@ export class AnimalEntity {
         // Animação
         this.frameIndex = 0;
         this.lastFrameTime = 0;
+
+        // SFX: cooldown individual para sons de animal
+        this._lastSfxTime = 0;
+        // Cada animal ganha um cooldown próprio entre 20-40s (evita sincronia)
+        this._sfxCooldownMs = 20000 + Math.random() * 20000;
     }
 
     /**
@@ -183,7 +189,7 @@ export class AnimalEntity {
         if (Math.random() > 0.6) {
             this.state = AnimalState.MOVE;
             this.stateDuration = Math.random() * (MOVE_STATE_MAX_MS - MOVE_STATE_MIN_MS) + MOVE_STATE_MIN_MS;
-            
+
             const angle = Math.random() * Math.PI * 2;
             const dist = Math.random() * RANGES.ANIMAL_SIGHT_RADIUS;
             this.targetX = this.x + Math.cos(angle) * dist;
@@ -193,6 +199,20 @@ export class AnimalEntity {
         } else {
             this.state = AnimalState.IDLE;
             this.stateDuration = Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS) + IDLE_STATE_MIN_MS;
+        }
+
+        // SFX: chance de mugir se cooldown individual já passou
+        if (this.assetName === 'Bull') {
+            const now = performance.now();
+            if (now - this._lastSfxTime >= this._sfxCooldownMs && Math.random() < 0.25) {
+                const audio = getSystem('audio');
+                if (audio && audio.playSfx3D) {
+                    audio.playSfx3D('bull_bellow', this.x, this.y, { category: 'animal' });
+                    this._lastSfxTime = now;
+                    // Sorteia novo cooldown para a próxima vez (20-40s)
+                    this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                }
+            }
         }
     }
 

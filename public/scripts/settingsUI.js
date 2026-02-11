@@ -151,6 +151,155 @@ function isProbablyVisible(el) {
 }
 
 /* ─────────────────────────────────────────────
+ * Audio section in config
+ * ───────────────────────────────────────────── */
+
+const VOLUME_KEYS = {
+  music:   'farmxp_musicVolume',
+  ambient: 'farmxp_ambientVolume',
+  animal:  'farmxp_animalVolume',
+};
+const DEFAULT_VOLUME = 0.5;
+
+function loadVolume(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw !== null) {
+      const val = parseFloat(raw);
+      if (!isNaN(val) && val >= 0 && val <= 1) return val;
+    }
+  } catch {}
+  return DEFAULT_VOLUME;
+}
+
+/**
+ * Cria uma linha de slider de volume reutilizável
+ * @param {Object} opts
+ * @param {string} opts.id - ID base do slider
+ * @param {string} opts.i18nLabel - Chave i18n do label
+ * @param {string} opts.i18nHint - Chave i18n do hint
+ * @param {string} opts.fallbackLabel - Label fallback
+ * @param {string} opts.fallbackHint - Hint fallback
+ * @param {number} opts.currentValue - Volume atual (0-1)
+ * @param {string} opts.eventName - Nome do CustomEvent disparado
+ * @returns {HTMLDivElement}
+ */
+function createVolumeRow({ id, i18nLabel, i18nHint, fallbackLabel, fallbackHint, currentValue, eventName }) {
+  const option = document.createElement('div');
+  option.className = 'config-option config-option--audio';
+  option.style.cssText = 'display: flex; align-items: center; gap: 12px; flex-wrap: wrap;';
+
+  const left = document.createElement('div');
+
+  const label = document.createElement('div');
+  label.className = 'config-label';
+  label.setAttribute('data-i18n', i18nLabel);
+  label.textContent = safeT(i18nLabel, fallbackLabel);
+
+  const hint = document.createElement('div');
+  hint.className = 'config-hint';
+  hint.setAttribute('data-i18n', i18nHint);
+  hint.textContent = safeT(i18nHint, fallbackHint);
+
+  left.appendChild(label);
+  left.appendChild(hint);
+
+  const right = document.createElement('div');
+  right.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+
+  const range = document.createElement('input');
+  range.type = 'range';
+  range.id = `${id}Range`;
+  range.min = '0';
+  range.max = '100';
+  range.value = String(Math.round(currentValue * 100));
+  range.style.cssText = 'width: 120px; cursor: pointer; accent-color: #4caf50;';
+
+  const valueLabel = document.createElement('span');
+  valueLabel.id = `${id}Value`;
+  valueLabel.style.cssText = 'min-width: 36px; text-align: center; color: #fff; font-size: 14px;';
+  valueLabel.textContent = `${Math.round(currentValue * 100)}%`;
+
+  range.addEventListener('input', () => {
+    const pct = parseInt(range.value, 10);
+    const vol = pct / 100;
+    valueLabel.textContent = `${pct}%`;
+
+    try {
+      document.dispatchEvent(new CustomEvent(eventName, { detail: { volume: vol } }));
+    } catch {}
+  });
+
+  right.appendChild(range);
+  right.appendChild(valueLabel);
+
+  option.appendChild(left);
+  option.appendChild(right);
+  return option;
+}
+
+function ensureAudioSection() {
+  const configModal = document.getElementById('configModal');
+  if (!configModal) return;
+
+  const configContent =
+    document.getElementById('config-content') ||
+    configModal.querySelector('#config-content') ||
+    configModal;
+
+  if (document.getElementById('audio-section')) return;
+
+  const section = document.createElement('div');
+  section.className = 'config-section';
+  section.id = 'audio-section';
+
+  const h3 = document.createElement('h3');
+  h3.setAttribute('data-i18n', 'settings.audio.title');
+  h3.textContent = safeT('settings.audio.title', 'Som');
+  section.appendChild(h3);
+
+  section.appendChild(createVolumeRow({
+    id: 'musicVolume',
+    i18nLabel: 'settings.audio.musicVolume',
+    i18nHint: 'settings.audio.musicVolumeHint',
+    fallbackLabel: 'Volume da Música',
+    fallbackHint: 'Ajuste o volume da música de fundo.',
+    currentValue: loadVolume(VOLUME_KEYS.music),
+    eventName: 'musicVolumeChanged',
+  }));
+
+  section.appendChild(createVolumeRow({
+    id: 'ambientVolume',
+    i18nLabel: 'settings.audio.ambientVolume',
+    i18nHint: 'settings.audio.ambientVolumeHint',
+    fallbackLabel: 'Volume Ambiente',
+    fallbackHint: 'Sons do ambiente: pedra, madeira, construção, clima.',
+    currentValue: loadVolume(VOLUME_KEYS.ambient),
+    eventName: 'ambientVolumeChanged',
+  }));
+
+  section.appendChild(createVolumeRow({
+    id: 'animalVolume',
+    i18nLabel: 'settings.audio.animalVolume',
+    i18nHint: 'settings.audio.animalVolumeHint',
+    fallbackLabel: 'Volume dos Animais',
+    fallbackHint: 'Sons dos animais: mugido, cacarejo, etc.',
+    currentValue: loadVolume(VOLUME_KEYS.animal),
+    eventName: 'animalVolumeChanged',
+  }));
+
+  // Insere antes da seção de acessibilidade (primeiro config-section)
+  const firstSection = configContent.querySelector('.config-section');
+  if (firstSection) {
+    configContent.insertBefore(section, firstSection);
+  } else {
+    configContent.appendChild(section);
+  }
+
+  try { translateDOM(); } catch {}
+}
+
+/* ─────────────────────────────────────────────
  * UI mounting
  * ───────────────────────────────────────────── */
 function ensureKeybindsMenuOption() {
@@ -625,6 +774,9 @@ export function initSettingsUI() {
   initAccessibilityUI();
   initConfigModalFocusTrap();
 
+  // monta seção de áudio
+  ensureAudioSection();
+
   // monta a opção + modal de remap
   ensureKeybindsMenuOption();
   ensureKeybindsModal();
@@ -691,7 +843,8 @@ function initConfigModalFocusTrap() {
       if (mutation.attributeName === 'class') {
         if (configModal.classList.contains('active')) {
           a11y.trapFocus(configModal);
-          // quando abrir o config, garante que a opção existe
+          // quando abrir o config, garante que as seções existem
+          ensureAudioSection();
           ensureKeybindsMenuOption();
         } else {
           a11y.releaseFocus(configModal);
