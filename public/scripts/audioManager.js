@@ -295,6 +295,7 @@ const audioManager = {
 
   _setupUserInteraction() {
     const unlock = () => {
+      if (this._userInteracted) return;
       this._userInteracted = true;
 
       this._ensureSfx();
@@ -632,22 +633,23 @@ const audioManager = {
     if (!this._sfxCtx) return;
 
     const L = this._sfxCtx.listener;
-
-    // 2D -> 3D: game X = audio X, game Y = audio Z
-    L.positionX.value = this._listenerX;
-    L.positionY.value = 0;
-    L.positionZ.value = this._listenerY;
-
     const fx = Math.cos(this._listenerFacingRad);
     const fz = Math.sin(this._listenerFacingRad);
 
-    L.forwardX.value = fx;
-    L.forwardY.value = 0;
-    L.forwardZ.value = fz;
-
-    L.upX.value = 0;
-    L.upY.value = 1;
-    L.upZ.value = 0;
+    if (L.positionX && 'value' in L.positionX) {
+      L.positionX.value = this._listenerX;
+      L.positionY.value = 0;
+      L.positionZ.value = this._listenerY;
+      L.forwardX.value = fx;
+      L.forwardY.value = 0;
+      L.forwardZ.value = fz;
+      L.upX.value = 0;
+      L.upY.value = 1;
+      L.upZ.value = 0;
+    } else if (L.setPosition) {
+      L.setPosition(this._listenerX, 0, this._listenerY);
+      L.setOrientation(fx, 0, fz, 0, 1, 0);
+    }
   },
 
   /**
@@ -665,7 +667,9 @@ const audioManager = {
 
   /** Pré-carrega todos os SFX definidos em SFX_FILES */
   preloadSfx() {
-    Object.keys(SFX_FILES).forEach((name) => this._getSfxBuffer(name));
+    for (const name of Object.keys(SFX_FILES)) {
+      this._getSfxBuffer(name);
+    }
   },
 
   _getSfxBuffer(name) {
@@ -686,6 +690,10 @@ const audioManager = {
       .then((buffer) => {
         this._sfxBuffers.set(name, buffer);
         return buffer;
+      })
+      .catch((err) => {
+        this._sfxBufferPromises.delete(name);
+        throw err;
       });
 
     this._sfxBufferPromises.set(name, p);
@@ -738,7 +746,7 @@ const audioManager = {
     playbackRate = 1.0,
     refDistance = 90,
     maxDistance = 700,
-    rolloffFactor = 1.2,
+    rolloffFactor = 1.0,
     category = 'ambient',
   } = {}) {
     if (!this._userInteracted) return;

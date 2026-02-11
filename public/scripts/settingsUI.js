@@ -213,6 +213,7 @@ function createVolumeRow({ id, i18nLabel, i18nHint, fallbackLabel, fallbackHint,
   range.min = '0';
   range.max = '100';
   range.value = String(Math.round(currentValue * 100));
+  range.setAttribute('aria-label', safeT(i18nLabel, fallbackLabel));
   range.style.cssText = 'width: 120px; cursor: pointer; accent-color: #4caf50;';
 
   const valueLabel = document.createElement('span');
