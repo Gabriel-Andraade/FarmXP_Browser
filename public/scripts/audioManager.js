@@ -456,6 +456,7 @@ const audioManager = {
     const playPromise = audio.play();
     if (playPromise && playPromise.catch) {
       playPromise.catch((err) => {
+        if (this._currentAudio !== audio) return; // new track
         logger.warn('AudioManager: autoplay bloqueado', err.message);
         this._currentAudio = null;
         this._currentTrack = null;
@@ -907,6 +908,7 @@ const audioManager = {
     const layerCount = 1 + Math.floor(Math.random() * 3); // 1, 2 ou 3
     const fadeInSec = 2.0;
     const now = this._sfxCtx.currentTime;
+    const perLayerVolume = this._ambientVolume / layerCount;
 
     for (let i = 0; i < layerCount; i++) {
       const src = this._sfxCtx.createBufferSource();
@@ -925,8 +927,7 @@ const audioManager = {
       const startTime = now + delay;
 
       gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(this._ambientVolume, startTime + fadeInSec);
-
+      gain.gain.linearRampToValueAtTime(perLayerVolume, startTime + fadeInSec);
       src.start(startTime, 0);
 
       this._fogLayers.push({ src, gain });
