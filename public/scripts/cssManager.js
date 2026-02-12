@@ -52,7 +52,7 @@ export const cssManager = {
         link.href = hrefWithVersion.toString();
 
         link.onload = () => resolve(file);
-        link.onerror = () => reject(new Error(`Falha ao carregar: ${file}`));
+        link.onerror = () => { link.remove(); reject(new Error(`Failed to load: ${file}`)); };
 
         document.head.appendChild(link);
       } catch (e) {
