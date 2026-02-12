@@ -15,7 +15,7 @@
   /* defaults seguros */
   --fx-bg: #0b0e14;
   --fx-fg: #e6e6e6;
-  --fx-focus: currentColor;
+  --fx-focus: currentcolor;
 }
 
 *,

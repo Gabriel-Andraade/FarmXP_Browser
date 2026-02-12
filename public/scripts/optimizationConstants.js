@@ -255,14 +255,12 @@ function clearCalculationCache() {
 }
 
 /**
- * Compacta arrays globais grandes filtrando itens inválidos
- * Remove objetos destruídos, sem saúde ou null
+ * No-op — anteriormente tentava compactar arrays via window[arrayName],
+ * mas os arrays relevantes são module-scoped em theWorld.js (#65).
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
-// compactLargeArrays removida — acessava window[arrayName] mas arrays são
-// module-scoped em theWorld.js, tornando a função um no-op (#65)
 function compactLargeArrays() {
     return Promise.resolve({ itemsCompacted: 0 });
 }
@@ -274,8 +272,6 @@ function compactLargeArrays() {
  * @returns {Promise<Object>} Resultado da tentativa
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
-// forceGarbageCollection simplificada — o workaround antigo criava lixo
-// (1000 arrays de 1000 itens) ao invés de limpar. Agora só chama gc() se disponível.
 function forceGarbageCollection() {
     return new Promise((resolve) => {
         try {
@@ -319,21 +315,18 @@ function resetCanvasContext() {
 }
 
 /**
- * Otimiza uso de memória limpando timeouts, eventos e assets
- * Limpa timers pendentes e dispara cleanup de objetos destruídos
+ * Dispara um cleanup event-driven de objetos destruídos.
+ * (O comportamento antigo de limpar timers/intervals indiscriminadamente foi removido.)
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
  * @returns {Array<string>} returns.optimizations - Lista de otimizações aplicadas
  */
-// optimizeMemoryUsage corrigida — a versão antiga limpava TODOS os timers
-// indiscriminadamente (clearTimeout/clearInterval de 1 até 1000), destruindo
-// autosave, weather, needs update, etc. (#59)
-// Referência a window.assets.cleanupUnused removida — função não existe (#86/12)
 function optimizeMemoryUsage() {
     return new Promise((resolve) => {
         try {
-            if (window.theWorld && window.theWorld.objectDestroyed) {
+            // theWorld é suficiente para indicar que o mundo está disponível; objectDestroyed é sempre uma função truthy.
+            if (window.theWorld) {
                 document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
             }
 
