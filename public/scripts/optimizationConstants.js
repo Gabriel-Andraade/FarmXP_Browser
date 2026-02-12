@@ -1,5 +1,6 @@
 import { TILE_SIZE } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
+import { logger } from "./logger.js";
 
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
@@ -46,7 +47,7 @@ export const OPTIMIZATION_CONFIG = {
  */
 export function perfLog(...args) {
     if (OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-        // no-op when logging disabled
+        logger.debug("[Perf]", ...args);
     }
 }
 
