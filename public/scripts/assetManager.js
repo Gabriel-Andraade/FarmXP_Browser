@@ -179,14 +179,15 @@ function createPlaceholderImage() {
 
     const img = new Image();
     img.src = canvas.toDataURL();
+    img._isPlaceholder = true;
     return img;
 }
 
 /* aplica dimensões usando metadata real da imagem,
    com fallback para dimensões predefinidas do config */
 function setAssetDimensions(asset, category) {
-    // Fonte primária: metadata real da imagem carregada
-    if (asset.img && asset.img.naturalWidth > 0) {
+    // Fonte primária: metadata real da imagem carregada (não placeholders)
+    if (asset.img && asset.img.naturalWidth > 0 && !asset.img._isPlaceholder) {
         asset.width = asset.img.naturalWidth;
         asset.height = asset.img.naturalHeight;
         return;

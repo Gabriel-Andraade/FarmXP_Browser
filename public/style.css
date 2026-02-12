@@ -34,10 +34,10 @@ body {
   overflow: hidden; /* jogo/canvas não deve scrollar */
   background: var(--fx-bg);
   color: var(--fx-fg);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
-/* Container principal do jogo*/
+/* Container principal do jogo */
 .theGame {
   position: relative;
   width: 100%;

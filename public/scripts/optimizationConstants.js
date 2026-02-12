@@ -1,4 +1,4 @@
-import { TILE_SIZE } from "./worldConstants.js";
+import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 
 /**
