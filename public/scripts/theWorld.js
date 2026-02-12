@@ -79,6 +79,37 @@ const CULLING_BUFFER = CAMERA.CULLING_BUFFER;
 export function markWorldChanged() {
   cacheValid = false;
 }
+/**
+ * Compacts module-scoped world arrays by removing invalid/destroyed entries.
+ * Replaces the old window[arrayName] approach and works without legacy globals.
+ * @returns {{ itemsCompacted: number }} Number of removed items
+ */
+export function compactLargeArrays() {
+  const arrays = [trees, rocks, thickets, houses, animals, placedBuildings, placedWells];
+
+  let removed = 0;
+  for (const arr of arrays) {
+    if (!Array.isArray(arr) || arr.length <= 50) continue;
+
+    const before = arr.length;
+    const filtered = arr.filter((item) => {
+      if (!item) return false;
+      if (item.destroyed) return false;
+      if (item.health !== undefined && item.health <= 0) return false;
+      if (item.hp !== undefined && item.hp <= 0) return false;
+      return true;
+    });
+
+    if (filtered.length < before) {
+      arr.length = 0;
+      arr.push(...filtered);
+      removed += (before - filtered.length);
+    }
+  }
+
+  if (removed > 0) markWorldChanged();
+  return { itemsCompacted: removed };
+}
 
 /**
  * Places a well object in the world
@@ -1333,6 +1364,7 @@ const theWorld = {
   initializeWorld,
   getInitialPlayerPosition,
   markWorldChanged,
+  compactLargeArrays,
   placeWell,
   addAnimal,
   updateAnimals,
