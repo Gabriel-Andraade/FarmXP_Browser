@@ -101,6 +101,13 @@ export function compactLargeArrays() {
     });
 
     if (filtered.length < before) {
+      // Remove hitboxes for items that will be compacted out
+      const filteredSet = new Set(filtered);
+      for (const item of arr) {
+       if (item && !filteredSet.has(item) && item.id) {
+         try { collisionSystem.removeHitbox(item.id); } catch (_) { /* already gone */ }
+       }
+      }
       arr.length = 0;
       arr.push(...filtered);
       removed += (before - filtered.length);
