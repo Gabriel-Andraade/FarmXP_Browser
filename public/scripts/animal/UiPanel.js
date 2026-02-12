@@ -241,6 +241,7 @@ class UiPanel {
     this.updateContent();
     this.updatePositions(true);
     this.target.__uiPaused = true;
+    this._startLoop();
   }
 
   closeAll() { this.close(); }
@@ -418,11 +419,15 @@ class UiPanel {
   }
 
   _startLoop() {
+    if (this._loopRunning) return;
+    this._loopRunning = true;
     const tick = () => {
-      if (this.visible && this.target) {
-        this.updateContent();
-        this.updatePositions();
+      if (!this.visible || !this.target) {
+        this._loopRunning = false;
+        return;
       }
+      this.updateContent();
+      this.updatePositions();
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

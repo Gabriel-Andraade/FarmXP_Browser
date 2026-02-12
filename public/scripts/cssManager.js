@@ -43,17 +43,10 @@ export const cssManager = {
    * Files are loaded sequentially to ensure proper cascade
    * @type {string[]}
    */
-  files: [
-    "base.css",           // Base styles and resets
-    "modals.css",         // Modal/dialog styles
-    //"hud.css",          // HUD styles (disabled)
-    "player-panel.css",   // Player panel UI
-    "game.css",           // Main game styles
-    "character-select.css", // Character selection screen
-    "house.css",          // House/building interior styles
-    "commerce.css",       // Trading/merchant UI styles
-    "config.css",         // Configuration modal styles
-  ],
+  // NOTA: index.html já carrega todos os CSS via <link> tags.
+  // Lista esvaziada para evitar carregamento duplicado.
+  // Se novos CSS forem adicionados dinamicamente, colocar aqui.
+  files: [],
 
   /**
    * Loads a single CSS file dynamically by creating a link element
@@ -101,8 +94,8 @@ export const cssManager = {
    * }
    */
   async loadAll() {
-    for (const file of this.files) {
-      await this.loadOne(file);
-    }
+    // Carrega todos em paralelo — a ordem no DOM é mantida pelo appendChild
+    // sequencial dentro de loadOne(), garantindo o cascade correto
+    await Promise.all(this.files.map(file => this.loadOne(file)));
   },
 };

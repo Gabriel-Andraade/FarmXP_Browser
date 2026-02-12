@@ -46,7 +46,7 @@ export const OPTIMIZATION_CONFIG = {
  */
 export function perfLog(...args) {
     if (OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-        // no-op when logging disabled
+        console.log('[Perf]', ...args);
     }
 }
 
@@ -261,42 +261,10 @@ function clearCalculationCache() {
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
+// compactLargeArrays removida — acessava window[arrayName] mas arrays são
+// module-scoped em theWorld.js, tornando a função um no-op (#65)
 function compactLargeArrays() {
-    return new Promise((resolve) => {
-        try {
-            let totalCompacted = 0;
-
-            const globalArrays = [
-                'trees', 'rocks', 'thickets',
-                'placedBuildings', 'placedWells',
-                'houses', 'rainParticles', 'snowParticles'
-            ];
-
-            globalArrays.forEach(arrayName => {
-                const array = window[arrayName];
-                if (Array.isArray(array) && array.length > 50) {
-                    const originalLength = array.length;
-
-                    const validItems = array.filter(item => {
-                        if (!item) return false;
-                        if (item.destroyed) return false;
-                        if (item.health !== undefined && item.health <= 0) return false;
-                        return true;
-                    });
-
-                    if (validItems.length < originalLength * 0.9) {
-                        array.length = 0;
-                        array.push(...validItems);
-                        totalCompacted += (originalLength - validItems.length);
-                    }
-                }
-            });
-
-            resolve({ itemsCompacted: totalCompacted });
-        } catch (e) {
-            resolve({ itemsCompacted: 0 });
-        }
-    });
+    return Promise.resolve({ itemsCompacted: 0 });
 }
 
 /**
@@ -306,19 +274,13 @@ function compactLargeArrays() {
  * @returns {Promise<Object>} Resultado da tentativa
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
+// forceGarbageCollection simplificada — o workaround antigo criava lixo
+// (1000 arrays de 1000 itens) ao invés de limpar. Agora só chama gc() se disponível.
 function forceGarbageCollection() {
     return new Promise((resolve) => {
         try {
             if (typeof window.gc === 'function') {
                 window.gc();
-                resolve({ gcForced: true });
-            } else if (window.performance && window.performance.memory) {
-                for (let i = 0; i < 1000; i++) {
-                    window['temp_gc_' + i] = new Array(1000).fill(0);
-                }
-                for (let i = 0; i < 1000; i++) {
-                    delete window['temp_gc_' + i];
-                }
                 resolve({ gcForced: true });
             } else {
                 resolve({ gcForced: false });
@@ -364,29 +326,18 @@ function resetCanvasContext() {
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
  * @returns {Array<string>} returns.optimizations - Lista de otimizações aplicadas
  */
+// optimizeMemoryUsage corrigida — a versão antiga limpava TODOS os timers
+// indiscriminadamente (clearTimeout/clearInterval de 1 até 1000), destruindo
+// autosave, weather, needs update, etc. (#59)
+// Referência a window.assets.cleanupUnused removida — função não existe (#86/12)
 function optimizeMemoryUsage() {
     return new Promise((resolve) => {
         try {
-            let optimizations = [];
-
-            const maxTimeoutId = setTimeout(() => {}, 0);
-            const maxIntervalId = setInterval(() => {}, 0);
-
-            for (let i = 1; i < Math.min(maxTimeoutId, 1000); i++) {
-                clearTimeout(i);
-                clearInterval(i);
-            }
-
             if (window.theWorld && window.theWorld.objectDestroyed) {
                 document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
             }
 
-            if (window.assets && typeof window.assets.cleanupUnused === 'function') {
-                window.assets.cleanupUnused();
-                optimizations.push('assets');
-            }
-
-            resolve({ memoryOptimized: true, optimizations });
+            resolve({ memoryOptimized: true, optimizations: [] });
         } catch (e) {
             resolve({ memoryOptimized: false });
         }

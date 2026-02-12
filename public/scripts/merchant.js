@@ -33,8 +33,8 @@ class MerchantSystem {
         this.tradeValue = 0;
         this.tradeQuantity = 1;
         this.listenersSetup = false;
-        this.lastMerchantOpenCheck = 0;
         this.merchantOpenCheckInterval = 5;
+        this._merchantCheckAcc = 0;
 
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
@@ -543,7 +543,6 @@ class MerchantSystem {
         }
 
         this.currentMerchant = merchant;
-        this.lastMerchantOpenCheck = Date.now();
 
         this.closeAllModals();
         const modal = document.getElementById('commerceModal');
@@ -572,10 +571,10 @@ class MerchantSystem {
 
     // update chamado pelo game loop
     update(deltaTime) {
-        const currentTime = Date.now();
-        if (currentTime - this.lastMerchantOpenCheck >= this.merchantOpenCheckInterval * 1000) {
+        this._merchantCheckAcc += deltaTime;
+        if (this._merchantCheckAcc >= this.merchantOpenCheckInterval) {
             this.checkAndCloseIfMerchantClosed();
-            this.lastMerchantOpenCheck = currentTime;
+            this._merchantCheckAcc = 0;
         }
     }
 
