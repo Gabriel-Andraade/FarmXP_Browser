@@ -19,7 +19,6 @@ import { assets } from "./assetManager.js";
 import { loadImages } from "./thePlayer/frames.js";
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
 import { setViewportSize, camera } from "./thePlayer/cameraSystem.js";
-import { cssManager } from "./cssManager.js";
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./loadingScreen.js";
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
@@ -858,14 +857,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     logger.debug("settingsUI carregado (após i18n + a11y)");
   } catch (error) {
     handleWarn("falha ao carregar settingsUI", "main:DOMContentLoaded:settingsUI", error);
-  }
-
-  try {
-    logger.debug("Carregando estilos CSS...");
-    await cssManager.loadAll();
-    logger.debug("Todos os estilos CSS carregados");
-  } catch (error) {
-    logger.error("Erro ao carregar CSS:", error);
   }
 
   try {
