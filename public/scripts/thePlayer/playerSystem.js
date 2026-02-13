@@ -41,6 +41,9 @@ export class PlayerSystem {
         /** @type {Object|null} Currently equipped item */
         this.equippedItem = null;
 
+        /** @type {Object} Needs modifiers from active character */
+        this.needsModifiers = { energy: 1.0, hunger: 1.0, thirst: 1.0 };
+
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
 
@@ -210,12 +213,13 @@ export class PlayerSystem {
         const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
+        const modifiers = this.needsModifiers;
 
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier));
+        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier * modifiers.hunger));
+        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier * modifiers.thirst));
 
         this.needs.energy = Math.max(0, Math.min(GAME_BALANCE.NEEDS.MAX_VALUE,
-            this.needs.energy - (rates.energy * validMultiplier)));
+            this.needs.energy - (rates.energy * validMultiplier * modifiers.energy)));
 
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
@@ -544,29 +548,48 @@ export class PlayerSystem {
 
     /**
      * Dynamically loads the character module based on character ID
-     * @param {string} characterId - ID of character to load
+     * @param {string} characterId - ID of character to load (e.g. 'stella', 'ben', 'graham')
      * @returns {Promise<void>}
      */
     async loadCharacterModule(characterId) {
         try {
-            const characterModule = await import('./stella.js');
-            this.currentPlayer = characterModule.stella;
-            
+            const characterModule = await import(`./${characterId}.js`);
+            const config = characterModule.CHARACTER_CONFIG;
+
+            // Load character sprites
+            const { loadImages } = await import('./frames.js');
+            await loadImages(config);
+
+            // Access character entity and functions by name convention
+            const name = config.name; // 'Stella', 'Ben', 'Graham'
+            this.currentPlayer = characterModule[characterId]; // stella, ben, graham
+            this.updateFunction = characterModule[`update${name}`];
+            this.drawFunction = characterModule[`draw${name}`];
+
             this.currentPlayer.hunger = this.needs.hunger;
             this.currentPlayer.thirst = this.needs.thirst;
             this.currentPlayer.energy = this.needs.energy;
-            
+
             const { getInitialPlayerPosition } = await import('../theWorld.js');
             const initialPos = getInitialPlayerPosition();
             this.currentPlayer.x = initialPos.x;
             this.currentPlayer.y = initialPos.y;
-            
-            this.updateFunction = characterModule.updateStella;
-            this.drawFunction = characterModule.drawStella;
+
+            // Apply character needs modifiers
+            this.needsModifiers = config.needsModifiers || { energy: 1.0, hunger: 1.0, thirst: 1.0 };
+
+            // Enrich activeCharacter with full data from loaded module config
+            this.activeCharacter = {
+                ...this.activeCharacter,
+                id: characterId,
+                name: config.name,
+                portrait: `./assets/character/portrait/${config.name}_portrait.webp`
+            };
         } catch (error) {
-            this.loadStellaAsFallback();
+            await this.loadFallbackCharacter();
+            return; // fallback already dispatches playerReady
         }
-        
+
         this.dispatchPlayerReady();
     }
 
@@ -574,9 +597,14 @@ export class PlayerSystem {
      * Loads Stella as fallback character when requested character unavailable
      * @returns {Promise<void>}
      */
-    async loadStellaAsFallback() {
+    async loadFallbackCharacter() {
         try {
             const module = await import('./stella.js');
+            const config = module.CHARACTER_CONFIG;
+
+            const { loadImages } = await import('./frames.js');
+            await loadImages(config);
+
             this.currentPlayer = module.stella;
 
             this.currentPlayer.hunger = this.needs.hunger;
@@ -590,10 +618,18 @@ export class PlayerSystem {
 
             this.updateFunction = module.updateStella;
             this.drawFunction = module.drawStella;
+            this.needsModifiers = config.needsModifiers;
+
+            this.activeCharacter = {
+                ...this.activeCharacter,
+                id: 'stella',
+                name: config.name,
+                portrait: `./assets/character/portrait/${config.name}_portrait.webp`
+            };
         } catch (error) {
             this.createBasicPlayer();
         }
-        
+
         this.dispatchPlayerReady();
     }
 
