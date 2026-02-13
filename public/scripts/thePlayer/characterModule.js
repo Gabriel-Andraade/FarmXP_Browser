@@ -226,9 +226,6 @@ export function createCharacter(config) {
                 }
             }));
 
-            if (character.isConsuming) {
-                document.dispatchEvent(new Event('consumptionCancelled'));
-            }
         }
 
         camera.follow(character);
@@ -294,16 +291,16 @@ export function createCharacter(config) {
             const zoomedWidth = drawW * CAMERA_ZOOM;
             const zoomedHeight = drawH * CAMERA_ZOOM;
 
-            if (isExhausted) {
+            if (isExhausted || isConsuming) {
                 ctx.save();
-                ctx.filter = 'grayscale(50%) brightness(80%)';
+                if (isExhausted && isConsuming) {
+                    ctx.filter = 'grayscale(50%) brightness(100%) saturate(1.3)';
+                } else if (isExhausted) {
+                    ctx.filter = 'grayscale(50%) brightness(80%)';
+                } else {
+                    ctx.filter = 'brightness(1.2) saturate(1.3)';
+                }
             }
-
-            if (isConsuming) {
-                ctx.save();
-                ctx.filter = 'brightness(1.2) saturate(1.3)';
-            }
-
             const shouldFlip = character.facingLeft &&
                 (character.facingDirection === 'left' || character.facingDirection === 'right');
 

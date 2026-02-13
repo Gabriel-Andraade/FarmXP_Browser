@@ -7,6 +7,7 @@
  */
 
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
+import { logger } from '../logger.js';
 import { validateRange } from '../validation.js';
 
 /**
@@ -552,6 +553,12 @@ export class PlayerSystem {
      * @returns {Promise<void>}
      */
     async loadCharacterModule(characterId) {
+        const ALLOWED_CHARACTERS = ['stella', 'ben', 'graham'];
+        if (!ALLOWED_CHARACTERS.includes(characterId)) {
+            logger.warn(`[PlayerSystem] Unknown characterId '${characterId}', falling back`);
+            await this.loadFallbackCharacter();
+            return;
+        }
         try {
             const characterModule = await import(`./${characterId}.js`);
             const config = characterModule.CHARACTER_CONFIG;
@@ -566,6 +573,9 @@ export class PlayerSystem {
             this.updateFunction = characterModule[`update${name}`];
             this.drawFunction = characterModule[`draw${name}`];
 
+            if (!this.currentPlayer || !this.updateFunction || !this.drawFunction) {
+                throw new Error(`Character module '${characterId}' is missing expected exports (entity: '${characterId}', update: 'update${name}', draw: 'draw${name}')`);
+            }
             this.currentPlayer.hunger = this.needs.hunger;
             this.currentPlayer.thirst = this.needs.thirst;
             this.currentPlayer.energy = this.needs.energy;
@@ -586,6 +596,7 @@ export class PlayerSystem {
                 portrait: `./assets/character/portrait/${config.name}_portrait.webp`
             };
         } catch (error) {
+             logger.error(`[PlayerSystem] Failed to load character '${characterId}':`, error);
             await this.loadFallbackCharacter();
             return; // fallback already dispatches playerReady
         }
@@ -618,7 +629,7 @@ export class PlayerSystem {
 
             this.updateFunction = module.updateStella;
             this.drawFunction = module.drawStella;
-            this.needsModifiers = config.needsModifiers;
+            this.needsModifiers = config.needsModifiers || { energy: 1.0, hunger: 1.0, thirst: 1.0 };
 
             this.activeCharacter = {
                 ...this.activeCharacter,
