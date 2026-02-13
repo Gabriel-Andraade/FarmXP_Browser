@@ -214,13 +214,12 @@ export class PlayerSystem {
         const validMultiplier = validateRange(multiplier, 0, 10);
 
         const rates = this.needs.consumptionRates[actionType];
-        const modifiers = this.needsModifiers;
-
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier * modifiers.hunger));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier * modifiers.thirst));
+        const { hunger: mH = 1.0, thirst: mT = 1.0, energy: mE = 1.0 } = this.needsModifiers;
+        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier * mH));
+        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier * mT));
 
         this.needs.energy = Math.max(0, Math.min(GAME_BALANCE.NEEDS.MAX_VALUE,
-            this.needs.energy - (rates.energy * validMultiplier * modifiers.energy)));
+            this.needs.energy - (rates.energy * validMultiplier * mE)));
 
         this.dispatchNeedsUpdate();
         this.checkCriticalNeeds();
@@ -638,6 +637,7 @@ export class PlayerSystem {
                 portrait: `./assets/character/portrait/${config.name}_portrait.webp`
             };
         } catch (error) {
+            logger.error('[PlayerSystem] Failed to load fallback character:', error);
             this.createBasicPlayer();
         }
 
