@@ -681,6 +681,11 @@ export class PlayerSystem {
                 ctx.fillRect(this.x, this.y, this.width, this.height);
             }
         };
+        this.updateFunction = () => {};
+        this.drawFunction = (ctx) => {
+            if (this.currentPlayer) this.currentPlayer.draw(ctx);
+        };
+        this.needsModifiers = { energy: 1.0, hunger: 1.0, thirst: 1.0 };
     }
 
     /** @returns {Object|null} Current player entity */
