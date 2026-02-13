@@ -450,7 +450,7 @@ function setupSleepListeners() {
 
       const hud = getSystem('hud');
       if (hud) {
-        hud.showNotification("Bom dia! Energias renovadas.", "success", 4000);
+        hud.showNotification(t('time.goodMorning'), 4000);
       }
 
       preSleepInteractionState = null;
