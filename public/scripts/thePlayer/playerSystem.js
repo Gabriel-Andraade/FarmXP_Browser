@@ -9,6 +9,7 @@
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
 import { logger } from '../logger.js';
 import { validateRange } from '../validation.js';
+import { getSystem } from '../gameState.js';
 
 /**
  * Minimum and maximum values for player needs
@@ -261,9 +262,8 @@ export class PlayerSystem {
             }
         }));
 
-        if (window.playerHUD) {
-            window.playerHUD.updatePlayerInfo();
-        }
+        getSystem('hud')?.updatePlayerInfo?.();
+
     }
 
     /**
