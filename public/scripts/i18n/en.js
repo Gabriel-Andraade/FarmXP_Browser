@@ -147,7 +147,8 @@ export default {
     evening: 'Evening',
     night: 'Night',
     sleeping: 'Sleeping soundly: Day {fromDay} → Day {toDay} ({weekday})',
-    wait: 'Please wait...'
+    wait: 'Please wait...',
+    sleepZzz: 'Zzz...'
   },
 
   // Seasons
