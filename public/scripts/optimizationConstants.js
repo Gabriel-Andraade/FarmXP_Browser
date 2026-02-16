@@ -1,6 +1,6 @@
 import { TILE_SIZE } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
-
+import { getObject } from "./gameState.js";
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
  * @constant {number}
@@ -253,50 +253,20 @@ function clearCalculationCache() {
         }
     });
 }
-
 /**
- * Compacta arrays globais grandes filtrando itens inválidos
- * Remove objetos destruídos, sem saúde ou null
+ * Para implementar de forma correta sem acoplamento ao legacy bridge:
+ * - expor um método oficial no world (ex.: world.compactLargeArrays())
+ * - acessar arrays via getObject('world') (ex.: world.trees, world.rocks, etc).
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-    return new Promise((resolve) => {
-        try {
-            let totalCompacted = 0;
-
-            const globalArrays = [
-                'trees', 'rocks', 'thickets',
-                'placedBuildings', 'placedWells',
-                'houses', 'rainParticles', 'snowParticles'
-            ];
-
-            globalArrays.forEach(arrayName => {
-                const array = window[arrayName];
-                if (Array.isArray(array) && array.length > 50) {
-                    const originalLength = array.length;
-
-                    const validItems = array.filter(item => {
-                        if (!item) return false;
-                        if (item.destroyed) return false;
-                        if (item.health !== undefined && item.health <= 0) return false;
-                        return true;
-                    });
-
-                    if (validItems.length < originalLength * 0.9) {
-                        array.length = 0;
-                        array.push(...validItems);
-                        totalCompacted += (originalLength - validItems.length);
-                    }
-                }
-            });
-
-            resolve({ itemsCompacted: totalCompacted });
-        } catch (e) {
-            resolve({ itemsCompacted: 0 });
-        }
-    });
+  const world = getObject("world");
+  if (world && typeof world.compactLargeArrays === "function") {
+    return Promise.resolve(world.compactLargeArrays());
+  }
+  return Promise.resolve({ itemsCompacted: 0 });
 }
 
 /**
