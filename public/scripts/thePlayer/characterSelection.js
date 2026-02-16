@@ -70,7 +70,7 @@ export class CharacterSelection {
                 </div>
                 <h3>${character.name}</h3>
                 <p>${this.getCharacterSubtitle(character.id)}</p>
-                ${character.id !== "stella" ? `<div class="chs-character-warning">${t('characterSelection.inDevelopment')}</div>` : ''}
+                <div class="chs-character-traits">${this.getCharacterTraits(character.id)}</div>
             `;
 
             charactersGrid.appendChild(characterCard);
@@ -83,15 +83,19 @@ export class CharacterSelection {
         return t(`characterSelection.subtitles.${characterId}`) || t('characterSelection.subtitles.default');
     }
 
+    getCharacterTraits(characterId) {
+        const traits = {
+            stella: '',
+            ben: '',
+            graham: ''
+        };
+        return traits[characterId] || '';
+    }
+
     bindEvents() {
         this.container.querySelectorAll('.chs-character-card').forEach(card => {
             card.addEventListener('click', () => {
                 const characterId = card.dataset.characterId;
-
-                if (characterId !== "stella") {
-                    this.showWarning(t('characterSelection.onlyStellaAvailable'));
-                    return;
-                }
 
                 this.container.querySelectorAll('.chs-character-card').forEach(c => {
                     c.classList.remove('selected');
@@ -104,10 +108,6 @@ export class CharacterSelection {
 
         this.container.querySelector('.chs-start-game-btn').addEventListener('click', () => {
             if (this.selectedCharacter) {
-                if (this.selectedCharacter.id !== "stella") {
-                    this.showWarning(t('characterSelection.selectStellaToPlay'));
-                    return;
-                }
                 this.startGame();
             } else {
                 this.showWarning(t('characterSelection.selectCharacterFirst'));
@@ -159,11 +159,6 @@ export class CharacterSelection {
 
     startGame() {
         this.container.style.display = 'none';
-
-        if (this.selectedCharacter.id !== "stella") {
-            this.showWarning(t('characterSelection.redirecting'));
-            this.selectedCharacter = this.characters.find(c => c.id === "stella");
-        }
 
         playerSystem.setActiveCharacter(this.selectedCharacter);
 

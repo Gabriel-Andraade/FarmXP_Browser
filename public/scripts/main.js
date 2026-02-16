@@ -16,7 +16,7 @@ import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebu
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
-import { loadImages } from "./thePlayer/frames.js";
+// loadImages is now called dynamically inside playerSystem.loadCharacterModule
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
 import { setViewportSize, camera } from "./thePlayer/cameraSystem.js";
 import { cssManager } from "./cssManager.js";
@@ -623,7 +623,7 @@ async function startFullGameLoad() {
     if (window._pendingSaveData && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
-        saveRef.applySaveData(window._pendingSaveData);
+        await saveRef.applySaveData(window._pendingSaveData);
         logger.info('📂 Save aplicado do startup');
       } catch (e) {
         handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
@@ -712,7 +712,6 @@ async function initGameBootstrap() {
   updateLoadingProgress(0.02, t('messages.loading'));
 
   const loadingSteps = [
-    { name: "Sprites do jogador", action: loadImages },
     { name: "Assets core", action: () => assets.loadCore() },
     { name: "Interface responsiva", action: initResponsiveUI },
     { name: "Mundo base", action: initializeWorld },
