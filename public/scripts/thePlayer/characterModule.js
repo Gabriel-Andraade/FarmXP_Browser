@@ -110,7 +110,8 @@ export function createCharacter(config) {
     /**
      * Syncs hunger, thirst, energy and consumption state from playerSystem
      * into the local character object.
-     * @returns {void}
+     *
+     * @returns {Object|null} The resolved playerSystem (or null if unavailable)
      */
     function syncNeedsFromPlayerSystem() {
         const playerSystem = getSystem('player');
@@ -121,6 +122,7 @@ export function createCharacter(config) {
             character.energy = needs.energy;
             character.isConsuming = !!playerSystem.isConsuming;
         }
+        return playerSystem || null;
     }
 
     /**
@@ -132,9 +134,8 @@ export function createCharacter(config) {
      * @returns {void}
      */
     function updateCharacter(deltaTime, keys) {
-        syncNeedsFromPlayerSystem();
+        const playerSystem = syncNeedsFromPlayerSystem();
 
-        const playerSystem = getSystem('player');
         if (playerSystem && playerSystem.currentPlayer &&
             playerSystem.currentPlayer.isSleeping) {
             character.isSleeping = true;
@@ -229,7 +230,6 @@ export function createCharacter(config) {
                     efficiencyMultiplier
                 }
             }));
-
         }
 
         camera.follow(character);
@@ -255,9 +255,8 @@ export function createCharacter(config) {
      * @returns {void}
      */
     function drawCharacter(ctx) {
-        syncNeedsFromPlayerSystem();
+        const playerSystem = syncNeedsFromPlayerSystem();
 
-        const playerSystem = getSystem('player');
         const isExhausted = playerSystem &&
             playerSystem.getEfficiencyMultiplier &&
             playerSystem.getEfficiencyMultiplier() < 0.5;
@@ -273,6 +272,7 @@ export function createCharacter(config) {
 
         const isIdle = character.frame === idleFrame;
         let currentImage = isIdle ? idleImage : frames.moving[character.frame];
+
         if (currentImage && currentImage.complete) {
             const screenPos = camera.worldToScreen(character.x, character.y);
 
@@ -306,6 +306,7 @@ export function createCharacter(config) {
                     ctx.filter = 'brightness(1.2) saturate(1.3)';
                 }
             }
+
             const shouldFlip = character.facingLeft &&
                 (character.facingDirection === 'left' || character.facingDirection === 'right');
 

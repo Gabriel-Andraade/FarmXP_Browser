@@ -38,11 +38,9 @@ export function destroyAllSystems() {
             logger.debug('[Cleanup] ItemSystem destruído');
         }
 
-        // InventoryUI - Cleanup de DOM e listeners
-        if (typeof destroyInventoryUI === 'function') {
-            destroyInventoryUI();
-            logger.debug('[Cleanup] InventoryUI destruído');
-        }
+        // InventoryUI - Cleanup de DOM e listeners (static import => sempre função)
+        destroyInventoryUI();
+        logger.debug('[Cleanup] InventoryUI destruído');
 
         // WorldUI - Cleanup de listeners e elementos
         const worldUI = getSystem('worldUI');
@@ -58,11 +56,9 @@ export function destroyAllSystems() {
             logger.debug('[Cleanup] MerchantSystem destruído');
         }
 
-        // Controls - Cleanup de listeners globais
-        if (typeof destroyControls === 'function') {
-            destroyControls();
-            logger.debug('[Cleanup] Controls destruídos');
-        }
+        // Controls - Cleanup de listeners globais (static import => sempre função)
+        destroyControls();
+        logger.debug('[Cleanup] Controls destruídos');
 
         // HouseSystem - Cleanup se existir
         const houseSystem = getSystem('house');
@@ -104,22 +100,28 @@ export function destroyAllSystems() {
  * @returns {void}
  */
 export function setupAutoCleanup() {
-    window.addEventListener('beforeunload', (e) => {
+    // Guard local: evita double cleanup quando beforeunload + unload disparam em sequência
+    let cleanedUp = false;
+
+    const runCleanupOnce = (source) => {
+        if (cleanedUp) return;
+        cleanedUp = true;
+
         try {
             destroyAllSystems();
         } catch (error) {
-            logger.error('[Cleanup] Erro em beforeunload:', error);
+            logger.error(`[Cleanup] Erro em ${source}:`, error);
         }
-    });
+    };
+
+    window.addEventListener('beforeunload', (e) => {
+        runCleanupOnce('beforeunload');
+    }, { once: true });
 
     // Também capturar unload para compatibilidade com browsers antigos
     window.addEventListener('unload', () => {
-        try {
-            destroyAllSystems();
-        } catch (error) {
-            logger.error('[Cleanup] Erro em unload:', error);
-        }
-    });
+        runCleanupOnce('unload');
+    }, { once: true });
 
     logger.debug('[Cleanup] Auto-cleanup configurado');
 }
