@@ -76,7 +76,7 @@ class SaveSystem {
             });
         }
 
-        logger.info('💾 SaveSystem inicializado');
+        logger.info('💾 SaveSystem initialized');
     }
 
     /**
@@ -106,7 +106,7 @@ class SaveSystem {
             this._cachedRoot = parsed;
             return this._cachedRoot;
         } catch (error) {
-            logger.error('Erro ao ler saves:', error);
+            logger.error('Error reading saves:', error);
             this._cachedRoot = { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
             return this._cachedRoot;
         }
@@ -122,7 +122,7 @@ class SaveSystem {
             this._cachedRoot = root; // Atualizar cache
             return true;
         } catch (error) {
-            logger.error('Erro ao escrever saves:', error);
+            logger.error('Error writing saves:', error);
             this._cachedRoot = null;
             return false;
         }
@@ -169,7 +169,7 @@ class SaveSystem {
      */
     selectActiveSlot(slotIndex) {
         if (slotIndex < 0 || slotIndex >= MAX_SLOTS) {
-            logger.error('Índice de slot inválido:', slotIndex);
+            logger.error('Invalid slot index:', slotIndex);
             return;
         }
 
@@ -177,7 +177,7 @@ class SaveSystem {
         try {
             localStorage.setItem(ACTIVE_SLOT_KEY, String(slotIndex));
         } catch (error) {
-            logger.error('Erro ao salvar slot ativo:', error);
+            logger.error('Error saving active slot:', error);
         }
         this.sessionStartAt = Date.now();
         this.sessionMs = 0;
@@ -189,7 +189,7 @@ class SaveSystem {
             this._writeRoot(root);
         }
 
-        logger.info(`Slot ${slotIndex} selecionado como ativo`);
+        logger.info(`Slot ${slotIndex} selected as active`);
     }
 
     /**
@@ -216,7 +216,7 @@ class SaveSystem {
      */
     createOrOverwriteSlot(slotIndex, options = {}) {
         if (slotIndex < 0 || slotIndex >= MAX_SLOTS) {
-            logger.error('Índice de slot inválido:', slotIndex);
+            logger.error('Invalid slot index:', slotIndex);
             return false;
         }
 
@@ -272,12 +272,12 @@ class SaveSystem {
             if (!written) return false;
             this.isDirty = false;
 
-            logger.info(`💾 Save ${slotIndex} salvo com sucesso (razão: ${slot.meta.lastSaveReason})`);
+            logger.info(`💾 Save ${slotIndex} saved successfully (reason: ${slot.meta.lastSaveReason})`);
             this._dispatchEvent('save:changed', { slotIndex, action: 'save', reason: slot.meta.lastSaveReason });
 
             return true;
         } catch (error) {
-            logger.error('Erro ao salvar:', error);
+            logger.error('Error saving:', error);
             return false;
         }
     }
@@ -289,13 +289,13 @@ class SaveSystem {
      */
     saveActive(reason = 'manual') {
         if (this.activeSlot === null) {
-            logger.warn('Nenhum slot ativo para salvar');
+            logger.warn('No active slot to save');
             return false;
         }
 
         const result = this.createOrOverwriteSlot(this.activeSlot, { reason });
         if (result) {
-            logger.debug(`Save automático (${reason})`);
+            logger.debug(`Auto-save (${reason})`);
         }
         return result;
     }
@@ -307,7 +307,7 @@ class SaveSystem {
      */
     loadSlot(slotIndex) {
         if (slotIndex < 0 || slotIndex >= MAX_SLOTS) {
-            logger.error('Índice de slot inválido:', slotIndex);
+            logger.error('Invalid slot index:', slotIndex);
             return null;
         }
 
@@ -316,19 +316,19 @@ class SaveSystem {
             const slot = root.slots[slotIndex];
 
             if (!slot) {
-                logger.warn(`Slot ${slotIndex} está vazio`);
+                logger.warn(`Slot ${slotIndex} is empty`);
                 return null;
             }
 
             // Selecionar como ativo
             this.selectActiveSlot(slotIndex);
 
-            logger.info(`📂 Slot ${slotIndex} carregado`);
+            logger.info(`📂 Slot ${slotIndex} loaded`);
             this._dispatchEvent('save:loaded', { slotIndex, data: slot });
 
             return slot;
         } catch (error) {
-            logger.error('Erro ao carregar slot:', error);
+            logger.error('Error loading slot:', error);
             return null;
         }
     }
@@ -337,17 +337,17 @@ class SaveSystem {
      * Aplica os dados carregados aos sistemas do jogo
      * @param {Object} saveData - Dados do save (slot completo com meta e data)
      */
-    applySaveData(saveData) {
+    async applySaveData(saveData) {
         if (!saveData || !saveData.data) {
-            logger.warn('Dados de save inválidos');
+            logger.warn('Invalid save data');
             return;
         }
 
         const data = saveData.data;
 
-        // Aplicar dados do jogador
+        // Aplicar dados do jogador (async - pode trocar de personagem)
         if (data.player) {
-            this._applyPlayerData(data.player);
+            await this._applyPlayerData(data.player);
         }
 
         // Aplicar inventário
@@ -377,7 +377,7 @@ class SaveSystem {
             this._applyWeatherData(data.weather);
         }
 
-        logger.info('✅ Dados do save aplicados');
+        logger.info('✅ Save data applied');
         this._dispatchEvent('save:applied', { saveData });
     }
 
@@ -397,7 +397,7 @@ class SaveSystem {
         root.slots[slotIndex].meta.saveName = newName.trim().substring(0, 30);
         if (!this._writeRoot(root)) return false;
 
-        logger.info(`Slot ${slotIndex} renomeado para "${newName}"`);
+        logger.info(`Slot ${slotIndex} renamed to "${newName}"`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'rename' });
 
         return true;
@@ -421,11 +421,11 @@ class SaveSystem {
             try {
                 localStorage.removeItem(ACTIVE_SLOT_KEY);
             } catch (error) {
-                logger.error('Erro ao remover slot ativo:', error);
+                logger.error('Error removing active slot:', error);
             }
         }
 
-        logger.info(`🗑️ Slot ${slotIndex} deletado`);
+        logger.info(`🗑️ Slot ${slotIndex} deleted`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'delete' });
 
         return true;
@@ -452,7 +452,7 @@ class SaveSystem {
             weather.reset();
         } else {
             // Fallback manual com aviso de acoplamento
-            logger.warn('WeatherSystem.reset() não disponível - usando fallback acoplado');
+            logger.warn('WeatherSystem.reset() not available - using coupled fallback');
             
             // Fallback manual
             weather.currentTime = 6 * 60;
@@ -481,7 +481,7 @@ class SaveSystem {
             }
         }));
 
-        logger.info('⏰ Tempo do jogo resetado para novo jogo');
+        logger.info('⏰ Game time reset for new game');
     }
 
     /**
@@ -495,7 +495,7 @@ class SaveSystem {
                 this.saveActive('auto');
             }
         }, intervalMs);
-        logger.info(`⏰ Auto-save ativado (a cada ${intervalMs / 1000}s)`);
+        logger.info(`⏰ Auto-save enabled (every ${intervalMs / 1000}s)`);
     }
 
     /**
@@ -533,7 +533,7 @@ class SaveSystem {
         return {
             x: player?.x ?? 400,
             y: player?.y ?? 300,
-            direction: player?.direction ?? 'down',
+            facingDirection: player?.facingDirection ?? 'down',
             characterId: playerSystem?.activeCharacter?.id ?? 'stella',
             needs: {
                 hunger: playerSystem?.needs?.hunger ?? 100,
@@ -602,7 +602,7 @@ class SaveSystem {
         try {
             return exportWorldState();
         } catch (error) {
-            logger.error('Erro ao exportar estado do mundo:', error);
+            logger.error('Error exporting world state:', error);
             return {
                 trees: [],
                 rocks: [],
@@ -636,16 +636,28 @@ class SaveSystem {
     }
 
     /**
-     * Aplica dados do jogador
+     * Aplica dados do jogador (pode trocar de personagem se necessario)
      */
-    _applyPlayerData(data) {
-        const player = getObject('currentPlayer');
+    async _applyPlayerData(data) {
         const playerSystem = getSystem('player');
+
+        // Trocar personagem se o save tem um characterId diferente do atual
+        if (data.characterId && playerSystem) {
+            const currentCharId = playerSystem.activeCharacter?.id;
+            if (data.characterId !== currentCharId) {
+                playerSystem.activeCharacter = { id: data.characterId };
+                await playerSystem.loadCharacterModule(data.characterId);
+            }
+        }
+
+        // Usar playerSystem.currentPlayer diretamente (setado de forma sincrona
+        // dentro de loadCharacterModule, antes que o async exposeGlobals atualize gameState)
+        const player = playerSystem?.currentPlayer || getObject('currentPlayer');
 
         if (player) {
             player.x = data.x ?? player.x;
             player.y = data.y ?? player.y;
-            player.direction = data.direction ?? player.direction;
+            player.facingDirection = data.facingDirection ?? data.direction ?? player.facingDirection;
         }
 
         if (playerSystem && data.needs) {
@@ -685,7 +697,7 @@ class SaveSystem {
         }
 
         if (failedItems.length > 0) {
-            logger.warn('[SaveSystem] Falha ao restaurar itens:', failedItems);
+            logger.warn('[SaveSystem] Failed to restore items:', failedItems);
         }
 
         // Restaurar equipados apenas se o item existir no inventário
@@ -779,7 +791,7 @@ class SaveSystem {
         // Resumir o sistema
         if (typeof weather.resume === 'function') weather.resume();
 
-        logger.info(`⛅ Clima restaurado: ${weather.weatherType}, Dia ${weather.day}, ${typeof weather.getTimeString === 'function' ? weather.getTimeString() : ''}`);
+        logger.info(`⛅ Weather restored: ${weather.weatherType}, Day ${weather.day}, ${typeof weather.getTimeString === 'function' ? weather.getTimeString() : ''}`);
     }
 
     /**
@@ -791,9 +803,9 @@ class SaveSystem {
 
         try {
             importWorldState(data);
-            logger.info('🌍 Estado do mundo restaurado');
+            logger.info('🌍 World state restored');
         } catch (error) {
-            logger.error('Erro ao restaurar estado do mundo:', error);
+            logger.error('Error restoring world state:', error);
         }
     }
 
@@ -826,14 +838,14 @@ class SaveSystem {
                         contents: {}
                     };
                 }
-                logger.debug(`[SaveSystem] Baú ${chestId} criado durante restauração`);
+                logger.debug(`[SaveSystem] Chest ${chestId} created during restoration`);
             }
             
             // Restaurar os conteúdos
             chestSystem.chests[chestId].contents = chestData.contents || {};
         }
         
-        logger.info(`[SaveSystem] ${Object.keys(data).length} baús restaurados`);
+        logger.info(`[SaveSystem] ${Object.keys(data).length} chests restored`);
     }
 
     /**
