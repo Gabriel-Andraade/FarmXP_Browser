@@ -11,10 +11,9 @@ import { WORLD_WIDTH, WORLD_HEIGHT, getInitialPlayerPosition } from "../theWorld
 import { frames } from "./frames.js";
 import { camera, CAMERA_ZOOM } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
+import { getDebugFlag } from "../gameState.js";
 
-/** @constant {boolean} Enables red hitbox overlay for debugging collisions */
-const DEBUG_HITBOXES = false;
-
+//DEBUG_HITBOXES é gerenciado via gameState.js
 /**
  * Creates a character instance with update/draw/sync functions.
  * The returned object is a closure-based character entity whose animation,
@@ -318,7 +317,7 @@ export function createCharacter(config) {
                 ctx.restore();
             }
 
-            if (DEBUG_HITBOXES) {
+            if (getDebugFlag('hitboxes')) {
                 const hitbox = createHitbox();
                 const hitboxScreenPos = camera.worldToScreen(hitbox.x, hitbox.y);
                 ctx.strokeStyle = 'red';
