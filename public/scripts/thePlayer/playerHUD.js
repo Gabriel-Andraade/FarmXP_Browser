@@ -334,6 +334,7 @@ export class PlayerHUD {
                 const wrapper = document.createElement('div');
                 wrapper.style.cssText = 'display: flex; align-items: center; gap: 8px;';
                 const iconSpan = document.createElement('span');
+                iconSpan.textContent = item.icon || '';
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = itemName;
                 wrapper.append(iconSpan, nameSpan);

@@ -310,14 +310,13 @@ export const wellSystem = {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    document.getElementById("well-close").onclick = () => this.closeWellMenu();
-    document.getElementById("btn-pull-water").onclick = () => this.startPullingWater();
-    document.getElementById("btn-drink").onclick = () => this.drinkFromWell();
-    document.getElementById("btn-transfer-menu").onclick = () => {
-      const opts = document.getElementById("transfer-options");
-      opts.hidden = !opts.hidden;
+    closeBtn.onclick = () => this.closeWellMenu();
+    btnPullWater.onclick = () => this.startPullingWater();
+    btnDrink.onclick = () => this.drinkFromWell();
+    btnTransfer.onclick = () => {
+      transferOpts.hidden = !transferOpts.hidden;
     };
-    document.getElementById("btn-fill-bottle").onclick = () => this.fillBottle();
+    btnFillBottle.onclick = () => this.fillBottle();
 
     overlay.style.display = "flex";
     wellState.isOpen = true;

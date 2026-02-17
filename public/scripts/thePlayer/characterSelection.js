@@ -55,7 +55,6 @@ export class CharacterSelection {
         portraitLarge.className = 'chs-character-portrait-large';
         const portraitImg = document.createElement('img');
         portraitImg.className = 'chs-character-portrait-img';
-        portraitImg.src = '';
         portraitImg.alt = '';
         portraitLarge.appendChild(portraitImg);
         const charName = document.createElement('h2');
@@ -77,8 +76,6 @@ export class CharacterSelection {
         loadSection.append(loadH2, loadBtn);
 
         this.container.append(headerDiv, gridDiv, detailsDiv, loadSection);
-
-        const charactersGrid = this.container.querySelector('.chs-characters-grid');
 
         this.characters.forEach(character => {
             const characterCard = document.createElement('div');
@@ -103,7 +100,7 @@ export class CharacterSelection {
                 characterCard.appendChild(warning);
             }
 
-            charactersGrid.appendChild(characterCard);
+            gridDiv.appendChild(characterCard);
         });
 
         document.body.appendChild(this.container);
