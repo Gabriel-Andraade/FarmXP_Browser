@@ -1,6 +1,8 @@
-import { TILE_SIZE } from "./worldConstants.js";
+import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { getObject } from "./gameState.js";
+import { handleWarn } from "./errorHandler.js";
+import { logger } from "./logger.js";
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
  * @constant {number}
@@ -46,7 +48,7 @@ export const OPTIMIZATION_CONFIG = {
  */
 export function perfLog(...args) {
     if (OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-        // no-op when logging disabled
+        logger.info('[Perf]', ...args);
     }
 }
 
@@ -228,6 +230,7 @@ export async function performSleepOptimizations() {
         };
 
     } catch (error) {
+        handleWarn("falha nas otimizações de sleep", "optimizationConstants:performSleepOptimizations", { error });
         return {
             success: false,
             error: error?.message || String(error),
@@ -249,6 +252,7 @@ function clearCalculationCache() {
             commonCalculations.clear();
             resolve({ cacheCleared: beforeSize });
         } catch (e) {
+            handleWarn("falha ao limpar cache de cálculos", "optimizationConstants:clearCalculationCache", { e });
             resolve({ cacheCleared: 0 });
         }
     });
@@ -271,7 +275,8 @@ function compactLargeArrays() {
 
 /**
  * Tenta forçar coleta de lixo (garbage collection)
- * Usa window.gc se disponível, caso contrário tenta induzir GC
+ * Usa window.gc se disponível (requer flag --expose-gc), senão no-op
+ * fix: issue #59 — removed anti-pattern that polluted global window namespace
  * @private
  * @returns {Promise<Object>} Resultado da tentativa
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
@@ -282,18 +287,11 @@ function forceGarbageCollection() {
             if (typeof window.gc === 'function') {
                 window.gc();
                 resolve({ gcForced: true });
-            } else if (window.performance && window.performance.memory) {
-                for (let i = 0; i < 1000; i++) {
-                    window['temp_gc_' + i] = new Array(1000).fill(0);
-                }
-                for (let i = 0; i < 1000; i++) {
-                    delete window['temp_gc_' + i];
-                }
-                resolve({ gcForced: true });
             } else {
                 resolve({ gcForced: false });
             }
         } catch (e) {
+            handleWarn("falha ao forçar garbage collection", "optimizationConstants:forceGarbageCollection", { e });
             resolve({ gcForced: false });
         }
     });
@@ -309,26 +307,23 @@ function forceGarbageCollection() {
 function resetCanvasContext() {
     return new Promise((resolve) => {
         try {
-            const canvas = document.getElementById('gameCanvas');
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
+            const ctx = getObject('ctx');
+            if (ctx) {
                 ctx.setTransform(1, 0, 0, 1, 0, 0);
-                if (ctx.globalCompositeOperation) {
-                    ctx.globalCompositeOperation = 'source-over';
-                }
+                ctx.globalCompositeOperation = 'source-over';
                 resolve({ canvasReset: true });
             } else {
                 resolve({ canvasReset: false });
             }
         } catch (e) {
+            handleWarn("falha ao resetar canvas context", "optimizationConstants:resetCanvasContext", { e });
             resolve({ canvasReset: false });
         }
     });
 }
 
 /**
- * Otimiza uso de memória limpando timeouts, eventos e assets
- * Limpa timers pendentes e dispara cleanup de objetos destruídos
+ * Otimiza uso de memória disparando cleanup de objetos destruídos
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
@@ -337,27 +332,17 @@ function resetCanvasContext() {
 function optimizeMemoryUsage() {
     return new Promise((resolve) => {
         try {
-            let optimizations = [];
+            const optimizations = [];
+            const world = getObject("world");
 
-            const maxTimeoutId = setTimeout(() => {}, 0);
-            const maxIntervalId = setInterval(() => {}, 0);
-
-            for (let i = 1; i < Math.min(maxTimeoutId, 1000); i++) {
-                clearTimeout(i);
-                clearInterval(i);
-            }
-
-            if (window.theWorld && window.theWorld.objectDestroyed) {
+            if (world?.objectDestroyed) {
                 document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
-            }
-
-            if (window.assets && typeof window.assets.cleanupUnused === 'function') {
-                window.assets.cleanupUnused();
-                optimizations.push('assets');
+                optimizations.push('destroyedObjects');
             }
 
             resolve({ memoryOptimized: true, optimizations });
         } catch (e) {
+            handleWarn("falha ao otimizar memória", "optimizationConstants:optimizeMemoryUsage", { e });
             resolve({ memoryOptimized: false });
         }
     });
@@ -392,8 +377,9 @@ export function getMemoryStatus() {
  * @returns {boolean} True se cache foi limpo, false se theWorld não disponível
  */
 export function clearRenderCache() {
-    if (window.theWorld && window.theWorld.markWorldChanged) {
-        window.theWorld.markWorldChanged();
+    const world = getObject("world");
+    if (world?.markWorldChanged) {
+        world.markWorldChanged();
         return true;
     }
     return false;
