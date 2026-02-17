@@ -11,7 +11,7 @@ import { WORLD_WIDTH, WORLD_HEIGHT, getInitialPlayerPosition } from "../theWorld
 import { frames } from "./frames.js";
 import { camera, CAMERA_ZOOM } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
-import { getSystem } from "../gameState.js"
+import { getSystem } from "../gameState.js";
 
 /** @constant {boolean} Enables red hitbox overlay for debugging collisions */
 const DEBUG_HITBOXES = false;

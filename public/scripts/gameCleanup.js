@@ -5,8 +5,8 @@
 
 import { logger } from './logger.js';
 import { getSystem } from './gameState.js';
-import { destroyInventoryUI } from './inventoryUI.js';
-import { destroyControls } from './controls.js';
+import { destroyInventoryUI } from './thePlayer/inventoryUI.js';
+import { destroyControls } from './thePlayer/controls.js';
 
 /**
  * Executa limpeza completa de todos os sistemas do jogo
