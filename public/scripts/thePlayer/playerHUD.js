@@ -70,7 +70,7 @@ export class PlayerHUD {
             this.onPlayerReady(e.detail.player, e.detail.character);
         });
 
-        // 🌍 OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
+        // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
         document.addEventListener('languageChanged', () => {
             logger.info('[HUD] Idioma alterado, reconstruindo HUD...');
             this.createHUDStructure();
@@ -248,8 +248,9 @@ export class PlayerHUD {
     }
 
     updateNeedsFromSystem() {
-        if (!window.playerSystem) return;
-        const needs = window.playerSystem.getNeeds();
+        const playerSystem = getSystem('player');
+        if (!playerSystem) return;
+        const needs = playerSystem.getNeeds();
 
         if (!needs) return;
 
@@ -265,7 +266,8 @@ export class PlayerHUD {
     updatePlayerInfo() {
         if (!this.currentPlayer) return;
 
-        const needs = window.playerSystem?.getNeeds();
+        const playerSystem = getSystem('player');
+        const needs = playerSystem?.getNeeds();
         const hunger = needs?.hunger ?? this.currentPlayer.hunger ?? 100;
         const thirst = needs?.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;

@@ -11,6 +11,7 @@ import { WORLD_WIDTH, WORLD_HEIGHT, getInitialPlayerPosition } from "../theWorld
 import { frames } from "./frames.js";
 import { camera, CAMERA_ZOOM } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
+import { getSystem } from "../gameState.js"
 
 /** @constant {boolean} Enables red hitbox overlay for debugging collisions */
 const DEBUG_HITBOXES = false;
@@ -70,8 +71,9 @@ export function createCharacter(config) {
         },
 
         restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
-            if (window.playerSystem && window.playerSystem.restoreNeeds) {
-                window.playerSystem.restoreNeeds(hunger, thirst, energy);
+            const playerSystem = getSystem('player');
+            if (playerSystem && playerSystem.restoreNeeds) {
+                playerSystem.restoreNeeds(hunger, thirst, energy);
             }
         }
     };
@@ -111,12 +113,13 @@ export function createCharacter(config) {
      * @returns {void}
      */
     function syncNeedsFromPlayerSystem() {
-        if (window.playerSystem) {
-            const needs = window.playerSystem.getNeeds();
+        const playerSystem = getSystem('player');
+        if (playerSystem) {
+            const needs = playerSystem.getNeeds();
             character.hunger = needs.hunger;
             character.thirst = needs.thirst;
             character.energy = needs.energy;
-            character.isConsuming = !!window.playerSystem.isConsuming;
+            character.isConsuming = !!playerSystem.isConsuming;
         }
     }
 
@@ -131,8 +134,9 @@ export function createCharacter(config) {
     function updateCharacter(deltaTime, keys) {
         syncNeedsFromPlayerSystem();
 
-        if (window.playerSystem && window.playerSystem.currentPlayer &&
-            window.playerSystem.currentPlayer.isSleeping) {
+        const playerSystem = getSystem('player');
+        if (playerSystem && playerSystem.currentPlayer &&
+            playerSystem.currentPlayer.isSleeping) {
             character.isSleeping = true;
             return;
         } else {
@@ -158,8 +162,8 @@ export function createCharacter(config) {
         }
 
         let efficiencyMultiplier = 1.0;
-        if (window.playerSystem && window.playerSystem.getEfficiencyMultiplier) {
-            efficiencyMultiplier = window.playerSystem.getEfficiencyMultiplier();
+        if (playerSystem && playerSystem.getEfficiencyMultiplier) {
+            efficiencyMultiplier = playerSystem.getEfficiencyMultiplier();
         }
 
         character.speed = character.baseSpeed * efficiencyMultiplier;
@@ -253,9 +257,10 @@ export function createCharacter(config) {
     function drawCharacter(ctx) {
         syncNeedsFromPlayerSystem();
 
-        const isExhausted = window.playerSystem &&
-            window.playerSystem.getEfficiencyMultiplier &&
-            window.playerSystem.getEfficiencyMultiplier() < 0.5;
+        const playerSystem = getSystem('player');
+        const isExhausted = playerSystem &&
+            playerSystem.getEfficiencyMultiplier &&
+            playerSystem.getEfficiencyMultiplier() < 0.5;
 
         const isConsuming = character.isConsuming;
 
