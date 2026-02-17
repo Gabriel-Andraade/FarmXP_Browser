@@ -5,7 +5,7 @@ import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsuma
 import { t } from '../i18n/i18n.js';
 import { UI_UPDATE_DELAY_MS, UI_MIN_UPDATE_INTERVAL_MS, INIT_DELAY_MS, CONSUMPTION_BAR_DURATION_MS } from '../constants.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from '../validation.js';
-import { registerSystem, getDebugFlag } from '../gameState.js';
+import { registerSystem, getDebugFlag, getSystem } from '../gameState.js';
 
 
 export { getAllItems as allItems };
@@ -19,7 +19,7 @@ export class InventorySystem {
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
 
-        // 🔧 Inicializar categorias da configuração centralizada
+        //  Inicializar categorias da configuração centralizada
         this.categories = {
             tools: { limit: INVENTORY_CATEGORIES.tools.limit, stackLimit: INVENTORY_CATEGORIES.tools.stackLimit, items: [] },
             seeds: { limit: INVENTORY_CATEGORIES.seeds.limit, stackLimit: INVENTORY_CATEGORIES.seeds.stackLimit, items: [] },
@@ -40,6 +40,14 @@ export class InventorySystem {
         this.setupGlobalListeners();
 
         logger.info('🎒 InventorySystem inicializado com categorias centralizadas');
+    }
+    
+    _markSaveDirty() {
+        const save = getSystem('save');
+        if (!save || typeof save.markDirty !== 'function') return;
+        // Evita marcar dirty durante restore de save (load)
+        if (save.isApplyingSave) return;
+        save.markDirty();
     }
     
     scheduleUIUpdate() {
@@ -71,7 +79,6 @@ export class InventorySystem {
         for (const [category, data] of Object.entries(this.categories)) {
             const item = data.items.find(item => item.id === itemId);
             if (item) {
-                // ✅ Enriquecer item com dados completos do banco de dados
                 const fullItemData = getItem(itemId);
                 if (!fullItemData) {
                     logger.error(`❌ Item ID ${itemId} não encontrado em item.js`);
@@ -83,7 +90,7 @@ export class InventorySystem {
                     ...item,                    // Dados do inventário (quantidade, etc)
                     ...fullItemData,            // Dados completos (buildWidth, variants, etc)
                     category,                   // Categoria
-                    placeable: isPlaceable(itemId)  // ✅ Validar se é construível
+                    placeable: isPlaceable(itemId)  // Validar se é construível
                 };
                 
                 logger.debug(`🎯 Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
@@ -116,12 +123,14 @@ export class InventorySystem {
             } else if (item.type === 'food') {
                 this.equipped.food = item.id;
             }
+            this._markSaveDirty();
             this.scheduleUIUpdate();
         }, { signal });
 
         document.addEventListener('itemUnequipped', () => {
             this.equipped.tool = null;
             this.equipped.food = null;
+            this._markSaveDirty(); 
             this.scheduleUIUpdate();
         }, { signal });
 
@@ -141,7 +150,6 @@ export class InventorySystem {
     }
 
     addItem(categoryOrId, itemIdOrQty, quantity = 1, _recursionDepth = 0) {
-        // ✅ Proteção contra recursão infinita
         if (_recursionDepth > 100) {
             logger.error('❌ Limite de recursão excedido ao adicionar itens');
             return false;
@@ -192,7 +200,6 @@ export class InventorySystem {
         const categoryData = this.categories[category];
         const existingItem = categoryData.items.find(item => item.id === id);
         
-        // 🔧 Usar stack limit centralizado
         const stackLimit = getStackLimit(id);
 
         if (existingItem) {
@@ -222,7 +229,7 @@ export class InventorySystem {
                     fillUp: itemData.fillUp || null
                 });
 
-                logger.debug(`📚 Stack dividida: ${itemData.name} - Principal: ${stackLimit}, Nova: ${overflow}`);
+                logger.debug(` Stack dividida: ${itemData.name} - Principal: ${stackLimit}, Nova: ${overflow}`);
             } else {
                 existingItem.quantity = newTotal;
             }
@@ -261,18 +268,18 @@ export class InventorySystem {
             }
         }
 
-        this.saveToStorage();
+        this._markSaveDirty();
         this.scheduleUIUpdate();
         return true;
     }
 
     autoMapCategoryByItemType(itemType) {
-        // 🔧 Usar mapeamento centralizado em vez de replicado
+        // Usar mapeamento centralizado em vez de replicado
         return mapTypeToCategory(itemType);
     }
 
     findItemData(itemId) {
-        // 🔧 Usar getItem() centralizado em vez de items.find()
+        // Usar getItem() centralizado em vez de items.find()
         return getItem(itemId);
     }
 
@@ -312,7 +319,7 @@ export class InventorySystem {
 
         // ✅ Validação crítica: quantidade suficiente?
         if (item.quantity < qty) {
-            logger.warn(`❌ Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
+            logger.warn(` Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
             return false;
         }
 
@@ -325,7 +332,6 @@ export class InventorySystem {
         if (this.equipped.tool === id) this.equipped.tool = null;
         if (this.equipped.food === id) this.equipped.food = null;
 
-        this.saveToStorage();
         this.scheduleUIUpdate();
         return true;
     }
@@ -348,22 +354,22 @@ export class InventorySystem {
         // ✅ Validação de tipo
         if (category === 'tools') {
             if (item.type !== 'tool') {
-                logger.warn(`❌ Tentativa de equipar não-ferramenta: ${item.name}`);
+                logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
                 return false;
             }
             this.equipped.tool = itemId;
         } else if (category === 'food') {
             if (!item.fillUp) {
-                logger.warn(`❌ Tentativa de equipar comida não-consumível: ${item.name}`);
+                logger.warn(` Tentativa de equipar comida não-consumível: ${item.name}`);
                 return false;
             }
             this.equipped.food = itemId;
         } else {
-            logger.warn(`❌ Categoria '${category}' não pode ser equipada`);
+            logger.warn(` Categoria '${category}' não pode ser equipada`);
             return false;
         }
 
-        this.saveToStorage();
+        this._markSaveDirty();
         this.scheduleUIUpdate();
         return true;
     }
@@ -405,91 +411,23 @@ export class InventorySystem {
         return this.equipped;
     }
 
-    saveToStorage() {
-        const saveData = {
-            categories: {},
-            equipped: this.equipped,
-            timestamp: Date.now()
-        };
-        
-        for (const [catName, catData] of Object.entries(this.categories)) {
-            saveData.categories[catName] = {
-                items: catData.items.map(item => ({
-                    id: item.id,
-                    quantity: item.quantity
-                })),
-                limit: catData.limit
-            };
-        }
-        
-        if (getDebugFlag('debug')) {
-            logger.debug('💾 (Simulado) Salvando inventário:', saveData);
-        }
-        
-        // Em produção, você usaria localStorage ou um servidor
-        // try {
-        //     localStorage.setItem('farmingxp_inventory', JSON.stringify(saveData));
-        // } catch (e) {
-        //     console.warn('⚠️ Não foi possível salvar inventário:', e);
-        // }
-    }
-
-    loadFromStorage() {
-        logger.debug('💾 Carregamento de inventário (simulado)');
-        
-        // Em produção, você carregaria de localStorage
-        // try {
-        //     const saved = localStorage.getItem('farmingxp_inventory');
-        //     if (saved) {
-        //         const saveData = JSON.parse(saved);
-        //         // Implementar carregamento
-        //     }
-        // } catch (e) {
-        //     console.warn('⚠️ Não foi possível carregar inventário:', e);
-        // }
-        
-        // Para testes, adicionar alguns itens padrão
-        if (getDebugFlag('debug')) {
-            logger.debug('🧪 Adicionando itens de teste...');
-            
-            // Ferramentas
-            this.addItem(0, 1);  // Tesoura
-            this.addItem(1, 1);  // Enxada
-            
-            // Sementes
-            this.addItem(3, 5);  // Semente de Milho
-            this.addItem(4, 3);  // Semente de Trigo
-            
-            // Comida
-            this.addItem(5, 3);  // Maçã
-            this.addItem(6, 2);  // Pão
-            
-            // Recursos
-            this.addItem(9, 10); // Madeira
-            this.addItem(10, 8); // Pedra
-            
-            // Construção
-            this.addItem(43, 2); // Cerca de Madeira
-        }
-    }
-
     clear() {
         Object.keys(this.categories).forEach(category => {
             this.categories[category].items = [];
         });
         this.equipped = { tool: null, food: null };
-        this.saveToStorage();
+        this._markSaveDirty();
         this.triggerUIUpdate();
         logger.debug('🗑️ Inventário limpo');
     }
 
     updateUI() {
-        logger.warn('⚠️ updateUI() chamado diretamente - use scheduleUIUpdate()');
+        logger.warn(' updateUI() chamado diretamente - use scheduleUIUpdate()');
         this.triggerUIUpdate();
     }
 
     debug() {
-        logger.debug('🎒 INVENTÁRIO (Sistema Corrigido):');
+        logger.debug(' INVENTÁRIO (Sistema Corrigido):');
         logger.debug('='.repeat(60));
 
         Object.entries(this.categories).forEach(([category, data]) => {
@@ -528,7 +466,7 @@ export class InventorySystem {
     
     setUpdateDelay(delayMs) {
         this.UI_UPDATE_DELAY = Math.max(16, delayMs);
-        logger.debug(`🎯 Delay do inventário ajustado para ${this.UI_UPDATE_DELAY}ms`);
+        logger.debug(` Delay do inventário ajustado para ${this.UI_UPDATE_DELAY}ms`);
     }
 
     isConsumable(itemId) {
@@ -661,49 +599,3 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 
     itemElement.appendChild(buttonContainer);
 }
-
-// ====================================================================
-// FUNÇÕES GLOBAIS DE DEBUG/TESTE
-// ====================================================================
-
-inventorySystem.testCategorization = () => {
-    logger.debug('🧪 TESTANDO CATEGORIZAÇÃO DE ITENS');
-    logger.debug('='.repeat(60));
-
-    inventorySystem.clear();
-
-    const testCases = [
-        { id: 0, expected: 'tools', name: 'Tesoura (ferramenta)' },
-        { id: 1, expected: 'tools', name: 'Enxada (ferramenta)' },
-        { id: 3, expected: 'seeds', name: 'Semente de Milho (seed)' },
-        { id: 5, expected: 'food', name: 'Maçã (comida)' },
-        { id: 7, expected: 'animals', name: 'Ração para Galinha (animal_food)' },
-        { id: 9, expected: 'resources', name: 'Madeira Bruta (resource)' },
-        { id: 43, expected: 'construction', name: 'Cerca (construction)' },
-        { id: 63, expected: 'resources', name: 'Milho (crop)' }
-    ];
-
-    testCases.forEach(test => {
-        logger.debug(`📦 Adicionando: ${test.name}`);
-        const success = inventorySystem.addItem(test.id, 1);
-        logger.debug(`   ✅ Sucesso: ${success}, Esperado: ${test.expected}`);
-    });
-
-    setTimeout(() => {
-        inventorySystem.debug();
-    }, 100);
-};
-
-inventorySystem.addTestItems = () => {
-    inventorySystem.addItem(0, 1);  // Tesoura (tools)
-    inventorySystem.addItem(3, 5);  // Semente (seeds)
-    inventorySystem.addItem(5, 3);  // Maçã (food)
-    inventorySystem.addItem(7, 2);  // Ração (animals)
-    inventorySystem.addItem(9, 10); // Madeira (resources)
-    inventorySystem.addItem(43, 3); // Cerca (construction)
-
-    logger.debug('✅ Itens de teste adicionados!');
-    inventorySystem.debug();
-};
-
-logger.info('🎒 InventorySystem carregado e pronto!');

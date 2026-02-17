@@ -82,23 +82,30 @@ export class CharacterSelection {
             characterCard.className = 'chs-character-card';
             characterCard.dataset.characterId = character.id;
 
-            const portrait = document.createElement('div');
-            portrait.className = 'chs-character-portrait';
-            const img = document.createElement('img');
+const portrait = document.createElement('div');
+portrait.className = 'chs-character-portrait';
+
+    const img = document.createElement('img');
             img.src = character.portrait;
             img.alt = character.name;
+
+                img.loading = 'lazy';
+            img.decoding = 'async';
+
             portrait.appendChild(img);
+
             const nameH3 = document.createElement('h3');
-            nameH3.textContent = character.name;
+        nameH3.textContent = character.name;
+
             const subtitleP = document.createElement('p');
-            subtitleP.textContent = this.getCharacterSubtitle(character.id);
-            characterCard.append(portrait, nameH3, subtitleP);
-            if (character.id !== "stella") {
-                const warning = document.createElement('div');
-                warning.className = 'chs-character-warning';
-                warning.textContent = t('characterSelection.inDevelopment');
-                characterCard.appendChild(warning);
-            }
+        subtitleP.textContent = this.getCharacterSubtitle(character.id);
+
+            const traitsDiv = document.createElement('div');
+            traitsDiv.className = 'chs-character-traits';
+            traitsDiv.textContent = this.getCharacterTraits(character.id);
+
+        characterCard.append(portrait, nameH3, subtitleP, traitsDiv);
+
 
             gridDiv.appendChild(characterCard);
         });
@@ -110,15 +117,19 @@ export class CharacterSelection {
         return t(`characterSelection.subtitles.${characterId}`) || t('characterSelection.subtitles.default');
     }
 
+    getCharacterTraits(characterId) {
+        const traits = {
+            stella: '',
+            ben: '',
+            graham: ''
+        };
+        return traits[characterId] || '';
+    }
+
     bindEvents() {
         this.container.querySelectorAll('.chs-character-card').forEach(card => {
             card.addEventListener('click', () => {
                 const characterId = card.dataset.characterId;
-
-                if (characterId !== "stella") {
-                    this.showWarning(t('characterSelection.onlyStellaAvailable'));
-                    return;
-                }
 
                 this.container.querySelectorAll('.chs-character-card').forEach(c => {
                     c.classList.remove('selected');
@@ -131,10 +142,6 @@ export class CharacterSelection {
 
         this.container.querySelector('.chs-start-game-btn').addEventListener('click', () => {
             if (this.selectedCharacter) {
-                if (this.selectedCharacter.id !== "stella") {
-                    this.showWarning(t('characterSelection.selectStellaToPlay'));
-                    return;
-                }
                 this.startGame();
             } else {
                 this.showWarning(t('characterSelection.selectCharacterFirst'));
@@ -186,11 +193,6 @@ export class CharacterSelection {
 
     startGame() {
         this.container.style.display = 'none';
-
-        if (this.selectedCharacter.id !== "stella") {
-            this.showWarning(t('characterSelection.redirecting'));
-            this.selectedCharacter = this.characters.find(c => c.id === "stella");
-        }
 
         playerSystem.setActiveCharacter(this.selectedCharacter);
 

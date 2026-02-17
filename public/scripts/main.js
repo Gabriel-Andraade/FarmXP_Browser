@@ -16,10 +16,9 @@ import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebu
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { assets } from "./assetManager.js";
-import { loadImages } from "./thePlayer/frames.js";
+// loadImages is now called dynamically inside playerSystem.loadCharacterModule
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
 import { setViewportSize, camera } from "./thePlayer/cameraSystem.js";
-import { cssManager } from "./cssManager.js";
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen } from "./loadingScreen.js";
 import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
@@ -450,7 +449,7 @@ function setupSleepListeners() {
 
       const hud = getSystem('hud');
       if (hud) {
-        hud.showNotification("Bom dia! Energias renovadas.", "success", 4000);
+        hud.showNotification(t('time.goodMorning'), "success", 4000);
       }
 
       preSleepInteractionState = null;
@@ -622,7 +621,7 @@ async function startFullGameLoad() {
     if (window._pendingSaveData && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
-        saveRef.applySaveData(window._pendingSaveData);
+        await saveRef.applySaveData(window._pendingSaveData);
         logger.info('📂 Save aplicado do startup');
       } catch (e) {
         handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
@@ -711,7 +710,6 @@ async function initGameBootstrap() {
   updateLoadingProgress(0.02, t('messages.loading'));
 
   const loadingSteps = [
-    { name: "Sprites do jogador", action: loadImages },
     { name: "Assets core", action: () => assets.loadCore() },
     { name: "Interface responsiva", action: initResponsiveUI },
     { name: "Mundo base", action: initializeWorld },
@@ -857,14 +855,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     logger.debug("settingsUI carregado (após i18n + a11y)");
   } catch (error) {
     handleWarn("falha ao carregar settingsUI", "main:DOMContentLoaded:settingsUI", error);
-  }
-
-  try {
-    logger.debug("Carregando estilos CSS...");
-    await cssManager.loadAll();
-    logger.debug("Todos os estilos CSS carregados");
-  } catch (error) {
-    logger.error("Erro ao carregar CSS:", error);
   }
 
   try {

@@ -334,7 +334,7 @@ class SaveSlotsUI {
      *   pause -> loading -> block -> apply -> hide -> unblock -> resume.
      * @param {number} slotIndex - Índice do slot
      */
-    _loadSave(slotIndex) {
+    async _loadSave(slotIndex) {
         // ── Fluxo simplificado (startup / callback externo) ──
         if (this.onLoadCallback) {
             const slot = saveSystem.loadSlot(slotIndex);
@@ -371,9 +371,9 @@ class SaveSlotsUI {
 
         updateLoadingProgress(0.5, t('saveSlots.applying'));
 
-        // 4. Aplicar dados (mundo, inventário, posição, clima)
+        // 4. Aplicar dados (mundo, inventário, posição, clima, personagem)
         try {
-            saveSystem.applySaveData(slot);
+            await saveSystem.applySaveData(slot);
         } catch (e) {
             logger.error('Erro ao aplicar dados do save:', e);
             this._showMessage(t('saveSlots.applyError'), 'error');

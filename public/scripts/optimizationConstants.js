@@ -1,6 +1,6 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
-
+import { getObject } from "./gameState.js";
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
  * @constant {number}
@@ -253,7 +253,6 @@ function clearCalculationCache() {
         }
     });
 }
-
 /**
  * No-op — anteriormente tentava compactar arrays via window[arrayName],
  * mas os arrays relevantes são module-scoped em theWorld.js (#65).

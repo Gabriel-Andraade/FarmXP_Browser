@@ -678,7 +678,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.fillStyle = "white";
     ctx.font = "30px monospace";
     ctx.textAlign = "center";
-    ctx.fillText("Zzz...", width / 2, height / 2);
+    ctx.fillText(t('time.sleepZzz'), width / 2, height / 2);
     ctx.restore();
   }
 }

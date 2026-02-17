@@ -147,7 +147,8 @@ export default {
     evening: 'Noche',
     night: 'Madrugada',
     sleeping: 'Durmiendo profundamente: Día {fromDay} → Día {toDay} ({weekday})',
-    wait: 'Espere...'
+    wait: 'Espere...',
+    sleepZzz: 'Zzz...'
   },
 
   // Seasons
