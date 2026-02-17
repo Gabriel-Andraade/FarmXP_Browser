@@ -90,46 +90,81 @@ export class PlayerHUD {
         const oldTopBar = document.querySelector('.top-bar');
         if (oldTopBar) oldTopBar.remove();
 
-        // HTML limpo e estruturado
-        const hudHTML = `
-            <div class="player-panel" id="playerPanel">
-                <div class="player-portrait">
-                    <img id="playerPortrait" src="assets/characters/default.png" alt="Player Portrait">
-                </div>
-                <div class="player-info">
-                    <h3 id="hudPlayerName">${t('player.noCharacter')}</h3>
-                    <div id="equipped-item" style="display:none; font-size: 14px; color: #cfc; margin-top: 4px;"></div>
+        // fix: insertAdjacentHTML → DOM API
+        const playerPanel = document.createElement('div');
+        playerPanel.className = 'player-panel';
+        playerPanel.id = 'playerPanel';
 
-                    <div class="player-info-grid">
-                        <div class="player-stat"><span class="stat-label">👤 ${t('player.level')}:</span><span class="stat-value" id="hudPlayerLevel">1</span></div>
-                        <div class="player-stat"><span class="stat-label">⭐ ${t('player.xp')}:</span><span class="stat-value" id="hudPlayerXP">0/100</span></div>
-                        <div class="player-stat"><span class="stat-label">🍗 ${t('player.hunger')}:</span><span class="stat-value" id="hudPlayerHunger">100%</span></div>
-                        <div class="player-stat"><span class="stat-label">💧 ${t('player.thirst')}:</span><span class="stat-value" id="hudPlayerThirst">100%</span></div>
-                        <div class="player-stat"><span class="stat-label">⚡ ${t('player.energy')}:</span><span class="stat-value" id="hudPlayerEnergy">100%</span></div>
-                        <div class="player-stat"><span class="stat-label">💰 ${t('player.money')}:</span><span class="stat-value" id="hudPlayerMoney">$0</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="hud-action-buttons">
-                <button class="hud-action-btn" id="saveGameBtn" title="${t('hud.saveTooltip')}" aria-label="${t('hud.saveTooltip')}">💾</button>
-                <button class="hud-action-btn" id="settingsBtn" title="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}" aria-label="${t('hud.settingsTooltip', { key: getKeyForAction('config') })}">⚙️</button>
-                <button class="hud-action-btn" id="inventoryBtn" title="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}" aria-label="${t('hud.inventoryTooltip', { key: getKeyForAction('inventory') })}">🎒</button>
-                <button class="hud-action-btn" id="commerceBtn" title="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}" aria-label="${t('hud.commerceTooltip', { key: getKeyForAction('merchants') })}">🛒</button>
-                <button class="hud-action-btn" id="helpBtn" title="${t('hud.helpTooltip', { key: getKeyForAction('help') })}" aria-label="${t('hud.helpTooltip', { key: getKeyForAction('help') })}">❓</button>
-            </div>
-        `;
+        const portrait = document.createElement('div');
+        portrait.className = 'player-portrait';
+        const portraitImg = document.createElement('img');
+        portraitImg.id = 'playerPortrait';
+        portraitImg.src = 'assets/characters/default.png';
+        portraitImg.alt = 'Player Portrait';
+        portrait.appendChild(portraitImg);
 
-        const gameContainer = document.querySelector('.theGame');
-        if (gameContainer) {
-            gameContainer.insertAdjacentHTML('afterbegin', hudHTML);
-        } else {
-            // Fallback seguro caso .theGame não exista
-            const body = document.body;
-            const gameDiv = document.createElement('div');
-            gameDiv.className = 'theGame';
-            body.appendChild(gameDiv);
-            gameDiv.insertAdjacentHTML('afterbegin', hudHTML);
+        const playerInfo = document.createElement('div');
+        playerInfo.className = 'player-info';
+        const nameH3 = document.createElement('h3');
+        nameH3.id = 'hudPlayerName';
+        nameH3.textContent = t('player.noCharacter');
+        const equippedItem = document.createElement('div');
+        equippedItem.id = 'equipped-item';
+        equippedItem.style.cssText = 'display:none; font-size: 14px; color: #cfc; margin-top: 4px;';
+
+        const infoGrid = document.createElement('div');
+        infoGrid.className = 'player-info-grid';
+        const stats = [
+            { icon: '👤', label: t('player.level'), id: 'hudPlayerLevel', value: '1' },
+            { icon: '⭐', label: t('player.xp'), id: 'hudPlayerXP', value: '0/100' },
+            { icon: '🍗', label: t('player.hunger'), id: 'hudPlayerHunger', value: '100%' },
+            { icon: '💧', label: t('player.thirst'), id: 'hudPlayerThirst', value: '100%' },
+            { icon: '⚡', label: t('player.energy'), id: 'hudPlayerEnergy', value: '100%' },
+            { icon: '💰', label: t('player.money'), id: 'hudPlayerMoney', value: '$0' },
+        ];
+        for (const s of stats) {
+            const stat = document.createElement('div');
+            stat.className = 'player-stat';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'stat-label';
+            labelSpan.textContent = `${s.icon} ${s.label}:`;
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'stat-value';
+            valueSpan.id = s.id;
+            valueSpan.textContent = s.value;
+            stat.append(labelSpan, valueSpan);
+            infoGrid.appendChild(stat);
         }
+        playerInfo.append(nameH3, equippedItem, infoGrid);
+        playerPanel.append(portrait, playerInfo);
+
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'hud-action-buttons';
+        const buttons = [
+            { id: 'saveGameBtn', tooltip: t('hud.saveTooltip'), icon: '💾' },
+            { id: 'settingsBtn', tooltip: t('hud.settingsTooltip', { key: getKeyForAction('config') }), icon: '⚙️' },
+            { id: 'inventoryBtn', tooltip: t('hud.inventoryTooltip', { key: getKeyForAction('inventory') }), icon: '🎒' },
+            { id: 'commerceBtn', tooltip: t('hud.commerceTooltip', { key: getKeyForAction('merchants') }), icon: '🛒' },
+            { id: 'helpBtn', tooltip: t('hud.helpTooltip', { key: getKeyForAction('help') }), icon: '❓' },
+        ];
+        for (const b of buttons) {
+            const btn = document.createElement('button');
+            btn.className = 'hud-action-btn';
+            btn.id = b.id;
+            btn.title = b.tooltip;
+            btn.setAttribute('aria-label', b.tooltip);
+            btn.textContent = b.icon;
+            actionButtons.appendChild(btn);
+        }
+
+        let gameContainer = document.querySelector('.theGame');
+        if (!gameContainer) {
+            gameContainer = document.createElement('div');
+            gameContainer.className = 'theGame';
+            document.body.appendChild(gameContainer);
+        }
+        gameContainer.prepend(actionButtons);
+        gameContainer.prepend(playerPanel);
 
         // Rebindeia os listeners nos botões do HUD (necessário após recriação do HTML)
         this.bindHUDButtons();
@@ -294,15 +329,18 @@ export class PlayerHUD {
         if (equippedElement) {
             if (item) {
                 const itemName = getItemName(item.id, item.name);
-                equippedElement.innerHTML = `
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span></span>
-                        <span>${itemName}</span>
-                    </div>
-                `;
+                // fix: innerHTML → DOM API
+                equippedElement.replaceChildren();
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+                const iconSpan = document.createElement('span');
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = itemName;
+                wrapper.append(iconSpan, nameSpan);
+                equippedElement.appendChild(wrapper);
                 equippedElement.style.display = 'block';
             } else {
-                equippedElement.innerHTML = '';
+                equippedElement.replaceChildren();
                 equippedElement.style.display = 'none';
             }
         }

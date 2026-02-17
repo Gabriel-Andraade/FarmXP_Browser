@@ -415,6 +415,7 @@ class AccessibilityManager {
     // But this at least gives the user a way to "shift" colors globally without rewriting art.
     if (document.getElementById('cvd-filters')) return;
 
+    // fix: innerHTML → DOM API (createElementNS)
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('id', 'cvd-filters');
     svg.setAttribute('aria-hidden', 'true');
@@ -423,39 +424,22 @@ class AccessibilityManager {
     svg.style.height = '0';
     svg.style.overflow = 'hidden';
 
-    svg.innerHTML = `
-      <filter id="cvd-protanopia">
-        <feColorMatrix type="matrix" values="
-          0.567 0.433 0 0 0
-          0.558 0.442 0 0 0
-          0     0.242 0.758 0 0
-          0     0     0     1 0" />
-      </filter>
-
-      <filter id="cvd-deuteranopia">
-        <feColorMatrix type="matrix" values="
-          0.625 0.375 0 0 0
-          0.700 0.300 0 0 0
-          0     0.300 0.700 0 0
-          0     0     0     1 0" />
-      </filter>
-
-      <filter id="cvd-tritanopia">
-        <feColorMatrix type="matrix" values="
-          0.950 0.050 0 0 0
-          0     0.433 0.567 0 0
-          0     0.475 0.525 0 0
-          0     0     0     1 0" />
-      </filter>
-
-      <filter id="cvd-achromatopsia">
-        <feColorMatrix type="matrix" values="
-          0.2126 0.7152 0.0722 0 0
-          0.2126 0.7152 0.0722 0 0
-          0.2126 0.7152 0.0722 0 0
-          0      0      0      1 0" />
-      </filter>
-    `;
+    const NS = 'http://www.w3.org/2000/svg';
+    const filters = [
+      { id: 'cvd-protanopia', values: '0.567 0.433 0 0 0 0.558 0.442 0 0 0 0 0.242 0.758 0 0 0 0 0 1 0' },
+      { id: 'cvd-deuteranopia', values: '0.625 0.375 0 0 0 0.700 0.300 0 0 0 0 0.300 0.700 0 0 0 0 0 1 0' },
+      { id: 'cvd-tritanopia', values: '0.950 0.050 0 0 0 0 0.433 0.567 0 0 0 0.475 0.525 0 0 0 0 0 1 0' },
+      { id: 'cvd-achromatopsia', values: '0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0.2126 0.7152 0.0722 0 0 0 0 0 1 0' },
+    ];
+    for (const f of filters) {
+      const filter = document.createElementNS(NS, 'filter');
+      filter.setAttribute('id', f.id);
+      const matrix = document.createElementNS(NS, 'feColorMatrix');
+      matrix.setAttribute('type', 'matrix');
+      matrix.setAttribute('values', f.values);
+      filter.appendChild(matrix);
+      svg.appendChild(filter);
+    }
 
     document.body.appendChild(svg);
     this._cvdSvgEl = svg;

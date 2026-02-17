@@ -23,13 +23,34 @@ function ensureWeatherUIPanel() {
     _wuiCache = null; // invalidar cache ao recriar painel
     el = document.createElement("div");
     el.id = WEATHER_UI_ID;
-    el.innerHTML = `
-      <div class="wui-time" data-role="time">00:00</div>
-      <div class="wui-weekday" data-role="weekday">-</div>
-      <div class="wui-row"><span data-role="dayLabel">${t('time.dayLabel')}:</span><span data-role="day">1</span></div>
-      <div class="wui-row"><span data-role="seasonLabel">${t('time.seasonLabel')}:</span><span data-role="season">-</span></div>
-      <div class="wui-row"><span data-role="weatherLabel">${t('time.weatherLabel')}:</span><span data-role="weather">-</span></div>
-    `;
+    // fix: innerHTML → DOM API
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'wui-time';
+    timeDiv.dataset.role = 'time';
+    timeDiv.textContent = '00:00';
+    const weekdayDiv = document.createElement('div');
+    weekdayDiv.className = 'wui-weekday';
+    weekdayDiv.dataset.role = 'weekday';
+    weekdayDiv.textContent = '-';
+
+    const rows = [
+      { labelRole: 'dayLabel', labelText: `${t('time.dayLabel')}:`, valRole: 'day', valText: '1' },
+      { labelRole: 'seasonLabel', labelText: `${t('time.seasonLabel')}:`, valRole: 'season', valText: '-' },
+      { labelRole: 'weatherLabel', labelText: `${t('time.weatherLabel')}:`, valRole: 'weather', valText: '-' },
+    ];
+    const rowEls = rows.map(r => {
+      const row = document.createElement('div');
+      row.className = 'wui-row';
+      const label = document.createElement('span');
+      label.dataset.role = r.labelRole;
+      label.textContent = r.labelText;
+      const val = document.createElement('span');
+      val.dataset.role = r.valRole;
+      val.textContent = r.valText;
+      row.append(label, val);
+      return row;
+    });
+    el.append(timeDiv, weekdayDiv, ...rowEls);
     container.appendChild(el);
   } else if (el.parentElement !== container) {
     // Se já existia em outro lugar (ex.: body), move pro container correto
@@ -554,12 +575,15 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.restore();
   }
 
-  {
+  // fix: canvas context reset — isolate lightning state
+  if (WeatherSystem.lightningFlashes.length > 0) {
+    ctx.save();
     const flashes = WeatherSystem.lightningFlashes;
     for (let i = 0, len = flashes.length; i < len; i++) {
       ctx.fillStyle = `rgba(255, 255, 230, ${flashes[i].opacity})`;
       ctx.fillRect(0, 0, width, height);
     }
+    ctx.restore();
   }
 
   if (WeatherSystem.rainParticles.length > 0) {
@@ -587,7 +611,9 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.restore();
   }
 
+  // fix: canvas context reset — isolate snow state
   if (WeatherSystem.snowParticles.length > 0) {
+    ctx.save();
     ctx.fillStyle = "white";
     ctx.beginPath();
 
@@ -603,16 +629,23 @@ export function drawWeatherEffects(ctx, player, canvas) {
     }
 
     ctx.fill();
+    ctx.restore();
   }
 
+  // fix: canvas context reset — isolate fog state
   if (WeatherSystem.weatherType === "fog") {
+    ctx.save();
     ctx.fillStyle = `rgba(200, 210, 220, 0.2)`;
     ctx.fillRect(0, 0, width, height);
+    ctx.restore();
   }
 
+  // fix: canvas context reset — isolate sleep transition state
   if (WeatherSystem.sleepTransitionProgress > 0) {
+    ctx.save();
     ctx.fillStyle = `rgba(0,0,0,${WeatherSystem.sleepTransitionProgress})`;
     ctx.fillRect(0, 0, width, height);
+    ctx.restore();
   }
 
   if (WeatherSystem.sleepPhase === "holding" && WeatherSystem.sleepMessage) {

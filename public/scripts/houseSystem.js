@@ -82,13 +82,16 @@ export class HouseSystem {
     showDoorHint() {
         this.hideDoorHint();
 
+        // fix: innerHTML → DOM API
         const hint = document.createElement('div');
         hint.className = 'door-hint active';
-        hint.innerHTML = `
-            <div class="hint-content">
-                <span class="hint-text">${t('help.doorHint')}</span>
-            </div>
-        `;
+        const hintContent = document.createElement('div');
+        hintContent.className = 'hint-content';
+        const hintText = document.createElement('span');
+        hintText.className = 'hint-text';
+        hintText.textContent = t('help.doorHint');
+        hintContent.appendChild(hintText);
+        hint.appendChild(hintContent);
         hint.id = 'doorHint';
         document.body.appendChild(hint);
     }
@@ -159,50 +162,60 @@ export class HouseSystem {
         this.createHouseMenu();
     }
 
+    // fix: innerHTML → DOM API
     createHouseMenu() {
         this.closeHouseMenu();
 
         const modal = document.createElement('div');
         modal.className = 'modal hse-house-modal active';
-        modal.innerHTML = `
-            <div class="modal-content house-modal-content">
-                <div class="modal-header">
-                    <h2>${t('house.title')}</h2>
-                    <button class="modal-close">&times;</button>
-                </div>
-                <div class="hse-house-options">
-                    <button class="hse-house-option" data-action="enter">
-                        <span class="hse-option-text">${t('house.enter')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="sleep">
-                        <span class="hse-option-text">${t('house.sleep')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="crafting">
-                        <span class="hse-option-text">${t('house.crafting')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="storage">
-                        <span class="hse-option-text">${t('house.storage')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="customize">
-                        <span class="hse-option-text">${t('house.customize')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="save">
-                        <span class="hse-option-text">💾 ${t('house.saveGame')}</span>
-                    </button>
-                    <button class="hse-house-option" data-action="load">
-                        <span class="hse-option-text">📂 ${t('house.loadGame')}</span>
-                    </button>
-                </div>
-                <div class="hse-house-footer">
-                    <button class="hse-house-close-btn">${t('house.close')}</button>
-                </div>
-            </div>
-        `;
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content house-modal-content';
+
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        const h2 = document.createElement('h2');
+        h2.textContent = t('house.title');
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'modal-close';
+        closeBtn.textContent = '\u00D7';
+        modalHeader.append(h2, closeBtn);
+
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'hse-house-options';
+        const actions = [
+            { action: 'enter', text: t('house.enter') },
+            { action: 'sleep', text: t('house.sleep') },
+            { action: 'crafting', text: t('house.crafting') },
+            { action: 'storage', text: t('house.storage') },
+            { action: 'customize', text: t('house.customize') },
+            { action: 'save', text: `💾 ${t('house.saveGame')}` },
+            { action: 'load', text: `📂 ${t('house.loadGame')}` },
+        ];
+        for (const act of actions) {
+            const btn = document.createElement('button');
+            btn.className = 'hse-house-option';
+            btn.dataset.action = act.action;
+            const span = document.createElement('span');
+            span.className = 'hse-option-text';
+            span.textContent = act.text;
+            btn.appendChild(span);
+            optionsDiv.appendChild(btn);
+        }
+
+        const footer = document.createElement('div');
+        footer.className = 'hse-house-footer';
+        const closeFooterBtn = document.createElement('button');
+        closeFooterBtn.className = 'hse-house-close-btn';
+        closeFooterBtn.textContent = t('house.close');
+        footer.appendChild(closeFooterBtn);
+
+        modalContent.append(modalHeader, optionsDiv, footer);
+        modal.appendChild(modalContent);
 
         document.body.appendChild(modal);
 
-        modal.querySelector('.modal-close').addEventListener('click', () => this.closeHouseMenu());
-        modal.querySelector('.hse-house-close-btn').addEventListener('click', () => this.closeHouseMenu());
+        closeBtn.addEventListener('click', () => this.closeHouseMenu());
+        closeFooterBtn.addEventListener('click', () => this.closeHouseMenu());
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeHouseMenu();
         });
@@ -294,49 +307,77 @@ export class HouseSystem {
         }
     }
 
+    // fix: innerHTML → DOM API
     showStorageModal() {
         this.closeHouseMenu();
 
         const modal = document.createElement('div');
         modal.className = 'modal storage-modal active';
-        modal.innerHTML = `
-            <div class="modal-content storage-modal-content">
-                <div class="modal-header">
-                    <h2>${t('storage.title')}</h2>
-                    <button class="modal-close">&times;</button>
-                </div>
+        const storageContent = document.createElement('div');
+        storageContent.className = 'modal-content storage-modal-content';
 
-                <div class="storage-tabs">
-                    <button class="storage-tab active" data-tab="withdraw">${t('storage.withdraw')}</button>
-                    <button class="storage-tab" data-tab="deposit">${t('storage.deposit')}</button>
-                </div>
+        const storageHeader = document.createElement('div');
+        storageHeader.className = 'modal-header';
+        const storageH2 = document.createElement('h2');
+        storageH2.textContent = t('storage.title');
+        const storageCloseBtn = document.createElement('button');
+        storageCloseBtn.className = 'modal-close';
+        storageCloseBtn.textContent = '\u00D7';
+        storageHeader.append(storageH2, storageCloseBtn);
 
-                <div class="storage-stats" id="storageStats"></div>
+        const tabsDiv = document.createElement('div');
+        tabsDiv.className = 'storage-tabs';
+        const withdrawTab = document.createElement('button');
+        withdrawTab.className = 'storage-tab active';
+        withdrawTab.dataset.tab = 'withdraw';
+        withdrawTab.textContent = t('storage.withdraw');
+        const depositTab = document.createElement('button');
+        depositTab.className = 'storage-tab';
+        depositTab.dataset.tab = 'deposit';
+        depositTab.textContent = t('storage.deposit');
+        tabsDiv.append(withdrawTab, depositTab);
 
-                <div class="storage-categories">
-                    ${Object.entries(storageSystem.categories).map(([key, category]) => `
-                        <button class="storage-category-btn" data-category="${key}">
-                            <span class="category-icon">${category.icon || ''}</span>
-                            <span class="category-name">${category.name}</span>
-                        </button>
-                    `).join('')}
-                </div>
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'storage-stats';
+        statsDiv.id = 'storageStats';
 
-                <div class="storage-content" id="storageContent"></div>
+        const categoriesDiv = document.createElement('div');
+        categoriesDiv.className = 'storage-categories';
+        for (const [key, category] of Object.entries(storageSystem.categories)) {
+            const catBtn = document.createElement('button');
+            catBtn.className = 'storage-category-btn';
+            catBtn.dataset.category = key;
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'category-icon';
+            iconSpan.textContent = category.icon || '';
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'category-name';
+            nameSpan.textContent = category.name;
+            catBtn.append(iconSpan, nameSpan);
+            categoriesDiv.appendChild(catBtn);
+        }
 
-                <div class="storage-footer">
-                    <button class="storage-close-btn">${t('ui.close')}</button>
-                </div>
-            </div>
-        `;
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'storage-content';
+        contentDiv.id = 'storageContent';
+
+        const storageFooter = document.createElement('div');
+        storageFooter.className = 'storage-footer';
+        const closeFooterBtn = document.createElement('button');
+        closeFooterBtn.className = 'storage-close-btn';
+        closeFooterBtn.textContent = t('ui.close');
+        storageFooter.appendChild(closeFooterBtn);
+
+        storageContent.append(storageHeader, tabsDiv, statsDiv, categoriesDiv, contentDiv, storageFooter);
+        modal.appendChild(storageContent);
 
         document.body.appendChild(modal);
 
         this.renderStorageStats();
         this.renderStorageCategory('tools', 'withdraw');
 
-        modal.querySelector('.modal-close').addEventListener('click', () => this.closeStorageModal());
-        modal.querySelector('.storage-close-btn').addEventListener('click', () => this.closeStorageModal());
+        storageCloseBtn.addEventListener('click', () => this.closeStorageModal());
+        closeFooterBtn.addEventListener('click', () => this.closeStorageModal());
 
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeStorageModal();
@@ -372,18 +413,27 @@ export class HouseSystem {
             ? storageSystem.getStorageInfo()
             : { totalItems: 0, totalValue: 0 };
 
-        el.innerHTML = `
-            <div class="stat-row">
-                <div class="stat-item">
-                    <div class="stat-label">${t('storage.items')}</div>
-                    <div class="stat-value">${info.totalItems || 0}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">${t('storage.value')}</div>
-                    <div class="stat-value">${info.totalValue || 0}</div>
-                </div>
-            </div>
-        `;
+        // fix: innerHTML → DOM API
+        el.replaceChildren();
+        const statRow = document.createElement('div');
+        statRow.className = 'stat-row';
+        const stats = [
+            { label: t('storage.items'), value: info.totalItems || 0 },
+            { label: t('storage.value'), value: info.totalValue || 0 },
+        ];
+        for (const s of stats) {
+            const item = document.createElement('div');
+            item.className = 'stat-item';
+            const label = document.createElement('div');
+            label.className = 'stat-label';
+            label.textContent = s.label;
+            const val = document.createElement('div');
+            val.className = 'stat-value';
+            val.textContent = s.value;
+            item.append(label, val);
+            statRow.appendChild(item);
+        }
+        el.appendChild(statRow);
     }
 
     renderStorageCategory(categoryKey, mode) {
@@ -397,19 +447,24 @@ export class HouseSystem {
         const usedStacks = stacksRaw.length;
         const title = category?.name || categoryKey;
 
-        content.innerHTML = `
-            <div class="category-info">
-              <h3>${title}</h3>
-              <div class="category-stats">
-                <span>${t('storage.stacks')}: ${usedStacks}/${maxStacks}</span>
-                <span>${t('storage.mode')}: ${mode === 'deposit' ? t('storage.depositMode') : t('storage.withdrawMode')}</span>
-              </div>
-            </div>
-            <div class="storage-grid" id="storageGrid"></div>
-        `;
-
-        const grid = content.querySelector('#storageGrid');
-        if (!grid) return;
+        // fix: innerHTML → DOM API
+        content.replaceChildren();
+        const catInfo = document.createElement('div');
+        catInfo.className = 'category-info';
+        const catH3 = document.createElement('h3');
+        catH3.textContent = title;
+        const catStats = document.createElement('div');
+        catStats.className = 'category-stats';
+        const stacksSpan = document.createElement('span');
+        stacksSpan.textContent = `${t('storage.stacks')}: ${usedStacks}/${maxStacks}`;
+        const modeSpan = document.createElement('span');
+        modeSpan.textContent = `${t('storage.mode')}: ${mode === 'deposit' ? t('storage.depositMode') : t('storage.withdrawMode')}`;
+        catStats.append(stacksSpan, modeSpan);
+        catInfo.append(catH3, catStats);
+        const grid = document.createElement('div');
+        grid.className = 'storage-grid';
+        grid.id = 'storageGrid';
+        content.append(catInfo, grid);
 
         // Se estiver no modo deposit, busca itens do inventário, senão, do storage
         const list = (mode === 'deposit')
@@ -428,13 +483,16 @@ export class HouseSystem {
             })();
 
         if (!list.length) {
-            grid.innerHTML = `<div class="empty-storage">${t('storage.emptyCategory')}</div>`;
+            const emptyDiv = document.createElement('div');
+            emptyDiv.className = 'empty-storage';
+            emptyDiv.textContent = t('storage.emptyCategory');
+            grid.appendChild(emptyDiv);
             return;
         }
 
         const getKey = (itemId, sourceCat) => `${mode}:${categoryKey}:${sourceCat || 'null'}:${itemId}`;
 
-        grid.innerHTML = list.map((s) => {
+        for (const s of list) {
             const data = getItem(s.itemId);
             const icon = data?.icon || '';
             const name = data?.name || `item ${s.itemId}`;
@@ -447,31 +505,50 @@ export class HouseSystem {
             const btnClass = mode === 'deposit' ? 'deposit-btn' : 'withdraw-btn';
             const btnText = mode === 'deposit' ? t('storage.depositBtn', { qty: selected }) : t('storage.withdrawBtn', { qty: selected });
 
-            return `
-              <div class="storage-slot" 
-                   data-itemid="${s.itemId}" 
-                   data-sourcecat="${s.sourceCategory || ''}" 
-                   data-max="${qty}" 
-                   data-key="${key}">
-                <div class="slot-header">
-                  <div class="item-icon">${icon}</div>
-                  <div class="item-quantity">${qty}x</div>
-                </div>
+            const slot = document.createElement('div');
+            slot.className = 'storage-slot';
+            slot.dataset.itemid = s.itemId;
+            slot.dataset.sourcecat = s.sourceCategory || '';
+            slot.dataset.max = qty;
+            slot.dataset.key = key;
 
-                <div class="item-name">${name}</div>
+            const slotHeader = document.createElement('div');
+            slotHeader.className = 'slot-header';
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'item-icon';
+            iconDiv.textContent = icon;
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'item-quantity';
+            qtyDiv.textContent = `${qty}x`;
+            slotHeader.append(iconDiv, qtyDiv);
 
-                <div class="qty-controls">
-                  <button class="qty-btn qty-minus">-</button>
-                  <div class="qty-value">${selected}</div>
-                  <button class="qty-btn qty-plus">+</button>
-                </div>
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'item-name';
+            nameDiv.textContent = name;
 
-                <div class="item-actions">
-                  <button class="${btnClass}">${btnText}</button>
-                </div>
-              </div>
-            `;
-        }).join('');
+            const qtyControls = document.createElement('div');
+            qtyControls.className = 'qty-controls';
+            const minusBtn = document.createElement('button');
+            minusBtn.className = 'qty-btn qty-minus';
+            minusBtn.textContent = '-';
+            const qtyValue = document.createElement('div');
+            qtyValue.className = 'qty-value';
+            qtyValue.textContent = selected;
+            const plusBtn = document.createElement('button');
+            plusBtn.className = 'qty-btn qty-plus';
+            plusBtn.textContent = '+';
+            qtyControls.append(minusBtn, qtyValue, plusBtn);
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'item-actions';
+            const actionBtn = document.createElement('button');
+            actionBtn.className = btnClass;
+            actionBtn.textContent = btnText;
+            actionsDiv.appendChild(actionBtn);
+
+            slot.append(slotHeader, nameDiv, qtyControls, actionsDiv);
+            grid.appendChild(slot);
+        }
 
         grid.querySelectorAll('.storage-slot').forEach(slot => {
             const itemId = Number(slot.getAttribute('data-itemid'));

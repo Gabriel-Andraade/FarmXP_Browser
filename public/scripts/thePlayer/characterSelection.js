@@ -33,29 +33,50 @@ export class CharacterSelection {
         this.bindEvents();
     }
 
+    // fix: innerHTML → DOM API
     createUI() {
         this.container = document.createElement('div');
         this.container.className = 'chs-character-selection';
-        this.container.innerHTML = `
-            <div class="chs-character-selection-header">
-                <h1>${t('characterSelection.title')}</h1>
-                <p>${t('characterSelection.subtitle')}</p>
-            </div>
-            <div class="chs-characters-grid"></div>
-            <div class="chs-character-details" style="display: none;">
-                <div class="chs-character-portrait-large">
-                    <img class="chs-character-portrait-img" src="" alt="">
-                </div>
-                <h2 class="chs-character-name"></h2>
-                <p class="chs-character-description"></p>
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'chs-character-selection-header';
+        const h1 = document.createElement('h1');
+        h1.textContent = t('characterSelection.title');
+        const subtitle = document.createElement('p');
+        subtitle.textContent = t('characterSelection.subtitle');
+        headerDiv.append(h1, subtitle);
 
-                <button class="chs-start-game-btn">${t('characterSelection.startGame')}</button>
-            </div>
-            <div class="chs-load-game-section">
-                <h2>${t('characterSelection.continueAdventure')}</h2>
-                <button class="chs-load-game-btn">${t('characterSelection.loadGame')}</button>
-            </div>
-        `;
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'chs-characters-grid';
+
+        const detailsDiv = document.createElement('div');
+        detailsDiv.className = 'chs-character-details';
+        detailsDiv.style.display = 'none';
+        const portraitLarge = document.createElement('div');
+        portraitLarge.className = 'chs-character-portrait-large';
+        const portraitImg = document.createElement('img');
+        portraitImg.className = 'chs-character-portrait-img';
+        portraitImg.src = '';
+        portraitImg.alt = '';
+        portraitLarge.appendChild(portraitImg);
+        const charName = document.createElement('h2');
+        charName.className = 'chs-character-name';
+        const charDesc = document.createElement('p');
+        charDesc.className = 'chs-character-description';
+        const startBtn = document.createElement('button');
+        startBtn.className = 'chs-start-game-btn';
+        startBtn.textContent = t('characterSelection.startGame');
+        detailsDiv.append(portraitLarge, charName, charDesc, startBtn);
+
+        const loadSection = document.createElement('div');
+        loadSection.className = 'chs-load-game-section';
+        const loadH2 = document.createElement('h2');
+        loadH2.textContent = t('characterSelection.continueAdventure');
+        const loadBtn = document.createElement('button');
+        loadBtn.className = 'chs-load-game-btn';
+        loadBtn.textContent = t('characterSelection.loadGame');
+        loadSection.append(loadH2, loadBtn);
+
+        this.container.append(headerDiv, gridDiv, detailsDiv, loadSection);
 
         const charactersGrid = this.container.querySelector('.chs-characters-grid');
 
@@ -64,14 +85,23 @@ export class CharacterSelection {
             characterCard.className = 'chs-character-card';
             characterCard.dataset.characterId = character.id;
 
-            characterCard.innerHTML = `
-                <div class="chs-character-portrait">
-                    <img src="${character.portrait}" alt="${character.name}">
-                </div>
-                <h3>${character.name}</h3>
-                <p>${this.getCharacterSubtitle(character.id)}</p>
-                ${character.id !== "stella" ? `<div class="chs-character-warning">${t('characterSelection.inDevelopment')}</div>` : ''}
-            `;
+            const portrait = document.createElement('div');
+            portrait.className = 'chs-character-portrait';
+            const img = document.createElement('img');
+            img.src = character.portrait;
+            img.alt = character.name;
+            portrait.appendChild(img);
+            const nameH3 = document.createElement('h3');
+            nameH3.textContent = character.name;
+            const subtitleP = document.createElement('p');
+            subtitleP.textContent = this.getCharacterSubtitle(character.id);
+            characterCard.append(portrait, nameH3, subtitleP);
+            if (character.id !== "stella") {
+                const warning = document.createElement('div');
+                warning.className = 'chs-character-warning';
+                warning.textContent = t('characterSelection.inDevelopment');
+                characterCard.appendChild(warning);
+            }
 
             charactersGrid.appendChild(characterCard);
         });

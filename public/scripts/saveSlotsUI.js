@@ -49,26 +49,35 @@ class SaveSlotsUI {
     /**
      * Cria a estrutura do modal se não existir
      */
+    // fix: innerHTML → DOM API
     _ensureModal() {
         if (this.modal) return;
 
         this.modal = document.createElement('div');
         this.modal.id = MODAL_ID;
         this.modal.className = 'save-modal-overlay';
-        this.modal.innerHTML = `
-            <div class="save-modal-container">
-                <div class="save-modal-header">
-                    <h2 class="save-modal-title">💾 ${t('saveSlots.titleSaveLoad')}</h2>
-                    <button class="save-modal-close" aria-label="${t('ui.close')}">&times;</button>
-                </div>
-                <div class="save-modal-body">
-                    <div class="save-slots-grid"></div>
-                </div>
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.className = 'save-modal-container';
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'save-modal-header';
+        const titleH2 = document.createElement('h2');
+        titleH2.className = 'save-modal-title';
+        titleH2.textContent = `💾 ${t('saveSlots.titleSaveLoad')}`;
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'save-modal-close';
+        closeBtn.setAttribute('aria-label', t('ui.close'));
+        closeBtn.textContent = '\u00D7';
+        headerDiv.append(titleH2, closeBtn);
+        const bodyDiv = document.createElement('div');
+        bodyDiv.className = 'save-modal-body';
+        const gridDiv = document.createElement('div');
+        gridDiv.className = 'save-slots-grid';
+        bodyDiv.appendChild(gridDiv);
+        container.append(headerDiv, bodyDiv);
+        this.modal.appendChild(container);
 
         // Eventos
-        this.modal.querySelector('.save-modal-close').addEventListener('click', () => this.close());
+        closeBtn.addEventListener('click', () => this.close());
         this.modal.addEventListener('click', (e) => {
             if (e.target === this.modal) this.close();
         });
@@ -123,9 +132,12 @@ class SaveSlotsUI {
         const grid = this.modal.querySelector('.save-slots-grid');
         const slots = saveSystem.listSlots();
 
-        grid.innerHTML = slots.map((slot, index) => this._renderSlotCard(slot, index)).join('');
+        // fix: innerHTML → DOM API
+        grid.replaceChildren();
+        slots.forEach((slot, index) => {
+            grid.appendChild(this._renderSlotCard(slot, index));
+        });
 
-        // Bind eventos dos botões
         this._bindSlotEvents(grid);
     }
 
@@ -133,85 +145,124 @@ class SaveSlotsUI {
      * Renderiza um card de slot
      * @param {Object|null} slot - Dados do slot
      * @param {number} index - Índice do slot
-     * @returns {string} HTML do card
+     * @returns {HTMLElement} Elemento do card
      */
     _renderSlotCard(slot, index) {
         const isEmpty = slot === null;
         const isActive = saveSystem.activeSlot === index;
 
+        const card = document.createElement('div');
+        card.dataset.slot = index;
+
         if (isEmpty) {
-            return `
-                <div class="save-slot-card save-slot-empty" data-slot="${index}">
-                    <div class="save-slot-header">
-                        <span class="save-slot-number">${t('saveSlots.slotNumber', { number: index + 1 })}</span>
-                        <span class="save-slot-badge empty">${t('saveSlots.empty')}</span>
-                    </div>
-                    <div class="save-slot-empty-content">
-                        <div class="save-slot-empty-icon">📁</div>
-                        <p>${t('saveSlots.noSaveInSlot')}</p>
-                    </div>
-                    <div class="save-slot-actions">
-                        ${this.mode !== 'load' ? `
-                            <button class="save-btn save-btn-create" data-action="create" data-slot="${index}">
-                                ✨ ${t('saveSlots.createSave')}
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
+            card.className = 'save-slot-card save-slot-empty';
+
+            const header = document.createElement('div');
+            header.className = 'save-slot-header';
+            const number = document.createElement('span');
+            number.className = 'save-slot-number';
+            number.textContent = t('saveSlots.slotNumber', { number: index + 1 });
+            const badge = document.createElement('span');
+            badge.className = 'save-slot-badge empty';
+            badge.textContent = t('saveSlots.empty');
+            header.append(number, badge);
+
+            const emptyContent = document.createElement('div');
+            emptyContent.className = 'save-slot-empty-content';
+            const emptyIcon = document.createElement('div');
+            emptyIcon.className = 'save-slot-empty-icon';
+            emptyIcon.textContent = '📁';
+            const emptyText = document.createElement('p');
+            emptyText.textContent = t('saveSlots.noSaveInSlot');
+            emptyContent.append(emptyIcon, emptyText);
+
+            const actions = document.createElement('div');
+            actions.className = 'save-slot-actions';
+            if (this.mode !== 'load') {
+                const createBtn = document.createElement('button');
+                createBtn.className = 'save-btn save-btn-create';
+                createBtn.dataset.action = 'create';
+                createBtn.dataset.slot = index;
+                createBtn.textContent = `✨ ${t('saveSlots.createSave')}`;
+                actions.appendChild(createBtn);
+            }
+
+            card.append(header, emptyContent, actions);
+            return card;
         }
 
+        card.className = `save-slot-card ${isActive ? 'save-slot-active' : ''}`;
+
         const meta = slot.meta;
-        return `
-            <div class="save-slot-card ${isActive ? 'save-slot-active' : ''}" data-slot="${index}">
-                <div class="save-slot-header">
-                    <span class="save-slot-name" title="${escapeHtml(meta.saveName)}">${escapeHtml(meta.saveName)}</span>
-                    ${isActive ? `<span class="save-slot-badge active">${t('saveSlots.active')}</span>` : ''}
-                </div>
 
-                <div class="save-slot-meta">
-                    <div class="save-meta-row">
-                        <span class="save-meta-label">👤 ${t('saveSlots.character')}</span>
-                        <span class="save-meta-value">${escapeHtml(meta.characterName || 'Stella')}</span>
-                    </div>
-                    <div class="save-meta-row">
-                        <span class="save-meta-label">⏱️ ${t('saveSlots.totalTime')}</span>
-                        <span class="save-meta-value">${formatPlayTime(meta.totalPlayTimeMs)}</span>
-                    </div>
-                    <div class="save-meta-row">
-                        <span class="save-meta-label">📅 ${t('saveSlots.createdAt')}</span>
-                        <span class="save-meta-value">${formatDateTime(meta.createdAt)}</span>
-                    </div>
-                    <div class="save-meta-row">
-                        <span class="save-meta-label">💾 ${t('saveSlots.lastSave')}</span>
-                        <span class="save-meta-value">${formatDateTime(meta.lastSavedAt)}</span>
-                    </div>
-                    <div class="save-meta-row">
-                        <span class="save-meta-label">🎮 ${t('saveSlots.lastSession')}</span>
-                        <span class="save-meta-value">${formatPlayTime(meta.lastSessionMs)}</span>
-                    </div>
-                </div>
+        const header = document.createElement('div');
+        header.className = 'save-slot-header';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'save-slot-name';
+        nameSpan.title = meta.saveName;
+        nameSpan.textContent = meta.saveName;
+        header.appendChild(nameSpan);
+        if (isActive) {
+            const activeBadge = document.createElement('span');
+            activeBadge.className = 'save-slot-badge active';
+            activeBadge.textContent = t('saveSlots.active');
+            header.appendChild(activeBadge);
+        }
 
-                <div class="save-slot-actions">
-                    ${this.mode !== 'save' ? `
-                        <button class="save-btn save-btn-load" data-action="load" data-slot="${index}">
-                            ▶️ ${t('saveSlots.play')}
-                        </button>
-                    ` : ''}
-                    ${this.mode !== 'load' ? `
-                        <button class="save-btn save-btn-save" data-action="save" data-slot="${index}">
-                            💾 ${t('saveSlots.save')}
-                        </button>
-                    ` : ''}
-                    <button class="save-btn save-btn-rename" data-action="rename" data-slot="${index}">
-                        ✏️
-                    </button>
-                    <button class="save-btn save-btn-delete" data-action="delete" data-slot="${index}">
-                        🗑️
-                    </button>
-                </div>
-            </div>
-        `;
+        const metaDiv = document.createElement('div');
+        metaDiv.className = 'save-slot-meta';
+        const metaRows = [
+            { icon: '👤', label: t('saveSlots.character'), value: meta.characterName || 'Stella' },
+            { icon: '⏱️', label: t('saveSlots.totalTime'), value: formatPlayTime(meta.totalPlayTimeMs) },
+            { icon: '📅', label: t('saveSlots.createdAt'), value: formatDateTime(meta.createdAt) },
+            { icon: '💾', label: t('saveSlots.lastSave'), value: formatDateTime(meta.lastSavedAt) },
+            { icon: '🎮', label: t('saveSlots.lastSession'), value: formatPlayTime(meta.lastSessionMs) },
+        ];
+        for (const row of metaRows) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'save-meta-row';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'save-meta-label';
+            labelSpan.textContent = `${row.icon} ${row.label}`;
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'save-meta-value';
+            valueSpan.textContent = row.value;
+            rowDiv.append(labelSpan, valueSpan);
+            metaDiv.appendChild(rowDiv);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'save-slot-actions';
+        if (this.mode !== 'save') {
+            const loadBtn = document.createElement('button');
+            loadBtn.className = 'save-btn save-btn-load';
+            loadBtn.dataset.action = 'load';
+            loadBtn.dataset.slot = index;
+            loadBtn.textContent = `▶️ ${t('saveSlots.play')}`;
+            actions.appendChild(loadBtn);
+        }
+        if (this.mode !== 'load') {
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'save-btn save-btn-save';
+            saveBtn.dataset.action = 'save';
+            saveBtn.dataset.slot = index;
+            saveBtn.textContent = `💾 ${t('saveSlots.save')}`;
+            actions.appendChild(saveBtn);
+        }
+        const renameBtn = document.createElement('button');
+        renameBtn.className = 'save-btn save-btn-rename';
+        renameBtn.dataset.action = 'rename';
+        renameBtn.dataset.slot = index;
+        renameBtn.textContent = '✏️';
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'save-btn save-btn-delete';
+        deleteBtn.dataset.action = 'delete';
+        deleteBtn.dataset.slot = index;
+        deleteBtn.textContent = '🗑️';
+        actions.append(renameBtn, deleteBtn);
+
+        card.append(header, metaDiv, actions);
+        return card;
     }
 
     /**

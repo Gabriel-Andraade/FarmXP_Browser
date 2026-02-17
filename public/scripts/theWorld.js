@@ -637,17 +637,21 @@ function drawBuilding(ctx, building) {
   const drawW = Math.floor(bWidth * zoom);
   const drawH = Math.floor(bHeight * zoom);
 
+  ctx.save(); // fix: canvas context reset — isolate building draw state
+
   if (building.originalType === "chest") {
     const chestImg = assets.furniture?.chest?.img;
     if (chestImg && chestImg.src && !chestImg.src.includes("data:,")) {
-      try { 
-        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); 
-        return; 
+      try {
+        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH);
+        ctx.restore();
+        return;
       } catch (e) {
         handleWarn("Failed to draw chest image", "theWorld:drawBuilding:chestImage", { buildingId: building.id, err: e });
       }
     }
     drawSimpleChest(ctx, drawX, drawY, drawW, drawH);
+    ctx.restore();
     return;
   }
 
@@ -669,6 +673,7 @@ function drawBuilding(ctx, building) {
       ctx.strokeStyle = "#2d4052";
       ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
+    ctx.restore();
     return;
   }
 
@@ -711,8 +716,7 @@ function drawBuilding(ctx, building) {
     ctx.fillText(`Tipo: ${building.originalType || "construction"}`, drawX + 5, drawY + 12);
   }
 
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
+  ctx.restore();
 }
 
 /**

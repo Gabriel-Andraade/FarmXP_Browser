@@ -456,35 +456,60 @@ class MerchantSystem {
         const grid = document.getElementById('merchantsGrid');
         if (!grid) return;
 
-        grid.innerHTML = this.merchants.map(merchant => {
+        // fix: innerHTML → DOM API
+        grid.replaceChildren();
+        for (const merchant of this.merchants) {
             const isOpen = this.isMerchantOpen(merchant);
             const status = this.getMerchantStatus(merchant);
             const profession = this.getMerchantProfession(merchant);
             const specialties = this.getMerchantSpecialties(merchant);
 
-            return `
-                <div class="mch-merchant-card ${!isOpen ? 'mch-merchant-closed' : ''}" data-merchant-id="${merchant.id}">
-                    <div class="mch-merchant-card-header">
-                        <img src="${merchant.avatar}" alt="${merchant.name}" class="mch-merchant-card-avatar">
-                        <div class="mch-merchant-card-info">
-                            <h3>${merchant.name}</h3>
-                            <div class="mch-merchant-card-profession">${profession}</div>
-                        </div>
-                    </div>
-                    <div class="mch-merchant-card-details">
-                        <div><strong>${t('trading.specialties')}:</strong> ${specialties.join(', ')}</div>
-                        <div class="mch-merchant-status ${isOpen ? 'open' : 'closed'}" data-merchant-status="${merchant.id}">
-                            <strong>${status}</strong>
-                        </div>
-                    </div>
-                    <div class="mch-merchant-card-items">
-                        ${merchant.items.slice(0, 3).map(item => `
-                            <span class="mch-merchant-item-tag">${this.getItemName(item.id, item.name)}</span>
-                        `).join('')}
-                    </div>
-                </div>
-            `;
-        }).join('');
+            const card = document.createElement('div');
+            card.className = `mch-merchant-card ${!isOpen ? 'mch-merchant-closed' : ''}`;
+            card.dataset.merchantId = merchant.id;
+
+            const cardHeader = document.createElement('div');
+            cardHeader.className = 'mch-merchant-card-header';
+            const avatar = document.createElement('img');
+            avatar.src = merchant.avatar;
+            avatar.alt = merchant.name;
+            avatar.className = 'mch-merchant-card-avatar';
+            const cardInfo = document.createElement('div');
+            cardInfo.className = 'mch-merchant-card-info';
+            const h3 = document.createElement('h3');
+            h3.textContent = merchant.name;
+            const profDiv = document.createElement('div');
+            profDiv.className = 'mch-merchant-card-profession';
+            profDiv.textContent = profession;
+            cardInfo.append(h3, profDiv);
+            cardHeader.append(avatar, cardInfo);
+
+            const details = document.createElement('div');
+            details.className = 'mch-merchant-card-details';
+            const specDiv = document.createElement('div');
+            const specStrong = document.createElement('strong');
+            specStrong.textContent = `${t('trading.specialties')}:`;
+            specDiv.append(specStrong, ` ${specialties.join(', ')}`);
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `mch-merchant-status ${isOpen ? 'open' : 'closed'}`;
+            statusDiv.dataset.merchantStatus = merchant.id;
+            const statusStrong = document.createElement('strong');
+            statusStrong.textContent = status;
+            statusDiv.appendChild(statusStrong);
+            details.append(specDiv, statusDiv);
+
+            const itemsDiv = document.createElement('div');
+            itemsDiv.className = 'mch-merchant-card-items';
+            for (const item of merchant.items.slice(0, 3)) {
+                const tag = document.createElement('span');
+                tag.className = 'mch-merchant-item-tag';
+                tag.textContent = this.getItemName(item.id, item.name);
+                itemsDiv.appendChild(tag);
+            }
+
+            card.append(cardHeader, details, itemsDiv);
+            grid.appendChild(card);
+        }
 
         grid.querySelectorAll('.mch-merchant-card').forEach(card => {
             const merchantId = card.dataset.merchantId;
@@ -515,7 +540,10 @@ class MerchantSystem {
                 const isOpen = this.isMerchantOpen(merchant);
 
                 statusEl.className = `mch-merchant-status ${isOpen ? 'open' : 'closed'}`;
-                statusEl.innerHTML = `<strong>${status}</strong>`;
+                // fix: innerHTML → DOM API
+                const strong = document.createElement('strong');
+                strong.textContent = status;
+                statusEl.replaceChildren(strong);
 
                 const card = statusEl.closest('.mch-merchant-card');
                 if (card) {
@@ -636,12 +664,15 @@ class MerchantSystem {
         if (!container) return;
 
         const categories = this.getPlayerCategories();
-        container.innerHTML = categories.map(cat => `
-            <button class="mch-player-category-btn ${this.currentPlayerCategory === cat ? 'active' : ''}" 
-                    data-category="${cat}">
-                ${this.getCategoryIcon(cat)} ${this.getCategoryName(cat)}
-            </button>
-        `).join('');
+        // fix: innerHTML → DOM API
+        container.replaceChildren();
+        for (const cat of categories) {
+            const btn = document.createElement('button');
+            btn.className = `mch-player-category-btn ${this.currentPlayerCategory === cat ? 'active' : ''}`;
+            btn.dataset.category = cat;
+            btn.textContent = `${this.getCategoryIcon(cat)} ${this.getCategoryName(cat)}`;
+            container.appendChild(btn);
+        }
     }
 
     // renderiza categorias do mercador
@@ -650,12 +681,15 @@ class MerchantSystem {
         if (!container) return;
 
         const categories = this.getMerchantCategories();
-        container.innerHTML = categories.map(cat => `
-            <button class="mch-merchant-category-btn ${this.currentMerchantCategory === cat ? 'active' : ''}" 
-                    data-category="${cat}">
-                ${this.getCategoryIcon(cat)} ${this.getCategoryName(cat)}
-            </button>
-        `).join('');
+        // fix: innerHTML → DOM API
+        container.replaceChildren();
+        for (const cat of categories) {
+            const btn = document.createElement('button');
+            btn.className = `mch-merchant-category-btn ${this.currentMerchantCategory === cat ? 'active' : ''}`;
+            btn.dataset.category = cat;
+            btn.textContent = `${this.getCategoryIcon(cat)} ${this.getCategoryName(cat)}`;
+            container.appendChild(btn);
+        }
     }
 
     // renderiza itens do jogador
@@ -665,22 +699,33 @@ class MerchantSystem {
 
         const items = this.getPlayerItems();
 
+        // fix: innerHTML → DOM API
+        grid.replaceChildren();
+
         if (items.length === 0) {
-            grid.innerHTML = `
-                <div class="mch-hexagon-slot empty">
-                    <div class="mch-hexagon-name">${t('trading.empty')}</div>
-                </div>
-            `;
+            const emptySlot = document.createElement('div');
+            emptySlot.className = 'mch-hexagon-slot empty';
+            const emptyName = document.createElement('div');
+            emptyName.className = 'mch-hexagon-name';
+            emptyName.textContent = t('trading.empty');
+            emptySlot.appendChild(emptyName);
+            grid.appendChild(emptySlot);
             return;
         }
 
-        grid.innerHTML = items.map(item => `
-            <div class="mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}"
-                 data-item-id="${item.id}">
-                <div class="mch-hexagon-name">${this.getItemName(item.id, item.name)}</div>
-                <div class="mch-hexagon-quantity">${item.quantity}</div>
-            </div>
-        `).join('');
+        for (const item of items) {
+            const slot = document.createElement('div');
+            slot.className = `mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}`;
+            slot.dataset.itemId = item.id;
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'mch-hexagon-name';
+            nameDiv.textContent = this.getItemName(item.id, item.name);
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'mch-hexagon-quantity';
+            qtyDiv.textContent = item.quantity;
+            slot.append(nameDiv, qtyDiv);
+            grid.appendChild(slot);
+        }
     }
 
     // renderiza itens do mercador
@@ -689,13 +734,21 @@ class MerchantSystem {
         if (!grid) return;
 
         const merchantItems = this.getMerchantItems();
-        grid.innerHTML = merchantItems.map(item => `
-            <div class="mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}"
-                 data-item-id="${item.id}">
-                <div class="mch-hexagon-name">${this.getItemName(item.id, item.name)}</div>
-                <div class="mch-merchant-hexagon-price">$${item.price}</div>
-            </div>
-        `).join('');
+        // fix: innerHTML → DOM API
+        grid.replaceChildren();
+        for (const item of merchantItems) {
+            const hex = document.createElement('div');
+            hex.className = `mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}`;
+            hex.dataset.itemId = item.id;
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'mch-hexagon-name';
+            nameDiv.textContent = this.getItemName(item.id, item.name);
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'mch-merchant-hexagon-price';
+            priceDiv.textContent = `$${item.price}`;
+            hex.append(nameDiv, priceDiv);
+            grid.appendChild(hex);
+        }
     }
 
     // categorias do jogador
@@ -841,12 +894,14 @@ class MerchantSystem {
 
         tradeButton.className = `mch-trade-button ${this.tradeMode}`;
         tradeButton.id = 'tradeButton';
-        tradeButton.innerHTML = `
-            <span class="mch-trade-button-text">
-                ${this.tradeMode === 'sell' ? t('trading.sell').toUpperCase() : t('trading.buy').toUpperCase()} x${this.tradeQuantity}
-            </span>
-            <span class="mch-trade-button-price">$${totalValue}</span>
-        `;
+        // fix: innerHTML → DOM API
+        const textSpan = document.createElement('span');
+        textSpan.className = 'mch-trade-button-text';
+        textSpan.textContent = `${this.tradeMode === 'sell' ? t('trading.sell').toUpperCase() : t('trading.buy').toUpperCase()} x${this.tradeQuantity}`;
+        const priceSpan = document.createElement('span');
+        priceSpan.className = 'mch-trade-button-price';
+        priceSpan.textContent = `$${totalValue}`;
+        tradeButton.append(textSpan, priceSpan);
 
         const hasSelection = (this.tradeMode === 'sell' && this.selectedPlayerItem) ||
                              (this.tradeMode === 'buy' && this.selectedMerchantItem);
