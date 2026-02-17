@@ -339,15 +339,8 @@ function optimizeMemoryUsage() {
         try {
             let optimizations = [];
 
-            const maxTimeoutId = setTimeout(() => {}, 0);
-            const maxIntervalId = setInterval(() => {}, 0);
-
-            for (let i = 1; i < Math.min(maxTimeoutId, 1000); i++) {
-                clearTimeout(i);
-                clearInterval(i);
-            }
-
-            if (window.theWorld && window.theWorld.objectDestroyed) {
+            const world = getObject('world');
+            if (world && world.objectDestroyed) {
                 document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
             }
 
