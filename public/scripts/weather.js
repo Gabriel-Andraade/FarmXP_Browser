@@ -625,7 +625,5 @@ export function drawWeatherEffects(ctx, player, canvas) {
  * @returns {void}
  */
 export function drawWeatherUI(ctx) {
-  // O painel agora é overlay HTML ancorado no canto do canvas
-  updateWeatherUIPanelPosition();
-  updateWeatherUIPanelContent();
+  // UI is updated via event listeners (timeChanged, dayChanged, languageChanged, resize)
 }
