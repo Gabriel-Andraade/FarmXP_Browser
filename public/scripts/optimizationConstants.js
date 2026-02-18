@@ -251,12 +251,13 @@ function clearCalculationCache() {
             const beforeSize = commonCalculations.size;
             commonCalculations.clear();
             resolve({ cacheCleared: beforeSize });
-        } catch (e) {
-            handleWarn("falha ao limpar cache de cálculos", "optimizationConstants:clearCalculationCache", { e });
+        } catch (error) {
+            handleWarn("falha ao limpar cache de cálculos", "optimizationConstants:clearCalculationCache", { error });
             resolve({ cacheCleared: 0 });
         }
     });
 }
+
 /**
  * Para implementar de forma correta sem acoplamento ao legacy bridge:
  * - expor um método oficial no world (ex.: world.compactLargeArrays())
@@ -266,11 +267,11 @@ function clearCalculationCache() {
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-  const world = getObject("world");
-  if (world && typeof world.compactLargeArrays === "function") {
-    return Promise.resolve(world.compactLargeArrays());
-  }
-  return Promise.resolve({ itemsCompacted: 0 });
+    const world = getObject("world");
+    if (world && typeof world.compactLargeArrays === "function") {
+        return Promise.resolve(world.compactLargeArrays());
+    }
+    return Promise.resolve({ itemsCompacted: 0 });
 }
 
 /**
@@ -290,8 +291,8 @@ function forceGarbageCollection() {
             } else {
                 resolve({ gcForced: false });
             }
-        } catch (e) {
-            handleWarn("falha ao forçar garbage collection", "optimizationConstants:forceGarbageCollection", { e });
+        } catch (error) {
+            handleWarn("falha ao forçar garbage collection", "optimizationConstants:forceGarbageCollection", { error });
             resolve({ gcForced: false });
         }
     });
@@ -315,8 +316,8 @@ function resetCanvasContext() {
             } else {
                 resolve({ canvasReset: false });
             }
-        } catch (e) {
-            handleWarn("falha ao resetar canvas context", "optimizationConstants:resetCanvasContext", { e });
+        } catch (error) {
+            handleWarn("falha ao resetar canvas context", "optimizationConstants:resetCanvasContext", { error });
             resolve({ canvasReset: false });
         }
     });
@@ -340,9 +341,9 @@ function optimizeMemoryUsage() {
                 optimizations.push('destroyedObjects');
             }
 
-            resolve({ memoryOptimized: true, optimizations });
-        } catch (e) {
-            handleWarn("falha ao otimizar memória", "optimizationConstants:optimizeMemoryUsage", { e });
+            resolve({ memoryOptimized: optimizations.length > 0, optimizations });
+        } catch (error) {
+            handleWarn("falha ao otimizar memória", "optimizationConstants:optimizeMemoryUsage", { error });
             resolve({ memoryOptimized: false });
         }
     });
@@ -374,7 +375,7 @@ export function getMemoryStatus() {
 /**
  * Limpa cache de renderização marcando mundo como alterado
  * Força re-renderização completa na próxima frame
- * @returns {boolean} True se cache foi limpo, false se theWorld não disponível
+ * `@returns` {boolean} True se cache foi limpo, false se world não disponível
  */
 export function clearRenderCache() {
     const world = getObject("world");
