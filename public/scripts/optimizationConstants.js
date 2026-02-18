@@ -1,5 +1,7 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
+import { logger } from "./logger.js";
+
 import { getObject } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
@@ -48,7 +50,7 @@ export const OPTIMIZATION_CONFIG = {
  */
 export function perfLog(...args) {
     if (OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-        logger.info('[Perf]', ...args);
+        logger.debug("[Perf]", ...args);
     }
 }
 
