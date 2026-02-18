@@ -348,6 +348,8 @@ export class PlayerSystem {
      * @returns {void}
      */
     startSleep() {
+        if (this._sleepActive) return;
+        
         // reset guards for a new sleep cycle
         this._sleepActive = true;
         this._sleepEnding = false;
