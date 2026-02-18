@@ -1,5 +1,7 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
+import { logger } from "./logger.js";
+
 import { getObject } from "./gameState.js";
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
@@ -46,7 +48,7 @@ export const OPTIMIZATION_CONFIG = {
  */
 export function perfLog(...args) {
     if (OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-        console.log('[Perf]', ...args);
+        logger.debug("[Perf]", ...args);
     }
 }
 
