@@ -619,11 +619,12 @@ export function drawWeatherEffects(ctx, player, canvas) {
 }
 
 /**
- * Atualiza o painel de UI de clima (posição e conteúdo)
- * O painel é um elemento HTML overlay ancorado no canto do canvas
- * @param {CanvasRenderingContext2D} ctx - Contexto do canvas (não utilizado, mantido por compatibilidade)
+ * No-op stub kept for game-loop call-site compatibility.
+ * Weather UI is now updated exclusively via event listeners
+ * (timeChanged, dayChanged, languageChanged, resize, and direct calls in randomizeWeather).
+ * `@param` {CanvasRenderingContext2D} _ctx - Unused; retained for backward compatibility with main.js caller.
  * @returns {void}
  */
-export function drawWeatherUI(ctx) {
+export function drawWeatherUI(_ctx) {
   // UI is updated via event listeners (timeChanged, dayChanged, languageChanged and resize)
 }
