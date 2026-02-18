@@ -278,6 +278,14 @@ class MerchantSystem {
                 this.cancelTrade();
             }
         }, { signal });
+
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.mch-quantity-decrease')) {
+                this.decreaseQuantity();
+            } else if (e.target.closest('.mch-quantity-increase')) {
+                this.increaseQuantity();
+            }
+        }, { signal });
     }
 
     // aumenta a quantidade de transação
@@ -1211,36 +1219,3 @@ class MerchantSystem {
 
 export const merchantSystem = new MerchantSystem();
 registerSystem('merchant', merchantSystem);
-
-// =============================================================================
-// FUNÇÕES GLOBAIS PARA COMPATIBILIDADE COM HTML (onclick)
-// Estas funções conectam os botões do index.html com a classe MerchantSystem
-// =============================================================================
-
-window.increaseQuantity = function() {
-    merchantSystem.increaseQuantity();
-};
-
-window.decreaseQuantity = function() {
-    merchantSystem.decreaseQuantity();
-};
-
-window.setTradeMode = function(mode) {
-    merchantSystem.setTradeMode(mode);
-};
-
-window.confirmTrade = function() {
-    merchantSystem.confirmTrade();
-};
-
-window.cancelTrade = function() {
-    merchantSystem.cancelTrade();
-};
-
-window.closeCommerceSystem = function() {
-    merchantSystem.closeAllModals();
-};
-
-window.backToMerchantsList = function() {
-    merchantSystem.backToMerchantsList();
-};
