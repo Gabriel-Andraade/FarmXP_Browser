@@ -625,5 +625,5 @@ export function drawWeatherEffects(ctx, player, canvas) {
  * @returns {void}
  */
 export function drawWeatherUI(ctx) {
-  // UI is updated via event listeners (timeChanged, dayChanged, languageChanged, resize)
+  // UI is updated via event listeners (timeChanged, dayChanged, languageChanged and resize)
 }
