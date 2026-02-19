@@ -8,6 +8,7 @@
 
 import { WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
 import { registerSystem } from "./gameState.js";
+import { logger } from "./logger.js";
 
 /**
  * Configurações de performance para carregamento de assets
@@ -155,6 +156,7 @@ async function loadSingleImage(src) {
         };
 
         img.onerror = () => {
+            logger.warn(`[AssetManager] Falha ao carregar imagem: ${src} — usando placeholder`);
             const placeholder = createPlaceholderImage();
             resolve(placeholder);
         };
@@ -177,11 +179,21 @@ function createPlaceholderImage() {
 
     const img = new Image();
     img.src = canvas.toDataURL();
+    img._isPlaceholder = true;
     return img;
 }
 
-/* aplica dimensões baseadas no tipo */
+/* aplica dimensões usando metadata real da imagem,
+   com fallback para dimensões predefinidas do config */
 function setAssetDimensions(asset, category) {
+    // Fonte primária: metadata real da imagem carregada (não placeholders)
+    if (asset.img && asset.img.naturalWidth > 0 && !asset.img._isPlaceholder) {
+        asset.width = asset.img.naturalWidth;
+        asset.height = asset.img.naturalHeight;
+        return;
+    }
+
+    // Fallback: dimensões predefinidas por tipo (para imagens que falharam ao carregar)
     const DIMENSIONS = {
         'TREES': { width: WORLD_GENERATOR_CONFIG.TREES.WIDTH, height: WORLD_GENERATOR_CONFIG.TREES.HEIGHT },
         'ROCKS': { width: WORLD_GENERATOR_CONFIG.ROCKS.WIDTH, height: WORLD_GENERATOR_CONFIG.ROCKS.HEIGHT },
@@ -196,7 +208,6 @@ function setAssetDimensions(asset, category) {
     };
 
     let type = 'UNKNOWN';
-
     if (asset.src.includes('Tree')) type = 'TREES';
     else if (asset.src.includes('Rock')) type = 'ROCKS';
     else if (asset.src.includes('Thicket')) type = 'THICKETS';
@@ -207,16 +218,10 @@ function setAssetDimensions(asset, category) {
     else if (asset.src.includes('well')) type = 'WELL';
     else if (asset.src.includes('House')) type = 'HOUSE';
     else if (asset.src.includes('portrait')) type = 'PORTRAIT';
-    else if (category === 'ANIMALS') type = 'ANIMAL';
 
     if (DIMENSIONS[type]) {
         asset.width = DIMENSIONS[type].width;
         asset.height = DIMENSIONS[type].height;
-    } else {
-        if (asset.img && asset.img.naturalWidth) {
-            asset.width = asset.img.naturalWidth;
-            asset.height = asset.img.naturalHeight;
-        }
     }
 }
 

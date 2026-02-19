@@ -497,7 +497,7 @@ export class PlayerInteractionSystem {
 
         const button = document.createElement('button');
         button.id = 'mobile-interact-btn';
-        button.innerHTML = 'E';
+        button.textContent = 'E'; // fix: innerHTML → textContent
         button.addEventListener('touchstart', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();

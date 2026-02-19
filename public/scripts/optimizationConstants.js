@@ -1,4 +1,4 @@
-import { TILE_SIZE } from "./worldConstants.js";
+import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { logger } from "./logger.js";
 
@@ -256,19 +256,14 @@ function clearCalculationCache() {
     });
 }
 /**
- * Para implementar de forma correta sem acoplamento ao legacy bridge:
- * - expor um método oficial no world (ex.: world.compactLargeArrays())
- * - acessar arrays via getObject('world') (ex.: world.trees, world.rocks, etc).
+ * No-op — anteriormente tentava compactar arrays via window[arrayName],
+ * mas os arrays relevantes são module-scoped em theWorld.js (#65).
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-  const world = getObject("world");
-  if (world && typeof world.compactLargeArrays === "function") {
-    return Promise.resolve(world.compactLargeArrays());
-  }
-  return Promise.resolve({ itemsCompacted: 0 });
+    return Promise.resolve({ itemsCompacted: 0 });
 }
 
 /**
@@ -283,14 +278,6 @@ function forceGarbageCollection() {
         try {
             if (typeof window.gc === 'function') {
                 window.gc();
-                resolve({ gcForced: true });
-            } else if (window.performance && window.performance.memory) {
-                for (let i = 0; i < 1000; i++) {
-                    window['temp_gc_' + i] = new Array(1000).fill(0);
-                }
-                for (let i = 0; i < 1000; i++) {
-                    delete window['temp_gc_' + i];
-                }
                 resolve({ gcForced: true });
             } else {
                 resolve({ gcForced: false });
@@ -329,8 +316,8 @@ function resetCanvasContext() {
 }
 
 /**
- * Otimiza uso de memória limpando timeouts, eventos e assets
- * Limpa timers pendentes e dispara cleanup de objetos destruídos
+ * Dispara um cleanup event-driven de objetos destruídos.
+ * (O comportamento antigo de limpar timers/intervals indiscriminadamente foi removido.)
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
@@ -339,26 +326,12 @@ function resetCanvasContext() {
 function optimizeMemoryUsage() {
     return new Promise((resolve) => {
         try {
-            let optimizations = [];
-
-            const maxTimeoutId = setTimeout(() => {}, 0);
-            const maxIntervalId = setInterval(() => {}, 0);
-
-            for (let i = 1; i < Math.min(maxTimeoutId, 1000); i++) {
-                clearTimeout(i);
-                clearInterval(i);
-            }
-
-            if (window.theWorld && window.theWorld.objectDestroyed) {
+            // theWorld é suficiente para indicar que o mundo está disponível; objectDestroyed é sempre uma função truthy.
+            if (window.theWorld) {
                 document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
             }
 
-            if (window.assets && typeof window.assets.cleanupUnused === 'function') {
-                window.assets.cleanupUnused();
-                optimizations.push('assets');
-            }
-
-            resolve({ memoryOptimized: true, optimizations });
+            resolve({ memoryOptimized: true, optimizations: [] });
         } catch (e) {
             resolve({ memoryOptimized: false });
         }

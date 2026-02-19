@@ -156,7 +156,11 @@ export class CraftingSystem {
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
       craftBtn.disabled = true;
-       craftBtn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${t('crafting.crafting')}`;
+       // fix: innerHTML → DOM API
+       craftBtn.replaceChildren();
+       const spinner = document.createElement('i');
+       spinner.className = 'fas fa-spinner fa-spin';
+       craftBtn.append(spinner, ` ${t('crafting.crafting')}`);
       craftBtn.classList.add("crf-disabled");
     }
 
@@ -175,7 +179,11 @@ export class CraftingSystem {
 
       if (craftBtn) {
         craftBtn.disabled = false;
-        craftBtn.innerHTML = `<i class="fas fa-hammer"></i> ${t('crafting.craft')}`;
+        // fix: innerHTML → DOM API
+        craftBtn.replaceChildren();
+        const hammerIcon = document.createElement('i');
+        hammerIcon.className = 'fas fa-hammer';
+        craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
         craftBtn.classList.remove("crf-disabled");
       }
       return;
@@ -187,7 +195,11 @@ export class CraftingSystem {
     if (craftBtn) {
       setTimeout(() => {
         craftBtn.disabled = false;
-        craftBtn.innerHTML = `<i class="fas fa-hammer"></i> ${t('crafting.craft')}`;
+        // fix: innerHTML → DOM API
+        craftBtn.replaceChildren();
+        const hammerIcon = document.createElement('i');
+        hammerIcon.className = 'fas fa-hammer';
+        craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
         craftBtn.classList.remove("crf-disabled");
       }, 1000);
     }
@@ -237,6 +249,7 @@ export class CraftingSystem {
    * Cria os elementos HTML da interface de crafting
    * @returns {void}
    */
+  // fix: innerHTML → DOM API
   createCraftingUI() {
     const existingPanel = document.querySelector(".crf-panel");
     const existingOverlay = document.querySelector(".crf-overlay");
@@ -251,20 +264,30 @@ export class CraftingSystem {
     const panel = document.createElement("div");
     panel.className = "crf-panel";
 
-    panel.innerHTML = `
-      <button class="crf-close-btn" aria-label="${t('ui.close')}">&times;</button>
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'crf-close-btn';
+    closeBtn.setAttribute('aria-label', t('ui.close'));
+    closeBtn.textContent = '\u00D7';
 
-      <div class="crf-header">
-        <h2>⚒️ ${t('crafting.title')}</h2>
-      </div>
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'crf-header';
+    const h2 = document.createElement('h2');
+    h2.textContent = `⚒️ ${t('crafting.title')}`;
+    headerDiv.appendChild(h2);
 
-      <div class="crf-categories" id="crf-categories"></div>
-      <div class="crf-recipes" id="crf-list"></div>
-    `;
+    const categoriesDiv = document.createElement('div');
+    categoriesDiv.className = 'crf-categories';
+    categoriesDiv.id = 'crf-categories';
+
+    const recipesDiv = document.createElement('div');
+    recipesDiv.className = 'crf-recipes';
+    recipesDiv.id = 'crf-list';
+
+    panel.append(closeBtn, headerDiv, categoriesDiv, recipesDiv);
 
     document.body.appendChild(panel);
 
-    panel.querySelector(".crf-close-btn")?.addEventListener("click", () => this.close());
+    closeBtn.addEventListener("click", () => this.close());
     overlay.addEventListener("click", () => this.close());
 
     this.handleEscapeBound = this.handleEscape.bind(this);
@@ -310,28 +333,23 @@ export class CraftingSystem {
 
     const uniqueCats = ["all", ...new Set(recipes.map((r) => r.category))];
 
-    catBox.innerHTML = uniqueCats
-      .map((cat) => {
-        const isActive = this.activeCategory === cat;
-        return `
-          <button
-            type="button"
-            class="crf-category-btn ${isActive ? "crf-active" : ""}"
-            data-cat="${cat}"
-          >
-            <i class="fas fa-${this.getCategoryIcon(cat)}"></i>
-            ${getCategoryLabel(cat)}
-          </button>
-        `;
-      })
-      .join("");
-
-    catBox.querySelectorAll("button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        this.activeCategory = btn.dataset.cat || "all";
+    // fix: innerHTML → DOM API
+    catBox.replaceChildren();
+    for (const cat of uniqueCats) {
+      const isActive = this.activeCategory === cat;
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `crf-category-btn ${isActive ? 'crf-active' : ''}`;
+      btn.dataset.cat = cat;
+      const icon = document.createElement('i');
+      icon.className = `fas fa-${this.getCategoryIcon(cat)}`;
+      btn.append(icon, ` ${getCategoryLabel(cat)}`);
+      btn.addEventListener('click', () => {
+        this.activeCategory = cat;
         this.renderRecipeList();
       });
-    });
+      catBox.appendChild(btn);
+    }
   }
 
   /**
@@ -349,7 +367,8 @@ export class CraftingSystem {
         ? recipes
         : recipes.filter((r) => r.category === this.activeCategory);
 
-    list.innerHTML = "";
+    // fix: innerHTML → DOM API
+    list.replaceChildren();
 
     filtered.forEach((recipe) => {
       const can = this.canCraft(recipe);
@@ -358,69 +377,65 @@ export class CraftingSystem {
       const div = document.createElement("div");
       div.className = "crf-item";
 
-      div.innerHTML = `
-        <div class="crf-info">
-          <div class="crf-name">
-            <i class="fas fa-${recipe.icon || "hammer"}"></i>
-            ${getRecipeName(recipe)}
-          </div>
+      const infoDiv = document.createElement("div");
+      infoDiv.className = "crf-info";
 
-          <div class="crf-requirements">
-            ${recipe.requiredItems
-              .map((req) => {
-                const data = getItem(req.itemId);
-                const hasEnough = this.getTotalItemQuantity(req.itemId) >= req.qty;
+      const nameDiv = document.createElement("div");
+      nameDiv.className = "crf-name";
+      const nameIcon = document.createElement("i");
+      nameIcon.className = `fas fa-${recipe.icon || "hammer"}`;
+      nameDiv.append(nameIcon, ` ${getRecipeName(recipe)}`);
 
-                return `
-                  <div class="crf-requirement ${
-                    hasEnough ? "crf-has-enough" : "crf-not-enough"
-                  }">
-                    <span class="crf-req-icon">${data?.icon || "📦"}</span>
-                    <span class="crf-req-qty">${req.qty}x</span>
-                    <span class="crf-req-name">${getTranslatedItemName(req.itemId, data?.name || String(req.itemId))}</span>
-                  </div>
-                `;
-              })
-              .join("")}
-          </div>
+      const reqDiv = document.createElement("div");
+      reqDiv.className = "crf-requirements";
+      for (const req of recipe.requiredItems) {
+        const data = getItem(req.itemId);
+        const hasEnough = this.getTotalItemQuantity(req.itemId) >= req.qty;
+        const reqEl = document.createElement("div");
+        reqEl.className = `crf-requirement ${hasEnough ? "crf-has-enough" : "crf-not-enough"}`;
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "crf-req-icon";
+        iconSpan.textContent = data?.icon || "📦";
+        const qtySpan = document.createElement("span");
+        qtySpan.className = "crf-req-qty";
+        qtySpan.textContent = `${req.qty}x`;
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "crf-req-name";
+        nameSpan.textContent = getTranslatedItemName(req.itemId, data?.name || String(req.itemId));
+        reqEl.append(iconSpan, qtySpan, nameSpan);
+        reqDiv.appendChild(reqEl);
+      }
 
-          ${
-            missing.length > 0
-              ? `
-                <div class="crf-missing">
-                  <i class="fas fa-exclamation-triangle"></i>
-                  ${t('crafting.missing')}:
-                  ${missing
-                    .map((m) => {
-                      const data = getItem(m.itemId);
-                      return `${m.missing}x ${getTranslatedItemName(m.itemId, data?.name || String(m.itemId))}`;
-                    })
-                    .join(", ")}
-                </div>
-              `
-              : ""
-          }
-        </div>
+      infoDiv.append(nameDiv, reqDiv);
 
-        <button
-          type="button"
-          class="crf-btn ${can ? "" : "crf-disabled"}"
-          data-id="${recipe.id}"
-          ${can ? "" : "disabled"}
-        >
-          <i class="fas fa-hammer"></i>
-          ${t('crafting.craft')}
-        </button>
-      `;
+      if (missing.length > 0) {
+        const missingDiv = document.createElement("div");
+        missingDiv.className = "crf-missing";
+        const warnIcon = document.createElement("i");
+        warnIcon.className = "fas fa-exclamation-triangle";
+        const missingText = missing.map((m) => {
+          const data = getItem(m.itemId);
+          return `${m.missing}x ${getTranslatedItemName(m.itemId, data?.name || String(m.itemId))}`;
+        }).join(", ");
+        missingDiv.append(warnIcon, ` ${t('crafting.missing')}: ${missingText}`);
+        infoDiv.appendChild(missingDiv);
+      }
 
+      const craftBtn = document.createElement("button");
+      craftBtn.type = "button";
+      craftBtn.className = `crf-btn ${can ? "" : "crf-disabled"}`;
+      craftBtn.dataset.id = recipe.id;
+      if (!can) craftBtn.disabled = true;
+      const hammerIcon = document.createElement("i");
+      hammerIcon.className = "fas fa-hammer";
+      craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
+
+      if (can) {
+        craftBtn.addEventListener("click", () => this.craft(recipe.id));
+      }
+
+      div.append(infoDiv, craftBtn);
       list.appendChild(div);
-    });
-
-    list.querySelectorAll(".crf-btn:not(.crf-disabled)").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
-        this.craft(id);
-      });
     });
   }
 
@@ -437,12 +452,12 @@ export class CraftingSystem {
       return;
     }
 
+    // fix: innerHTML → DOM API
     const message = document.createElement("div");
     message.className = `crf-feedback ${type === "success" ? "crf-success" : "crf-error"}`;
-    message.innerHTML = `
-      <i class="fas fa-${type === "success" ? "check" : "exclamation-triangle"}"></i>
-      ${text}
-    `;
+    const msgIcon = document.createElement('i');
+    msgIcon.className = `fas fa-${type === "success" ? "check" : "exclamation-triangle"}`;
+    message.append(msgIcon, ` ${text}`);
 
     document.body.appendChild(message);
 

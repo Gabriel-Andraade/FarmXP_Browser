@@ -171,58 +171,80 @@ export const chestSystem = {
         panel.className = 'cht-panel';
         panel.id = 'cht-panel';
         
-        panel.innerHTML = `
-            <div class="cht-header">
-                <h2><span>📦</span> ${t('chest.title')} - ${chest.name}</h2>
-                <button class="cht-close-btn">&times;</button>
-            </div>
-            
-            <div class="cht-content">
-                <!-- Lado esquerdo: Baú -->
-                <div class="cht-side">
-                    <div class="cht-side-title">📦 ${t('chest.storage')}</div>
-                    
-                    <div class="cht-categories" id="cht-categories">
-                        <!-- Categorias serão injetadas aqui -->
-                    </div>
-                    
-                    <div class="cht-slots" id="cht-slots">
-                        <!-- Slots serão injetados aqui -->
-                    </div>
-                </div>
-                
-                <!-- Lado direito: Inventário do Jogador -->
-                <div class="cht-side">
-                    <div class="cht-side-title">🎒 ${t('chest.inventory')}</div>
-                    
-                    <div class="cht-player-inventory" id="cht-player-inventory">
-                        <!-- Itens do inventário serão injetados aqui -->
-                    </div>
-                </div>
-            </div>
-            
-            <div class="cht-controls">
-                <button class="cht-btn take-all" id="take-all-btn">
-                    <span>⬇️</span> ${t('chest.takeAll')}
-                </button>
-                <button class="cht-btn store-all" id="store-all-btn">
-                    <span>⬆️</span> ${t('chest.storeAll')}
-                </button>
-                <button class="cht-btn" id="organize-btn">
-                    <span>🔧</span> ${t('chest.organize')}
-                </button>
-            </div>
-        `;
-        
+        // fix: innerHTML → DOM API
+        const chtHeader = document.createElement('div');
+        chtHeader.className = 'cht-header';
+        const chtH2 = document.createElement('h2');
+        const chtIcon = document.createElement('span');
+        chtIcon.textContent = '📦';
+        chtH2.append(chtIcon, ` ${t('chest.title')} - ${chest.name}`);
+        const chtCloseBtn = document.createElement('button');
+        chtCloseBtn.className = 'cht-close-btn';
+        chtCloseBtn.textContent = '\u00D7';
+        chtHeader.append(chtH2, chtCloseBtn);
+
+        const chtContent = document.createElement('div');
+        chtContent.className = 'cht-content';
+
+        const leftSide = document.createElement('div');
+        leftSide.className = 'cht-side';
+        const leftTitle = document.createElement('div');
+        leftTitle.className = 'cht-side-title';
+        leftTitle.textContent = `📦 ${t('chest.storage')}`;
+        const categoriesDiv = document.createElement('div');
+        categoriesDiv.className = 'cht-categories';
+        categoriesDiv.id = 'cht-categories';
+        const slotsDiv = document.createElement('div');
+        slotsDiv.className = 'cht-slots';
+        slotsDiv.id = 'cht-slots';
+        leftSide.append(leftTitle, categoriesDiv, slotsDiv);
+
+        const rightSide = document.createElement('div');
+        rightSide.className = 'cht-side';
+        const rightTitle = document.createElement('div');
+        rightTitle.className = 'cht-side-title';
+        rightTitle.textContent = `🎒 ${t('chest.inventory')}`;
+        const playerInv = document.createElement('div');
+        playerInv.className = 'cht-player-inventory';
+        playerInv.id = 'cht-player-inventory';
+        rightSide.append(rightTitle, playerInv);
+
+        chtContent.append(leftSide, rightSide);
+
+        const chtControls = document.createElement('div');
+        chtControls.className = 'cht-controls';
+
+        const takeAllBtn = document.createElement('button');
+        takeAllBtn.className = 'cht-btn take-all';
+        const takeAllIcon = document.createElement('span');
+        takeAllIcon.textContent = '⬇️';
+        takeAllBtn.append(takeAllIcon, ` ${t('chest.takeAll')}`);
+
+        const storeAllBtn = document.createElement('button');
+        storeAllBtn.className = 'cht-btn store-all';
+        const storeAllIcon = document.createElement('span');
+        storeAllIcon.textContent = '⬆️';
+        storeAllBtn.append(storeAllIcon, ` ${t('chest.storeAll')}`);
+
+        const organizeBtn = document.createElement('button');
+        organizeBtn.className = 'cht-btn';
+        const organizeIcon = document.createElement('span');
+        organizeIcon.textContent = '🔧';
+        organizeBtn.append(organizeIcon, ` ${t('chest.organize')}`);
+
+        chtControls.append(takeAllBtn, storeAllBtn, organizeBtn);
+
+        panel.append(chtHeader, chtContent, chtControls);
+
         document.body.appendChild(panel);
-        
+
         // Adicionar event listeners
-        panel.querySelector('.cht-close-btn').addEventListener('click', () => this.closeChestUI());
+        chtCloseBtn.addEventListener('click', () => this.closeChestUI());
         overlay.addEventListener('click', () => this.closeChestUI());
-        
-        document.getElementById('take-all-btn').addEventListener('click', () => this.takeAllItems(chest.id));
-        document.getElementById('store-all-btn').addEventListener('click', () => this.storeAllItems(chest.id));
-        document.getElementById('organize-btn').addEventListener('click', () => this.organizeChest(chest.id));
+
+        takeAllBtn.addEventListener('click', () => this.takeAllItems(chest.id));
+        storeAllBtn.addEventListener('click', () => this.storeAllItems(chest.id));
+        organizeBtn.addEventListener('click', () => this.organizeChest(chest.id));
         
         // Renderizar conteúdo
         this.renderChestCategories(chest.id);
@@ -230,7 +252,8 @@ export const chestSystem = {
         this.renderPlayerInventory(chest.id);
         
         // Fechar com ESC
-        document.addEventListener('keydown', this.handleKeyPress.bind(this));
+        this._boundKeyPress = this.handleKeyPress.bind(this);
+        document.addEventListener('keydown', this._boundKeyPress);
     },
     
     /**
@@ -257,8 +280,11 @@ export const chestSystem = {
         if (overlay) overlay.remove();
         if (panel) panel.remove();
         
-        document.removeEventListener('keydown', this.handleKeyPress);
-        
+        if (this._boundKeyPress) {
+            document.removeEventListener('keydown', this._boundKeyPress);
+            this._boundKeyPress = null;
+        }
+
         this.currentChest = null;
     },
     
@@ -275,25 +301,19 @@ export const chestSystem = {
         const container = document.getElementById('cht-categories');
         if (!container) return;
         
-        let html = '';
+        // fix: innerHTML → DOM API
+        container.replaceChildren();
         this.categories.forEach(category => {
             const itemCount = chest.storage[category]?.items?.length || 0;
-            html += `
-                <button class="cht-category-btn" data-category="${category}">
-                    ${this.getCategoryIcon(category)} ${category} (${itemCount})
-                </button>
-            `;
-        });
-        
-        container.innerHTML = html;
-        
-        // Adicionar event listeners
-        container.querySelectorAll('.cht-category-btn').forEach(btn => {
+            const btn = document.createElement('button');
+            btn.className = 'cht-category-btn';
+            btn.dataset.category = category;
+            btn.textContent = `${this.getCategoryIcon(category)} ${category} (${itemCount})`;
             btn.addEventListener('click', () => {
-                // Atualizar categoria ativa
-                container.querySelectorAll('.cht-category-btn').forEach(b => b.classList.remove('active'));
+                container.querySelectorAll('.cht-category-btn').forEach(b => { b.classList.remove('active'); });
                 btn.classList.add('active');
             });
+            container.appendChild(btn);
         });
         
         // Ativar primeira categoria
@@ -312,48 +332,52 @@ export const chestSystem = {
         const container = document.getElementById('cht-slots');
         if (!chest || !container) return;
         
-        let html = '';
-        
         // Contar total de itens
         let totalItems = 0;
         this.categories.forEach(category => {
             totalItems += chest.storage[category]?.items?.length || 0;
         });
         
+        // fix: innerHTML → DOM API
+        container.replaceChildren();
+
         if (totalItems === 0) {
-            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">📦 ${t('chest.empty')}</div>`;
+            const emptyMsg = document.createElement('div');
+            emptyMsg.classList.add('cht-empty-state');
+            emptyMsg.textContent = `📦 ${t('chest.empty')}`;
+            container.appendChild(emptyMsg);
         } else {
-            // Mostrar todos os itens de todas as categorias
             this.categories.forEach(category => {
                 const items = chest.storage[category]?.items || [];
                 items.forEach(item => {
-                    html += `
-                        <div class="cht-slot" data-item-id="${item.id}" data-category="${category}">
-                            <div class="item-icon">${item.icon || '📦'}</div>
-                            <div class="item-name">${item.name}</div>
-                            <div class="item-quantity">${item.quantity}</div>
-                        </div>
-                    `;
+                    const slot = document.createElement('div');
+                    slot.className = 'cht-slot';
+                    slot.dataset.itemId = item.id;
+                    slot.dataset.category = category;
+                    const iconDiv = document.createElement('div');
+                    iconDiv.className = 'cht-item-icon';
+                    iconDiv.textContent = item.icon || '📦';
+                    const nameDiv = document.createElement('div');
+                    nameDiv.className = 'cht-item-name';
+                    nameDiv.textContent = item.name;
+                    const qtyDiv = document.createElement('div');
+                    qtyDiv.className = 'cht-item-quantity';
+                    qtyDiv.textContent = item.quantity;
+                    slot.append(iconDiv, nameDiv, qtyDiv);
+                    slot.addEventListener('click', () => {
+                        this.takeItemFromChest(chestId, item.id, category);
+                    });
+                    container.appendChild(slot);
                 });
             });
-            
-            // Adicionar slots vazios
+
             const emptySlots = (this.categories.length * this.slotsPerCategory) - totalItems;
             for (let i = 0; i < emptySlots; i++) {
-                html += '<div class="cht-slot empty"></div>';
+                const emptySlot = document.createElement('div');
+                emptySlot.className = 'cht-slot empty';
+                container.appendChild(emptySlot);
             }
         }
-        
-        container.innerHTML = html;
-        
-        // Adicionar event listeners para os slots
-        container.querySelectorAll('.cht-slot:not(.empty)').forEach(slot => {
-            slot.addEventListener('click', () => {
-                const itemId = parseInt(slot.dataset.itemId);
-                const category = slot.dataset.category;
-                this.takeItemFromChest(chestId, itemId, category);
-            });
-        });
     },
     
     /**
@@ -366,43 +390,49 @@ export const chestSystem = {
         const container = document.getElementById('cht-player-inventory');
         if (!container) return;
         
-        if (!window.inventorySystem) {
-            container.innerHTML = `<div style="color: #aaa; text-align: center;">${t('ui.inventoryNotAvailable')}</div>`;
+        // fix: innerHTML → DOM API
+        if (!inventorySystem) {
+            const unavailable = document.createElement('div');
+            unavailable.style.cssText = 'color: #aaa; text-align: center;';
+            unavailable.textContent = t('ui.inventoryNotAvailable');
+            container.replaceChildren(unavailable);
             return;
         }
-        
-        const inventory = window.inventorySystem.getInventory();
-        let html = '';
+
+        const inventory = inventorySystem.getInventory();
+        container.replaceChildren();
         let itemCount = 0;
-        
-        // Coletar todos os itens do inventário
+
         Object.entries(inventory).forEach(([category, data]) => {
             data.items.forEach(item => {
                 itemCount++;
-                html += `
-                    <div class="cht-inventory-item" data-item-id="${item.id}" data-category="${category}">
-                        <div class="item-icon">${item.icon || '🎒'}</div>
-                        <div class="item-name">${item.name}</div>
-                        <div class="item-quantity">${item.quantity}</div>
-                    </div>
-                `;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'cht-inventory-item';
+                itemEl.dataset.itemId = item.id;
+                itemEl.dataset.category = category;
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'cht-item-icon';
+                iconDiv.textContent = item.icon || '🎒';
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'cht-item-name';
+                nameDiv.textContent = item.name;
+                const qtyDiv = document.createElement('div');
+                qtyDiv.className = 'cht-item-quantity';
+                qtyDiv.textContent = item.quantity;
+                itemEl.append(iconDiv, nameDiv, qtyDiv);
+                itemEl.addEventListener('click', () => {
+                    this.storeItemInChest(chestId, item.id, category);
+                });
+                container.appendChild(itemEl);
             });
         });
-        
+
         if (itemCount === 0) {
-            html = `<div style="grid-column: 1 / -1; text-align: center; color: #aaa; padding: 40px;">🎒 ${t('inventory.empty')}</div>`;
+            const emptyMsg = document.createElement('div');
+            emptyMsg.classList.add('cht-empty-state');
+            emptyMsg.textContent = `🎒 ${t('inventory.empty')}`;
+            container.appendChild(emptyMsg);
         }
-        
-        container.innerHTML = html;
-        
-        // Adicionar event listeners
-        container.querySelectorAll('.cht-inventory-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const itemId = parseInt(item.dataset.itemId);
-                const category = item.dataset.category;
-                this.storeItemInChest(chestId, itemId, category);
-            });
-        });
     },
     
     /**
@@ -418,7 +448,7 @@ export const chestSystem = {
         if (!chest) return;
         
         // Obter dados do item
-        const itemData = window.inventorySystem?.findItemData(itemId);
+        const itemData = inventorySystem?.findItemData(itemId);
         if (!itemData) return;
         
         // Determinar categoria no baú
@@ -431,7 +461,7 @@ export const chestSystem = {
         }
         
         // Remover 1 item do inventário
-        if (window.inventorySystem?.removeItem(itemId, 1)) {
+        if (inventorySystem?.removeItem(itemId, 1)) {
             // Adicionar ao baú
             const existingItem = chest.storage[toCategory].items.find(i => i.id === itemId);
             if (existingItem) {
@@ -472,7 +502,7 @@ export const chestSystem = {
         const item = categoryData.items[itemIndex];
         
         // Adicionar ao inventário do jogador
-        if (window.inventorySystem?.addItem(itemId, 1)) {
+        if (inventorySystem?.addItem(itemId, 1)) {
             // Remover do baú
             if (item.quantity > 1) {
                 item.quantity--;
@@ -504,7 +534,7 @@ export const chestSystem = {
             const items = [...chest.storage[category].items];
             items.forEach(item => {
                 while (item.quantity > 0) {
-                    if (window.inventorySystem?.addItem(item.id, 1)) {
+                    if (inventorySystem?.addItem(item.id, 1)) {
                         item.quantity--;
                         takenCount++;
                     } else {
@@ -534,33 +564,37 @@ export const chestSystem = {
      */
     storeAllItems(chestId) {
         const chest = this.chests[chestId];
-        if (!chest || !window.inventorySystem) return;
+        if (!chest || !inventorySystem) return;
         
         let storedCount = 0;
-        const inventory = window.inventorySystem.getInventory();
+        const inventory = inventorySystem.getInventory();
         
         Object.entries(inventory).forEach(([category, data]) => {
             const itemsToStore = [...data.items];
             itemsToStore.forEach(item => {
                 const targetCategory = this.autoMapCategory(item.type || category);
-                
-                // Verificar se há espaço
-                if (chest.storage[targetCategory].items.length >= this.slotsPerCategory) {
-                    return;
-                }
-                
-                // Mover 1 unidade de cada item
-                if (window.inventorySystem.removeItem(item.id, 1)) {
-                    const existingItem = chest.storage[targetCategory].items.find(i => i.id === item.id);
-                    if (existingItem) {
-                        existingItem.quantity++;
-                    } else {
-                        chest.storage[targetCategory].items.push({
-                            ...window.inventorySystem.findItemData(item.id),
-                            quantity: 1
-                        });
+
+                while (item.quantity > 0) {
+                    // Verificar se há espaço
+                    if (chest.storage[targetCategory].items.length >= this.slotsPerCategory) {
+                        break;
                     }
-                    storedCount++;
+
+                    if (inventorySystem.removeItem(item.id, 1)) {
+                        const existingItem = chest.storage[targetCategory].items.find(i => i.id === item.id);
+                        if (existingItem) {
+                            existingItem.quantity++;
+                        } else {
+                            chest.storage[targetCategory].items.push({
+                                ...inventorySystem.findItemData(item.id),
+                                quantity: 1
+                            });
+                        }
+                        item.quantity--;
+                        storedCount++;
+                    } else {
+                        break;
+                    }
                 }
             });
         });
