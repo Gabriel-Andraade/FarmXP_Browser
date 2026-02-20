@@ -60,6 +60,7 @@ class UiPanel {
     };
 
     this._onResize = () => this._resizeSvg();
+    this._abortController = new AbortController();
 
     this.init();
   }
@@ -77,13 +78,10 @@ class UiPanel {
     // Cria o DOM inicial
     this._createDOM();
 
-    document.addEventListener("pointerdown", this._onDocPointerDown, true);
-    window.addEventListener("resize", this._onResize);
-    
-    //  OUVINTE IMPORTANTE: Recria a interface quando o idioma mudar
-    document.addEventListener('languageChanged', () => {
-        this.rebuildInterface();
-    });
+    const signal = this._abortController.signal;
+    document.addEventListener("pointerdown", this._onDocPointerDown, { capture: true, signal });
+    window.addEventListener("resize", this._onResize, { signal });
+    document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
     this._resizeSvg();
     this._startLoop();
@@ -291,6 +289,14 @@ class UiPanel {
 
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
+  }
+
+  destroy() {
+    this.close();
+    this._abortController.abort();
+    if (this.layer && this.layer.parentNode) {
+      this.layer.parentNode.removeChild(this.layer);
+    }
   }
 
   toggleActions() {
