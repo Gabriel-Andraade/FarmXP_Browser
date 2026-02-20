@@ -229,48 +229,94 @@ export const wellSystem = {
       return;
     }
 
+    // fix: innerHTML → DOM API
     const overlay = document.createElement("div");
     overlay.id = "well-overlay";
     overlay.classList.add("active");
-    overlay.innerHTML = `
-      <div id="well-modal">
-        <div class="well-close-btn" id="well-close">X</div>
+    const modal = document.createElement('div');
+    modal.id = 'well-modal';
 
-        <div class="well-col">
-          <h3>${t('well.backpack')}</h3>
-          <div class="well-item-slot" id="slot-bucket"><div id="qty-bucket">0</div></div>
-          <div class="well-item-slot" id="slot-bottle"><div id="qty-bottle">0</div></div>
-        </div>
+    const closeBtn = document.createElement('div');
+    closeBtn.className = 'well-close-btn';
+    closeBtn.id = 'well-close';
+    closeBtn.textContent = 'X';
 
-        <div class="well-col">
-          <h3>${t('well.actions')}</h3>
-          <button class="well-main-btn well-btn-blue" id="btn-drink">${t('well.drink')}</button>
-          <button class="well-main-btn well-btn-red" id="btn-transfer-menu">${t('well.collect')}</button>
-          <div id="transfer-options" hidden>
-            <button class="well-main-btn" id="btn-fill-bottle">${t('well.fillBottle')}</button>
-          </div>
-        </div>
+    // Coluna backpack
+    const col1 = document.createElement('div');
+    col1.className = 'well-col';
+    const h3_1 = document.createElement('h3');
+    h3_1.textContent = t('well.backpack');
+    const slotBucket = document.createElement('div');
+    slotBucket.className = 'well-item-slot';
+    slotBucket.id = 'slot-bucket';
+    const qtyBucket = document.createElement('div');
+    qtyBucket.id = 'qty-bucket';
+    qtyBucket.textContent = '0';
+    slotBucket.appendChild(qtyBucket);
+    const slotBottle = document.createElement('div');
+    slotBottle.className = 'well-item-slot';
+    slotBottle.id = 'slot-bottle';
+    const qtyBottle = document.createElement('div');
+    qtyBottle.id = 'qty-bottle';
+    qtyBottle.textContent = '0';
+    slotBottle.appendChild(qtyBottle);
+    col1.append(h3_1, slotBucket, slotBottle);
 
-        <div class="well-col">
-          <h3>${t('well.well')}</h3>
-          <div class="well-bucket-container">
-            <div class="well-water-fill" id="well-water-level"></div>
-          </div>
-          <button class="well-main-btn well-btn-green" id="btn-pull-water">${t('well.lowerBucket')}</button>
-          <div id="well-timer" hidden>00:00</div>
-        </div>
-      </div>
-    `;
+    // Coluna actions
+    const col2 = document.createElement('div');
+    col2.className = 'well-col';
+    const h3_2 = document.createElement('h3');
+    h3_2.textContent = t('well.actions');
+    const btnDrink = document.createElement('button');
+    btnDrink.className = 'well-main-btn well-btn-blue';
+    btnDrink.id = 'btn-drink';
+    btnDrink.textContent = t('well.drink');
+    const btnTransfer = document.createElement('button');
+    btnTransfer.className = 'well-main-btn well-btn-red';
+    btnTransfer.id = 'btn-transfer-menu';
+    btnTransfer.textContent = t('well.collect');
+    const transferOpts = document.createElement('div');
+    transferOpts.id = 'transfer-options';
+    transferOpts.hidden = true;
+    const btnFillBottle = document.createElement('button');
+    btnFillBottle.className = 'well-main-btn';
+    btnFillBottle.id = 'btn-fill-bottle';
+    btnFillBottle.textContent = t('well.fillBottle');
+    transferOpts.appendChild(btnFillBottle);
+    col2.append(h3_2, btnDrink, btnTransfer, transferOpts);
+
+    // Coluna well
+    const col3 = document.createElement('div');
+    col3.className = 'well-col';
+    const h3_3 = document.createElement('h3');
+    h3_3.textContent = t('well.well');
+    const bucketContainer = document.createElement('div');
+    bucketContainer.className = 'well-bucket-container';
+    const waterLevel = document.createElement('div');
+    waterLevel.className = 'well-water-fill';
+    waterLevel.id = 'well-water-level';
+    bucketContainer.appendChild(waterLevel);
+    const btnPullWater = document.createElement('button');
+    btnPullWater.className = 'well-main-btn well-btn-green';
+    btnPullWater.id = 'btn-pull-water';
+    btnPullWater.textContent = t('well.lowerBucket');
+    const wellTimer = document.createElement('div');
+    wellTimer.id = 'well-timer';
+    wellTimer.hidden = true;
+    wellTimer.textContent = '00:00';
+    col3.append(h3_3, bucketContainer, btnPullWater, wellTimer);
+
+    modal.append(closeBtn, col1, col2, col3);
+    overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    document.getElementById("well-close").onclick = () => this.closeWellMenu();
-    document.getElementById("btn-pull-water").onclick = () => this.startPullingWater();
-    document.getElementById("btn-drink").onclick = () => this.drinkFromWell();
-    document.getElementById("btn-transfer-menu").onclick = () => {
-      const opts = document.getElementById("transfer-options");
-      opts.hidden = !opts.hidden;
+    closeBtn.onclick = () => this.closeWellMenu();
+    btnPullWater.onclick = () => this.startPullingWater();
+    btnDrink.onclick = () => this.drinkFromWell();
+    btnTransfer.onclick = () => {
+      transferOpts.hidden = !transferOpts.hidden;
     };
-    document.getElementById("btn-fill-bottle").onclick = () => this.fillBottle();
+    btnFillBottle.onclick = () => this.fillBottle();
 
     overlay.style.display = "flex";
     wellState.isOpen = true;

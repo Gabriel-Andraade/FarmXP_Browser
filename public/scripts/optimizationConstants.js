@@ -260,14 +260,14 @@ function clearCalculationCache() {
 }
 
 /**
- * Para implementar de forma correta sem acoplamento ao legacy bridge:
- * - expor um método oficial no world (ex.: world.compactLargeArrays())
- * - acessar arrays via getObject('world') (ex.: world.trees, world.rocks, etc).
+ * No-op — anteriormente tentava compactar arrays via window[arrayName],
+ * mas os arrays relevantes são module-scoped em theWorld.js (#65).
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
   try {
     const world = getObject("world");
     if (world && typeof world.compactLargeArrays === "function") {
@@ -277,6 +277,9 @@ function compactLargeArrays() {
   } catch (e) {
     return Promise.resolve({ itemsCompacted: 0 });
   }
+=======
+    return Promise.resolve({ itemsCompacted: 0 });
+>>>>>>> main
 }
 
 /**
@@ -287,6 +290,7 @@ function compactLargeArrays() {
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
 function forceGarbageCollection() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
   try {
     if (typeof window.gc === "function") {
       window.gc();
@@ -296,6 +300,20 @@ function forceGarbageCollection() {
   } catch (e) {
     return Promise.resolve({ gcForced: false });
   }
+=======
+    return new Promise((resolve) => {
+        try {
+            if (typeof window.gc === 'function') {
+                window.gc();
+                resolve({ gcForced: true });
+            } else {
+                resolve({ gcForced: false });
+            }
+        } catch (e) {
+            resolve({ gcForced: false });
+        }
+    });
+>>>>>>> main
 }
 
 /**
@@ -323,13 +341,19 @@ function resetCanvasContext() {
 }
 
 /**
+<<<<<<< issue/58-indiscriminately-clears-all-timers
  * Otimiza uso de memória disparando cleanup de objetos destruídos e limpando assets não usados
+=======
+ * Dispara um cleanup event-driven de objetos destruídos.
+ * (O comportamento antigo de limpar timers/intervals indiscriminadamente foi removido.)
+>>>>>>> main
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
  * @returns {Array<string>} returns.optimizations - Lista de otimizações aplicadas
  */
 function optimizeMemoryUsage() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
   return new Promise((resolve) => {
     try {
       const optimizations = [];
@@ -338,6 +362,16 @@ function optimizeMemoryUsage() {
         try {
           window.assets.cleanupUnused();
           optimizations.push("assets");
+=======
+    return new Promise((resolve) => {
+        try {
+            // theWorld é suficiente para indicar que o mundo está disponível; objectDestroyed é sempre uma função truthy.
+            if (window.theWorld) {
+                document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
+            }
+
+            resolve({ memoryOptimized: true, optimizations: [] });
+>>>>>>> main
         } catch (e) {
           // best-effort
         }

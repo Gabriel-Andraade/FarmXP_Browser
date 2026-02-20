@@ -11,9 +11,7 @@
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage"
   },
-  "dependencies": {
-    "react-icons": "^5.5.0"
-  },
+
   "devDependencies": {
     "@types/bun": "^1.2.23",
     "typescript": "^5.9.3"
