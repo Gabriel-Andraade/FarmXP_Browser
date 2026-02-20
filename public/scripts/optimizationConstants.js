@@ -227,21 +227,20 @@ export async function performSleepOptimizations() {
     const results = await Promise.allSettled(optimizations);
     const succeeded = results.filter(r => r.status === 'fulfilled').length;
 
-        const endTime = performance.now();
-        return {
-            success: true,
-            duration: endTime - startTime,
-            optimizationsApplied: optimizations.length
-        };
-
-    } catch (error) {
-        handleWarn("falha nas otimizações de sleep", "optimizationConstants:performSleepOptimizations", { error });
-        return {
-            success: false,
-            error: error?.message || String(error),
-            optimizationsApplied: optimizations.length
-        };
-    }
+    const endTime = performance.now();
+    return {
+      success: true,
+      duration: endTime - startTime,
+      optimizationsApplied: succeeded,
+    };
+  } catch (error) {
+    handleWarn("falha nas otimizações de sleep", "optimizationConstants:performSleepOptimizations", { error });
+    return {
+      success: false,
+      error: error?.message || String(error),
+      optimizationsApplied: 0,
+    };
+  }
 }
 
 /**
@@ -251,27 +250,24 @@ export async function performSleepOptimizations() {
  * @returns {number} returns.cacheCleared - Número de entradas limpas
  */
 function clearCalculationCache() {
-    return new Promise((resolve) => {
-        try {
-            const beforeSize = commonCalculations.size;
-            commonCalculations.clear();
-            resolve({ cacheCleared: beforeSize });
-        } catch (error) {
-            handleWarn("falha ao limpar cache de cálculos", "optimizationConstants:clearCalculationCache", { error });
-            resolve({ cacheCleared: 0 });
-        }
-    });
+  try {
+    const beforeSize = commonCalculations.size;
+    commonCalculations.clear();
+    return Promise.resolve({ cacheCleared: beforeSize });
+  } catch (error) {
+    handleWarn("falha ao limpar cache de cálculos", "optimizationConstants:clearCalculationCache", { error });
+    return Promise.resolve({ cacheCleared: 0 });
+  }
 }
 
 /**
- * No-op — anteriormente tentava compactar arrays via window[arrayName],
- * mas os arrays relevantes são module-scoped em theWorld.js (#65).
+ * Compacta arrays grandes chamando o método do mundo
+ * Reduz overhead de memória de arrays com muitos elementos vazios
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-<<<<<<< issue/58-indiscriminately-clears-all-timers
   try {
     const world = getObject("world");
     if (world && typeof world.compactLargeArrays === "function") {
@@ -281,21 +277,16 @@ function compactLargeArrays() {
   } catch (e) {
     return Promise.resolve({ itemsCompacted: 0 });
   }
-=======
-    return Promise.resolve({ itemsCompacted: 0 });
->>>>>>> main
 }
 
 /**
  * Tenta forçar coleta de lixo (garbage collection)
  * Usa window.gc se disponível (requer flag --expose-gc), senão no-op
- * fix: issue #59 — removed anti-pattern that polluted global window namespace
  * @private
  * @returns {Promise<Object>} Resultado da tentativa
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
 function forceGarbageCollection() {
-<<<<<<< issue/58-indiscriminately-clears-all-timers
   try {
     if (typeof window.gc === "function") {
       window.gc();
@@ -305,29 +296,6 @@ function forceGarbageCollection() {
   } catch (e) {
     return Promise.resolve({ gcForced: false });
   }
-=======
-    return new Promise((resolve) => {
-        try {
-            if (typeof window.gc === 'function') {
-                window.gc();
-                resolve({ gcForced: true });
-            } else if (window.performance && window.performance.memory) {
-                for (let i = 0; i < 1000; i++) {
-                    window['temp_gc_' + i] = new Array(1000).fill(0);
-                }
-                for (let i = 0; i < 1000; i++) {
-                    delete window['temp_gc_' + i];
-                }
-                resolve({ gcForced: true });
-            } else {
-                resolve({ gcForced: false });
-            }
-        } catch (error) {
-            handleWarn("falha ao forçar garbage collection", "optimizationConstants:forceGarbageCollection", { error });
-            resolve({ gcForced: false });
-        }
-    });
->>>>>>> main
 }
 
 /**
@@ -357,44 +325,28 @@ function resetCanvasContext() {
 
 /**
  * Otimiza uso de memória disparando cleanup de objetos destruídos
-<<<<<<< issue/58-indiscriminately-clears-all-timers
- * Otimiza uso de memória disparando cleanup de objetos destruídos e limpando assets não usados
-=======
- * Dispara um cleanup event-driven de objetos destruídos.
- * (O comportamento antigo de limpar timers/intervals indiscriminadamente foi removido.)
->>>>>>> main
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
  * @returns {Array<string>} returns.optimizations - Lista de otimizações aplicadas
  */
 function optimizeMemoryUsage() {
-<<<<<<< issue/58-indiscriminately-clears-all-timers
   return new Promise((resolve) => {
     try {
       const optimizations = [];
+      const world = getObject("world");
 
-      if (window.assets && typeof window.assets.cleanupUnused === "function") {
-        try {
-          window.assets.cleanupUnused();
-          optimizations.push("assets");
-=======
-    return new Promise((resolve) => {
-        try {
-            const optimizations = [];
-            const world = getObject("world");
+      if (world?.objectDestroyed) {
+        document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
+        optimizations.push('destroyedObjects');
+      }
 
-            if (world?.objectDestroyed) {
-                document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
-                optimizations.push('destroyedObjects');
-            }
-
-            resolve({ memoryOptimized: optimizations.length > 0, optimizations });
-        } catch (error) {
-            handleWarn("falha ao otimizar memória", "optimizationConstants:optimizeMemoryUsage", { error });
-            resolve({ memoryOptimized: false });
-        }
-    });
+      resolve({ memoryOptimized: optimizations.length > 0, optimizations });
+    } catch (error) {
+      handleWarn("falha ao otimizar memória", "optimizationConstants:optimizeMemoryUsage", { error });
+      resolve({ memoryOptimized: false });
+    }
+  });
 }
 
 /**
@@ -423,7 +375,7 @@ export function getMemoryStatus() {
 /**
  * Limpa cache de renderização marcando mundo como alterado
  * Força re-renderização completa na próxima frame
- * `@returns` {boolean} True se cache foi limpo, false se world não disponível
+ * @returns {boolean} True se cache foi limpo, false se world não disponível
  */
 export function clearRenderCache() {
     const world = getObject("world");
