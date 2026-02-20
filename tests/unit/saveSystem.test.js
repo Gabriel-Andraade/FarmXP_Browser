@@ -716,7 +716,7 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(data.world.rocks).toHaveLength(1);
       expect(data.world.rocks[0].id).toBe('rock1');
 
-      // Limpa após o teste (opcional, o beforeEach já limpa os arrays)
+      // Cleanup necessário: beforeEach não limpa theWorld arrays
       theWorld.trees.length = 0;
       theWorld.rocks.length = 0;
     });

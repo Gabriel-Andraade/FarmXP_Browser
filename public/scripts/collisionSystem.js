@@ -601,4 +601,4 @@ export class CollisionSystem {
 export const collisionSystem = new CollisionSystem();
 registerSystem('collision', collisionSystem);
 // (opcional, mas ajuda fallback de testes)
- export default CollisionSystem;
+export default CollisionSystem;
