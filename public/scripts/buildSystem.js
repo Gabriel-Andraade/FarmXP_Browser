@@ -453,7 +453,7 @@ export const BuildSystem = {
                 }
             }
         } catch (e) {
-            console.error(`erro ao carregar ${key}:`, e);
+            console.warn(`erro ao carregar ${key}:`, e);
         }
         return [];
     },
@@ -630,3 +630,5 @@ try {
 } catch (e) {
     logger.warn("buildsystem: initadvancedsystem falhou na inicializacao automatica.", e);
 }
+ export const buildSystem = BuildSystem;
+ export default BuildSystem;

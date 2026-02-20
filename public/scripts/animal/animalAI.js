@@ -271,8 +271,11 @@ export class AnimalEntity {
             // Nota: A atualização do collisionSystem é feita por theWorld.js após update()
             // para evitar conflitos de valores
         } else {
-            this.state = AnimalState.IDLE; 
-            this.pickNewState(); 
+            // Não move, fica IDLE por um tempo mínimo (sem chamar pickNewState imediatamente)
+            this.state = AnimalState.IDLE;
+            this.stateTimer = performance.now();
+            this.stateDuration = IDLE_STATE_MIN_MS;
+            return;
         }
     }
 

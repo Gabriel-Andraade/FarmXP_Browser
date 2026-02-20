@@ -89,7 +89,14 @@ export class CollisionSystem {
      * @static
      * @type {Object}
      */
-    static CONFIG_SIZES = HITBOX_CONFIGS.STATIC_OBJECTS;
+      static get CONFIG_SIZES() {
+        return {
+            ...HITBOX_CONFIGS.STATIC_OBJECTS,
+            // Fallback para garantir que as configurações existam
+            CHEST: HITBOX_CONFIGS.STATIC_OBJECTS.CHEST || { width: 31, height: 31, offsetX: 0, offsetY: 0 },
+            WELL: HITBOX_CONFIGS.STATIC_OBJECTS.WELL || { width: 63, height: 30, offsetY: 56 },
+        };
+    }
 
     /**
      * Configurações de hitboxes para animais usando proporções relativas
@@ -97,8 +104,12 @@ export class CollisionSystem {
      * @static
      * @type {Object}
      */
-    static ANIMAL_CONFIGS = HITBOX_CONFIGS.ANIMALS;
-
+    static get ANIMAL_CONFIGS() {
+        return {
+            ...HITBOX_CONFIGS.ANIMALS,
+            BULL: HITBOX_CONFIGS.ANIMALS.BULL || { widthRatio: 0.3, heightRatio: 0.3, offsetXRatio: 0.3, offsetYRatio: 0.5 },
+        };
+    }
     /**
      * Configurações das zonas de interação (hitboxes laranjas/verdes)
      * Define áreas onde o jogador pode interagir com objetos
@@ -601,3 +612,5 @@ export class CollisionSystem {
 
 export const collisionSystem = new CollisionSystem();
 registerSystem('collision', collisionSystem);
+// (opcional, mas ajuda fallback de testes)
+ export default CollisionSystem;

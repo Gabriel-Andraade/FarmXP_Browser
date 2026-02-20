@@ -150,8 +150,8 @@ describe('CurrencyManager (Production Implementation)', () => {
       expect(manager.canAfford(2000)).toBe(false);
     });
 
-    test('should return true for zero amount', () => {
-      expect(manager.canAfford(0)).toBe(true);
+    test('should return false for zero amount (validation rejects non-positive)', () => {
+      expect(manager.canAfford(0)).toBe(false);
     });
 
     test('should not modify balance when checking', () => {

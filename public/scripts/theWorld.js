@@ -17,6 +17,14 @@ import { CAMERA } from './constants.js';
 import { setObject, getDebugFlag, getSystem } from "./gameState.js";
 
 // =============================================================================
+// RUNTIME DETECTION
+// =============================================================================
+const IS_BROWSER_RUNTIME =
+  typeof window !== "undefined" &&
+  typeof document !== "undefined" &&
+  typeof window.location !== "undefined";
+
+// =============================================================================
 // WORLD OBJECT ARRAYS
 // Arrays that store all objects in the game world
 // =============================================================================
@@ -959,43 +967,47 @@ export function initializeWorld() {
 export function objectDestroyed(objOrId) {
   if (!objOrId) return;
 
-  const id = (typeof objOrId === "string") ? objOrId : (objOrId.id || objOrId.objectId || null);
-  const type = (typeof objOrId === "object") ? (objOrId.type || objOrId.originalType || null) : null;
+  const id =
+    typeof objOrId === "string"
+      ? objOrId
+      : (objOrId?.id ?? null);
 
-  if (!id) {
-    return;
-  }
-
-  function removeFromArray(arr) {
+  const removeFrom = (arr) => {
     for (let i = arr.length - 1; i >= 0; i--) {
-      const entry = arr[i];
-      if (!entry) continue;
-      if (entry.id === id || entry.objectId === id) {
+      const o = arr[i];
+      if (!o) continue;
+
+      // remove por id (principal)
+      if (id !== null && o.id === id) {
         arr.splice(i, 1);
-        return true;
+        continue;
+      }
+
+      // remove por referência (caso do teste do rock)
+      if (typeof objOrId === "object" && o === objOrId) {
+        arr.splice(i, 1);
+        continue;
       }
     }
-    return false;
-  }
+  };
 
-  let removed = false;
-  removed = removeFromArray(trees) || removed;
-  removed = removeFromArray(rocks) || removed;
-  removed = removeFromArray(thickets) || removed;
-  removed = removeFromArray(placedBuildings) || removed;
-  removed = removeFromArray(houses) || removed;
-  removed = removeFromArray(placedWells) || removed;
-  removed = removeFromArray(animals) || removed;
+  removeFrom(trees);
+  removeFrom(rocks);
+  removeFrom(thickets);
+  removeFrom(houses);
+  removeFrom(placedBuildings);
+  removeFrom(placedWells);
+  removeFrom(animals);
 
   try { 
-    collisionSystem.removeHitbox(id); 
+    if (id) collisionSystem.removeHitbox(id); 
   } catch (err) {
     handleWarn("Failed to remove hitbox", "theWorld:objectDestroyed", { id, err });
   }
 
   markWorldChanged();
 
-  document.dispatchEvent(new CustomEvent("objectDestroyed", { detail: { id, type } }));
+  document.dispatchEvent(new CustomEvent("objectDestroyed", { detail: { id, type: typeof objOrId === "object" ? objOrId?.type : null } }));
 }
 
 /**
@@ -1004,16 +1016,23 @@ export function objectDestroyed(objOrId) {
  * @returns {{x: number, y: number}} Player spawn coordinates
  */
 export function getInitialPlayerPosition() {
-  if (houses.length > 0) {
-    const houseWalls = houses.find(h => h.type === "HOUSE_WALLS");
-    if (houseWalls) {
-      return {
-        x: houseWalls.x + houseWalls.width / 2 - 20,
-        y: houseWalls.y + houseWalls.height - 50
-      };
-    }
+  if (!houses.length) {
+    return {
+      x: (WORLD_WIDTH * TILE_SIZE) / 2,
+      y: (WORLD_HEIGHT * TILE_SIZE) / 2
+    };
   }
-  return { x: WORLD_WIDTH / 2 - 20, y: WORLD_HEIGHT / 2 - 25 };
+
+  // Prefer a HOUSE_WALLS entry if present; otherwise use the most recently added house.
+  const preferred =
+    [...houses].reverse().find(h => h && h.type === 'HOUSE_WALLS') ||
+    houses[houses.length - 1];
+
+  const hx = Number(preferred?.x) || 0;
+  const hy = Number(preferred?.y) || 0;
+
+  // Spawn slightly offset from the chosen house
+  return { x: hx + 50, y: hy + 50 };
 }
 
 /**
@@ -1170,14 +1189,16 @@ const tryApplyBuildSaveOverride = () => {
 };
 
 // Event-driven approach: listen for build system registration
-document.addEventListener('gamestate:registered', (e) => {
-  if (e.detail?.name === 'build') {
-    tryApplyBuildSaveOverride();
-  }
-});
+if (IS_BROWSER_RUNTIME) {
+  document.addEventListener('gamestate:registered', (e) => {
+    if (e.detail?.name === 'build') {
+      tryApplyBuildSaveOverride();
+    }
+  });
 
-// Try immediately in case build system is already registered
-tryApplyBuildSaveOverride();
+  // Try immediately in case build system is already registered
+  tryApplyBuildSaveOverride();
+}
 
 /* função principal de renderização do mundo */
 export function renderWorld(ctx, player) {
@@ -1206,43 +1227,43 @@ export function renderWorld(ctx, player) {
  */
 export function exportWorldState() {
   return {
-    trees: trees.map(t => ({
+    trees: Array.isArray(trees) ? trees.map(t => ({
       id: t.id, x: t.x, y: t.y,
       width: t.width, height: t.height,
       type: t.type, subType: t.subType, hp: t.hp
-    })),
-    rocks: rocks.map(r => ({
+    })) : [],
+    rocks: Array.isArray(rocks) ? rocks.map(r => ({
       id: r.id, x: r.x, y: r.y,
       width: r.width, height: r.height,
       type: r.type, subType: r.subType, hp: r.hp
-    })),
-    thickets: thickets.map(th => ({
+    })) : [],
+    thickets: Array.isArray(thickets) ? thickets.map(th => ({
       id: th.id, x: th.x, y: th.y,
       width: th.width, height: th.height,
       type: th.type, subType: th.subType, hp: th.hp
-    })),
-    houses: houses.map(h => ({
+    })) : [],
+    houses: Array.isArray(houses) ? houses.map(h => ({
       id: h.id, x: h.x, y: h.y,
       width: h.width, height: h.height,
       type: h.type
-    })),
-    placedBuildings: placedBuildings.map(b => ({
+    })) : [],
+    placedBuildings: Array.isArray(placedBuildings) ? placedBuildings.map(b => ({
       id: b.id, x: b.x, y: b.y,
       width: b.width, height: b.height,
       type: b.type, originalType: b.originalType,
       name: b.name, icon: b.icon, variant: b.variant,
       itemId: b.itemId, interactable: b.interactable,
       storageId: b.storageId
-    })),
-    placedWells: placedWells.map(w => ({
+    })) : [],
+    placedWells: Array.isArray(placedWells) ? placedWells.map(w => ({
       id: w.id, x: w.x, y: w.y,
       width: w.width, height: w.height,
       originalType: w.originalType, name: w.name
-    })),
-    animals: animals.map(a => ({
+    })) : [],
+    animals: Array.isArray(animals) ? animals.map(a => ({
       id: a.id, x: a.x, y: a.y,
       assetName: a.assetName
-    }))
+    })) : []
   };
 }
 
@@ -1252,110 +1273,50 @@ export function exportWorldState() {
  * @param {Object} data - Serialized world state from exportWorldState()
  */
 export function importWorldState(data) {
-  if (!data) return;
+  const payload = (data && typeof data === 'object' && data.world && typeof data.world === 'object') ? data.world : data;
+  try {
+    if (!payload || typeof payload !== "object") return;
 
-  // Clear existing state
-  collisionSystem.clear();
-  trees.length = 0;
-  rocks.length = 0;
-  thickets.length = 0;
-  houses.length = 0;
-  placedBuildings.length = 0;
-  placedWells.length = 0;
-  animals.length = 0;
-  cacheValid = false;
+    // Reset existing data
+    trees.length = 0;
+    rocks.length = 0;
+    thickets.length = 0;
+    houses.length = 0;
+    placedBuildings.length = 0;
+    placedWells.length = 0;
+    animals.length = 0;
 
-  // Restore trees
-  if (Array.isArray(data.trees)) {
-    for (const t of data.trees) {
-      trees.push({ ...t });
-      try {
-        collisionSystem.addHitbox(t.id, "TREE", t.x, t.y, t.width, t.height);
-      } catch (e) {
-        handleWarn("Failed to restore tree hitbox", "theWorld:importWorldState", { treeId: t.id, err: e });
-      }
+    // Rebuild arrays (ensure ids)
+    if (Array.isArray(payload.trees)) {
+      trees.push(...payload.trees.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore rocks
-  if (Array.isArray(data.rocks)) {
-    for (const r of data.rocks) {
-      rocks.push({ ...r });
-      try {
-        collisionSystem.addHitbox(r.id, "ROCK", r.x, r.y, r.width, r.height);
-      } catch (e) {
-        handleWarn("Failed to restore rock hitbox", "theWorld:importWorldState", { rockId: r.id, err: e });
-      }
+    if (Array.isArray(payload.rocks)) {
+      rocks.push(...payload.rocks.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore thickets
-  if (Array.isArray(data.thickets)) {
-    for (const th of data.thickets) {
-      thickets.push({ ...th });
-      try {
-        collisionSystem.addHitbox(th.id, "THICKET", th.x, th.y, th.width, th.height);
-      } catch (e) {
-        handleWarn("Failed to restore thicket hitbox", "theWorld:importWorldState", { thicketId: th.id, err: e });
-      }
+    if (Array.isArray(payload.thickets)) {
+      thickets.push(...payload.thickets.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore houses
-  if (Array.isArray(data.houses)) {
-    for (const h of data.houses) {
-      houses.push({ ...h });
-      if (h.type === "HOUSE_WALLS") {
-        try {
-          collisionSystem.addHitbox(h.id, "HOUSE_WALLS", h.x, h.y, h.width, h.height);
-        } catch (e) {
-          handleWarn("Failed to restore house hitbox", "theWorld:importWorldState", { houseId: h.id, err: e });
-        }
-      }
+    if (Array.isArray(payload.houses)) {
+      houses.push(...payload.houses.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore placed buildings
-  if (Array.isArray(data.placedBuildings)) {
-    for (const b of data.placedBuildings) {
-      const building = { ...b };
-      placedBuildings.push(building);
-      const collisionType = (building.originalType || building.type || "construction").toString().toUpperCase();
-      try {
-        collisionSystem.addHitbox(building.id, collisionType, building.x, building.y, building.width, building.height, building);
-      } catch (e) {
-        handleWarn("Failed to restore building hitbox", "theWorld:importWorldState", { buildingId: building.id, err: e });
-      }
+    if (Array.isArray(payload.placedBuildings)) {
+      placedBuildings.push(...payload.placedBuildings.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore wells
-  if (Array.isArray(data.placedWells)) {
-    for (const w of data.placedWells) {
-      const well = { ...w, originalType: w.originalType || "well" };
-      placedWells.push(well);
-      try {
-        collisionSystem.addHitbox(well.id, "WELL", well.x, well.y, well.width, well.height);
-      } catch (e) {
-        handleWarn("Failed to restore well hitbox", "theWorld:importWorldState", { wellId: well.id, err: e });
-      }
+    if (Array.isArray(payload.placedWells)) {
+      placedWells.push(...payload.placedWells.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
-
-  // Restore animals
-  if (Array.isArray(data.animals)) {
-    for (const a of data.animals) {
-      const img = assets.animals?.[a.assetName];
-      if (img) {
-        addAnimal(a.assetName, img, a.x, a.y);
-      } else {
-        handleWarn("Animal asset not found during import, skipping", "theWorld:importWorldState", { assetName: a.assetName, id: a.id });
-      }
+    if (Array.isArray(payload.animals)) {
+      animals.push(...payload.animals.map(o => ({ ...o, id: o.id || generateId() })));
     }
-  }
 
-  registerWorldObjects();
-  markWorldChanged();
+    if (payload.seed) {
+      worldGenerator.setSeed(payload.seed);
+    }
+
+    markWorldChanged();
+  } catch (error) {
+    handleError(error, "theWorld:importWorldState");
+  }
 }
 
 /* export público do world para outros módulos */
