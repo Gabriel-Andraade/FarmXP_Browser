@@ -223,7 +223,7 @@ export async function performSleepOptimizations() {
       optimizations.push(optimizeMemoryUsage());
     }
 
-    await Promise.all(optimizations);
+    await Promise.allSettled(optimizations);
 
     const endTime = performance.now();
     return {
@@ -267,11 +267,18 @@ function clearCalculationCache() {
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-  const world = getObject("world");
-  if (world && typeof world.compactLargeArrays === "function") {
-    return Promise.resolve(world.compactLargeArrays());
-  }
-  return Promise.resolve({ itemsCompacted: 0 });
+  return new Promise((resolve) => {
+    try {
+      const world = getObject("world");
+      if (world && typeof world.compactLargeArrays === "function") {
+        resolve(world.compactLargeArrays());
+      } else {
+        resolve({ itemsCompacted: 0 });
+      }
+    } catch (e) {
+      resolve({ itemsCompacted: 0 });
+    }
+  });
 }
 
 /**
@@ -286,14 +293,6 @@ function forceGarbageCollection() {
     try {
       if (typeof window.gc === "function") {
         window.gc();
-        resolve({ gcForced: true });
-      } else if (window.performance && window.performance.memory) {
-        for (let i = 0; i < 1000; i++) {
-          window["temp_gc_" + i] = new Array(1000).fill(0);
-        }
-        for (let i = 0; i < 1000; i++) {
-          delete window["temp_gc_" + i];
-        }
         resolve({ gcForced: true });
       } else {
         resolve({ gcForced: false });
@@ -343,16 +342,6 @@ function optimizeMemoryUsage() {
     try {
       const optimizations = [];
 
-      const world = getObject("world");
-      if (world && typeof world.objectDestroyed === "function") {
-        try {
-          world.objectDestroyed();
-          optimizations.push("destroyedObjects");
-        } catch (e) {
-          // best-effort
-        }
-      }
-
       if (window.assets && typeof window.assets.cleanupUnused === "function") {
         try {
           window.assets.cleanupUnused();
@@ -362,7 +351,9 @@ function optimizeMemoryUsage() {
         }
       }
 
-      resolve({ memoryOptimized: true, optimizations });
+      document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
+
+      resolve({ memoryOptimized: optimizations.length > 0, optimizations });
     } catch (e) {
       resolve({ memoryOptimized: false });
     }
