@@ -585,6 +585,7 @@ async function startFullGameLoad() {
       WeatherSystem = weatherModule.WeatherSystem;
       drawWeatherEffects = weatherModule.drawWeatherEffects;
 
+
       if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
 
       // Registrar WeatherSystem no gameState APÓS import e init
@@ -995,8 +996,6 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem && drawWeatherEffects) {
         drawWeatherEffects(ctx, currentPlayer, canvas);
-        // drawWeatherUI removido — painel é event-driven
-        // (timeChanged, dayChanged, languageChanged, weatherChanged)
       }
     } catch (e) {
       handleWarn("falha ao desenhar clima", "main:gameLoop:weather", e);

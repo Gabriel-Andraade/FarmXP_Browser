@@ -684,13 +684,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
 }
 
 /**
- * Atualiza o painel de UI de clima (posição e conteúdo)
- * O painel é um elemento HTML overlay ancorado no canto do canvas
- * @param {CanvasRenderingContext2D} ctx - Contexto do canvas (não utilizado, mantido por compatibilidade)
- * @returns {void}
+// drawWeatherUI() was removed; UI panel is now updated exclusively via event
+// listeners (timeChanged, dayChanged, languageChanged, resize) and direct calls
+// in randomizeWeather().
  */
-export function drawWeatherUI(ctx) {
-  // O painel agora é overlay HTML ancorado no canto do canvas
-  updateWeatherUIPanelPosition();
-  updateWeatherUIPanelContent();
-}
