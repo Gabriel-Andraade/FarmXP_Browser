@@ -88,6 +88,13 @@ export function destroyAllSystems() {
             logger.debug('[Cleanup] WeatherSystem destruído');
         }
 
+        // AnimalUI - Cleanup de listeners e DOM (AbortController)
+        const animalUI = getSystem('animalUI');
+        if (animalUI && typeof animalUI.destroy === 'function') {
+            animalUI.destroy();
+            logger.debug('[Cleanup] AnimalUI destruído');
+        }
+
         logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
     } catch (error) {
         logger.error('[Cleanup] Erro durante destruição dos sistemas:', error);
