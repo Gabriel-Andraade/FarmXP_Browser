@@ -225,13 +225,14 @@ export async function performSleepOptimizations() {
       optimizations.push(optimizeMemoryUsage());
     }
 
-    await Promise.allSettled(optimizations);
+    const results = await Promise.allSettled(optimizations);
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
 
     const endTime = performance.now();
     return {
       success: true,
       duration: endTime - startTime,
-      optimizationsApplied: optimizations.length,
+      optimizationsApplied: succeeded,
     };
   } catch (error) {
     return {
@@ -249,15 +250,13 @@ export async function performSleepOptimizations() {
  * @returns {number} returns.cacheCleared - Número de entradas limpas
  */
 function clearCalculationCache() {
-  return new Promise((resolve) => {
-    try {
-      const beforeSize = commonCalculations.size;
-      commonCalculations.clear();
-      resolve({ cacheCleared: beforeSize });
-    } catch (e) {
-      resolve({ cacheCleared: 0 });
-    }
-  });
+  try {
+    const beforeSize = commonCalculations.size;
+    commonCalculations.clear();
+    return Promise.resolve({ cacheCleared: beforeSize });
+  } catch (e) {
+    return Promise.resolve({ cacheCleared: 0 });
+  }
 }
 
 /**
@@ -269,18 +268,15 @@ function clearCalculationCache() {
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
-  return new Promise((resolve) => {
-    try {
-      const world = getObject("world");
-      if (world && typeof world.compactLargeArrays === "function") {
-        resolve(world.compactLargeArrays());
-      } else {
-        resolve({ itemsCompacted: 0 });
-      }
-    } catch (e) {
-      resolve({ itemsCompacted: 0 });
+  try {
+    const world = getObject("world");
+    if (world && typeof world.compactLargeArrays === "function") {
+      return Promise.resolve(world.compactLargeArrays());
     }
-  });
+    return Promise.resolve({ itemsCompacted: 0 });
+  } catch (e) {
+    return Promise.resolve({ itemsCompacted: 0 });
+  }
 }
 
 /**
@@ -291,18 +287,15 @@ function compactLargeArrays() {
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
 function forceGarbageCollection() {
-  return new Promise((resolve) => {
-    try {
-      if (typeof window.gc === "function") {
-        window.gc();
-        resolve({ gcForced: true });
-      } else {
-        resolve({ gcForced: false });
-      }
-    } catch (e) {
-      resolve({ gcForced: false });
+  try {
+    if (typeof window.gc === "function") {
+      window.gc();
+      return Promise.resolve({ gcForced: true });
     }
-  });
+    return Promise.resolve({ gcForced: false });
+  } catch (e) {
+    return Promise.resolve({ gcForced: false });
+  }
 }
 
 /**
@@ -313,23 +306,20 @@ function forceGarbageCollection() {
  * @returns {boolean} returns.canvasReset - Se canvas foi resetado
  */
 function resetCanvasContext() {
-  return new Promise((resolve) => {
-    try {
-      const canvas = document.getElementById("gameCanvas");
-      if (canvas) {
-        const ctx = canvas.getContext("2d");
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        if (ctx.globalCompositeOperation) {
-          ctx.globalCompositeOperation = "source-over";
-        }
-        resolve({ canvasReset: true });
-      } else {
-        resolve({ canvasReset: false });
+  try {
+    const canvas = document.getElementById("gameCanvas");
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (ctx.globalCompositeOperation) {
+        ctx.globalCompositeOperation = "source-over";
       }
-    } catch (e) {
-      resolve({ canvasReset: false });
+      return Promise.resolve({ canvasReset: true });
     }
-  });
+    return Promise.resolve({ canvasReset: false });
+  } catch (e) {
+    return Promise.resolve({ canvasReset: false });
+  }
 }
 
 /**
@@ -352,8 +342,6 @@ function optimizeMemoryUsage() {
           // best-effort
         }
       }
-
-      document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
 
       resolve({ memoryOptimized: optimizations.length > 0, optimizations });
     } catch (e) {
