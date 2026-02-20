@@ -622,9 +622,6 @@ export function drawWeatherEffects(ctx, player, canvas) {
  * No-op stub kept for game-loop call-site compatibility.
  * Weather UI is now updated exclusively via event listeners
  * (timeChanged, dayChanged, languageChanged, resize, and direct calls in randomizeWeather).
- * `@param` {CanvasRenderingContext2D} _ctx - Unused; retained for backward compatibility with main.js caller.
- * @returns {void}
+ * Weather UI is updated via event listeners (timeChanged, dayChanged, languageChanged and resize).
+ * drawWeatherUI was removed as it was a no-op.
  */
-export function drawWeatherUI(_ctx) {
-  // UI is updated via event listeners (timeChanged, dayChanged, languageChanged and resize)
-}

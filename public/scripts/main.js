@@ -32,7 +32,7 @@ import { setupAutoCleanup } from "./gameCleanup.js";
 
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
 let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
-let WeatherSystem, drawWeatherEffects, drawWeatherUI;
+let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
 // =============================================================================
@@ -584,7 +584,7 @@ async function startFullGameLoad() {
       const weatherModule = await import("./weather.js");
       WeatherSystem = weatherModule.WeatherSystem;
       drawWeatherEffects = weatherModule.drawWeatherEffects;
-      drawWeatherUI = weatherModule.drawWeatherUI;
+
 
       if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
 
@@ -998,7 +998,6 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem && drawWeatherEffects) {
         drawWeatherEffects(ctx, currentPlayer, canvas);
-        drawWeatherUI?.(ctx);
       }
     } catch (e) {
       handleWarn("falha ao desenhar clima", "main:gameLoop:weather", e);
