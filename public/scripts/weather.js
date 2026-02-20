@@ -619,9 +619,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
 }
 
 /**
- * No-op stub kept for game-loop call-site compatibility.
- * Weather UI is now updated exclusively via event listeners
- * (timeChanged, dayChanged, languageChanged, resize, and direct calls in randomizeWeather).
- * Weather UI is updated via event listeners (timeChanged, dayChanged, languageChanged and resize).
- * drawWeatherUI was removed as it was a no-op.
+// drawWeatherUI() was removed; UI panel is now updated exclusively via event
+// listeners (timeChanged, dayChanged, languageChanged, resize) and direct calls
+// in randomizeWeather().
  */
