@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import "../setup.js";
 
 // Mock logger.js
@@ -125,12 +125,13 @@ describe('SaveSystem (Production Implementation)', () => {
   beforeEach(() => {
     // Reset localStorage
     globalThis.localStorage.clear();
+    saveSystem.stopAutoSave();
     // Reset save system state
     saveSystem.activeSlot = null;
     saveSystem.sessionStartAt = null;
     saveSystem.sessionMs = 0;
     saveSystem.isDirty = false;
-    saveSystem._cachedRoot = null;
+    saveSystem._clearCache();
     // Clear mock systems/objects
     for (const key of Object.keys(mockSystems)) {
       if (key !== 'save') delete mockSystems[key];
@@ -138,6 +139,11 @@ describe('SaveSystem (Production Implementation)', () => {
     for (const key of Object.keys(mockObjects)) {
       delete mockObjects[key];
     }
+  });
+
+  afterEach(() => {
+    theWorld.trees.length = 0;
+    theWorld.rocks.length = 0;
   });
 
   describe('formatPlayTime', () => {
@@ -186,7 +192,7 @@ describe('SaveSystem (Production Implementation)', () => {
     });
 
     test('should format a valid timestamp', () => {
-      // January 15, 2025, 14:30 UTC
+      // January 15, 2025, 14:30 (local time)
       const ts = new Date(2025, 0, 15, 14, 30).getTime();
       const result = formatDateTime(ts);
       expect(result).toContain('15/01/2025');
@@ -715,10 +721,6 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(data.world.trees[0].id).toBe('tree1');
       expect(data.world.rocks).toHaveLength(1);
       expect(data.world.rocks[0].id).toBe('rock1');
-
-      // Cleanup necessário: beforeEach não limpa theWorld arrays
-      theWorld.trees.length = 0;
-      theWorld.rocks.length = 0;
     });
 
     test('should return null weather when no weather system', () => {
@@ -921,10 +923,6 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(theWorld.trees[0].id).toBe('imported1');
       expect(theWorld.rocks).toHaveLength(1);
       expect(theWorld.rocks[0].id).toBe('imported2');
-
-      // Limpeza manual
-      theWorld.trees.length = 0;
-      theWorld.rocks.length = 0;
     });
 
     test('should apply chest data to existing chest system', async () => {
