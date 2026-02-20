@@ -993,6 +993,23 @@ const audioManager = {
     if (typeof data.volume === 'number') this.setVolume(data.volume);
     if (typeof data.ambientVolume === 'number') this.setAmbientVolume(data.ambientVolume);
     if (typeof data.animalVolume === 'number') this.setAnimalVolume(data.animalVolume);
+  },
+
+  destroy() {
+    this._stopCurrentTrack();
+    this._stopRain();
+    this._stopFog();
+
+    if (this._sfxCtx && this._sfxCtx.state !== 'closed') {
+      this._sfxCtx.close().catch(() => {});
+    }
+    this._sfxCtx = null;
+    this._sfxMaster = null;
+    this._sfxBuffers.clear();
+    this._sfxBufferPromises.clear();
+
+    this._initialized = false;
+    this._userInteracted = false;
   }
 };
 
