@@ -1,6 +1,72 @@
 import { HITBOX_CONFIGS, MOVEMENT, DEFAULTS } from './constants.js';
 import { registerSystem, getDebugFlag, getObject } from './gameState.js';
 
+// =============================================================================
+// SPATIAL GRID — acelera queries espaciais de O(n) para O(k) onde k << n
+// =============================================================================
+const GRID_CELL_SIZE = 200;
+
+class SpatialGrid {
+    constructor(cellSize = GRID_CELL_SIZE) {
+        this.cellSize = cellSize;
+        this.cells = new Map();
+    }
+
+    _key(cx, cy) { return (cx << 16) | (cy & 0xFFFF); }
+
+    _getCells(x, y, w, h) {
+        const cs = this.cellSize;
+        const minCX = Math.floor(x / cs);
+        const minCY = Math.floor(y / cs);
+        const maxCX = Math.floor((x + w) / cs);
+        const maxCY = Math.floor((y + h) / cs);
+        const keys = [];
+        for (let cx = minCX; cx <= maxCX; cx++) {
+            for (let cy = minCY; cy <= maxCY; cy++) {
+                keys.push(this._key(cx, cy));
+            }
+        }
+        return keys;
+    }
+
+    insert(id, hitbox) {
+        const cellKeys = this._getCells(hitbox.x, hitbox.y, hitbox.width, hitbox.height);
+        for (const k of cellKeys) {
+            let cell = this.cells.get(k);
+            if (!cell) { cell = new Set(); this.cells.set(k, cell); }
+            cell.add(id);
+        }
+    }
+
+    remove(id, hitbox) {
+        if (!hitbox) return;
+        const cellKeys = this._getCells(hitbox.x, hitbox.y, hitbox.width, hitbox.height);
+        for (const k of cellKeys) {
+            const cell = this.cells.get(k);
+            if (cell) {
+                cell.delete(id);
+                if (cell.size === 0) this.cells.delete(k);
+            }
+        }
+    }
+
+    query(x, y, w, h) {
+        const cellKeys = this._getCells(x, y, w, h);
+        const result = new Set();
+        for (const k of cellKeys) {
+            const cell = this.cells.get(k);
+            if (cell) {
+                for (const id of cell) result.add(id);
+            }
+        }
+        return result;
+    }
+
+    clear() {
+        this.cells.clear();
+    }
+}
+
 /**
  * Verifica colisão entre duas caixas delimitadoras usando o algoritmo AABB (Axis-Aligned Bounding Box)
  * @param {Object} boxA - Primeira caixa delimitadora
@@ -81,6 +147,8 @@ export class CollisionSystem {
         this.hitboxes = new Map();              // Hitboxes físicas (vermelho)
         this.interactionHitboxes = new Map();   // Zonas de interação (laranja/verde)
         this.playerInteractionHitbox = null;    // Alcance do jogador (amarelo)
+        this._physGrid = new SpatialGrid();     // Grid espacial para hitboxes físicas
+        this._interGrid = new SpatialGrid();    // Grid espacial para hitboxes de interação
     }
 
     /**
@@ -205,19 +273,25 @@ export class CollisionSystem {
         return this.hitboxes.get(obj.id);
     }
 
+    _setPhysHitbox(hitbox) {
+        const old = this.hitboxes.get(hitbox.id);
+        if (old) this._physGrid.remove(hitbox.id, old);
+        this.hitboxes.set(hitbox.id, hitbox);
+        this._physGrid.insert(hitbox.id, hitbox);
+    }
+
     registerPhysicalHitbox(object) {
         if (object.type === "HOUSE_ROOF") {
             const config = CollisionSystem.CONFIG_SIZES.HOUSE_ROOF;
             if (config) {
-                const hitbox = {
+                this._setPhysHitbox({
                     id: object.id,
                     type: object.type,
                     x: object.x + object.width - config.offsetFromRight,
                     y: object.y + object.height - config.offsetFromBottom,
                     width: config.width,
                     height: config.height
-                };
-                this.hitboxes.set(object.id, hitbox);
+                });
                 return;
             }
         }
@@ -225,7 +299,7 @@ export class CollisionSystem {
         const cfg = this.getConfigForObject(object);
 
         if (!cfg) {
-            const hitbox = {
+            this._setPhysHitbox({
                 id: object.id,
                 x: object.x,
                 y: object.y,
@@ -233,8 +307,7 @@ export class CollisionSystem {
                 height: object.height,
                 type: object.type,
                 object: object.original || null
-            };
-            this.hitboxes.set(object.id, hitbox);
+            });
             return;
         }
 
@@ -260,7 +333,7 @@ export class CollisionSystem {
             hitboxY = Math.round((object.y || 0) + (baseH * offYRatio));
         }
 
-        const hitbox = {
+        this._setPhysHitbox({
             id: object.id,
             x: hitboxX,
             y: hitboxY,
@@ -268,8 +341,7 @@ export class CollisionSystem {
             height: hitboxHeight,
             type: object.type,
             object: object.original || null
-        };
-        this.hitboxes.set(object.id, hitbox);
+        });
     }
 
     registerInteractionHitbox(object) {
@@ -301,17 +373,28 @@ export class CollisionSystem {
             }
         };
 
+        const oldInter = this.interactionHitboxes.get(object.id);
+        if (oldInter) this._interGrid.remove(object.id, oldInter);
         this.interactionHitboxes.set(object.id, hitbox);
+        this._interGrid.insert(object.id, hitbox);
     }
 
     removeHitbox(id) {
+        const phys = this.hitboxes.get(id);
+        if (phys) this._physGrid.remove(id, phys);
         this.hitboxes.delete(id);
+
+        const inter = this.interactionHitboxes.get(id);
+        if (inter) this._interGrid.remove(id, inter);
         this.interactionHitboxes.delete(id);
     }
 
     updateHitboxPosition(id, newX, newY, newWidth = undefined, newHeight = undefined) {
         const hb = this.hitboxes.get(id);
         if (!hb) return false;
+
+        // Remover do grid na posição antiga
+        this._physGrid.remove(id, hb);
 
         const oldX = hb.x;
         const oldY = hb.y;
@@ -323,8 +406,13 @@ export class CollisionSystem {
         if (typeof newWidth === "number") hb.width = newWidth;
         if (typeof newHeight === "number") hb.height = newHeight;
 
+        // Re-inserir no grid na posição nova
+        this._physGrid.insert(id, hb);
+
         const ihb = this.interactionHitboxes.get(id);
         if (ihb) {
+            this._interGrid.remove(id, ihb);
+
             const dx = hb.x - oldX;
             const dy = hb.y - oldY;
             ihb.x += dx;
@@ -338,6 +426,8 @@ export class CollisionSystem {
                 const scaleY = hb.height / oldH;
                 ihb.height *= scaleY;
             }
+
+            this._interGrid.insert(id, ihb);
         }
 
         return true;
@@ -345,27 +435,39 @@ export class CollisionSystem {
 
     reapplyHitboxesForType(type) {
         const t = type.toUpperCase();
-        for (const [id, hitbox] of this.hitboxes.entries()) {
+        // Snapshot das entries ANTES de iterar — removeHitbox + register modifica
+        // o Map durante iteração, o que causaria loop infinito (entradas re-inseridas
+        // seriam visitadas novamente pelo iterator)
+        const entries = [];
+        for (const [id, hitbox] of this.hitboxes) {
             if (hitbox.type?.toUpperCase() === t && hitbox.object) {
-                this.removeHitbox(id);
-                this.registerPhysicalHitbox({
-                    id,
-                    type: hitbox.type,
-                    x: hitbox.object.x,
-                    y: hitbox.object.y,
-                    width: hitbox.object.width,
-                    height: hitbox.object.height,
-                    original: hitbox.object
-                });
+                entries.push({ id, type: hitbox.type, object: hitbox.object });
             }
+        }
+
+        for (const entry of entries) {
+            this.removeHitbox(entry.id);
+            const objectData = {
+                id: entry.id,
+                type: entry.type,
+                x: entry.object.x,
+                y: entry.object.y,
+                width: entry.object.width,
+                height: entry.object.height,
+                original: entry.object
+            };
+            this.registerPhysicalHitbox(objectData);
+            this.registerInteractionHitbox(objectData);
         }
     }
 
     areaCollides(x, y, w, h, ignoreId = null) {
-        const rect = { x: x, y: y, width: w, height: h };
-        for (const hitbox of this.hitboxes.values()) {
-            if (ignoreId && hitbox.id === ignoreId) continue;
-            if (checkAABBCollision(rect, hitbox)) return true;
+        const rect = { x, y, width: w, height: h };
+        const candidates = this._physGrid.query(x, y, w, h);
+        for (const id of candidates) {
+            if (ignoreId && id === ignoreId) continue;
+            const hitbox = this.hitboxes.get(id);
+            if (hitbox && checkAABBCollision(rect, hitbox)) return true;
         }
         return false;
     }
@@ -381,9 +483,11 @@ export class CollisionSystem {
     checkPlayerCollision(px, py, pw, ph) {
         const playerHitbox = this.createPlayerHitbox(px, py, pw, ph);
         const collisions = [];
+        const candidates = this._physGrid.query(playerHitbox.x, playerHitbox.y, playerHitbox.width, playerHitbox.height);
 
-        for (const [objectId, hitbox] of this.hitboxes) {
-            if (this.checkCollision(playerHitbox, hitbox)) {
+        for (const objectId of candidates) {
+            const hitbox = this.hitboxes.get(objectId);
+            if (hitbox && this.checkCollision(playerHitbox, hitbox)) {
                 collisions.push({ objectId, type: hitbox.type, hitbox });
             }
         }
@@ -426,7 +530,12 @@ export class CollisionSystem {
         const worldX = screenX / (camera.zoom || 1) + (camera.x || 0);
         const worldY = screenY / (camera.zoom || 1) + (camera.y || 0);
 
-        for (const hitbox of this.interactionHitboxes.values()) {
+        // Ponto query: buscar na célula que contém o ponto
+        const candidates = this._interGrid.query(worldX, worldY, 1, 1);
+        for (const id of candidates) {
+            const hitbox = this.interactionHitboxes.get(id);
+            if (!hitbox) continue;
+
             if (worldX >= hitbox.x &&
                 worldX <= hitbox.x + hitbox.width &&
                 worldY >= hitbox.y &&
@@ -458,8 +567,10 @@ export class CollisionSystem {
     getObjectsInInteractionRange(range) {
         if (!range) return [];
         const found = [];
-        for (const [objectId, hitbox] of this.interactionHitboxes) {
-            if (this.checkCollision(range, hitbox)) {
+        const candidates = this._interGrid.query(range.x, range.y, range.width, range.height);
+        for (const objectId of candidates) {
+            const hitbox = this.interactionHitboxes.get(objectId);
+            if (hitbox && this.checkCollision(range, hitbox)) {
                 found.push(objectId);
             }
         }
@@ -470,9 +581,11 @@ export class CollisionSystem {
      * encontra a primeira hitbox fisica que colide com 'rect'
      */
     _firstSolidCollision(rect, ignoreId = null) {
-        for (const hitbox of this.hitboxes.values()) {
-            if (ignoreId && hitbox.id === ignoreId) continue;
-            if (checkAABBCollision(rect, hitbox)) return hitbox;
+        const candidates = this._physGrid.query(rect.x, rect.y, rect.width, rect.height);
+        for (const id of candidates) {
+            if (ignoreId && id === ignoreId) continue;
+            const hitbox = this.hitboxes.get(id);
+            if (hitbox && checkAABBCollision(rect, hitbox)) return hitbox;
         }
         return null;
     }
@@ -596,6 +709,8 @@ export class CollisionSystem {
         this.hitboxes.clear();
         this.interactionHitboxes.clear();
         this.playerInteractionHitbox = null;
+        this._physGrid.clear();
+        this._interGrid.clear();
     }
 }
 

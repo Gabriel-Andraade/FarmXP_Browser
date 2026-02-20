@@ -416,6 +416,7 @@ const audioManager = {
     // Quando metadados carregarem, calcula fade proporcional e inicia
     audio.addEventListener('loadedmetadata', () => {
       if (this._currentAudio !== audio) return;
+      if (this._phase !== 'idle') return; // já iniciou via canplaythrough
 
       const duration = audio.duration;
       this._fadeDurationSec = Math.min(
@@ -471,20 +472,26 @@ const audioManager = {
    * @param {HTMLAudioElement} audio
    */
   _startEndMonitor(audio) {
-    const check = () => {
-      if (this._currentAudio !== audio) return;
-      if (audio.paused || audio.ended) return;
+    // Limpa monitor anterior (defesa contra double-init)
+    if (this._endMonitorCleanup) {
+      this._endMonitorCleanup();
+      this._endMonitorCleanup = null;
+    }
 
-      const duration = audio.duration;
-      if (!duration || isNaN(duration)) {
-        requestAnimationFrame(check);
+    // Usa evento timeupdate ao invés de rAF polling (~4 eventos/s vs 60/s)
+    const onTimeUpdate = () => {
+      if (this._currentAudio !== audio) {
+        audio.removeEventListener('timeupdate', onTimeUpdate);
         return;
       }
 
+      const duration = audio.duration;
+      if (!duration || isNaN(duration)) return;
+
       const remaining = duration - audio.currentTime;
 
-      // Quando falta exatamente a duração do fade, inicia fade out
       if (remaining <= this._fadeDurationSec && this._phase === 'playing') {
+        audio.removeEventListener('timeupdate', onTimeUpdate);
         const finishedTrack = this._currentTrack;
         this._startFadeOut(() => {
           if (this._currentAudio === audio) {
@@ -495,17 +502,24 @@ const audioManager = {
           }
           this._continueThemeAfterTrackEnd(finishedTrack);
         });
-        return; // para de monitorar, o fade cuida do resto
       }
-
-      requestAnimationFrame(check);
     };
 
-    requestAnimationFrame(check);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+
+    // Guardar referência para cleanup
+    this._endMonitorCleanup = () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+    };
   },
 
   _stopCurrentTrack() {
     this._cancelFade();
+
+    if (this._endMonitorCleanup) {
+      this._endMonitorCleanup();
+      this._endMonitorCleanup = null;
+    }
 
     if (this._currentAudio) {
       try {

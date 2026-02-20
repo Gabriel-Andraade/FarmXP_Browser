@@ -27,24 +27,33 @@ class LoadingScreenManager {
         // Evita duplicatas
         if (document.getElementById("ldg-initial-screen")) return;
 
+        // fix: innerHTML → DOM API
         const loadingScreen = document.createElement("div");
         loadingScreen.id = "ldg-initial-screen";
 
-        loadingScreen.innerHTML = `
-            <div class="ldg-content">
-                <h1>FarmingXP</h1>
-                <p class="ldg-subtitle">${t('loading.preparingFarm')}</p>
-                <div class="ldg-progress-container">
-                    <div id="ldg-initial-progress-bar"></div>
-                </div>
-                <p id="ldg-initial-message"></p>
-                <div class="ldg-dots">
-                    <div class="ldg-dot"></div>
-                    <div class="ldg-dot"></div>
-                    <div class="ldg-dot"></div>
-                </div>
-            </div>
-        `;
+        const content = document.createElement('div');
+        content.className = 'ldg-content';
+        const h1 = document.createElement('h1');
+        h1.textContent = 'FarmingXP';
+        const subtitle = document.createElement('p');
+        subtitle.className = 'ldg-subtitle';
+        subtitle.textContent = t('loading.preparingFarm');
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'ldg-progress-container';
+        const progressBar = document.createElement('div');
+        progressBar.id = 'ldg-initial-progress-bar';
+        progressContainer.appendChild(progressBar);
+        const messageP = document.createElement('p');
+        messageP.id = 'ldg-initial-message';
+        const dots = document.createElement('div');
+        dots.className = 'ldg-dots';
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'ldg-dot';
+            dots.appendChild(dot);
+        }
+        content.append(h1, subtitle, progressContainer, messageP, dots);
+        loadingScreen.appendChild(content);
 
         document.body.appendChild(loadingScreen);
         this.currentScreen = loadingScreen;
@@ -88,41 +97,69 @@ class LoadingScreenManager {
     showSleepLoading(durationSeconds = 5) {
         if (this.sleepScreen) this.hideSleepLoading();
 
+        // fix: innerHTML → DOM API
         this.sleepScreen = document.createElement("div");
         this.sleepScreen.id = "ldg-sleep-screen";
 
-        this.sleepScreen.innerHTML = `
-            <div class="ldg-sleep-content">
-                <div class="ldg-sleep-emoji">💤</div>
-                <h2 class="ldg-sleep-title">${t('sleep.title')}</h2>
+        const sleepContent = document.createElement('div');
+        sleepContent.className = 'ldg-sleep-content';
 
-                <div class="ldg-sleep-progress-container">
-                    <div class="ldg-sleep-progress-header">
-                        <span>${t('sleep.progress')}</span>
-                        <span id="ldg-sleep-time-remaining">${durationSeconds}s</span>
-                    </div>
-                    <div class="ldg-sleep-progress-bar">
-                        <div id="ldg-sleep-progress-bar"></div>
-                    </div>
-                </div>
+        const emoji = document.createElement('div');
+        emoji.className = 'ldg-sleep-emoji';
+        emoji.textContent = '💤';
+        const sleepTitle = document.createElement('h2');
+        sleepTitle.className = 'ldg-sleep-title';
+        sleepTitle.textContent = t('sleep.title');
 
-                <div class="ldg-sleep-message-container">
-                    <p id="ldg-sleep-main-message">${t('sleep.fallingAsleep')}</p>
-                    <p id="ldg-sleep-detail-message">${t('sleep.closingEyes')}</p>
-                </div>
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'ldg-sleep-progress-container';
+        const progressHeader = document.createElement('div');
+        progressHeader.className = 'ldg-sleep-progress-header';
+        const progressLabel = document.createElement('span');
+        progressLabel.textContent = t('sleep.progress');
+        const timeRemaining = document.createElement('span');
+        timeRemaining.id = 'ldg-sleep-time-remaining';
+        timeRemaining.textContent = `${durationSeconds}s`;
+        progressHeader.append(progressLabel, timeRemaining);
+        const progressBarWrap = document.createElement('div');
+        progressBarWrap.className = 'ldg-sleep-progress-bar';
+        const progressBar = document.createElement('div');
+        progressBar.id = 'ldg-sleep-progress-bar';
+        progressBarWrap.appendChild(progressBar);
+        progressContainer.append(progressHeader, progressBarWrap);
 
-                <div class="ldg-sleep-optimizations">
-                    <div class="ldg-optimization-card">
-                        <div class="ldg-card-title">${t('sleep.cache')}</div>
-                        <div id="cache-status" class="ldg-card-status">${t('sleep.waiting')}</div>
-                    </div>
-                    <div class="ldg-optimization-card">
-                        <div class="ldg-card-title">${t('sleep.memory')}</div>
-                        <div id="memory-status" class="ldg-card-status">${t('sleep.waiting')}</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const messageContainer = document.createElement('div');
+        messageContainer.className = 'ldg-sleep-message-container';
+        const mainMsg = document.createElement('p');
+        mainMsg.id = 'ldg-sleep-main-message';
+        mainMsg.textContent = t('sleep.fallingAsleep');
+        const detailMsg = document.createElement('p');
+        detailMsg.id = 'ldg-sleep-detail-message';
+        detailMsg.textContent = t('sleep.closingEyes');
+        messageContainer.append(mainMsg, detailMsg);
+
+        const optimizations = document.createElement('div');
+        optimizations.className = 'ldg-sleep-optimizations';
+        const cards = [
+            { titleKey: 'sleep.cache', statusId: 'cache-status' },
+            { titleKey: 'sleep.memory', statusId: 'memory-status' },
+        ];
+        for (const card of cards) {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'ldg-optimization-card';
+            const cardTitle = document.createElement('div');
+            cardTitle.className = 'ldg-card-title';
+            cardTitle.textContent = t(card.titleKey);
+            const cardStatus = document.createElement('div');
+            cardStatus.id = card.statusId;
+            cardStatus.className = 'ldg-card-status';
+            cardStatus.textContent = t('sleep.waiting');
+            cardEl.append(cardTitle, cardStatus);
+            optimizations.appendChild(cardEl);
+        }
+
+        sleepContent.append(emoji, sleepTitle, progressContainer, messageContainer, optimizations);
+        this.sleepScreen.appendChild(sleepContent);
 
         document.body.appendChild(this.sleepScreen);
         const screen = this.sleepScreen;

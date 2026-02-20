@@ -92,7 +92,8 @@ class UiPanel {
   //  Método para reconstruir tudo quando o idioma muda
   rebuildInterface() {
       if (this.layer) {
-          this.layer.innerHTML = ''; // Limpa o antigo
+          // fix: innerHTML → DOM API
+          this.layer.replaceChildren(); // Limpa o antigo
           this._createDOM(); // Cria novo com idioma atual
           
           // Se estava aberto, atualiza o conteúdo do animal
@@ -108,6 +109,7 @@ class UiPanel {
       }
   }
 
+  // fix: innerHTML → DOM API
   _createDOM() {
     //  Importante: t() é chamado aqui. Se o idioma mudar, precisamos chamar _createDOM de novo.
     
@@ -148,58 +150,90 @@ class UiPanel {
     this.actionsMenu = document.createElement("div");
     this.actionsMenu.className = "aui-menu aui-interactive";
     
-    //  Tradução dinâmica aplicada aqui
-    this.actionsMenu.innerHTML = `
-      <h3>${t('animal.ui.interactions')}</h3>
-      <div class="aui-actions">
-        <div class="aui-action-btn" data-action="pet"><span class="icon">❤</span><span>${t('animal.actions.pet')}</span></div>
-        <div class="aui-action-btn" data-action="guide"><span class="icon">➤</span><span>${t('animal.actions.guide')}</span></div>
-        <div class="aui-action-btn" data-action="feed"><span class="icon">🍎</span><span>${t('animal.actions.feed')}</span></div>
-        <div class="aui-action-btn" data-action="close"><span class="icon">❌</span><span>${t('animal.actions.close')}</span></div>
-      </div>
-    `;
-    this.actionsMenu.querySelectorAll(".aui-action-btn").forEach((btn) => {
+    const actionsTitle = document.createElement('h3');
+    actionsTitle.textContent = t('animal.ui.interactions');
+    const actionsContainer = document.createElement('div');
+    actionsContainer.className = 'aui-actions';
+
+    const actionItems = [
+      { action: 'pet', icon: '❤', label: t('animal.actions.pet') },
+      { action: 'guide', icon: '➤', label: t('animal.actions.guide') },
+      { action: 'feed', icon: '🍎', label: t('animal.actions.feed') },
+      { action: 'close', icon: '❌', label: t('animal.actions.close') },
+    ];
+    for (const item of actionItems) {
+      const btn = document.createElement('div');
+      btn.className = 'aui-action-btn';
+      btn.dataset.action = item.action;
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'icon';
+      iconSpan.textContent = item.icon;
+      const labelSpan = document.createElement('span');
+      labelSpan.textContent = item.label;
+      btn.append(iconSpan, labelSpan);
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const action = btn.getAttribute("data-action");
-        if (action === "close") return this.closeAll();
-        this._emitAction(action);
+        if (item.action === "close") return this.closeAll();
+        this._emitAction(item.action);
       });
-    });
+      actionsContainer.appendChild(btn);
+    }
+    this.actionsMenu.append(actionsTitle, actionsContainer);
     this.layer.appendChild(this.actionsMenu);
 
     this.infoMenu = document.createElement("div");
     this.infoMenu.className = "aui-menu aui-interactive";
     
-    //  Tradução dinâmica aplicada aqui
-    this.infoMenu.innerHTML = `
-      <h3>${t('animal.ui.info')}</h3>
-      <div class="aui-info-header">
-        <div class="aui-gender-circle" data-role="gender">?</div>
-        <div class="aui-name-wrap">
-          <div class="aui-animal-name" data-role="name" contenteditable="true" spellcheck="false"></div>
-          <div class="aui-animal-type" data-role="type"></div>
-        </div>
-      </div>
+    const infoTitle = document.createElement('h3');
+    infoTitle.textContent = t('animal.ui.info');
 
-      <div class="aui-bars">
-        <div class="aui-bar-row">
-          <div class="aui-bar-label">${t('animal.stats.hunger')}</div>
-          <div class="aui-bar"><div class="aui-bar-fill" data-role="bar-hunger"></div></div>
-          <div class="aui-bar-val" data-role="val-hunger">0%</div>
-        </div>
-        <div class="aui-bar-row">
-          <div class="aui-bar-label">${t('animal.stats.thirst')}</div>
-          <div class="aui-bar"><div class="aui-bar-fill" data-role="bar-thirst"></div></div>
-          <div class="aui-bar-val" data-role="val-thirst">0%</div>
-        </div>
-        <div class="aui-bar-row">
-          <div class="aui-bar-label">${t('animal.stats.morale')}</div>
-          <div class="aui-bar"><div class="aui-bar-fill" data-role="bar-moral"></div></div>
-          <div class="aui-bar-val" data-role="val-moral">0%</div>
-        </div>
-      </div>
-    `;
+    const infoHeader = document.createElement('div');
+    infoHeader.className = 'aui-info-header';
+    const genderCircle = document.createElement('div');
+    genderCircle.className = 'aui-gender-circle';
+    genderCircle.dataset.role = 'gender';
+    genderCircle.textContent = '?';
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'aui-name-wrap';
+    const animalName = document.createElement('div');
+    animalName.className = 'aui-animal-name';
+    animalName.dataset.role = 'name';
+    animalName.contentEditable = 'true';
+    animalName.spellcheck = false;
+    const animalType = document.createElement('div');
+    animalType.className = 'aui-animal-type';
+    animalType.dataset.role = 'type';
+    nameWrap.append(animalName, animalType);
+    infoHeader.append(genderCircle, nameWrap);
+
+    const barsContainer = document.createElement('div');
+    barsContainer.className = 'aui-bars';
+    const barStats = [
+      { label: t('animal.stats.hunger'), role: 'hunger' },
+      { label: t('animal.stats.thirst'), role: 'thirst' },
+      { label: t('animal.stats.morale'), role: 'moral' },
+    ];
+    for (const stat of barStats) {
+      const row = document.createElement('div');
+      row.className = 'aui-bar-row';
+      const label = document.createElement('div');
+      label.className = 'aui-bar-label';
+      label.textContent = stat.label;
+      const bar = document.createElement('div');
+      bar.className = 'aui-bar';
+      const fill = document.createElement('div');
+      fill.className = 'aui-bar-fill';
+      fill.dataset.role = `bar-${stat.role}`;
+      bar.appendChild(fill);
+      const val = document.createElement('div');
+      val.className = 'aui-bar-val';
+      val.dataset.role = `val-${stat.role}`;
+      val.textContent = '0%';
+      row.append(label, bar, val);
+      barsContainer.appendChild(row);
+    }
+
+    this.infoMenu.append(infoTitle, infoHeader, barsContainer);
 
     const nameEl = this.infoMenu.querySelector('[data-role="name"]');
     nameEl.addEventListener("keydown", (e) => {
@@ -241,6 +275,7 @@ class UiPanel {
     this.updateContent();
     this.updatePositions(true);
     this.target.__uiPaused = true;
+    this._startLoop();
   }
 
   closeAll() { this.close(); }
@@ -418,11 +453,15 @@ class UiPanel {
   }
 
   _startLoop() {
+    if (this._loopRunning) return;
+    this._loopRunning = true;
     const tick = () => {
-      if (this.visible && this.target) {
-        this.updateContent();
-        this.updatePositions();
+      if (!this.visible || !this.target) {
+        this._loopRunning = false;
+        return;
       }
+      this.updateContent();
+      this.updatePositions();
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);

@@ -918,9 +918,7 @@ function gameLoop(timestamp) {
     frameCount = 0;
     lastFpsUpdate = timestamp;
 
-    if (fps < 30 && OPTIMIZATION_CONFIG.LOG_PERFORMANCE) {
-      perfLog(`FPS Baixo: ${fps}`);
-    }
+    if (fps < 30) perfLog(`FPS Baixo: ${fps}`);
   }
 
   if (!simulationPaused) {
@@ -1014,14 +1012,8 @@ function gameLoop(timestamp) {
     }
   }
 
-  try {
-    const playerHUD = getSystem('hud');
-    if (playerHUD && currentPlayer) {
-      playerHUD.render();
-    }
-  } catch (e) {
-    handleWarn("falha ao renderizar player hud", "main:gameLoop:playerHUD", e);
-  }
+  // PlayerHUD.render() removido do game loop — o HUD é event-driven
+  // (playerNeedsChanged, moneyChanged, playerReady, languageChanged, needsUpdateInterval)
 
   if (!allAssetsLoaded) drawLoadingIndicator();
 
