@@ -423,20 +423,8 @@ export class PlayerSystem {
         } else {
             switch(item.type) {
                 case 'food':
-                    const isDrink = item.name && (
-                        item.name.toLowerCase().includes('água') ||
-                        item.name.toLowerCase().includes('suco') ||
-                        item.name.toLowerCase().includes('refrigerante') ||
-                        item.name.toLowerCase().includes('bebida')
-                    );
-                    
-                    if (isDrink) {
-                        thirstRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.DRINK_THIRST;
-                        energyRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.DRINK_ENERGY;
-                    } else {
-                        hungerRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_HUNGER;
-                        energyRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_ENERGY;
-                    }
+                    hungerRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_HUNGER;
+                    energyRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.FOOD_ENERGY;
                     break;
                 case 'water':
                     thirstRestore = GAME_BALANCE.NEEDS.FOOD_RESTORATION.WATER_THIRST;
