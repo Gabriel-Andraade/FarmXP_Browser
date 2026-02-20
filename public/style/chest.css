@@ -309,6 +309,14 @@
   }
 }
 
+/* ===== EMPTY STATE ===== */
+.cht-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #aaa;
+  padding: 40px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .cht-panel {

@@ -11,10 +11,9 @@ import { WORLD_WIDTH, WORLD_HEIGHT, getInitialPlayerPosition } from "../theWorld
 import { frames } from "./frames.js";
 import { camera, CAMERA_ZOOM } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
+import { getDebugFlag, getSystem  } from "../gameState.js";
 
-/** @constant {boolean} Enables red hitbox overlay for debugging collisions */
-const DEBUG_HITBOXES = false;
-
+//DEBUG_HITBOXES é gerenciado via gameState.js
 /**
  * Creates a character instance with update/draw/sync functions.
  * The returned object is a closure-based character entity whose animation,
@@ -70,8 +69,9 @@ export function createCharacter(config) {
         },
 
         restoreNeeds(hunger = 0, thirst = 0, energy = 0) {
-            if (window.playerSystem && window.playerSystem.restoreNeeds) {
-                window.playerSystem.restoreNeeds(hunger, thirst, energy);
+            const playerSystem = getSystem('player');
+            if (playerSystem && playerSystem.restoreNeeds) {
+                playerSystem.restoreNeeds(hunger, thirst, energy);
             }
         }
     };
@@ -108,16 +108,19 @@ export function createCharacter(config) {
     /**
      * Syncs hunger, thirst, energy and consumption state from playerSystem
      * into the local character object.
-     * @returns {void}
+     *
+     * @returns {Object|null} The resolved playerSystem (or null if unavailable)
      */
     function syncNeedsFromPlayerSystem() {
-        if (window.playerSystem) {
-            const needs = window.playerSystem.getNeeds();
+        const playerSystem = getSystem('player');
+        if (playerSystem) {
+            const needs = playerSystem.getNeeds();
             character.hunger = needs.hunger;
             character.thirst = needs.thirst;
             character.energy = needs.energy;
-            character.isConsuming = !!window.playerSystem.isConsuming;
+            character.isConsuming = !!playerSystem.isConsuming;
         }
+        return playerSystem || null;
     }
 
     /**
@@ -129,10 +132,10 @@ export function createCharacter(config) {
      * @returns {void}
      */
     function updateCharacter(deltaTime, keys) {
-        syncNeedsFromPlayerSystem();
+        const playerSystem = syncNeedsFromPlayerSystem();
 
-        if (window.playerSystem && window.playerSystem.currentPlayer &&
-            window.playerSystem.currentPlayer.isSleeping) {
+        if (playerSystem && playerSystem.currentPlayer &&
+            playerSystem.currentPlayer.isSleeping) {
             character.isSleeping = true;
             return;
         } else {
@@ -158,8 +161,8 @@ export function createCharacter(config) {
         }
 
         let efficiencyMultiplier = 1.0;
-        if (window.playerSystem && window.playerSystem.getEfficiencyMultiplier) {
-            efficiencyMultiplier = window.playerSystem.getEfficiencyMultiplier();
+        if (playerSystem && playerSystem.getEfficiencyMultiplier) {
+            efficiencyMultiplier = playerSystem.getEfficiencyMultiplier();
         }
 
         character.speed = character.baseSpeed * efficiencyMultiplier;
@@ -225,7 +228,6 @@ export function createCharacter(config) {
                     efficiencyMultiplier
                 }
             }));
-
         }
 
         camera.follow(character);
@@ -251,11 +253,11 @@ export function createCharacter(config) {
      * @returns {void}
      */
     function drawCharacter(ctx) {
-        syncNeedsFromPlayerSystem();
+        const playerSystem = syncNeedsFromPlayerSystem();
 
-        const isExhausted = window.playerSystem &&
-            window.playerSystem.getEfficiencyMultiplier &&
-            window.playerSystem.getEfficiencyMultiplier() < 0.5;
+        const isExhausted = playerSystem &&
+            playerSystem.getEfficiencyMultiplier &&
+            playerSystem.getEfficiencyMultiplier() < 0.5;
 
         const isConsuming = character.isConsuming;
 
@@ -268,6 +270,7 @@ export function createCharacter(config) {
 
         const isIdle = character.frame === idleFrame;
         let currentImage = isIdle ? idleImage : frames.moving[character.frame];
+
         if (currentImage && currentImage.complete) {
             const screenPos = camera.worldToScreen(character.x, character.y);
 
@@ -301,6 +304,7 @@ export function createCharacter(config) {
                     ctx.filter = 'brightness(1.2) saturate(1.3)';
                 }
             }
+
             const shouldFlip = character.facingLeft &&
                 (character.facingDirection === 'left' || character.facingDirection === 'right');
 
@@ -318,7 +322,7 @@ export function createCharacter(config) {
                 ctx.restore();
             }
 
-            if (DEBUG_HITBOXES) {
+            if (getDebugFlag('hitboxes')) {
                 const hitbox = createHitbox();
                 const hitboxScreenPos = camera.worldToScreen(hitbox.x, hitbox.y);
                 ctx.strokeStyle = 'red';

@@ -55,6 +55,10 @@ export class PlayerSystem {
         // Armazenar referência do sleep interval para cleanup
         this.sleepInterval = null;
 
+        // Guard flags para evitar double-fire do endSleep (ex.: energia cheia + sleepEnded externo)
+        this._sleepEnding = false;
+        this._sleepActive = false;
+
         /**
          * Player survival needs configuration
          * @type {Object}
@@ -344,12 +348,23 @@ export class PlayerSystem {
      * @returns {void}
      */
     startSleep() {
-        this.currentPlayer.isSleeping = true;
+        if (this._sleepActive) return;
+        
+        // reset guards for a new sleep cycle
+        this._sleepActive = true;
+        this._sleepEnding = false;
+
+        if (this.currentPlayer) {
+            this.currentPlayer.isSleeping = true;
+        }
 
         if (this.sleepInterval) clearInterval(this.sleepInterval);
         this.sleepInterval = setInterval(() => {
             if (this.needs.energy < GAME_BALANCE.NEEDS.MAX_VALUE) {
-                this.needs.energy = Math.min(GAME_BALANCE.NEEDS.MAX_VALUE, this.needs.energy + GAME_BALANCE.NEEDS.SLEEP_ENERGY_RESTORE_AMOUNT);
+                this.needs.energy = Math.min(
+                    GAME_BALANCE.NEEDS.MAX_VALUE,
+                    this.needs.energy + GAME_BALANCE.NEEDS.SLEEP_ENERGY_RESTORE_AMOUNT
+                );
                 this.dispatchNeedsUpdate();
 
                 if (this.needs.energy >= GAME_BALANCE.NEEDS.MAX_VALUE) {
@@ -366,13 +381,24 @@ export class PlayerSystem {
      * @returns {void}
      */
     endSleep() {
+        // If we're not in an active sleep cycle, don't do anything
+        if (!this._sleepActive && !this.currentPlayer?.isSleeping) return;
+
+        // Guard against double execution (energy-full + external sleepEnded)
+        if (this._sleepEnding) return;
+        this._sleepEnding = true;
+        this._sleepActive = false;
+
         // Clear sleep interval if it exists
         if (this.sleepInterval) {
             clearInterval(this.sleepInterval);
             this.sleepInterval = null;
         }
         
-        this.currentPlayer.isSleeping = false;
+        if (this.currentPlayer) {
+            this.currentPlayer.isSleeping = false;
+        }
+
         this.needs.energy = GAME_BALANCE.NEEDS.MAX_VALUE;
         this.dispatchNeedsUpdate();
 
@@ -726,6 +752,10 @@ export class PlayerSystem {
             clearInterval(this.sleepInterval);
             this.sleepInterval = null;
         }
+
+        // Reset guards
+        this._sleepEnding = false;
+        this._sleepActive = false;
     }
 }
 

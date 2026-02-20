@@ -4,6 +4,9 @@
  */
 
 import { logger } from './logger.js';
+import { getSystem } from './gameState.js';
+import { destroyInventoryUI } from './thePlayer/inventoryUI.js';
+import { destroyControls } from './thePlayer/controls.js';
 
 /**
  * Executa limpeza completa de todos os sistemas do jogo
@@ -15,68 +18,73 @@ export function destroyAllSystems() {
         logger.info('[Cleanup] Iniciando destruição de todos os sistemas...');
 
         // PlayerSystem - Cleanup de listeners e intervals
-        if (window.playerSystem && typeof window.playerSystem.destroy === 'function') {
-            window.playerSystem.destroy();
+        const playerSystem = getSystem('player');
+        if (playerSystem && typeof playerSystem.destroy === 'function') {
+            playerSystem.destroy();
             logger.debug('[Cleanup] PlayerSystem destruído');
         }
 
         // InventorySystem - Cleanup de listeners
-        if (window.inventorySystem && typeof window.inventorySystem.destroy === 'function') {
-            window.inventorySystem.destroy();
+        const inventorySystem = getSystem('inventory');
+        if (inventorySystem && typeof inventorySystem.destroy === 'function') {
+            inventorySystem.destroy();
             logger.debug('[Cleanup] InventorySystem destruído');
         }
 
         // ItemSystem - Cleanup de listeners e mapa de objetos
-        if (window.itemSystem && typeof window.itemSystem.destroy === 'function') {
-            window.itemSystem.destroy();
+        const itemSystem = getSystem('item');
+        if (itemSystem && typeof itemSystem.destroy === 'function') {
+            itemSystem.destroy();
             logger.debug('[Cleanup] ItemSystem destruído');
         }
 
-        // InventoryUI - Cleanup de DOM e listeners
-        if (window.destroyInventoryUI && typeof window.destroyInventoryUI === 'function') {
-            window.destroyInventoryUI();
-            logger.debug('[Cleanup] InventoryUI destruído');
-        }
+        // InventoryUI - Cleanup de DOM e listeners (static import => sempre função)
+        destroyInventoryUI();
+        logger.debug('[Cleanup] InventoryUI destruído');
 
         // WorldUI - Cleanup de listeners e elementos
-        if (window.worldUI && typeof window.worldUI.destroy === 'function') {
-            window.worldUI.destroy();
+        const worldUI = getSystem('worldUI');
+        if (worldUI && typeof worldUI.destroy === 'function') {
+            worldUI.destroy();
             logger.debug('[Cleanup] WorldUI destruído');
         }
 
         // MerchantSystem - Cleanup de listeners
-        if (window.merchantSystem && typeof window.merchantSystem.destroy === 'function') {
-            window.merchantSystem.destroy();
+        const merchantSystem = getSystem('merchant');
+        if (merchantSystem && typeof merchantSystem.destroy === 'function') {
+            merchantSystem.destroy();
             logger.debug('[Cleanup] MerchantSystem destruído');
         }
 
-        // Controls - Cleanup de listeners globais
-        if (window.destroyControls && typeof window.destroyControls === 'function') {
-            window.destroyControls();
-            logger.debug('[Cleanup] Controls destruídos');
-        }
+        // Controls - Cleanup de listeners globais (static import => sempre função)
+        destroyControls();
+        logger.debug('[Cleanup] Controls destruídos');
 
         // HouseSystem - Cleanup se existir
-        if (window.houseSystem && typeof window.houseSystem.destroy === 'function') {
-            window.houseSystem.destroy();
+        const houseSystem = getSystem('house');
+        if (houseSystem && typeof houseSystem.destroy === 'function') {
+            houseSystem.destroy();
             logger.debug('[Cleanup] HouseSystem destruído');
         }
 
         // ChestSystem - Cleanup se existir
-        if (window.chestSystem && typeof window.chestSystem.destroy === 'function') {
-            window.chestSystem.destroy();
+        const chestSystem = getSystem('chest');
+        if (chestSystem && typeof chestSystem.destroy === 'function') {
+            chestSystem.destroy();
             logger.debug('[Cleanup] ChestSystem destruído');
         }
 
         // WellSystem - Cleanup se existir
-        if (window.wellSystem && typeof window.wellSystem.destroy === 'function') {
-            window.wellSystem.destroy();
+        const wellSystem = getSystem('well');
+        if (wellSystem && typeof wellSystem.destroy === 'function') {
+            wellSystem.destroy();
             logger.debug('[Cleanup] WellSystem destruído');
         }
 
         // WeatherSystem - Cleanup se existir
-        if (window.weatherSystem && typeof window.weatherSystem.destroy === 'function') {
-            window.weatherSystem.destroy();
+        const weatherSystem = getSystem('weather');
+        if (weatherSystem && typeof weatherSystem.destroy === 'function') {
+            weatherSystem.destroy();
             logger.debug('[Cleanup] WeatherSystem destruído');
         }
 
@@ -92,22 +100,28 @@ export function destroyAllSystems() {
  * @returns {void}
  */
 export function setupAutoCleanup() {
-    window.addEventListener('beforeunload', (e) => {
+    // Guard local: evita double cleanup quando beforeunload + unload disparam em sequência
+    let cleanedUp = false;
+
+    const runCleanupOnce = (source) => {
+        if (cleanedUp) return;
+        cleanedUp = true;
+
         try {
             destroyAllSystems();
         } catch (error) {
-            logger.error('[Cleanup] Erro em beforeunload:', error);
+            logger.error(`[Cleanup] Erro em ${source}:`, error);
         }
-    });
+    };
+
+    window.addEventListener('beforeunload', (e) => {
+        runCleanupOnce('beforeunload');
+    }, { once: true });
 
     // Também capturar unload para compatibilidade com browsers antigos
     window.addEventListener('unload', () => {
-        try {
-            destroyAllSystems();
-        } catch (error) {
-            logger.error('[Cleanup] Erro em unload:', error);
-        }
-    });
+        runCleanupOnce('unload');
+    }, { once: true });
 
     logger.debug('[Cleanup] Auto-cleanup configurado');
 }

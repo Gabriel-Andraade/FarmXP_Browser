@@ -79,6 +79,9 @@ let lastPlayerHeight = -1;
  */
 const CULLING_BUFFER = CAMERA.CULLING_BUFFER;
 
+/** Threshold em pixels para invalidar cache de Y-sort (evita rebuild a cada pixel) */
+const Y_SORT_THRESHOLD = 4;
+
 /**
  * Invalidates the world object cache, forcing recalculation on next render
  * Call this when any world object is added, removed, or modified
@@ -293,14 +296,17 @@ function isInViewportWithBuffer(x, y, width, height) {
  * @returns {Array<Object>} Sorted array of world objects with draw functions
  */
 export function getSortedWorldObjects(player) {
-  const playerChanged = player && (player.y !== lastPlayerY || player.height !== lastPlayerHeight);
+  const playerChanged = player && (
+    Math.abs(player.y - lastPlayerY) > Y_SORT_THRESHOLD ||
+    player.height !== lastPlayerHeight
+  );
 
   if (cacheValid && !playerChanged) {
-    if (typeof perfLog === "function") perfLog("using world objects cache");
+    perfLog("using world objects cache");
     return sortedWorldObjectsCache;
   }
 
-  if (typeof perfLog === "function") perfLog("recalculating world objects cache");
+  perfLog("recalculating world objects cache");
   const allObjects = [];
 
   for (const tree of trees) {
@@ -558,11 +564,8 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   const objWidth = obj.width || 64;
   const objHeight = obj.height || 96;
 
-  try {
-    if (camera?.isInViewport && !camera.isInViewport(obj.x || 0, obj.y || 0, objWidth, objHeight)) return;
-  } catch (e) {
-    handleWarn("Failed to check viewport for object", "theWorld:drawSingleObject:viewport", { err: e });
-  }
+  // Viewport culling removido daqui — já é feito nas closures do wrapper
+  // em getSortedWorldObjects() via isInViewportWithBuffer()
 
   let actualWidth, actualHeight;
   if (assetCategory === "trees") {
@@ -680,17 +683,21 @@ function drawBuilding(ctx, building) {
   const drawW = Math.floor(bWidth * zoom);
   const drawH = Math.floor(bHeight * zoom);
 
+  ctx.save(); // fix: canvas context reset — isolate building draw state
+
   if (building.originalType === "chest") {
     const chestImg = assets.furniture?.chest?.img;
     if (chestImg && chestImg.src && !chestImg.src.includes("data:,")) {
-      try { 
-        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH); 
-        return; 
+      try {
+        ctx.drawImage(chestImg, drawX, drawY, drawW, drawH);
+        ctx.restore();
+        return;
       } catch (e) {
         handleWarn("Failed to draw chest image", "theWorld:drawBuilding:chestImage", { buildingId: building.id, err: e });
       }
     }
     drawSimpleChest(ctx, drawX, drawY, drawW, drawH);
+    ctx.restore();
     return;
   }
 
@@ -712,6 +719,7 @@ function drawBuilding(ctx, building) {
       ctx.strokeStyle = "#2d4052";
       ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
+    ctx.restore();
     return;
   }
 
@@ -754,8 +762,7 @@ function drawBuilding(ctx, building) {
     ctx.fillText(`Tipo: ${building.originalType || "construction"}`, drawX + 5, drawY + 12);
   }
 
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
+  ctx.restore();
 }
 
 /**
@@ -1056,45 +1063,86 @@ export function drawBackground(ctx) {
   }
 }
 
-function drawGrass(ctx) {
+// Offscreen canvas cache para grass tiles
+let _grassCache = null;
+
+function _ensureGrassCache() {
+  // Buffer extra em tiles ao redor do viewport para evitar re-renders frequentes
+  const BUFFER_TILES = 10;
   const camX = camera?.x ?? 0;
   const camY = camera?.y ?? 0;
   const camW = camera?.width ?? GAME_WIDTH;
   const camH = camera?.height ?? GAME_HEIGHT;
 
-  const startCol = Math.max(0, Math.floor((camX - CULLING_BUFFER) / TILE_SIZE));
+  const startCol = Math.max(0, Math.floor((camX - CULLING_BUFFER) / TILE_SIZE) - BUFFER_TILES);
   const endCol = Math.min(Math.ceil(WORLD_WIDTH / TILE_SIZE),
-    Math.ceil((camX + camW + CULLING_BUFFER) / TILE_SIZE));
-  const startRow = Math.max(0, Math.floor((camY - CULLING_BUFFER) / TILE_SIZE));
+    Math.ceil((camX + camW + CULLING_BUFFER) / TILE_SIZE) + BUFFER_TILES);
+  const startRow = Math.max(0, Math.floor((camY - CULLING_BUFFER) / TILE_SIZE) - BUFFER_TILES);
   const endRow = Math.min(Math.ceil(WORLD_HEIGHT / TILE_SIZE),
-    Math.ceil((camY + camH + CULLING_BUFFER) / TILE_SIZE));
+    Math.ceil((camY + camH + CULLING_BUFFER) / TILE_SIZE) + BUFFER_TILES);
 
-  const toScreen = (typeof worldToScreenFast === "function")
-    ? worldToScreenFast
-    : (x, y) => (camera?.worldToScreen ? camera.worldToScreen(x, y) : { x, y });
+  // Reusar cache se a região atual ainda está dentro da região cacheada
+  if (_grassCache &&
+      startCol >= _grassCache.startCol && endCol <= _grassCache.endCol &&
+      startRow >= _grassCache.startRow && endRow <= _grassCache.endRow) {
+    return _grassCache;
+  }
+
+  const cols = endCol - startCol;
+  const rows = endRow - startRow;
+  const w = cols * ZOOMED_TILE_SIZE_INT;
+  const h = rows * ZOOMED_TILE_SIZE_INT;
+
+  let offCanvas, offCtx;
+  if (_grassCache && _grassCache.canvas.width >= w && _grassCache.canvas.height >= h) {
+    offCanvas = _grassCache.canvas;
+    offCtx = _grassCache.ctx;
+    offCtx.clearRect(0, 0, w, h);
+  } else {
+    offCanvas = document.createElement('canvas');
+    offCanvas.width = w;
+    offCanvas.height = h;
+    offCtx = offCanvas.getContext('2d', { alpha: false });
+  }
 
   for (let y = startRow; y < endRow; y++) {
     for (let x = startCol; x < endCol; x++) {
-      const worldX = x * TILE_SIZE;
-      const worldY = y * TILE_SIZE;
-
-      const screenPos = toScreen(worldX, worldY);
-      const drawX = Math.floor(screenPos.x);
-      const drawY = Math.floor(screenPos.y);
+      const drawX = (x - startCol) * ZOOMED_TILE_SIZE_INT;
+      const drawY = (y - startRow) * ZOOMED_TILE_SIZE_INT;
 
       if (assets.nature?.floor?.length > 0) {
         const grassType = (x + y) % assets.nature.floor.length;
         const grassAsset = assets.nature.floor[grassType];
         if (grassAsset?.img?.complete) {
-          ctx.drawImage(grassAsset.img, drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+          offCtx.drawImage(grassAsset.img, drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
           continue;
         }
       }
 
-      ctx.fillStyle = (x + y) % 2 === 0 ? "#5a9367" : "#528a5e";
-      ctx.fillRect(drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+      offCtx.fillStyle = (x + y) % 2 === 0 ? "#5a9367" : "#528a5e";
+      offCtx.fillRect(drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
     }
   }
+
+  _grassCache = { canvas: offCanvas, ctx: offCtx, startCol, endCol, startRow, endRow };
+  return _grassCache;
+}
+
+function drawGrass(ctx) {
+  const cache = _ensureGrassCache();
+
+  const toScreen = (typeof worldToScreenFast === "function")
+    ? worldToScreenFast
+    : (x, y) => (camera?.worldToScreen ? camera.worldToScreen(x, y) : { x, y });
+
+  // Uma única drawImage ao invés de centenas
+  const origin = toScreen(cache.startCol * TILE_SIZE, cache.startRow * TILE_SIZE);
+  const cols = cache.endCol - cache.startCol;
+  const rows = cache.endRow - cache.startRow;
+  ctx.drawImage(cache.canvas,
+    0, 0, cols * ZOOMED_TILE_SIZE_INT, rows * ZOOMED_TILE_SIZE_INT,
+    Math.floor(origin.x), Math.floor(origin.y),
+    cols * ZOOMED_TILE_SIZE_INT, rows * ZOOMED_TILE_SIZE_INT);
 }
 
 /* fallbacks simples para natureza */

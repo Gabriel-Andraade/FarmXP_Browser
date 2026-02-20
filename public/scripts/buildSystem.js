@@ -96,19 +96,42 @@ export const BuildSystem = {
       if (!this._helpPanelEl) {
         const panel = document.createElement('div');
         panel.id = this._helpPanelId;
-        panel.innerHTML = `
-  <div class="bhp-header">
-    <div class="bhp-title">${t('build.mode')}</div>
-    <div class="bhp-sub" id="bhp-item-name">-</div>
-  </div>
-  <div class="bhp-body">
-    <div class="bhp-row"><strong><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></strong><span>${t('build.gridX')}</span></div>
-    <div class="bhp-row"><strong><kbd>4</kbd><kbd>5</kbd><kbd>6</kbd></strong><span>${t('build.gridY')}</span></div>
-    <div class="bhp-row"><strong><kbd>r</kbd></strong><span>${t('build.rotate')}</span></div>
-    <div class="bhp-row"><strong><kbd>t</kbd></strong><span>${t('build.place')}</span></div>
-    <div class="bhp-row"><strong><kbd>esc</kbd></strong><span>${t('build.exit')}</span></div>
-  </div>
-    `.trim();
+        // fix: innerHTML → DOM API
+        const header = document.createElement('div');
+        header.className = 'bhp-header';
+        const title = document.createElement('div');
+        title.className = 'bhp-title';
+        title.textContent = t('build.mode');
+        const sub = document.createElement('div');
+        sub.className = 'bhp-sub';
+        sub.id = 'bhp-item-name';
+        sub.textContent = '-';
+        header.append(title, sub);
+
+        const body = document.createElement('div');
+        body.className = 'bhp-body';
+        const rows = [
+          { keys: ['1', '2', '3'], label: t('build.gridX') },
+          { keys: ['4', '5', '6'], label: t('build.gridY') },
+          { keys: ['r'], label: t('build.rotate') },
+          { keys: ['t'], label: t('build.place') },
+          { keys: ['esc'], label: t('build.exit') },
+        ];
+        for (const row of rows) {
+          const rowDiv = document.createElement('div');
+          rowDiv.className = 'bhp-row';
+          const strong = document.createElement('strong');
+          for (const k of row.keys) {
+            const kbd = document.createElement('kbd');
+            kbd.textContent = k;
+            strong.appendChild(kbd);
+          }
+          const span = document.createElement('span');
+          span.textContent = row.label;
+          rowDiv.append(strong, span);
+          body.appendChild(rowDiv);
+        }
+        panel.append(header, body);
         document.body.appendChild(panel);
         this._helpPanelEl = panel;
       }
@@ -581,19 +604,21 @@ export const BuildSystem = {
         this.removeDebugOverlay();
         this.debugElement = document.createElement('div');
         this.debugElement.id = 'buildSystem-debug';
-        // Estilos via build.css (#buildSystem-debug)
-        this.debugElement.innerHTML = `<div id="bs-info"></div><div id="bs-msg"></div>`;
+        // fix: innerHTML → DOM API (estilos via build.css)
+        const infoDiv = document.createElement('div');
+        infoDiv.id = 'bs-info';
+        const msgDiv = document.createElement('div');
+        msgDiv.id = 'bs-msg';
+        this.debugElement.append(infoDiv, msgDiv);
         document.body.appendChild(this.debugElement);
     },
 
     updateDebugInfo() {
         if (!this.debugElement) return;
         const pos = this.getSnapPosition();
-        this.debugElement.querySelector('#bs-info').innerHTML = `
-            item: ${this.selectedItem?.name}<br>
-            pos: [${Math.round(pos.x)}, ${Math.round(pos.y)}]<br>
-            alinhamento: x(${this.currentSubPosX}) y(${this.currentSubPosY})
-        `;
+        // fix: innerHTML → textContent
+        this.debugElement.querySelector('#bs-info').textContent =
+            `item: ${this.selectedItem?.name} | pos: [${Math.round(pos.x)}, ${Math.round(pos.y)}] | alinhamento: x(${this.currentSubPosX}) y(${this.currentSubPosY})`;
     },
 
     showDebugMessage(msg, time=2000) {
