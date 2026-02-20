@@ -32,7 +32,7 @@ import { setupAutoCleanup } from "./gameCleanup.js";
 
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
 let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
-let WeatherSystem, drawWeatherEffects, drawWeatherUI;
+let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
 // =============================================================================
@@ -584,7 +584,6 @@ async function startFullGameLoad() {
       const weatherModule = await import("./weather.js");
       WeatherSystem = weatherModule.WeatherSystem;
       drawWeatherEffects = weatherModule.drawWeatherEffects;
-      drawWeatherUI = weatherModule.drawWeatherUI;
 
       if (WeatherSystem && WeatherSystem.init) WeatherSystem.init();
 
@@ -996,7 +995,8 @@ function gameLoop(timestamp) {
     try {
       if (WeatherSystem && drawWeatherEffects) {
         drawWeatherEffects(ctx, currentPlayer, canvas);
-        drawWeatherUI?.(ctx);
+        // drawWeatherUI removido — painel é event-driven
+        // (timeChanged, dayChanged, languageChanged, weatherChanged)
       }
     } catch (e) {
       handleWarn("falha ao desenhar clima", "main:gameLoop:weather", e);
@@ -1013,14 +1013,8 @@ function gameLoop(timestamp) {
     }
   }
 
-  try {
-    const playerHUD = getSystem('hud');
-    if (playerHUD && currentPlayer) {
-      playerHUD.render();
-    }
-  } catch (e) {
-    handleWarn("falha ao renderizar player hud", "main:gameLoop:playerHUD", e);
-  }
+  // PlayerHUD.render() removido do game loop — o HUD é event-driven
+  // (playerNeedsChanged, moneyChanged, playerReady, languageChanged, needsUpdateInterval)
 
   if (!allAssetsLoaded) drawLoadingIndicator();
 

@@ -496,30 +496,61 @@ const createInventoryUI = () => {
   sheet.replaceSync(css);
   shadow.adoptedStyleSheets = [sheet];
 
-  // Estrutura HTML
-  shadow.innerHTML = `
-    <div class="inv-overlay" id="inventoryModal">
-      <div class="inv-container">
-        <div class="inv-header">
-          <span class="inv-title">🎒 ${t('inventory.title')}</span>
-          <button class="inv-close" id="closeInvBtn">&times;</button>
-        </div>
-        <div class="inv-body">
-          <div class="inv-tabs" id="invTabs"></div>
-          <div class="inv-content">
-            <div class="inv-grid" id="invGrid"></div>
-            <div class="inv-details" id="invDetails" style="display: none;">
-              <div class="inv-item-info">
-                <span class="inv-item-name" id="detailName">${t('inventory.selectItem')}</span>
-                <span class="inv-item-desc" id="detailDesc"></span>
-              </div>
-              <div class="inv-actions" id="detailActions"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  // fix: innerHTML → DOM API (estrutura via createElement)
+  const overlay = document.createElement('div');
+  overlay.className = 'inv-overlay';
+  overlay.id = 'inventoryModal';
+
+  const container = document.createElement('div');
+  container.className = 'inv-container';
+
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'inv-header';
+  const titleSpan = document.createElement('span');
+  titleSpan.className = 'inv-title';
+  titleSpan.textContent = `🎒 ${t('inventory.title')}`;
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'inv-close';
+  closeBtn.id = 'closeInvBtn';
+  closeBtn.textContent = '\u00D7';
+  headerDiv.append(titleSpan, closeBtn);
+
+  const bodyDiv = document.createElement('div');
+  bodyDiv.className = 'inv-body';
+  const tabs = document.createElement('div');
+  tabs.className = 'inv-tabs';
+  tabs.id = 'invTabs';
+
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'inv-content';
+  const grid = document.createElement('div');
+  grid.className = 'inv-grid';
+  grid.id = 'invGrid';
+
+  const details = document.createElement('div');
+  details.className = 'inv-details';
+  details.id = 'invDetails';
+  details.style.display = 'none';
+  const itemInfo = document.createElement('div');
+  itemInfo.className = 'inv-item-info';
+  const detailName = document.createElement('span');
+  detailName.className = 'inv-item-name';
+  detailName.id = 'detailName';
+  detailName.textContent = t('inventory.selectItem');
+  const detailDesc = document.createElement('span');
+  detailDesc.className = 'inv-item-desc';
+  detailDesc.id = 'detailDesc';
+  itemInfo.append(detailName, detailDesc);
+  const detailActions = document.createElement('div');
+  detailActions.className = 'inv-actions';
+  detailActions.id = 'detailActions';
+  details.append(itemInfo, detailActions);
+
+  contentDiv.append(grid, details);
+  bodyDiv.append(tabs, contentDiv);
+  container.append(headerDiv, bodyDiv);
+  overlay.appendChild(container);
+  shadow.appendChild(overlay);
 
   return shadow;
 };
@@ -639,14 +670,18 @@ export function closeInventoryModal() {
 function renderTabs() {
   if (!tabsEl) return;
   
-  tabsEl.innerHTML = '';
+  // fix: innerHTML → DOM API
+  tabsEl.replaceChildren();
   const categories = Object.keys(inventorySystem.categories || {});
 
   categories.forEach(catKey => {
     const catData = CATEGORY_MAP[catKey] || { label: () => catKey, icon: '📦' };
     const btn = document.createElement('button');
     btn.className = `inv-tab-btn ${activeCategory === catKey ? 'active' : ''}`;
-    btn.innerHTML = `<span style="font-size: 20px;">${catData.icon}</span> ${catData.label()}`;
+    const iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '20px';
+    iconSpan.textContent = catData.icon;
+    btn.append(iconSpan, ` ${catData.label()}`);
     
     btn.onclick = () => {
       activeCategory = catKey;
@@ -665,17 +700,21 @@ function renderTabs() {
 function renderInventory() {
   if (!contentEl) return;
   
-  contentEl.innerHTML = '';
-  
+  // fix: innerHTML → DOM API
+  contentEl.replaceChildren();
+
   const categoryData = inventorySystem.categories?.[activeCategory];
-  
+
   if (!categoryData?.items || categoryData.items.length === 0) {
-    contentEl.innerHTML = `
-      <div class="inv-empty-msg">
-        <div>${t('inventory.empty')}</div>
-        <div style="font-size: 14px; opacity: 0.5;">${t('inventory.emptySubtext')}</div>
-      </div>
-    `;
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'inv-empty-msg';
+    const mainText = document.createElement('div');
+    mainText.textContent = t('inventory.empty');
+    const subText = document.createElement('div');
+    subText.style.cssText = 'font-size: 14px; opacity: 0.5;';
+    subText.textContent = t('inventory.emptySubtext');
+    emptyMsg.append(mainText, subText);
+    contentEl.appendChild(emptyMsg);
     currentItems = [];
     detailsEl.style.display = 'none';
     return;
@@ -760,13 +799,14 @@ function updateDetailsPanel(item, qty) {
   shadowRoot.getElementById('detailDesc').textContent = item.description || t('inventory.noDescription');
   
   const actionsDiv = shadowRoot.getElementById('detailActions');
-  actionsDiv.innerHTML = '';
+  // fix: innerHTML → DOM API
+  actionsDiv.replaceChildren();
 
   // 1. EQUIPAR (Ferramentas)
   if (item.type === 'tool') {
     const equipBtn = document.createElement('button');
     equipBtn.className = 'btn-action btn-equip';
-    equipBtn.innerHTML = `🛠️ ${t('inventory.actions.equip')}`;
+    equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
     equipBtn.onclick = () => {
       document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
       closeInventoryModal();
@@ -778,7 +818,7 @@ function updateDetailsPanel(item, qty) {
   if (['placeable', 'structure', 'construction'].includes(item.type)) {
     const buildBtn = document.createElement('button');
     buildBtn.className = 'btn-action btn-build';
-    buildBtn.innerHTML = `🔨 ${t('inventory.actions.build')}`;
+    buildBtn.textContent = `🔨 ${t('inventory.actions.build')}`;
     buildBtn.onclick = async () => {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
@@ -835,7 +875,7 @@ function updateDetailsPanel(item, qty) {
   if (item.type === 'food' || item.type === 'consumable' || item.fillUp) {
     const useBtn = document.createElement('button');
     useBtn.className = 'btn-action btn-use';
-    useBtn.innerHTML = `🍽️ ${t('inventory.actions.consume')}`;
+    useBtn.textContent = `🍽️ ${t('inventory.actions.consume')}`;
     useBtn.onclick = () => {
       document.dispatchEvent(new CustomEvent('startConsumptionRequest', { 
         detail: { 
@@ -853,7 +893,7 @@ function updateDetailsPanel(item, qty) {
   // 4. DESCARTAR (Sempre disponível)
   const dropBtn = document.createElement('button');
   dropBtn.className = 'btn-action btn-discard';
-  dropBtn.innerHTML = `🗑️ ${t('inventory.actions.discard')}`;
+  dropBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
   dropBtn.onclick = () => {
     if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
       const success = inventorySystem.removeItem(activeCategory, item.id, 1);

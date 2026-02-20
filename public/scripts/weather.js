@@ -20,15 +20,37 @@ function ensureWeatherUIPanel() {
 
   let el = document.getElementById(WEATHER_UI_ID);
   if (!el) {
+    _wuiCache = null; // invalidar cache ao recriar painel
     el = document.createElement("div");
     el.id = WEATHER_UI_ID;
-    el.innerHTML = `
-      <div class="wui-time" data-role="time">00:00</div>
-      <div class="wui-weekday" data-role="weekday">-</div>
-      <div class="wui-row"><span data-role="dayLabel">${t('time.dayLabel')}:</span><span data-role="day">1</span></div>
-      <div class="wui-row"><span data-role="seasonLabel">${t('time.seasonLabel')}:</span><span data-role="season">-</span></div>
-      <div class="wui-row"><span data-role="weatherLabel">${t('time.weatherLabel')}:</span><span data-role="weather">-</span></div>
-    `;
+    // fix: innerHTML → DOM API
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'wui-time';
+    timeDiv.dataset.role = 'time';
+    timeDiv.textContent = '00:00';
+    const weekdayDiv = document.createElement('div');
+    weekdayDiv.className = 'wui-weekday';
+    weekdayDiv.dataset.role = 'weekday';
+    weekdayDiv.textContent = '-';
+
+    const rows = [
+      { labelRole: 'dayLabel', labelText: `${t('time.dayLabel')}:`, valRole: 'day', valText: '1' },
+      { labelRole: 'seasonLabel', labelText: `${t('time.seasonLabel')}:`, valRole: 'season', valText: '-' },
+      { labelRole: 'weatherLabel', labelText: `${t('time.weatherLabel')}:`, valRole: 'weather', valText: '-' },
+    ];
+    const rowEls = rows.map(r => {
+      const row = document.createElement('div');
+      row.className = 'wui-row';
+      const label = document.createElement('span');
+      label.dataset.role = r.labelRole;
+      label.textContent = r.labelText;
+      const val = document.createElement('span');
+      val.dataset.role = r.valRole;
+      val.textContent = r.valText;
+      row.append(label, val);
+      return row;
+    });
+    el.append(timeDiv, weekdayDiv, ...rowEls);
     container.appendChild(el);
   } else if (el.parentElement !== container) {
     // Se já existia em outro lugar (ex.: body), move pro container correto
@@ -46,35 +68,49 @@ function updateWeatherUIPanelPosition() {
   ensureWeatherUIPanel();
 }
 
-function updateWeatherUIPanelContent() {
+// Cache de elementos DOM do painel de weather
+let _wuiCache = null;
+
+function _getWuiElements() {
+  // Verificar se cache ainda é válido (painel pode ter sido removido do DOM)
+  if (_wuiCache && _wuiCache.panel.isConnected) return _wuiCache;
+  _wuiCache = null;
   const panel = ensureWeatherUIPanel();
-  if (!panel) return;
+  if (!panel) return null;
+  _wuiCache = {
+    panel,
+    time: panel.querySelector('[data-role="time"]'),
+    weekday: panel.querySelector('[data-role="weekday"]'),
+    day: panel.querySelector('[data-role="day"]'),
+    season: panel.querySelector('[data-role="season"]'),
+    weather: panel.querySelector('[data-role="weather"]'),
+    dayLabel: panel.querySelector('[data-role="dayLabel"]'),
+    seasonLabel: panel.querySelector('[data-role="seasonLabel"]'),
+    weatherLabel: panel.querySelector('[data-role="weatherLabel"]'),
+  };
+  return _wuiCache;
+}
 
-  const timeEl = panel.querySelector('[data-role="time"]');
-  const weekdayEl = panel.querySelector('[data-role="weekday"]');
-  const dayEl = panel.querySelector('[data-role="day"]');
-  const seasonEl = panel.querySelector('[data-role="season"]');
-  const weatherEl = panel.querySelector('[data-role="weather"]');
-  const dayLabelEl = panel.querySelector('[data-role="dayLabel"]');
-  const seasonLabelEl = panel.querySelector('[data-role="seasonLabel"]');
-  const weatherLabelEl = panel.querySelector('[data-role="weatherLabel"]');
+function updateWeatherUIPanelContent() {
+  const els = _getWuiElements();
+  if (!els) return;
 
-  if (timeEl) timeEl.textContent = WeatherSystem.getTimeString();
-  if (weekdayEl) weekdayEl.textContent = WeatherSystem.getWeekday();
-  if (dayEl) dayEl.textContent = String(WeatherSystem.day);
-  if (seasonEl) seasonEl.textContent = WeatherSystem.getSeasonName();
+  if (els.time) els.time.textContent = WeatherSystem.getTimeString();
+  if (els.weekday) els.weekday.textContent = WeatherSystem.getWeekday();
+  if (els.day) els.day.textContent = String(WeatherSystem.day);
+  if (els.season) els.season.textContent = WeatherSystem.getSeasonName();
 
   // Update labels for language changes
-  if (dayLabelEl) dayLabelEl.textContent = `${t('time.dayLabel')}:`;
-  if (seasonLabelEl) seasonLabelEl.textContent = `${t('time.seasonLabel')}:`;
-  if (weatherLabelEl) weatherLabelEl.textContent = `${t('time.weatherLabel')}:`;
+  if (els.dayLabel) els.dayLabel.textContent = `${t('time.dayLabel')}:`;
+  if (els.seasonLabel) els.seasonLabel.textContent = `${t('time.seasonLabel')}:`;
+  if (els.weatherLabel) els.weatherLabel.textContent = `${t('time.weatherLabel')}:`;
 
   let icon = "☀️";
   if (WeatherSystem.weatherType === "rain") icon = "🌧️";
   if (WeatherSystem.weatherType === "storm") icon = "⛈️";
   if (WeatherSystem.weatherType === "fog") icon = "🌫️";
   if (WeatherSystem.weatherType === "blizzard") icon = "❄️";
-  if (weatherEl) weatherEl.textContent = icon;
+  if (els.weather) els.weather.textContent = icon;
 }
 
 /**
@@ -436,8 +472,10 @@ export const WeatherSystem = {
     const viewW = 1920 / camera.zoom;
     const viewH = 1080 / camera.zoom;
     const pad = 300;
+    const particles = this.rainParticles;
 
-    this.rainParticles.forEach((p) => {
+    for (let i = 0, len = particles.length; i < len; i++) {
+      const p = particles[i];
       p.x -= p.wind * (1 + p.depth);
       p.y += p.speed * 0.016;
 
@@ -449,27 +487,31 @@ export const WeatherSystem = {
       if (p.x < camera.x - pad) {
         p.x += viewW + pad * 2;
       }
-    });
+    }
   },
 
   updateFogLayers() {
-    this.fogLayers.forEach((l) => {
-      l.time += 0.01;
-    });
+    const layers = this.fogLayers;
+    for (let i = 0, len = layers.length; i < len; i++) {
+      layers[i].time += 0.01;
+    }
   },
 
   updateSnowParticles() {
     const viewH = 1080 / camera.zoom;
+    const particles = this.snowParticles;
+    const timeFactor = Math.sin(this.currentTime * 0.05) * 0.5;
 
-    this.snowParticles.forEach((p) => {
+    for (let i = 0, len = particles.length; i < len; i++) {
+      const p = particles[i];
       p.y += p.speedY * 0.016;
-      p.x += p.speedX * 0.016 + Math.sin(this.currentTime * 0.05) * 0.5;
+      p.x += p.speedX * 0.016 + timeFactor;
 
       if (p.y > camera.y + viewH + 100) {
         p.y = camera.y - 100;
         p.x = camera.x - 500 + Math.random() * 2500;
       }
-    });
+    }
   },
 
   updateLightningFlashes(dt) {
@@ -533,10 +575,16 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.restore();
   }
 
-  WeatherSystem.lightningFlashes.forEach((f) => {
-    ctx.fillStyle = `rgba(255, 255, 230, ${f.opacity})`;
-    ctx.fillRect(0, 0, width, height);
-  });
+  // fix: canvas context reset — isolate lightning state
+  if (WeatherSystem.lightningFlashes.length > 0) {
+    ctx.save();
+    const flashes = WeatherSystem.lightningFlashes;
+    for (let i = 0, len = flashes.length; i < len; i++) {
+      ctx.fillStyle = `rgba(255, 255, 230, ${flashes[i].opacity})`;
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.restore();
+  }
 
   if (WeatherSystem.rainParticles.length > 0) {
     ctx.save();
@@ -545,42 +593,59 @@ export function drawWeatherEffects(ctx, player, canvas) {
     ctx.lineCap = "round";
     ctx.beginPath();
 
-    WeatherSystem.rainParticles.forEach((p) => {
-      const screenX = p.x - camera.x;
-      const screenY = p.y - camera.y;
+    const rainP = WeatherSystem.rainParticles;
+    const camX = camera.x;
+    const camY = camera.y;
+    for (let i = 0, len = rainP.length; i < len; i++) {
+      const p = rainP[i];
+      const screenX = p.x - camX;
+      const screenY = p.y - camY;
 
       if (screenX > -100 && screenX < width + 100 && screenY > -100 && screenY < height + 100) {
         ctx.moveTo(screenX, screenY);
         ctx.lineTo(screenX - Math.cos(p.angle) * p.length, screenY + Math.sin(p.angle) * p.length);
       }
-    });
+    }
 
     ctx.stroke();
     ctx.restore();
   }
 
+  // fix: canvas context reset — isolate snow state
   if (WeatherSystem.snowParticles.length > 0) {
+    ctx.save();
     ctx.fillStyle = "white";
     ctx.beginPath();
 
-    WeatherSystem.snowParticles.forEach((p) => {
-      const screenX = p.x - camera.x;
-      const screenY = p.y - camera.y;
+    const snowP = WeatherSystem.snowParticles;
+    const camX = camera.x;
+    const camY = camera.y;
+    for (let i = 0, len = snowP.length; i < len; i++) {
+      const p = snowP[i];
+      const screenX = p.x - camX;
+      const screenY = p.y - camY;
       ctx.moveTo(screenX, screenY);
       ctx.arc(screenX, screenY, p.size, 0, Math.PI * 2);
-    });
+    }
 
     ctx.fill();
+    ctx.restore();
   }
 
+  // fix: canvas context reset — isolate fog state
   if (WeatherSystem.weatherType === "fog") {
+    ctx.save();
     ctx.fillStyle = `rgba(200, 210, 220, 0.2)`;
     ctx.fillRect(0, 0, width, height);
+    ctx.restore();
   }
 
+  // fix: canvas context reset — isolate sleep transition state
   if (WeatherSystem.sleepTransitionProgress > 0) {
+    ctx.save();
     ctx.fillStyle = `rgba(0,0,0,${WeatherSystem.sleepTransitionProgress})`;
     ctx.fillRect(0, 0, width, height);
+    ctx.restore();
   }
 
   if (WeatherSystem.sleepPhase === "holding" && WeatherSystem.sleepMessage) {

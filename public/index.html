@@ -117,7 +117,7 @@
             </div>
             
             <div class="mch-commerce-controls">
-               <button class="mch-close-button" onclick="closeCommerceSystem()" data-i18n="ui.close">Fechar</button>
+               <button class="mch-close-button" data-i18n="ui.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -150,8 +150,8 @@
                 <div class="mch-action-panel">
                     <div class="mch-action-indicator" id="actionIndicator">💸 Vendendo</div>
                     <div class="mch-arrow-container">
-                        <div class="mch-trade-arrow mch-sell-arrow" onclick="setTradeMode('sell')">🢂</div>
-                        <div class="mch-trade-arrow mch-buy-arrow" onclick="setTradeMode('buy')">🢀</div>
+                        <div class="mch-trade-arrow mch-sell-arrow">🢂</div>
+                        <div class="mch-trade-arrow mch-buy-arrow">🢀</div>
                     </div>
                     <div class="mch-action-indicator" id="tradeValue">$0</div>
                 </div>
@@ -176,8 +176,8 @@
             </div>
             
             <div class="mch-commerce-controls">
-                <button class="mch-back-button" onclick="backToMerchantsList()" data-i18n="ui.backToMerchants">← Voltar aos Mercadores</button>
-                <button class="mch-close-button" onclick="closeCommerceSystem()" data-i18n="ui.close">Fechar</button>
+                <button class="mch-back-button" data-i18n="ui.backToMerchants">← Voltar aos Mercadores</button>
+                <button class="mch-close-button" data-i18n="ui.close">Fechar</button>
             </div>
         </div>
     </div>
@@ -190,22 +190,22 @@
 
             <!-- Controles de Quantidade -->
             <div class="mch-quantity-controls">
-                <button class="mch-quantity-btn mch-quantity-decrease" id="quantityDecreaseBtn" onclick="decreaseQuantity()">
+                <button class="mch-quantity-btn mch-quantity-decrease" id="quantityDecreaseBtn">
                     <span>−</span>
                 </button>
                 <div class="mch-quantity-display">
                     <span data-i18n="trading.quantity">Quantidade</span>:
                     <span id="tradeQuantityDisplay" class="mch-quantity-value">1</span>
                 </div>
-                <button class="mch-quantity-btn mch-quantity-increase" id="quantityIncreaseBtn" onclick="increaseQuantity()">
+                <button class="mch-quantity-btn mch-quantity-increase" id="quantityIncreaseBtn">
                     <span>+</span>
                 </button>
             </div>
 
             <!-- Botões de Confirmação -->
             <div class="mch-confirm-buttons">
-                <button class="mch-confirm-btn mch-confirm-yes" onclick="confirmTrade()" data-i18n="trading.confirm">✓ Confirmar</button>
-                <button class="mch-confirm-btn mch-confirm-no" onclick="cancelTrade()" data-i18n="ui.cancel">✕ Cancelar</button>
+                <button class="mch-confirm-btn mch-confirm-yes" data-i18n="trading.confirm">✓ Confirmar</button>
+                <button class="mch-confirm-btn mch-confirm-no" data-i18n="ui.cancel">✕ Cancelar</button>
             </div>
         </div>
     </div>

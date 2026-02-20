@@ -140,7 +140,9 @@ class WorldUIManager {
      * @param {number} obj.maxHealth - Maximum health value
      * @returns {void}
      */
+    // fix: canvas context reset — isolate health bar state
     drawHealthBar(ctx, obj) {
+        ctx.save();
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
             obj.x + obj.width / 2,
@@ -162,6 +164,8 @@ class WorldUIManager {
         this.drawRoundedRect(ctx, x, y, width, height, 3, this.styles.hpBar.bgColor);
 
         ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
 
         let gradient;
         if (percent > VISUAL.HEALTH_BAR.THRESHOLD_HIGH) {
@@ -178,8 +182,8 @@ class WorldUIManager {
             gradient.addColorStop(1, this.styles.hpBar.gradientLow[1]);
         }
 
-            const minFillWidth = Number.isFinite(VISUAL.HEALTH_BAR.MIN_WIDTH) ? VISUAL.HEALTH_BAR.MIN_WIDTH : 0;
-            const fillWidth = Math.max(minFillWidth, width * percent);
+        const minFillWidth = Number.isFinite(VISUAL.HEALTH_BAR.MIN_WIDTH) ? VISUAL.HEALTH_BAR.MIN_WIDTH : 0;
+        const fillWidth = Math.max(minFillWidth, width * percent);
 
         this.drawRoundedRect(ctx, x, y, fillWidth, height, 3, gradient);
 
@@ -199,6 +203,7 @@ class WorldUIManager {
                 y + height / 2
             );
         }
+        ctx.restore();
     }
 
     /**
@@ -239,7 +244,9 @@ class WorldUIManager {
      * @param {string} key - Key character to display (e.g., "E")
      * @returns {void}
      */
+    // fix: canvas context reset — isolate key prompt state
     drawKeyPrompt(ctx, obj, key) {
+        ctx.save();
         const zoom = CAMERA_ZOOM;
         const screenPos = camera.worldToScreen(
             obj.x + obj.width / 2,
@@ -277,6 +284,8 @@ class WorldUIManager {
         );
 
         ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
         ctx.strokeStyle = this.styles.keyPrompt.borderColor;
         ctx.lineWidth = this.styles.keyPrompt.borderWidth;
         ctx.stroke();
@@ -286,6 +295,7 @@ class WorldUIManager {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(key, x, y + 1);
+        ctx.restore();
     }
 
     /**

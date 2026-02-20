@@ -12,6 +12,9 @@ export const cssManager = {
   /**
    * Keep empty to avoid duplicate loads, since index.html already loads CSS.
    */
+  // NOTA: index.html já carrega todos os CSS via <link> tags.
+  // Lista esvaziada para evitar carregamento duplicado.
+  // Se novos CSS forem adicionados dinamicamente, colocar aqui.
   files: [],
 
   /**
@@ -68,7 +71,8 @@ export const cssManager = {
    * @returns {Promise<void>}
    */
   async loadAll() {
-    if (!this.files || this.files.length === 0) return;
-    await Promise.all(this.files.map((file) => this.loadOne(file)));
+    // Carrega todos em paralelo — a ordem no DOM é mantida pelo appendChild
+    // sequencial dentro de loadOne(), garantindo o cascade correto
+    await Promise.all(this.files.map(file => this.loadOne(file)));
   },
 };

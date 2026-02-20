@@ -1,7 +1,5 @@
 import { TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT } from "./worldConstants.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
-import { logger } from "./logger.js";
-
 import { getObject } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
@@ -29,17 +27,17 @@ export const INV_CAMERA_ZOOM = 1 / CAMERA_ZOOM;
  * @constant {Object}
  */
 export const OPTIMIZATION_CONFIG = {
-    ENABLED: true,
-    USE_PRECALCULATED_VALUES: true,
-    MAX_DRAW_CALLS_PER_FRAME: 5000,
-    LOG_PERFORMANCE: false,
-    SLEEP_OPTIMIZATIONS: {
-        CLEAR_CACHE: true,
-        COMPACT_ARRAYS: true,
-        FORCE_GC: true,
-        RESET_CANVAS: true,
-        OPTIMIZE_MEMORY: true
-    }
+  ENABLED: true,
+  USE_PRECALCULATED_VALUES: true,
+  MAX_DRAW_CALLS_PER_FRAME: 5000,
+  LOG_PERFORMANCE: false,
+  SLEEP_OPTIMIZATIONS: {
+    CLEAR_CACHE: true,
+    COMPACT_ARRAYS: true,
+    FORCE_GC: true,
+    RESET_CANVAS: true,
+    OPTIMIZE_MEMORY: true,
+  },
 };
 
 /**
@@ -70,15 +68,15 @@ const commonCalculations = new Map();
  * @returns {*} Resultado do cálculo (do cache ou recém calculado)
  */
 export function getCachedCalculation(key, calculationFn) {
-    if (!OPTIMIZATION_CONFIG.USE_PRECALCULATED_VALUES) {
-        return calculationFn();
-    }
+  if (!OPTIMIZATION_CONFIG.USE_PRECALCULATED_VALUES) {
+    return calculationFn();
+  }
 
-    if (!commonCalculations.has(key)) {
-        commonCalculations.set(key, calculationFn());
-    }
+  if (!commonCalculations.has(key)) {
+    commonCalculations.set(key, calculationFn());
+  }
 
-    return commonCalculations.get(key);
+  return commonCalculations.get(key);
 }
 
 /**
@@ -91,10 +89,10 @@ export function getCachedCalculation(key, calculationFn) {
  * @returns {number} returns.y - Posição Y na tela
  */
 export function worldToScreenFast(x, y) {
-    return {
-        x: (x - camera.x) * CAMERA_ZOOM,
-        y: (y - camera.y) * CAMERA_ZOOM
-    };
+  return {
+    x: (x - camera.x) * CAMERA_ZOOM,
+    y: (y - camera.y) * CAMERA_ZOOM,
+  };
 }
 
 /**
@@ -107,10 +105,10 @@ export function worldToScreenFast(x, y) {
  * @returns {number} returns.y - Posição Y no mundo
  */
 export function screenToWorldFast(x, y) {
-    return {
-        x: (x * INV_CAMERA_ZOOM) + camera.x,
-        y: (y * INV_CAMERA_ZOOM) + camera.y
-    };
+  return {
+    x: x * INV_CAMERA_ZOOM + camera.x,
+    y: y * INV_CAMERA_ZOOM + camera.y,
+  };
 }
 
 /**
@@ -126,10 +124,10 @@ export function screenToWorldFast(x, y) {
  * @returns {number} returns.y - Posição Y na tela
  */
 export function worldToScreenWithCamera(x, y, customCamera) {
-    return {
-        x: (x - customCamera.x) * CAMERA_ZOOM,
-        y: (y - customCamera.y) * CAMERA_ZOOM
-    };
+  return {
+    x: (x - customCamera.x) * CAMERA_ZOOM,
+    y: (y - customCamera.y) * CAMERA_ZOOM,
+  };
 }
 
 /**
@@ -143,17 +141,17 @@ export function worldToScreenWithCamera(x, y, customCamera) {
  * @returns {boolean} True se o retângulo está visível, false caso contrário
  */
 export function isInViewportFast(x, y, width, height, buffer = 0) {
-    const screenPos = worldToScreenFast(x, y);
-    const zoom = CAMERA_ZOOM;
-    const zoomedWidth = width * zoom;
-    const zoomedHeight = height * zoom;
+  const screenPos = worldToScreenFast(x, y);
+  const zoom = CAMERA_ZOOM;
+  const zoomedWidth = width * zoom;
+  const zoomedHeight = height * zoom;
 
-    return (
-        screenPos.x + zoomedWidth + buffer > 0 &&
-        screenPos.x - buffer < window.innerWidth &&
-        screenPos.y + zoomedHeight + buffer > 0 &&
-        screenPos.y - buffer < window.innerHeight
-    );
+  return (
+    screenPos.x + zoomedWidth + buffer > 0 &&
+    screenPos.x - buffer < window.innerWidth &&
+    screenPos.y + zoomedHeight + buffer > 0 &&
+    screenPos.y - buffer < window.innerHeight
+  );
 }
 
 /**
@@ -169,21 +167,25 @@ export function isInViewportFast(x, y, width, height, buffer = 0) {
  * @returns {number} returns.height - Altura em tiles
  */
 export function getVisibleTileBounds(buffer = 100) {
-    const visibleStartX = Math.max(0, Math.floor((camera.x - buffer) / TILE_SIZE));
-    const visibleEndX = Math.min(Math.ceil(WORLD_WIDTH / TILE_SIZE),
-                                 Math.ceil((camera.x + camera.width + buffer) / TILE_SIZE));
-    const visibleStartY = Math.max(0, Math.floor((camera.y - buffer) / TILE_SIZE));
-    const visibleEndY = Math.min(Math.ceil(WORLD_HEIGHT / TILE_SIZE),
-                                 Math.ceil((camera.y + camera.height + buffer) / TILE_SIZE));
+  const visibleStartX = Math.max(0, Math.floor((camera.x - buffer) / TILE_SIZE));
+  const visibleEndX = Math.min(
+    Math.ceil(WORLD_WIDTH / TILE_SIZE),
+    Math.ceil((camera.x + camera.width + buffer) / TILE_SIZE)
+  );
+  const visibleStartY = Math.max(0, Math.floor((camera.y - buffer) / TILE_SIZE));
+  const visibleEndY = Math.min(
+    Math.ceil(WORLD_HEIGHT / TILE_SIZE),
+    Math.ceil((camera.y + camera.height + buffer) / TILE_SIZE)
+  );
 
-    return {
-        startX: visibleStartX,
-        endX: visibleEndX,
-        startY: visibleStartY,
-        endY: visibleEndY,
-        width: visibleEndX - visibleStartX,
-        height: visibleEndY - visibleStartY
-    };
+  return {
+    startX: visibleStartX,
+    endX: visibleEndX,
+    startY: visibleStartY,
+    endY: visibleEndY,
+    width: visibleEndX - visibleStartX,
+    height: visibleEndY - visibleStartY,
+  };
 }
 
 /**
@@ -198,31 +200,32 @@ export function getVisibleTileBounds(buffer = 100) {
  * @returns {string} [returns.error] - Mensagem de erro se falhou
  */
 export async function performSleepOptimizations() {
-    const optimizations = [];
-    const startTime = performance.now();
+  const optimizations = [];
+  const startTime = performance.now();
 
-    try {
-        if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.CLEAR_CACHE) {
-            optimizations.push(clearCalculationCache());
-        }
+  try {
+    if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.CLEAR_CACHE) {
+      optimizations.push(clearCalculationCache());
+    }
 
-        if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.COMPACT_ARRAYS) {
-            optimizations.push(compactLargeArrays());
-        }
+    if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.COMPACT_ARRAYS) {
+      optimizations.push(compactLargeArrays());
+    }
 
-        if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.FORCE_GC) {
-            optimizations.push(forceGarbageCollection());
-        }
+    if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.FORCE_GC) {
+      optimizations.push(forceGarbageCollection());
+    }
 
-        if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.RESET_CANVAS) {
-            optimizations.push(resetCanvasContext());
-        }
+    if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.RESET_CANVAS) {
+      optimizations.push(resetCanvasContext());
+    }
 
-        if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.OPTIMIZE_MEMORY) {
-            optimizations.push(optimizeMemoryUsage());
-        }
+    if (OPTIMIZATION_CONFIG.SLEEP_OPTIMIZATIONS.OPTIMIZE_MEMORY) {
+      optimizations.push(optimizeMemoryUsage());
+    }
 
-        await Promise.all(optimizations);
+    const results = await Promise.allSettled(optimizations);
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
 
         const endTime = performance.now();
         return {
@@ -261,19 +264,26 @@ function clearCalculationCache() {
 }
 
 /**
- * Para implementar de forma correta sem acoplamento ao legacy bridge:
- * - expor um método oficial no world (ex.: world.compactLargeArrays())
- * - acessar arrays via getObject('world') (ex.: world.trees, world.rocks, etc).
+ * No-op — anteriormente tentava compactar arrays via window[arrayName],
+ * mas os arrays relevantes são module-scoped em theWorld.js (#65).
  * @private
  * @returns {Promise<Object>} Resultado da compactação
  * @returns {number} returns.itemsCompacted - Número de itens removidos
  */
 function compactLargeArrays() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
+  try {
     const world = getObject("world");
     if (world && typeof world.compactLargeArrays === "function") {
-        return Promise.resolve(world.compactLargeArrays());
+      return Promise.resolve(world.compactLargeArrays());
     }
     return Promise.resolve({ itemsCompacted: 0 });
+  } catch (e) {
+    return Promise.resolve({ itemsCompacted: 0 });
+  }
+=======
+    return Promise.resolve({ itemsCompacted: 0 });
+>>>>>>> main
 }
 
 /**
@@ -285,10 +295,29 @@ function compactLargeArrays() {
  * @returns {boolean} returns.gcForced - Se GC foi forçado com sucesso
  */
 function forceGarbageCollection() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
+  try {
+    if (typeof window.gc === "function") {
+      window.gc();
+      return Promise.resolve({ gcForced: true });
+    }
+    return Promise.resolve({ gcForced: false });
+  } catch (e) {
+    return Promise.resolve({ gcForced: false });
+  }
+=======
     return new Promise((resolve) => {
         try {
             if (typeof window.gc === 'function') {
                 window.gc();
+                resolve({ gcForced: true });
+            } else if (window.performance && window.performance.memory) {
+                for (let i = 0; i < 1000; i++) {
+                    window['temp_gc_' + i] = new Array(1000).fill(0);
+                }
+                for (let i = 0; i < 1000; i++) {
+                    delete window['temp_gc_' + i];
+                }
                 resolve({ gcForced: true });
             } else {
                 resolve({ gcForced: false });
@@ -298,6 +327,7 @@ function forceGarbageCollection() {
             resolve({ gcForced: false });
         }
     });
+>>>>>>> main
 }
 
 /**
@@ -327,12 +357,28 @@ function resetCanvasContext() {
 
 /**
  * Otimiza uso de memória disparando cleanup de objetos destruídos
+<<<<<<< issue/58-indiscriminately-clears-all-timers
+ * Otimiza uso de memória disparando cleanup de objetos destruídos e limpando assets não usados
+=======
+ * Dispara um cleanup event-driven de objetos destruídos.
+ * (O comportamento antigo de limpar timers/intervals indiscriminadamente foi removido.)
+>>>>>>> main
  * @private
  * @returns {Promise<Object>} Resultado da otimização
  * @returns {boolean} returns.memoryOptimized - Se memória foi otimizada
  * @returns {Array<string>} returns.optimizations - Lista de otimizações aplicadas
  */
 function optimizeMemoryUsage() {
+<<<<<<< issue/58-indiscriminately-clears-all-timers
+  return new Promise((resolve) => {
+    try {
+      const optimizations = [];
+
+      if (window.assets && typeof window.assets.cleanupUnused === "function") {
+        try {
+          window.assets.cleanupUnused();
+          optimizations.push("assets");
+=======
     return new Promise((resolve) => {
         try {
             const optimizations = [];
@@ -362,16 +408,16 @@ function optimizeMemoryUsage() {
  * @returns {string} [returns.error] - Mensagem de erro se API não disponível
  */
 export function getMemoryStatus() {
-    if (window.performance && window.performance.memory) {
-        const mem = window.performance.memory;
-        return {
-            usedJSHeapSize: Math.round(mem.usedJSHeapSize / 1024 / 1024) + "MB",
-            totalJSHeapSize: Math.round(mem.totalJSHeapSize / 1024 / 1024) + "MB",
-            jsHeapSizeLimit: Math.round(mem.jsHeapSizeLimit / 1024 / 1024) + "MB",
-            usagePercent: Math.round((mem.usedJSHeapSize / mem.jsHeapSizeLimit) * 100) + "%"
-        };
-    }
-    return { error: "Performance Memory API not available" };
+  if (window.performance && window.performance.memory) {
+    const mem = window.performance.memory;
+    return {
+      usedJSHeapSize: Math.round(mem.usedJSHeapSize / 1024 / 1024) + "MB",
+      totalJSHeapSize: Math.round(mem.totalJSHeapSize / 1024 / 1024) + "MB",
+      jsHeapSizeLimit: Math.round(mem.jsHeapSizeLimit / 1024 / 1024) + "MB",
+      usagePercent: Math.round((mem.usedJSHeapSize / mem.jsHeapSizeLimit) * 100) + "%",
+    };
+  }
+  return { error: "Performance Memory API not available" };
 }
 
 /**
@@ -397,11 +443,11 @@ export function clearRenderCache() {
  * @returns {Function} returns.getConfig - Retorna cópia da configuração
  */
 export function quickOptimization() {
-    return {
-        clearCalculationCache: () => commonCalculations.clear(),
-        getCacheSize: () => commonCalculations.size,
-        getConfig: () => ({ ...OPTIMIZATION_CONFIG })
-    };
+  return {
+    clearCalculationCache: () => commonCalculations.clear(),
+    getCacheSize: () => commonCalculations.size,
+    getConfig: () => ({ ...OPTIMIZATION_CONFIG }),
+  };
 }
 
 /**
@@ -409,19 +455,19 @@ export function quickOptimization() {
  * @default
  */
 export default {
-    ZOOMED_TILE_SIZE,
-    ZOOMED_TILE_SIZE_INT,
-    INV_CAMERA_ZOOM,
-    OPTIMIZATION_CONFIG,
-    perfLog,
-    getCachedCalculation,
-    worldToScreenFast,
-    screenToWorldFast,
-    worldToScreenWithCamera,
-    isInViewportFast,
-    getVisibleTileBounds,
-    performSleepOptimizations,
-    getMemoryStatus,
-    clearRenderCache,
-    quickOptimization
+  ZOOMED_TILE_SIZE,
+  ZOOMED_TILE_SIZE_INT,
+  INV_CAMERA_ZOOM,
+  OPTIMIZATION_CONFIG,
+  perfLog,
+  getCachedCalculation,
+  worldToScreenFast,
+  screenToWorldFast,
+  worldToScreenWithCamera,
+  isInViewportFast,
+  getVisibleTileBounds,
+  performSleepOptimizations,
+  getMemoryStatus,
+  clearRenderCache,
+  quickOptimization,
 };
