@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, afterAll, mock } from 'bun:test';
 import "../setup.js";
 
 // Track calls for assertions
@@ -60,6 +60,7 @@ mock.module('../../public/scripts/i18n/i18n.js', () => ({
 const { PlayerSystem } = await import('../../public/scripts/thePlayer/playerSystem.js');
 // Create a mock instance of PlayerSystem
 const mockPlayerSystem = new PlayerSystem();
+afterAll(() => mockPlayerSystem.destroy?.());
 // Override setActiveCharacter to track calls
 const _origSetActiveCharacter = mockPlayerSystem.setActiveCharacter.bind(mockPlayerSystem);
 mockPlayerSystem.setActiveCharacter = (data) => {
@@ -82,6 +83,10 @@ describe('CharacterSelection (Production Implementation)', () => {
   beforeEach(() => {
     setActiveCharacterCalls = [];
     cs = new CharacterSelection();
+  });
+
+  afterEach(() => {
+    cs?.container?.remove?.();
   });
 
   describe('constructor', () => {

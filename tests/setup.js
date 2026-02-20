@@ -26,7 +26,9 @@ function dispatchTo(map, target, event) {
   if (!list || list.length === 0) return true;
 
   for (const fn of [...list]) {
-    try { fn.call(target, event); } catch {}
+    try { fn.call(target, event); } catch (e) {
+      console.error('Error in event listener:', e);
+    }
   }
   return !event?.defaultPrevented;
 }
@@ -188,7 +190,7 @@ globalThis.localStorage ??= {
   clear() { this._data = {}; }
 };
 
-// Reset localStorage + listeners between tests (se você quiser chamar manualmente)
+// Reset localStorage + listeners between tests (call manually if needed)
 globalThis.resetTestEnvironment = () => {
   globalThis.localStorage._data = {};
   _documentListeners.clear();

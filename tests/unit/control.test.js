@@ -158,10 +158,8 @@ describe('Control System (Production Implementation)', () => {
       expect(keys).toHaveProperty('Space');
     });
 
-    test('should initialize all keys as false', () => {
-      // Reset keys first
+    test('should allow resetting all keys to false', () => {
       Object.keys(keys).forEach(k => { keys[k] = false; });
-
       Object.values(keys).forEach(value => {
         expect(value).toBe(false);
       });

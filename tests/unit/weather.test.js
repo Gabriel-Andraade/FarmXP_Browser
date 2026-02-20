@@ -439,8 +439,12 @@ describe('WeatherSystem (Production Implementation)', () => {
 
       WeatherSystem.randomizeWeather();
 
-      // Old particles should be cleared (new ones may be generated)
-      // The method clears all arrays then generates based on type
+      // After randomizeWeather, arrays should have been cleared and regenerated
+      const hasOldEntry = (arr) => arr.some(p => p.x === 1 && Object.keys(p).length === 1);
+      expect(hasOldEntry(WeatherSystem.rainParticles)).toBe(false);
+      expect(hasOldEntry(WeatherSystem.fogLayers)).toBe(false);
+      expect(hasOldEntry(WeatherSystem.snowParticles)).toBe(false);
+      expect(hasOldEntry(WeatherSystem.lightningFlashes)).toBe(false);
     });
 
     test('should generate rain particles for rain weather', () => {

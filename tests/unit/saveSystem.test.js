@@ -77,7 +77,7 @@ mock.module('../../public/scripts/worldConstants.js', () => ({
   WORLD_HEIGHT: 5010,
   GAME_WIDTH: 880,
   GAME_HEIGHT: 963.09,
-  TILE_SIZE: 32,
+  TILE_SIZE: 20,
 }));
 
 mock.module('../../public/scripts/animal/animalAI.js', () => ({

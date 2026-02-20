@@ -1309,10 +1309,11 @@ export function importWorldState(data) {
       animals.push(...payload.animals.map(o => ({ ...o, id: o.id || generateId() })));
     }
 
-    if (payload.seed) {
+    if (payload.seed && typeof worldGenerator.setSeed === "function") {
       worldGenerator.setSeed(payload.seed);
     }
 
+    registerWorldObjects();
     markWorldChanged();
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
