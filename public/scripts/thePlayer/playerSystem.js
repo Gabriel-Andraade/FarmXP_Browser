@@ -9,7 +9,7 @@
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
 import { logger } from '../logger.js';
 import { validateRange } from '../validation.js';
-import { getSystem } from '../gameState.js';
+import { getSystem, registerSystem } from '../gameState.js';
 
 /**
  * Minimum and maximum values for player needs
@@ -759,4 +759,32 @@ export class PlayerSystem {
     }
 }
 
-export const playerSystem = new PlayerSystem();
+// Singleton (compat: characterSelection expects a named export)
+const __isTestEnv =
+  (typeof process !== 'undefined' && process?.env?.NODE_ENV === 'test') ||
+  (typeof Bun !== 'undefined' && Bun?.env?.NODE_ENV === 'test');
+
+export const playerSystem = (() => {
+  const existing = getSystem('player');
+  if (existing) return existing;
+
+  const instance = new PlayerSystem();
+
+  // Register for other systems (SaveSystem, etc.)
+  try {
+    registerSystem('player', instance);
+  } catch (_) {
+    // ignore when document/CustomEvent is not available
+  }
+
+  // Avoid leaving timers running in test environments
+  try {
+    if (__isTestEnv && typeof instance.destroy === 'function') {
+      instance.destroy();
+    }
+  } catch (_) {}
+
+  return instance;
+})();
+
+export default PlayerSystem;

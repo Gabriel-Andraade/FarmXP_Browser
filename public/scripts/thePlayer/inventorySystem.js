@@ -599,3 +599,4 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
 
     itemElement.appendChild(buttonContainer);
 }
+export default InventorySystem;

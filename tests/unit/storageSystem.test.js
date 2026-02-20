@@ -1,15 +1,65 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
 import "../setup.js";
 
+// Test data for items
+const testItems = [
+  { id: 1, type: 'tool', name: 'Axe', price: 100 },
+  { id: 2, type: 'resource', name: 'Wood', price: 10 },
+  { id: 3, type: 'food', name: 'Apple', price: 5 },
+  { id: 4, type: 'animal_food', name: 'Hay', price: 15 },
+  { id: 5, type: 'seed', name: 'Wheat Seeds', price: 20 },
+];
+
 // Mock items module before importing StorageSystem
 mock.module('../../public/scripts/item.js', () => ({
-  items: [
-    { id: 1, type: 'tool', name: 'Axe', price: 100 },
-    { id: 2, type: 'resource', name: 'Wood', price: 10 },
-    { id: 3, type: 'food', name: 'Apple', price: 5 },
-    { id: 4, type: 'animal_food', name: 'Hay', price: 15 },
-    { id: 5, type: 'seed', name: 'Wheat Seeds', price: 20 },
-  ]
+  items: testItems
+}));
+
+// Mock itemUtils.js directly to avoid cross-test contamination
+mock.module('../../public/scripts/itemUtils.js', () => ({
+  getItem: (id) => testItems.find(item => item.id === id) || null,
+  getStackLimit: (id) => {
+    const item = testItems.find(i => i.id === id);
+    if (!item) return 1;
+    return item.type === 'tool' ? 1 : 50;
+  },
+  isPlaceable: (id) => false,
+  getSellPrice: (id) => {
+    const item = testItems.find(i => i.id === id);
+    return item ? Math.floor(item.price * 0.5) : 0;
+  }
+}));
+
+// Mock i18n to avoid import chain issues
+mock.module('../../public/scripts/i18n/i18n.js', () => ({
+  t: (key) => key
+}));
+
+// Mock gameState.js - ALL named exports
+mock.module('../../public/scripts/gameState.js', () => ({
+  registerSystem: () => {},
+  getSystem: () => null,
+  getObject: () => null,
+  setObject: () => {},
+  setDebugFlag: () => {},
+  getDebugFlag: () => false,
+  setGameFlag: () => {},
+  checkGameFlag: () => false,
+  initDebugFlagsFromUrl: () => {},
+  exposeDebug: () => {},
+  installLegacyGlobals: () => {},
+  default: {},
+}));
+
+// Mock validation.js - ALL named exports
+mock.module('../../public/scripts/validation.js', () => ({
+  MAX_CURRENCY: 1_000_000_000,
+  isValidPositiveInteger: (n) => Number.isInteger(n) && n > 0,
+  isValidItemId: (id) => Number.isInteger(id) && id > 0,
+  isValidPositiveNumber: (n) => typeof n === 'number' && n > 0,
+  sanitizeQuantity: (q, min = 1, max = 9999) => Math.max(min, Math.min(max, Math.floor(q))),
+  validateRange: (v, min, max) => Math.max(min, Math.min(max, v)),
+  validateTradeInput: () => ({ valid: true }),
 }));
 
 // Import REAL StorageSystem class from production code
