@@ -297,6 +297,10 @@ class UiPanel {
     if (this.layer && this.layer.parentNode) {
       this.layer.parentNode.removeChild(this.layer);
     }
+    // Null out DOM refs so the detached subtree (and its listener closures) can be GC'd
+    this.layer = this.svg = this.leftPath = this.rightPath = null;
+    this.oval = this.leftBtn = this.rightBtn = null;
+    this.actionsMenu = this.infoMenu = null;
   }
 
   toggleActions() {
