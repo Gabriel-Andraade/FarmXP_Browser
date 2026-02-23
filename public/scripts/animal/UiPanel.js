@@ -53,13 +53,6 @@ class UiPanel {
     this.actionsMenu = null;
     this.infoMenu = null;
 
-    this._onDocPointerDown = (e) => {
-      if (!this.visible) return;
-      if (e.target && e.target.closest && e.target.closest("#animal-ui-layer .aui-interactive")) return;
-      this.closeAll();
-    };
-
-    this._onResize = () => this._resizeSvg();
     this._abortController = new AbortController();
 
     this.init();
@@ -79,8 +72,12 @@ class UiPanel {
     this._createDOM();
 
     const signal = this._abortController.signal;
-    document.addEventListener("pointerdown", this._onDocPointerDown, { capture: true, signal });
-    window.addEventListener("resize", this._onResize, { signal });
+    document.addEventListener("pointerdown", (e) => {
+      if (!this.visible) return;
+      if (e.target && e.target.closest && e.target.closest("#animal-ui-layer .aui-interactive")) return;
+      this.closeAll();
+    }, { capture: true, signal });
+    window.addEventListener("resize", () => this._resizeSvg(), { signal });
     document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
     this._resizeSvg();
@@ -294,6 +291,8 @@ class UiPanel {
   destroy() {
     this.close();
     this._abortController.abort();
+    this._abortController = null;
+    this._loopRunning = false;
     if (this.layer && this.layer.parentNode) {
       this.layer.parentNode.removeChild(this.layer);
     }
