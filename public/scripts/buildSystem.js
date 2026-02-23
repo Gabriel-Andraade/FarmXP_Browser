@@ -185,7 +185,11 @@ export const BuildSystem = {
                 this.mouseUpdatePending = true;
                 this._mouseTimeoutId = setTimeout(() => {
                     this._mouseTimeoutId = null;
-                    this.processPendingMouseUpdate();
+                    if (this.active) {
+                        this.processPendingMouseUpdate();
+                    } else {
+                        this.mouseUpdatePending = false;
+                    }
                 }, this.mouseUpdateInterval);
             }
         }
