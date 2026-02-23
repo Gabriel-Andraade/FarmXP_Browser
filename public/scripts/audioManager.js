@@ -96,6 +96,7 @@ const audioManager = {
   _initialized: false,
   _userInteracted: false,
   _isSleeping: false,
+  _destroyed: false,
 
   /** @type {number|null} rAF id do fade ativo */
   _fadeRafId: null,
@@ -152,6 +153,7 @@ const audioManager = {
   init() {
     if (this._initialized) return;
 
+    this._destroyed = false;
     this._loadVolume();
     this._setupEventListeners();
     this._setupUserInteraction();
@@ -231,70 +233,67 @@ const audioManager = {
   /* ── listeners ────────────────────────────── */
 
   _setupEventListeners() {
-    document.addEventListener('timeChanged', (e) => {
-      this._onTimeChanged(e.detail.time);
-    });
-
-    document.addEventListener('sleepStarted', () => {
-      this._isSleeping = true;
-      this._stopCurrentTrack();
-      this._stopRain();
-      this._stopFog();
-    });
-
-    document.addEventListener('sleepEnded', () => {
-      this._isSleeping = false;
-      const weather = getSystem('weather');
-      if (weather) {
-        this._onTimeChanged(weather.currentTime);
-        if (weather.weatherType === 'rain' || weather.weatherType === 'storm') {
-          this._startRain();
-        } else if (weather.weatherType === 'fog') {
-          this._startFog();
+    this._evtHandlers = {
+      timeChanged: (e) => {
+        this._onTimeChanged(e.detail.time);
+      },
+      sleepStarted: () => {
+        this._isSleeping = true;
+        this._stopCurrentTrack();
+        this._stopRain();
+        this._stopFog();
+      },
+      sleepEnded: () => {
+        this._isSleeping = false;
+        const weather = getSystem('weather');
+        if (weather) {
+          this._onTimeChanged(weather.currentTime);
+          if (weather.weatherType === 'rain' || weather.weatherType === 'storm') {
+            this._startRain();
+          } else if (weather.weatherType === 'fog') {
+            this._startFog();
+          }
         }
-      }
-    });
-
-    document.addEventListener('musicVolumeChanged', (e) => {
-      this.setVolume(e.detail.volume);
-    });
-
-    document.addEventListener('ambientVolumeChanged', (e) => {
-      this.setAmbientVolume(e.detail.volume);
-    });
-
-    document.addEventListener('animalVolumeChanged', (e) => {
-      this.setAnimalVolume(e.detail.volume);
-    });
-
-    document.addEventListener('weatherChanged', (e) => {
-      const { type } = e.detail;
-      if (type === 'rain' || type === 'storm') {
-        this._startRain();
-        this._stopFog();
-      } else if (type === 'fog') {
-        this._stopRain();
-        this._startFog();
-      } else {
-        this._stopRain();
-        this._stopFog();
-      }
-    });
-
-    document.addEventListener('lightningFlash', () => {
-      this._playThunder();
-    });
-
-    document.addEventListener('objectDamaged', (e) => {
-      const { type, x, y } = e.detail;
-      if (type === 'tree') this.playSfx3D('wood_hit', x, y, { category: 'ambient' });
-      else if (type === 'rock') this.playSfx3D('stone_hit', x, y, { category: 'ambient' });
-      else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
-    });
+      },
+      musicVolumeChanged: (e) => {
+        this.setVolume(e.detail.volume);
+      },
+      ambientVolumeChanged: (e) => {
+        this.setAmbientVolume(e.detail.volume);
+      },
+      animalVolumeChanged: (e) => {
+        this.setAnimalVolume(e.detail.volume);
+      },
+      weatherChanged: (e) => {
+        const { type } = e.detail;
+        if (type === 'rain' || type === 'storm') {
+          this._startRain();
+          this._stopFog();
+        } else if (type === 'fog') {
+          this._stopRain();
+          this._startFog();
+        } else {
+          this._stopRain();
+          this._stopFog();
+        }
+      },
+      lightningFlash: () => {
+        this._playThunder();
+      },
+      objectDamaged: (e) => {
+        const { type, x, y } = e.detail;
+        if (type === 'tree') this.playSfx3D('wood_hit', x, y, { category: 'ambient' });
+        else if (type === 'rock') this.playSfx3D('stone_hit', x, y, { category: 'ambient' });
+        else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
+      },
+    };
+    for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+      document.addEventListener(evt, fn);
+    }
   },
 
   _setupUserInteraction() {
-    const unlock = () => {
+    this._unlockFn = () => {
       if (this._userInteracted) return;
       this._userInteracted = true;
 
@@ -311,14 +310,14 @@ const audioManager = {
         }
       }
 
-      document.removeEventListener('click', unlock);
-      document.removeEventListener('keydown', unlock);
-      document.removeEventListener('pointerdown', unlock);
+      document.removeEventListener('click', this._unlockFn);
+      document.removeEventListener('keydown', this._unlockFn);
+      document.removeEventListener('pointerdown', this._unlockFn);
     };
 
-    document.addEventListener('click', unlock, { once: false });
-    document.addEventListener('keydown', unlock, { once: false });
-    document.addEventListener('pointerdown', unlock, { once: false });
+    document.addEventListener('click', this._unlockFn, { once: false });
+    document.addEventListener('keydown', this._unlockFn, { once: false });
+    document.addEventListener('pointerdown', this._unlockFn, { once: false });
   },
 
   /* ── lógica de troca de track ────────────── */
@@ -703,7 +702,7 @@ const audioManager = {
       })
       .then((ab) => this._sfxCtx.decodeAudioData(ab))
       .then((buffer) => {
-        this._sfxBuffers.set(name, buffer);
+        if (!this._destroyed) this._sfxBuffers.set(name, buffer);
         return buffer;
       })
       .catch((err) => {
@@ -1000,6 +999,22 @@ const audioManager = {
     this._stopRain();
     this._stopFog();
 
+    // Remove document event listeners
+    if (this._evtHandlers) {
+      for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+        document.removeEventListener(evt, fn);
+      }
+      this._evtHandlers = null;
+    }
+
+    // Remove interaction-unlock listeners
+    if (this._unlockFn) {
+      document.removeEventListener('click', this._unlockFn);
+      document.removeEventListener('keydown', this._unlockFn);
+      document.removeEventListener('pointerdown', this._unlockFn);
+      this._unlockFn = null;
+    }
+
     if (this._sfxCtx && this._sfxCtx.state !== 'closed') {
       this._sfxCtx.close().catch(() => {});
     }
@@ -1010,6 +1025,8 @@ const audioManager = {
 
     this._initialized = false;
     this._userInteracted = false;
+    this._isSleeping = false;
+    this._destroyed = true;
   }
 };
 
