@@ -81,6 +81,7 @@ export const BuildSystem = {
     _helpStyleId: 'bhp-help-style',
     _helpPanelId: 'bhp-help-panel',
     _helpPanelEl: null,
+    _mouseTimeoutId: null,
 
     /**
      * Cria o painel de ajuda do modo construção
@@ -255,8 +256,8 @@ export const BuildSystem = {
         if (this._mouseTimeoutId) {
             clearTimeout(this._mouseTimeoutId);
             this._mouseTimeoutId = null;
-            this.mouseUpdatePending = false;
         }
+        this.mouseUpdatePending = false;
         this.active = false;
         this.selectedItem = null;
         this.currentVariant = null;
