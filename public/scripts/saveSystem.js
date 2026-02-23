@@ -62,8 +62,8 @@ class SaveSystem {
         registerSystem('save', this);
 
         // Salvar antes de fechar a página
-        if (typeof window !== 'undefined') {
-            window.addEventListener('beforeunload', () => {
+        if (typeof globalThis !== 'undefined') {
+            addEventListener('beforeunload', () => {
                 if (this.activeSlot !== null) {
                     this.saveActive('beforeunload');
                 }
@@ -72,6 +72,13 @@ class SaveSystem {
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden' && this.activeSlot !== null) {
                     this.saveActive('visibilitychange');
+                }
+            });
+
+            addEventListener('storage', (e) => {
+                if (e.key === ROOT_KEY) {
+                    this._cachedRoot = null;
+                    logger.info('[SaveSystem] Cache invalidated due to cross-tab change');
                 }
             });
         }
