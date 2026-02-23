@@ -290,8 +290,10 @@ class UiPanel {
 
   destroy() {
     this.close();
-    this._abortController.abort();
-    this._abortController = null;
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
     this._loopRunning = false;
     if (this.layer && this.layer.parentNode) {
       this.layer.parentNode.removeChild(this.layer);
@@ -300,6 +302,8 @@ class UiPanel {
     this.layer = this.svg = this.leftPath = this.rightPath = null;
     this.oval = this.leftBtn = this.rightBtn = null;
     this.actionsMenu = this.infoMenu = null;
+    // Release non-DOM references that also prevent GC
+    this.canvas = this.camera = null;
   }
 
   toggleActions() {
