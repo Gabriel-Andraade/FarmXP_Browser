@@ -268,8 +268,15 @@ export class AnimalEntity {
             this.x = nextX;
             this.y = nextY;
             
-            // Nota: A atualização do collisionSystem é feita por theWorld.js após update()
-            // para evitar conflitos de valores
+            // Collision hitbox is NOT updated here — this is intentional.
+            // theWorld.js is the sole orchestrator for all collision lifecycle:
+            // it handles addHitbox, updateHitboxPosition and removeHitbox for
+            // every entity (animals, trees, rocks, buildings, wells, etc.).
+            // After calling animal.update(), theWorld.updateAnimals() immediately
+            // syncs the hitbox via collisionSystem.updateHitboxPosition() using
+            // the freshly updated getHitbox() coordinates, keeping position and
+            // collision data consistent within the same frame.
+            // See: theWorld.js:updateAnimals() (lines 252-268)
         } else {
             // Não move, fica IDLE por um tempo mínimo (sem chamar pickNewState imediatamente)
             this.state = AnimalState.IDLE;
