@@ -34,11 +34,19 @@ export function destroyAllSystems() {
         }
 
         // Módulos com cleanup via função standalone (não registrados como sistema)
-        destroyInventoryUI();
-        logger.debug('[Cleanup] InventoryUI destruído');
+        try {
+            destroyInventoryUI();
+            logger.debug('[Cleanup] InventoryUI destruído');
+        } catch (err) {
+            logger.error('[Cleanup] Erro ao destruir InventoryUI:', err);
+        }
 
-        destroyControls();
-        logger.debug('[Cleanup] Controls destruídos');
+        try {
+            destroyControls();
+            logger.debug('[Cleanup] Controls destruídos');
+        } catch (err) {
+            logger.error('[Cleanup] Erro ao destruir Controls:', err);
+        }
 
         logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
     } catch (error) {

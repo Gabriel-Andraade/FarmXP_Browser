@@ -60,6 +60,7 @@ class UiPanel {
     };
 
     this._onResize = () => this._resizeSvg();
+    this._onLanguageChanged = () => this.rebuildInterface();
 
     this.init();
   }
@@ -81,9 +82,7 @@ class UiPanel {
     window.addEventListener("resize", this._onResize);
     
     //  OUVINTE IMPORTANTE: Recria a interface quando o idioma mudar
-    document.addEventListener('languageChanged', () => {
-        this.rebuildInterface();
-    });
+    document.addEventListener('languageChanged', this._onLanguageChanged);
 
     this._resizeSvg();
     this._startLoop();
@@ -460,6 +459,7 @@ class UiPanel {
     // Remove listeners globais
     document.removeEventListener("pointerdown", this._onDocPointerDown, true);
     window.removeEventListener("resize", this._onResize);
+    document.removeEventListener("languageChanged", this._onLanguageChanged);
 
     // Remove o layer do DOM
     if (this.layer && this.layer.parentNode) {

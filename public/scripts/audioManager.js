@@ -231,70 +231,58 @@ const audioManager = {
   /* ── listeners ────────────────────────────── */
 
   _setupEventListeners() {
-    document.addEventListener('timeChanged', (e) => {
-      this._onTimeChanged(e.detail.time);
-    });
-
-    document.addEventListener('sleepStarted', () => {
-      this._isSleeping = true;
-      this._stopCurrentTrack();
-      this._stopRain();
-      this._stopFog();
-    });
-
-    document.addEventListener('sleepEnded', () => {
-      this._isSleeping = false;
-      const weather = getSystem('weather');
-      if (weather) {
-        this._onTimeChanged(weather.currentTime);
-        if (weather.weatherType === 'rain' || weather.weatherType === 'storm') {
-          this._startRain();
-        } else if (weather.weatherType === 'fog') {
-          this._startFog();
+    this._handlers = {
+      timeChanged: (e) => this._onTimeChanged(e.detail.time),
+      sleepStarted: () => {
+        this._isSleeping = true;
+        this._stopCurrentTrack();
+        this._stopRain();
+        this._stopFog();
+      },
+      sleepEnded: () => {
+        this._isSleeping = false;
+        const weather = getSystem('weather');
+        if (weather) {
+          this._onTimeChanged(weather.currentTime);
+          if (weather.weatherType === 'rain' || weather.weatherType === 'storm') {
+            this._startRain();
+          } else if (weather.weatherType === 'fog') {
+            this._startFog();
+          }
         }
-      }
-    });
+      },
+      musicVolumeChanged: (e) => this.setVolume(e.detail.volume),
+      ambientVolumeChanged: (e) => this.setAmbientVolume(e.detail.volume),
+      animalVolumeChanged: (e) => this.setAnimalVolume(e.detail.volume),
+      weatherChanged: (e) => {
+        const { type } = e.detail;
+        if (type === 'rain' || type === 'storm') {
+          this._startRain();
+          this._stopFog();
+        } else if (type === 'fog') {
+          this._stopRain();
+          this._startFog();
+        } else {
+          this._stopRain();
+          this._stopFog();
+        }
+      },
+      lightningFlash: () => this._playThunder(),
+      objectDamaged: (e) => {
+        const { type, x, y } = e.detail;
+        if (type === 'tree') this.playSfx3D('wood_hit', x, y, { category: 'ambient' });
+        else if (type === 'rock') this.playSfx3D('stone_hit', x, y, { category: 'ambient' });
+        else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
+      },
+    };
 
-    document.addEventListener('musicVolumeChanged', (e) => {
-      this.setVolume(e.detail.volume);
-    });
-
-    document.addEventListener('ambientVolumeChanged', (e) => {
-      this.setAmbientVolume(e.detail.volume);
-    });
-
-    document.addEventListener('animalVolumeChanged', (e) => {
-      this.setAnimalVolume(e.detail.volume);
-    });
-
-    document.addEventListener('weatherChanged', (e) => {
-      const { type } = e.detail;
-      if (type === 'rain' || type === 'storm') {
-        this._startRain();
-        this._stopFog();
-      } else if (type === 'fog') {
-        this._stopRain();
-        this._startFog();
-      } else {
-        this._stopRain();
-        this._stopFog();
-      }
-    });
-
-    document.addEventListener('lightningFlash', () => {
-      this._playThunder();
-    });
-
-    document.addEventListener('objectDamaged', (e) => {
-      const { type, x, y } = e.detail;
-      if (type === 'tree') this.playSfx3D('wood_hit', x, y, { category: 'ambient' });
-      else if (type === 'rock') this.playSfx3D('stone_hit', x, y, { category: 'ambient' });
-      else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
-    });
+    for (const [event, handler] of Object.entries(this._handlers)) {
+      document.addEventListener(event, handler);
+    }
   },
 
   _setupUserInteraction() {
-    const unlock = () => {
+    this._unlockHandler = () => {
       if (this._userInteracted) return;
       this._userInteracted = true;
 
@@ -311,14 +299,14 @@ const audioManager = {
         }
       }
 
-      document.removeEventListener('click', unlock);
-      document.removeEventListener('keydown', unlock);
-      document.removeEventListener('pointerdown', unlock);
+      document.removeEventListener('click', this._unlockHandler);
+      document.removeEventListener('keydown', this._unlockHandler);
+      document.removeEventListener('pointerdown', this._unlockHandler);
     };
 
-    document.addEventListener('click', unlock, { once: false });
-    document.addEventListener('keydown', unlock, { once: false });
-    document.addEventListener('pointerdown', unlock, { once: false });
+    document.addEventListener('click', this._unlockHandler, { once: false });
+    document.addEventListener('keydown', this._unlockHandler, { once: false });
+    document.addEventListener('pointerdown', this._unlockHandler, { once: false });
   },
 
   /* ── lógica de troca de track ────────────── */
@@ -985,6 +973,22 @@ const audioManager = {
     this._stopCurrentTrack();
     this._stopRain();
     this._stopFog();
+
+    // Remove todos os event listeners registrados
+    if (this._handlers) {
+      for (const [event, handler] of Object.entries(this._handlers)) {
+        document.removeEventListener(event, handler);
+      }
+      this._handlers = null;
+    }
+
+    // Remove listeners de user interaction (caso ainda não tenham sido removidos)
+    if (this._unlockHandler) {
+      document.removeEventListener('click', this._unlockHandler);
+      document.removeEventListener('keydown', this._unlockHandler);
+      document.removeEventListener('pointerdown', this._unlockHandler);
+      this._unlockHandler = null;
+    }
 
     // Fecha o AudioContext (libera recursos do sistema)
     if (this._sfxCtx) {
