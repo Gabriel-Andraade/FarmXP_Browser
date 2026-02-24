@@ -759,7 +759,10 @@ const audioManager = {
   /**
    * Plays a positional SFX in 3D space.
    * @returns {boolean} true if the sound was fired (or scheduled), false if
-   *   it was skipped (no user interaction yet, AudioContext unavailable, etc.)
+   *   it was skipped (no user interaction yet, AudioContext unavailable, etc.).
+   *   Note: when the buffer isn't yet cached, true means the fetch was
+   *   *scheduled* — if the fetch or decode subsequently fails the sound will
+   *   not play, but the caller will not be notified.
    */
   playSfx3D(name, x, y, {
     volume = 1.0,
