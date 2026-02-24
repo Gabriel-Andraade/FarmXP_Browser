@@ -25,3 +25,6 @@ export const CHARACTER_CONFIG = {
 
 const { character, updateCharacter, drawCharacter, syncNeeds } = createCharacter(CHARACTER_CONFIG);
 export { character as stella, updateCharacter as updateStella, drawCharacter as drawStella, syncNeeds as syncStellaNeeds };
+
+// Standardized export — used by playerSystem.loadCharacterModule()
+export default { entity: character, update: updateCharacter, draw: drawCharacter, syncNeeds };
