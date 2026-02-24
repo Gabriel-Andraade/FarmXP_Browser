@@ -207,10 +207,12 @@ export class AnimalEntity {
             if (now - this._lastSfxTime >= this._sfxCooldownMs && Math.random() < 0.25) {
                 const audio = getSystem('audio');
                 if (audio && audio.playSfx3D) {
-                    audio.playSfx3D('bull_bellow', this.x, this.y, { category: 'animal' });
-                    this._lastSfxTime = now;
-                    // Sorteia novo cooldown para a próxima vez (20-40s)
-                    this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                    const played = audio.playSfx3D('bull_bellow', this.x, this.y, { category: 'animal' });
+                    if (played) {
+                        this._lastSfxTime = now;
+                        // Sorteia novo cooldown para a próxima vez (20-40s)
+                        this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                    }
                 }
             }
         }

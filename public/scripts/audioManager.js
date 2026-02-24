@@ -756,6 +756,11 @@ const audioManager = {
     };
   },
 
+  /**
+   * Plays a positional SFX in 3D space.
+   * @returns {boolean} true if the sound was fired (or scheduled), false if
+   *   it was skipped (no user interaction yet, AudioContext unavailable, etc.)
+   */
   playSfx3D(name, x, y, {
     volume = 1.0,
     playbackRate = 1.0,
@@ -764,9 +769,9 @@ const audioManager = {
     rolloffFactor = 1.0,
     category = 'ambient',
   } = {}) {
-    if (!this._userInteracted) return;
+    if (!this._userInteracted) return false;
     this._ensureSfx();
-    if (!this._sfxCtx || !this._sfxMaster) return;
+    if (!this._sfxCtx || !this._sfxMaster) return false;
 
     const categoryVolume = category === 'animal' ? this._animalVolume : this._ambientVolume;
     const opts = { volume, playbackRate, refDistance, maxDistance, rolloffFactor, categoryVolume };
@@ -775,7 +780,7 @@ const audioManager = {
     const cached = this._sfxBuffers.get(name);
     if (cached) {
       this._fireSfx(cached, x, y, opts);
-      return;
+      return true;
     }
 
     // Fallback assíncrono (primeira vez antes do preload terminar)
@@ -787,6 +792,7 @@ const audioManager = {
       .catch((err) => {
         logger.warn(`AudioManager: SFX "${name}" falhou`, err.message);
       });
+    return true;
   },
 
   /* ── Rain / Thunder (ambient loop) ─────────── */
