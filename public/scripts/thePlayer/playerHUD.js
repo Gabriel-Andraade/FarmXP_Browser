@@ -53,29 +53,33 @@ export class PlayerHUD {
 
     init() {
         this.createHUDStructure();
-        this.bindEvents(); 
-        
-        document.addEventListener("playerNeedsChanged", (e) => {
+        this.bindEvents();
+
+        this._onPlayerNeedsChanged = (e) => {
             const { hunger, thirst, energy } = e.detail;
             this.setHUDValue('hudPlayerHunger', `${hunger}%`);
             this.setHUDValue('hudPlayerThirst', `${thirst}%`);
             this.setHUDValue('hudPlayerEnergy', `${energy}%`);
-        });
+        };
+        document.addEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
 
-        document.addEventListener('characterSelected', (e) => {
+        this._onCharacterSelected = (e) => {
             this.onCharacterSelected(e.detail.character);
-        });
+        };
+        document.addEventListener('characterSelected', this._onCharacterSelected);
 
-        document.addEventListener('playerReady', (e) => {
+        this._onPlayerReady = (e) => {
             this.onPlayerReady(e.detail.player, e.detail.character);
-        });
+        };
+        document.addEventListener('playerReady', this._onPlayerReady);
 
         // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
-        document.addEventListener('languageChanged', () => {
+        this._onLanguageChanged = () => {
             logger.info('[HUD] Idioma alterado, reconstruindo HUD...');
             this.createHUDStructure();
-            this.updatePlayerInfo(); // Atualiza os valores dinâmicos (nome, $$, etc)
-        });
+            this.updatePlayerInfo();
+        };
+        document.addEventListener('languageChanged', this._onLanguageChanged);
     }
 
     createHUDStructure() {
@@ -173,19 +177,21 @@ export class PlayerHUD {
     }
 
     bindEvents() {
-        document.querySelectorAll('.modal-close').forEach(btn =>
-            btn.addEventListener('click', () => this.closeModals())
-        );
-
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) this.closeModals();
+        document.querySelectorAll('.modal-close').forEach((btn) => {
+            btn.addEventListener('click', () => this.closeModals());
         });
+
+        this._onHudClick = (e) => {
+            if (e.target.classList.contains('modal')) this.closeModals();
+        };
+        document.addEventListener('click', this._onHudClick);
 
         // Listener para atualização de dinheiro em tempo real (documento, roda 1x)
-        document.addEventListener("moneyChanged", (e) => {
+        this._onMoneyChanged = (e) => {
             const el = document.getElementById("hudPlayerMoney");
             if (el) el.textContent = `$${e.detail.money}`;
-        });
+        };
+        document.addEventListener("moneyChanged", this._onMoneyChanged);
     }
 
     /**
@@ -347,6 +353,31 @@ export class PlayerHUD {
                 equippedElement.style.display = 'none';
             }
         }
+    }
+
+    destroy() {
+        // Para o intervalo de atualização de necessidades
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // Remove event listeners registrados em init() e bindEvents()
+        document.removeEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
+        document.removeEventListener('characterSelected', this._onCharacterSelected);
+        document.removeEventListener('playerReady', this._onPlayerReady);
+        document.removeEventListener('languageChanged', this._onLanguageChanged);
+        document.removeEventListener('click', this._onHudClick);
+        document.removeEventListener('moneyChanged', this._onMoneyChanged);
+
+        // Remove elementos do DOM
+        const panel = document.getElementById('playerPanel');
+        if (panel) panel.remove();
+        for (const el of document.querySelectorAll('.hud-action-buttons')) {
+            el.remove();
+        }
+
+        logger.debug('PlayerHUD destruído');
     }
 
     render() {

@@ -56,6 +56,14 @@ export function getSystem(systemName) {
 }
 
 /**
+ * Get all registered systems as [name, instance] entries
+ * @returns {Array<[string, Object]>} Array of [systemName, systemInstance] pairs
+ */
+export function getAllSystems() {
+  return Object.entries(gameState.systems);
+}
+
+/**
  * Set a game object (camera, world, player, etc)
  * @param {string} name - Object name
  * @param {*} value - Object value

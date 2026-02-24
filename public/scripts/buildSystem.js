@@ -53,6 +53,7 @@ export const BuildSystem = {
     lastMouseUpdate: 0,
     mouseUpdateInterval: MOUSE_UPDATE_INTERVAL_MS,
     mouseUpdatePending: false,
+    _mouseUpdateTimer: null,
     pendingMouseX: 0,
     pendingMouseY: 0,
 
@@ -182,7 +183,8 @@ export const BuildSystem = {
             
             if (!this.mouseUpdatePending) {
                 this.mouseUpdatePending = true;
-                setTimeout(() => {
+                this._mouseUpdateTimer = setTimeout(() => {
+                    this._mouseUpdateTimer = null;
                     this.processPendingMouseUpdate();
                 }, this.mouseUpdateInterval);
             }
@@ -634,6 +636,23 @@ export const BuildSystem = {
 
     removeDebugOverlay() {
         if (this.debugElement) { this.debugElement.remove(); this.debugElement = null; }
+    },
+
+    destroy() {
+        this.stopBuilding();
+        clearTimeout(this.msgTimeout);
+        this.msgTimeout = null;
+        clearTimeout(this._mouseUpdateTimer);
+        this._mouseUpdateTimer = null;
+        this.mouseUpdatePending = false;
+
+        // Remove o painel de ajuda do DOM
+        if (this._helpPanelEl) {
+            this._helpPanelEl.remove();
+            this._helpPanelEl = null;
+        }
+
+        logger.debug('BuildSystem destruído');
     },
 
     toggleDebug() {
