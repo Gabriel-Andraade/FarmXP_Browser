@@ -186,6 +186,8 @@ export class AnimalEntity {
      * @returns {void}
      */
     pickNewState() {
+        this.frameIndex = 0;
+
         if (Math.random() > 0.6) {
             this.state = AnimalState.MOVE;
             this.stateDuration = Math.random() * (MOVE_STATE_MAX_MS - MOVE_STATE_MIN_MS) + MOVE_STATE_MIN_MS;
@@ -245,6 +247,7 @@ export class AnimalEntity {
 
         if (dist < 2) {
             this.state = AnimalState.IDLE;
+            this.frameIndex = 0;
             return;
         }
 
@@ -273,6 +276,7 @@ export class AnimalEntity {
         } else {
             // Não move, fica IDLE por um tempo mínimo (sem chamar pickNewState imediatamente)
             this.state = AnimalState.IDLE;
+            this.frameIndex = 0;
             this.stateTimer = performance.now();
             this.stateDuration = IDLE_STATE_MIN_MS;
             return;
