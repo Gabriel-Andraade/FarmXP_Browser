@@ -62,8 +62,8 @@ class SaveSystem {
         registerSystem('save', this);
 
         // Salvar antes de fechar a página
-        if (typeof globalThis !== 'undefined') {
-            addEventListener('beforeunload', () => {
+            if (typeof window !== 'undefined') {
+                window.addEventListener('beforeunload', () => {
                 if (this.activeSlot !== null) {
                     this.saveActive('beforeunload');
                 }
@@ -75,8 +75,8 @@ class SaveSystem {
                 }
             });
 
-            addEventListener('storage', (e) => {
-                if (e.key === ROOT_KEY) {
+             window.addEventListener('storage', (e) => {
+                if (e.key === ROOT_KEY || e.key === null) {
                     this._cachedRoot = null;
                     logger.info('[SaveSystem] Cache invalidated due to cross-tab change');
                 }
