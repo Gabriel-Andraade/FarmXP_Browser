@@ -452,6 +452,22 @@ class UiPanel {
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   }
 
+  destroy() {
+    // Para o loop de rAF
+    this._loopRunning = false;
+    this.close();
+
+    // Remove listeners globais
+    document.removeEventListener("pointerdown", this._onDocPointerDown, true);
+    window.removeEventListener("resize", this._onResize);
+
+    // Remove o layer do DOM
+    if (this.layer && this.layer.parentNode) {
+      this.layer.remove();
+    }
+    this.layer = null;
+  }
+
   _startLoop() {
     if (this._loopRunning) return;
     this._loopRunning = true;

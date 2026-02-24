@@ -349,6 +349,21 @@ export class PlayerHUD {
         }
     }
 
+    destroy() {
+        // Para o intervalo de atualização de necessidades
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // Remove elementos do DOM
+        const panel = document.getElementById('playerPanel');
+        if (panel) panel.remove();
+        document.querySelectorAll('.hud-action-buttons').forEach((el) => el.remove());
+
+        logger.debug('PlayerHUD destruído');
+    }
+
     render() {
         this.updatePlayerInfo();
     }

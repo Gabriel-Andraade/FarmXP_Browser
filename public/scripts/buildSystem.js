@@ -636,6 +636,20 @@ export const BuildSystem = {
         if (this.debugElement) { this.debugElement.remove(); this.debugElement = null; }
     },
 
+    destroy() {
+        this.stopBuilding();
+        clearTimeout(this.msgTimeout);
+        this.msgTimeout = null;
+
+        // Remove o painel de ajuda do DOM
+        if (this._helpPanelEl) {
+            this._helpPanelEl.remove();
+            this._helpPanelEl = null;
+        }
+
+        logger.debug('BuildSystem destruído');
+    },
+
     toggleDebug() {
         this.debugMode = !this.debugMode;
         if (this.debugMode) {

@@ -440,6 +440,16 @@ export class CraftingSystem {
   }
 
   /**
+   * Cleanup do sistema de crafting
+   * Remove listeners e fecha UI se aberta
+   * @returns {void}
+   */
+  destroy() {
+    this.close();
+    logger.debug('CraftingSystem destruído');
+  }
+
+  /**
    * Exibe uma mensagem de feedback ao jogador
    * @param {string} text
    * @param {"success"|"error"} [type="success"]

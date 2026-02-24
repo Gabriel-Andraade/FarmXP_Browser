@@ -978,6 +978,33 @@ const audioManager = {
     }
   },
 
+  /* ── cleanup ─────────────────────────────── */
+
+  destroy() {
+    // Para toda reprodução ativa
+    this._stopCurrentTrack();
+    this._stopRain();
+    this._stopFog();
+
+    // Fecha o AudioContext (libera recursos do sistema)
+    if (this._sfxCtx) {
+      this._sfxCtx.close().catch(() => {});
+      this._sfxCtx = null;
+      this._sfxMaster = null;
+    }
+
+    // Limpa caches de buffer
+    this._sfxBufferPromises.clear();
+    this._sfxBuffers.clear();
+
+    // Reset de estado
+    this._initialized = false;
+    this._userInteracted = false;
+    this._phase = 'idle';
+
+    logger.debug('AudioManager destruído');
+  },
+
   /* ── save / load ──────────────────────────── */
 
   getSaveData() {
