@@ -189,6 +189,9 @@ export const WeatherSystem = {
         updateWeatherUIPanelContent();
       });
 
+      // Language-safe: getSeasonName() and getWeekday() call t() on every
+      // invocation (no cached strings), so a single UI refresh here is enough
+      // to display all weather panel text in the new language immediately.
       document.addEventListener("languageChanged", () => {
         updateWeatherUIPanelContent();
       });
