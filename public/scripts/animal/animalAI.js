@@ -297,8 +297,9 @@ export class AnimalEntity {
             ? ANIMATION.FRAME_RATE_MOVE_MS 
             : ANIMATION.FRAME_RATE_IDLE_MS;
 
-        const maxFrames = this.frameCounts
-            ? (this.frameCounts[this.state] ?? this.cols)
+        const configuredFrames = this.frameCounts?.[this.state];
+        const maxFrames = Number.isFinite(configuredFrames)
+            ? Math.min(this.cols, Math.max(1, Math.floor(configuredFrames)))
             : this.cols;
 
 
