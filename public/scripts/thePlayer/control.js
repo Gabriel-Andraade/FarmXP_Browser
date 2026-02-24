@@ -1043,8 +1043,7 @@ if (document.readyState === 'loading') {
 export function destroyControls() {
     controlsAbortController.abort();
     
-    // Re-inicializar AbortController para permitir re-setup
-    controlsAbortController = new AbortController();
+
 }
 
 // Expor para cleanup global
