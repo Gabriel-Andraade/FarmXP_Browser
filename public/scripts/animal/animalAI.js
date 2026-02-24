@@ -48,6 +48,9 @@ export class AnimalEntity {
      * @param {number} y - Posição Y inicial no mundo
      */
     constructor(assetName, assetData, x, y) {
+        // Optional: map animation rows to their actual frame counts
+        // e.g. assetData.frameCounts = { idle: 2, move: 4 }
+        this.frameCounts = assetData.frameCounts || null;
         this.type = "ANIMAL";
         this.assetName = assetName;
         
@@ -294,9 +297,14 @@ export class AnimalEntity {
             ? ANIMATION.FRAME_RATE_MOVE_MS 
             : ANIMATION.FRAME_RATE_IDLE_MS;
 
+        const maxFrames = this.frameCounts
+            ? (this.frameCounts[this.state] ?? this.cols)
+            : this.cols;
+
+
         if (now - this.lastFrameTime >= frameRate) {
             this.lastFrameTime = now;
-            this.frameIndex = (this.frameIndex + 1) % this.cols;
+            this.frameIndex = (this.frameIndex + 1) % maxFrames;
         }
     }
 
