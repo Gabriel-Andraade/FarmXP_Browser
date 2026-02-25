@@ -19,6 +19,8 @@ import { destroyControls } from './thePlayer/control.js';
  */
 export function destroyAllSystems() {
     try {
+        // fix: track partial failures so the final log reflects actual outcome
+        let hadErrors = false;
         logger.info('[Cleanup] Iniciando destruição de todos os sistemas...');
 
         // Destrói todos os sistemas registrados em gameState que possuem destroy()
@@ -28,6 +30,7 @@ export function destroyAllSystems() {
                     system.destroy();
                     logger.debug(`[Cleanup] ${name} destruído`);
                 } catch (err) {
+                    hadErrors = true;
                     logger.error(`[Cleanup] Erro ao destruir ${name}:`, err);
                 }
             }
@@ -39,6 +42,7 @@ export function destroyAllSystems() {
             destroyInventoryUI();
             logger.debug('[Cleanup] InventoryUI destruído');
         } catch (err) {
+            hadErrors = true;
             logger.error('[Cleanup] Erro ao destruir InventoryUI:', err);
         }
 
@@ -46,10 +50,15 @@ export function destroyAllSystems() {
             destroyControls();
             logger.debug('[Cleanup] Controls destruídos');
         } catch (err) {
+            hadErrors = true;
             logger.error('[Cleanup] Erro ao destruir Controls:', err);
         }
 
-        logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
+        if (hadErrors) {
+            logger.warn('[Cleanup] Cleanup concluído com falhas parciais');
+        } else {
+            logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
+        }
     } catch (error) {
         logger.error('[Cleanup] Erro durante destruição dos sistemas:', error);
     }

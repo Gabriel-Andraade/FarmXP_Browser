@@ -176,6 +176,12 @@ export class HouseSystem {
             this._onKeyDown = null;
         }
 
+        // fix: remove stale hitbox from collision system
+        if (this.houseInteractionHitbox) {
+            collisionSystem.interactionHitboxes.delete(this.houseInteractionHitbox.id);
+            this.houseInteractionHitbox = null;
+        }
+
         this.closeStorageModal();
         this.closeHouseMenu();
         this.hideDoorHint();

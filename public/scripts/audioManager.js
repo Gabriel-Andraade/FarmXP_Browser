@@ -1005,6 +1005,8 @@ const audioManager = {
     // Reset de estado
     this._initialized = false;
     this._userInteracted = false;
+    // fix: reset _isSleeping to avoid stale sleep state blocking _onTimeChanged() on re-init
+    this._isSleeping = false;
     this._phase = 'idle';
 
     logger.debug('AudioManager destruído');
