@@ -48,6 +48,9 @@ export class AnimalEntity {
      * @param {number} y - Posição Y inicial no mundo
      */
     constructor(assetName, assetData, x, y) {
+        // Optional: map animation rows to their actual frame counts
+        // e.g. assetData.frameCounts = { idle: 2, move: 4 }
+        this.frameCounts = assetData.frameCounts || null;
         this.type = "ANIMAL";
         this.assetName = assetName;
         
@@ -186,6 +189,8 @@ export class AnimalEntity {
      * @returns {void}
      */
     pickNewState() {
+        this.frameIndex = 0;
+
         if (Math.random() > 0.6) {
             this.state = AnimalState.MOVE;
             this.stateDuration = Math.random() * (MOVE_STATE_MAX_MS - MOVE_STATE_MIN_MS) + MOVE_STATE_MIN_MS;
@@ -245,6 +250,7 @@ export class AnimalEntity {
 
         if (dist < 2) {
             this.state = AnimalState.IDLE;
+            this.frameIndex = 0;
             return;
         }
 
@@ -273,6 +279,7 @@ export class AnimalEntity {
         } else {
             // Não move, fica IDLE por um tempo mínimo (sem chamar pickNewState imediatamente)
             this.state = AnimalState.IDLE;
+            this.frameIndex = 0;
             this.stateTimer = performance.now();
             this.stateDuration = IDLE_STATE_MIN_MS;
             return;
@@ -290,9 +297,15 @@ export class AnimalEntity {
             ? ANIMATION.FRAME_RATE_MOVE_MS 
             : ANIMATION.FRAME_RATE_IDLE_MS;
 
+        const configuredFrames = this.frameCounts?.[this.state];
+        const maxFrames = Number.isFinite(configuredFrames)
+            ? Math.min(this.cols, Math.max(1, Math.floor(configuredFrames)))
+            : this.cols;
+
+
         if (now - this.lastFrameTime >= frameRate) {
             this.lastFrameTime = now;
-            this.frameIndex = (this.frameIndex + 1) % this.cols;
+            this.frameIndex = (this.frameIndex + 1) % maxFrames;
         }
     }
 
