@@ -53,13 +53,7 @@ class UiPanel {
     this.actionsMenu = null;
     this.infoMenu = null;
 
-    this._onDocPointerDown = (e) => {
-      if (!this.visible) return;
-      if (e.target && e.target.closest && e.target.closest("#animal-ui-layer .aui-interactive")) return;
-      this.closeAll();
-    };
-
-    this._onResize = () => this._resizeSvg();
+    this._abortController = new AbortController();
 
     this.init();
   }
@@ -77,13 +71,14 @@ class UiPanel {
     // Cria o DOM inicial
     this._createDOM();
 
-    document.addEventListener("pointerdown", this._onDocPointerDown, true);
-    window.addEventListener("resize", this._onResize);
-    
-    //  OUVINTE IMPORTANTE: Recria a interface quando o idioma mudar
-    document.addEventListener('languageChanged', () => {
-        this.rebuildInterface();
-    });
+    const signal = this._abortController.signal;
+    document.addEventListener("pointerdown", (e) => {
+      if (!this.visible) return;
+      if (e.target && e.target.closest && e.target.closest("#animal-ui-layer .aui-interactive")) return;
+      this.closeAll();
+    }, { capture: true, signal });
+    window.addEventListener("resize", () => this._resizeSvg(), { signal });
+    document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
     this._resizeSvg();
     this._startLoop();
@@ -291,6 +286,24 @@ class UiPanel {
 
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
+  }
+
+  destroy() {
+    this.close();
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
+    }
+    this._loopRunning = false;
+    if (this.layer && this.layer.parentNode) {
+      this.layer.parentNode.removeChild(this.layer);
+    }
+    // Null out DOM refs so the detached subtree (and its listener closures) can be GC'd
+    this.layer = this.svg = this.leftPath = this.rightPath = null;
+    this.oval = this.leftBtn = this.rightBtn = null;
+    this.actionsMenu = this.infoMenu = null;
+    // Release non-DOM references that also prevent GC
+    this.canvas = this.camera = null;
   }
 
   toggleActions() {
