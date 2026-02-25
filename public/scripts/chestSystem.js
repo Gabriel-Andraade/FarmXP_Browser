@@ -806,6 +806,12 @@ export const chestSystem = {
      * @param {number} playerHeight - Altura do jogador
      * @returns {Object|null} Objeto do baú se estiver no alcance, null caso contrário
      */
+    // fix: added destroy() for gameCleanup auto-discovery
+    destroy() {
+        this.closeChestUI();
+        logger.debug('ChestSystem destruído');
+    },
+
     checkChestInteraction(playerX, playerY, playerWidth, playerHeight) {
         const interactionRange = 60;
         

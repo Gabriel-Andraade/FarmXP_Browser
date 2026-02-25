@@ -33,7 +33,8 @@ export function destroyAllSystems() {
             }
         }
 
-        // Módulos com cleanup via função standalone (não registrados como sistema)
+        // fix: wrapped each standalone cleanup in its own try/catch to prevent
+        // a failure in one from skipping the others
         try {
             destroyInventoryUI();
             logger.debug('[Cleanup] InventoryUI destruído');

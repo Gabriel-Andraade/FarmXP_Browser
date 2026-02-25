@@ -7,7 +7,7 @@
 
 import { saveSystem, formatPlayTime, formatDateTime } from './saveSystem.js';
 import { logger } from './logger.js';
-import { getSystem } from './gameState.js';
+import { getSystem, registerSystem } from './gameState.js';
 import { t } from './i18n/i18n.js';
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen, blockInteractions, unblockInteractions } from './loadingScreen.js';
 
@@ -38,12 +38,13 @@ class SaveSlotsUI {
         this.mode = 'menu'; // 'menu', 'save', 'load'
         this.onLoadCallback = null;
 
-        // Escutar mudanças nos saves
-        document.addEventListener('save:changed', () => {
+        // fix: store named handler so destroy() can remove it
+        this._onSaveChanged = () => {
             if (this.isOpen) {
                 this.render();
             }
-        });
+        };
+        document.addEventListener('save:changed', this._onSaveChanged);
     }
 
     /**
@@ -474,10 +475,30 @@ class SaveSlotsUI {
             setTimeout(() => toast.remove(), 300);
         }, 2000);
     }
+
+    // fix: added destroy() for proper teardown of persistent listeners
+    destroy() {
+        if (this._onSaveChanged) {
+            document.removeEventListener('save:changed', this._onSaveChanged);
+            this._onSaveChanged = null;
+        }
+
+        if (this.modal) {
+            this.modal.remove();
+            this.modal = null;
+        }
+
+        this.isOpen = false;
+        this.onLoadCallback = null;
+
+        logger.debug('SaveSlotsUI destruído');
+    }
 }
 
 // Singleton
 export const saveSlotsUI = new SaveSlotsUI();
+// fix: register as system for gameCleanup auto-discovery
+registerSystem('saveSlotsUI', saveSlotsUI);
 
 // Expor globalmente para debug
 if (typeof window !== 'undefined') {

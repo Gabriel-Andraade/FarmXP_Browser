@@ -29,6 +29,10 @@ export class HouseSystem {
         this.isMenuOpen = false;
         this.isPlayerNearDoor = false;
 
+        // fix: track setup retry timer and keydown handler for cleanup in destroy()
+        this._setupRetryTimer = null;
+        this._onKeyDown = null;
+
         this._injectHouseAndStorageStyles();
         this.storageQtySelection = new Map();
         this.setupHouseInteraction();
@@ -105,7 +109,11 @@ export class HouseSystem {
         const houseWalls = this.findHouseWalls();
 
         if (!houseWalls) {
-            setTimeout(() => this.setupHouseInteraction(), 2000);
+            // fix: store retry timer so destroy() can cancel it
+            this._setupRetryTimer = setTimeout(() => {
+                this._setupRetryTimer = null;
+                this.setupHouseInteraction();
+            }, 2000);
             return;
         }
 
@@ -140,19 +148,39 @@ export class HouseSystem {
     }
 
     setupEventListeners() {
-        document.addEventListener('keydown', (e) => {
+        // fix: store named handler so destroy() can remove it
+        this._onKeyDown = (e) => {
             if (e.key === 'Escape' && (this.isMenuOpen || document.querySelector('.storage-modal'))) {
                 if (document.querySelector('.storage-modal')) this.closeStorageModal();
                 else this.closeHouseMenu();
             } else if ((e.key === 'e' || e.key === 'E') && this.isPlayerNearDoor && !this.isMenuOpen) {
                 this.openHouseMenu();
             }
-        });
+        };
+        document.addEventListener('keydown', this._onKeyDown);
     }
 
-    cleanup() {
-        if (this.proximityCheckInterval) clearInterval(this.proximityCheckInterval);
+    // fix: renamed cleanup() to destroy() for gameCleanup auto-discovery,
+    // and added removal of keydown listener + pending timer
+    destroy() {
+        if (this.proximityCheckInterval) {
+            clearInterval(this.proximityCheckInterval);
+            this.proximityCheckInterval = null;
+        }
+
+        clearTimeout(this._setupRetryTimer);
+        this._setupRetryTimer = null;
+
+        if (this._onKeyDown) {
+            document.removeEventListener('keydown', this._onKeyDown);
+            this._onKeyDown = null;
+        }
+
+        this.closeStorageModal();
+        this.closeHouseMenu();
         this.hideDoorHint();
+
+        logger.debug('HouseSystem destruído');
     }
 
     openHouseMenu() {

@@ -230,6 +230,7 @@ const audioManager = {
 
   /* ── listeners ────────────────────────────── */
 
+  // fix: stored all event handlers as named references for proper cleanup in destroy()
   _setupEventListeners() {
     this._handlers = {
       timeChanged: (e) => this._onTimeChanged(e.detail.time),
@@ -974,7 +975,7 @@ const audioManager = {
     this._stopRain();
     this._stopFog();
 
-    // Remove todos os event listeners registrados
+    // fix: removed all document event listeners registered by _setupEventListeners()
     if (this._handlers) {
       for (const [event, handler] of Object.entries(this._handlers)) {
         document.removeEventListener(event, handler);
@@ -982,7 +983,7 @@ const audioManager = {
       this._handlers = null;
     }
 
-    // Remove listeners de user interaction (caso ainda não tenham sido removidos)
+    // fix: removed user interaction listeners registered by _setupUserInteraction()
     if (this._unlockHandler) {
       document.removeEventListener('click', this._unlockHandler);
       document.removeEventListener('keydown', this._unlockHandler);

@@ -53,6 +53,7 @@ export const BuildSystem = {
     lastMouseUpdate: 0,
     mouseUpdateInterval: MOUSE_UPDATE_INTERVAL_MS,
     mouseUpdatePending: false,
+    // fix: stored setTimeout ID so destroy() can cancel the throttled mouse update
     _mouseUpdateTimer: null,
     pendingMouseX: 0,
     pendingMouseY: 0,
@@ -642,6 +643,7 @@ export const BuildSystem = {
         this.stopBuilding();
         clearTimeout(this.msgTimeout);
         this.msgTimeout = null;
+        // fix: cleared the throttled mouse-update timer to prevent post-destroy callback
         clearTimeout(this._mouseUpdateTimer);
         this._mouseUpdateTimer = null;
         this.mouseUpdatePending = false;

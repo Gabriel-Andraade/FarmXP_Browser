@@ -55,6 +55,7 @@ export class PlayerHUD {
         this.createHUDStructure();
         this.bindEvents();
 
+        // fix: stored all event handlers as named fields for proper removal in destroy()
         this._onPlayerNeedsChanged = (e) => {
             const { hunger, thirst, energy } = e.detail;
             this.setHUDValue('hudPlayerHunger', `${hunger}%`);
@@ -362,7 +363,7 @@ export class PlayerHUD {
             this.needsUpdateInterval = null;
         }
 
-        // Remove event listeners registrados em init() e bindEvents()
+        // fix: removed all document event listeners added in init() and bindEvents()
         document.removeEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
         document.removeEventListener('characterSelected', this._onCharacterSelected);
         document.removeEventListener('playerReady', this._onPlayerReady);
@@ -373,6 +374,7 @@ export class PlayerHUD {
         // Remove elementos do DOM
         const panel = document.getElementById('playerPanel');
         if (panel) panel.remove();
+        // fix: replaced forEach with for...of to avoid implicit return value lint warning
         for (const el of document.querySelectorAll('.hud-action-buttons')) {
             el.remove();
         }

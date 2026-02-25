@@ -60,6 +60,7 @@ class UiPanel {
     };
 
     this._onResize = () => this._resizeSvg();
+    // fix: store named reference so destroy() can remove the languageChanged listener
     this._onLanguageChanged = () => this.rebuildInterface();
 
     this.init();
@@ -459,6 +460,7 @@ class UiPanel {
     // Remove listeners globais
     document.removeEventListener("pointerdown", this._onDocPointerDown, true);
     window.removeEventListener("resize", this._onResize);
+    // fix: removed the languageChanged listener that was previously anonymous
     document.removeEventListener("languageChanged", this._onLanguageChanged);
 
     // Remove o layer do DOM

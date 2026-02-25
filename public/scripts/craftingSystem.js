@@ -50,6 +50,8 @@ export class CraftingSystem {
     this.activeCategory = "all";
 
     this.handleEscapeBound = null;
+    // fix: track pending timers for cleanup in destroy()
+    this._pendingTimers = [];
   }
 
   /**
@@ -193,7 +195,9 @@ export class CraftingSystem {
     this.renderRecipeList();
 
     if (craftBtn) {
-      setTimeout(() => {
+      // fix: store setTimeout ID so destroy() can cancel it
+      const timerId = setTimeout(() => {
+        this._pendingTimers = this._pendingTimers.filter(id => id !== timerId);
         craftBtn.disabled = false;
         // fix: innerHTML → DOM API
         craftBtn.replaceChildren();
@@ -202,6 +206,7 @@ export class CraftingSystem {
         craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
         craftBtn.classList.remove("crf-disabled");
       }, 1000);
+      this._pendingTimers.push(timerId);
     }
   }
 
@@ -446,6 +451,11 @@ export class CraftingSystem {
    */
   destroy() {
     this.close();
+    // fix: clear any pending timers (e.g. craft button re-enable timeout)
+    for (const id of this._pendingTimers) {
+      clearTimeout(id);
+    }
+    this._pendingTimers = [];
     logger.debug('CraftingSystem destruído');
   }
 
