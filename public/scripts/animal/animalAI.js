@@ -276,7 +276,7 @@ export class AnimalEntity {
             // syncs the hitbox via collisionSystem.updateHitboxPosition() using
             // the freshly updated getHitbox() coordinates, keeping position and
             // collision data consistent within the same frame.
-            // See: theWorld.js:updateAnimals() (lines 252-268)
+            // See: theWorld.js:updateAnimals()
         } else {
             // Não move, fica IDLE por um tempo mínimo (sem chamar pickNewState imediatamente)
             this.state = AnimalState.IDLE;
