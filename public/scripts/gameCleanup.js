@@ -88,6 +88,13 @@ export function destroyAllSystems() {
             logger.debug('[Cleanup] WeatherSystem destruído');
         }
 
+        // AudioManager - Cleanup de AudioContext, tracks e SFX buffers
+        const audioManager = getSystem('audio');
+        if (audioManager && typeof audioManager.destroy === 'function') {
+            audioManager.destroy();
+            logger.debug('[Cleanup] AudioManager destruído');
+        }
+
         logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
     } catch (error) {
         logger.error('[Cleanup] Erro durante destruição dos sistemas:', error);
