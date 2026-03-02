@@ -286,7 +286,7 @@ const audioManager = {
         else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
       },
     };
-    for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+    for (const [evt, fn] of Object.entries(this._handlers)) {
       document.addEventListener(evt, fn);
     }
   },
@@ -1047,40 +1047,6 @@ const audioManager = {
     if (typeof data.animalVolume === 'number') this.setAnimalVolume(data.animalVolume);
   },
 
-  destroy() {
-    this._stopCurrentTrack();
-    this._stopRain();
-    this._stopFog();
-
-    // Remove document event listeners
-    if (this._evtHandlers) {
-      for (const [evt, fn] of Object.entries(this._evtHandlers)) {
-        document.removeEventListener(evt, fn);
-      }
-      this._evtHandlers = null;
-    }
-
-    // Remove interaction-unlock listeners
-    if (this._unlockFn) {
-      document.removeEventListener('click', this._unlockFn);
-      document.removeEventListener('keydown', this._unlockFn);
-      document.removeEventListener('pointerdown', this._unlockFn);
-      this._unlockFn = null;
-    }
-
-    if (this._sfxCtx && this._sfxCtx.state !== 'closed') {
-      this._sfxCtx.close().catch(() => {});
-    }
-    this._sfxCtx = null;
-    this._sfxMaster = null;
-    this._sfxBuffers.clear();
-    this._sfxBufferPromises.clear();
-
-    this._initialized = false;
-    this._userInteracted = false;
-    this._isSleeping = false;
-    this._destroyed = true;
-  }
 };
 
 export { audioManager };

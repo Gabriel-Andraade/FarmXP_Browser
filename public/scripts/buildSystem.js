@@ -255,9 +255,9 @@ export const BuildSystem = {
     },
 
     stopBuilding() {
-        if (this._mouseTimeoutId) {
-            clearTimeout(this._mouseTimeoutId);
-            this._mouseTimeoutId = null;
+        if (this._mouseUpdateTimer) {
+            clearTimeout(this._mouseUpdateTimer);
+            this._mouseUpdateTimer = null;
         }
         this.mouseUpdatePending = false;
         this.active = false;
