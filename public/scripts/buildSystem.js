@@ -83,7 +83,6 @@ export const BuildSystem = {
     _helpStyleId: 'bhp-help-style',
     _helpPanelId: 'bhp-help-panel',
     _helpPanelEl: null,
-    _mouseTimeoutId: null,
 
     /**
      * Cria o painel de ajuda do modo construção

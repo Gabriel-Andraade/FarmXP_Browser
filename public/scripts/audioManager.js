@@ -988,6 +988,7 @@ const audioManager = {
   /* ── cleanup ─────────────────────────────── */
 
   destroy() {
+    this._destroyed = true;
     // Para toda reprodução ativa
     this._stopCurrentTrack();
     this._stopRain();
