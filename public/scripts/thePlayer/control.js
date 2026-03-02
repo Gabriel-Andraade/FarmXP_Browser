@@ -1011,11 +1011,12 @@ export function getMovementDirection() {
     return { x, y };
 }
 
-// Initialize controls when the dom is ready
-document.addEventListener('DOMContentLoaded', () => {
-    // puxa binds do configUI (se existir) e alinha com storage/eventos
+// Initialize controls when the DOM is ready.
+// Modules loaded via <script type="module" defer> may execute after
+// DOMContentLoaded has already fired, so check readyState first to
+// avoid the listener never running.
+function _initControlsDOMReady() {
     bootstrapKeybindsFromConfigUI();
-
     setupInventoryControls();
     setupUIShortcuts();
 
@@ -1025,7 +1026,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.style.display = 'none';
         });
     }
-}, { signal: controlsAbortController.signal });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initControlsDOMReady, { signal: controlsAbortController.signal });
+} else {
+    _initControlsDOMReady();
+}
 
 
 /**
@@ -1036,8 +1043,7 @@ document.addEventListener('DOMContentLoaded', () => {
 export function destroyControls() {
     controlsAbortController.abort();
     
-    // Re-inicializar AbortController para permitir re-setup
-    controlsAbortController = new AbortController();
+
 }
 
 // Expor para cleanup global

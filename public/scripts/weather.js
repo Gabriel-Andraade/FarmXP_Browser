@@ -195,15 +195,12 @@ export const WeatherSystem = {
     }
   },
 
-  // fix: added destroy() for gameCleanup auto-discovery
-  destroy() {
-    if (this._onResize) {
-      window.removeEventListener("resize", this._onResize);
-      this._onResize = null;
-    }
-    if (this._onTimeChanged) {
-      document.removeEventListener("timeChanged", this._onTimeChanged);
-      this._onTimeChanged = null;
+      // Language-safe: getSeasonName() and getWeekday() call t() on every
+      // invocation (no cached strings), so a single UI refresh here is enough
+      // to display all weather panel text in the new language immediately.
+      document.addEventListener("languageChanged", () => {
+        updateWeatherUIPanelContent();
+      });
     }
     if (this._onDayChanged) {
       document.removeEventListener("dayChanged", this._onDayChanged);

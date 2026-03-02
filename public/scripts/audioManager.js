@@ -96,6 +96,7 @@ const audioManager = {
   _initialized: false,
   _userInteracted: false,
   _isSleeping: false,
+  _destroyed: false,
 
   /** @type {number|null} rAF id do fade ativo */
   _fadeRafId: null,
@@ -152,6 +153,7 @@ const audioManager = {
   init() {
     if (this._initialized) return;
 
+    this._destroyed = false;
     this._loadVolume();
     this._setupEventListeners();
     this._setupUserInteraction();
@@ -252,9 +254,15 @@ const audioManager = {
           }
         }
       },
-      musicVolumeChanged: (e) => this.setVolume(e.detail.volume),
-      ambientVolumeChanged: (e) => this.setAmbientVolume(e.detail.volume),
-      animalVolumeChanged: (e) => this.setAnimalVolume(e.detail.volume),
+      musicVolumeChanged: (e) => {
+        this.setVolume(e.detail.volume);
+      },
+      ambientVolumeChanged: (e) => {
+        this.setAmbientVolume(e.detail.volume);
+      },
+      animalVolumeChanged: (e) => {
+        this.setAnimalVolume(e.detail.volume);
+      },
       weatherChanged: (e) => {
         const { type } = e.detail;
         if (type === 'rain' || type === 'storm') {
@@ -268,7 +276,9 @@ const audioManager = {
           this._stopFog();
         }
       },
-      lightningFlash: () => this._playThunder(),
+      lightningFlash: () => {
+        this._playThunder();
+      },
       objectDamaged: (e) => {
         const { type, x, y } = e.detail;
         if (type === 'tree') this.playSfx3D('wood_hit', x, y, { category: 'ambient' });
@@ -276,9 +286,8 @@ const audioManager = {
         else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
       },
     };
-
-    for (const [event, handler] of Object.entries(this._handlers)) {
-      document.addEventListener(event, handler);
+    for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+      document.addEventListener(evt, fn);
     }
   },
 
@@ -692,7 +701,7 @@ const audioManager = {
       })
       .then((ab) => this._sfxCtx.decodeAudioData(ab))
       .then((buffer) => {
-        this._sfxBuffers.set(name, buffer);
+        if (!this._destroyed) this._sfxBuffers.set(name, buffer);
         return buffer;
       })
       .catch((err) => {
@@ -745,6 +754,14 @@ const audioManager = {
     };
   },
 
+  /**
+   * Plays a positional SFX in 3D space.
+   * @returns {boolean} true if the sound was fired (or scheduled), false if
+   *   it was skipped (no user interaction yet, AudioContext unavailable, etc.).
+   *   Note: when the buffer isn't yet cached, true means the fetch was
+   *   *scheduled* — if the fetch or decode subsequently fails the sound will
+   *   not play, but the caller will not be notified.
+   */
   playSfx3D(name, x, y, {
     volume = 1.0,
     playbackRate = 1.0,
@@ -753,9 +770,9 @@ const audioManager = {
     rolloffFactor = 1.0,
     category = 'ambient',
   } = {}) {
-    if (!this._userInteracted) return;
+    if (!this._userInteracted) return false;
     this._ensureSfx();
-    if (!this._sfxCtx || !this._sfxMaster) return;
+    if (!this._sfxCtx || !this._sfxMaster) return false;
 
     const categoryVolume = category === 'animal' ? this._animalVolume : this._ambientVolume;
     const opts = { volume, playbackRate, refDistance, maxDistance, rolloffFactor, categoryVolume };
@@ -764,7 +781,7 @@ const audioManager = {
     const cached = this._sfxBuffers.get(name);
     if (cached) {
       this._fireSfx(cached, x, y, opts);
-      return;
+      return true;
     }
 
     // Fallback assíncrono (primeira vez antes do preload terminar)
@@ -776,6 +793,7 @@ const audioManager = {
       .catch((err) => {
         logger.warn(`AudioManager: SFX "${name}" falhou`, err.message);
       });
+    return true;
   },
 
   /* ── Rain / Thunder (ambient loop) ─────────── */
@@ -1027,6 +1045,41 @@ const audioManager = {
     if (typeof data.volume === 'number') this.setVolume(data.volume);
     if (typeof data.ambientVolume === 'number') this.setAmbientVolume(data.ambientVolume);
     if (typeof data.animalVolume === 'number') this.setAnimalVolume(data.animalVolume);
+  },
+
+  destroy() {
+    this._stopCurrentTrack();
+    this._stopRain();
+    this._stopFog();
+
+    // Remove document event listeners
+    if (this._evtHandlers) {
+      for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+        document.removeEventListener(evt, fn);
+      }
+      this._evtHandlers = null;
+    }
+
+    // Remove interaction-unlock listeners
+    if (this._unlockFn) {
+      document.removeEventListener('click', this._unlockFn);
+      document.removeEventListener('keydown', this._unlockFn);
+      document.removeEventListener('pointerdown', this._unlockFn);
+      this._unlockFn = null;
+    }
+
+    if (this._sfxCtx && this._sfxCtx.state !== 'closed') {
+      this._sfxCtx.close().catch(() => {});
+    }
+    this._sfxCtx = null;
+    this._sfxMaster = null;
+    this._sfxBuffers.clear();
+    this._sfxBufferPromises.clear();
+
+    this._initialized = false;
+    this._userInteracted = false;
+    this._isSleeping = false;
+    this._destroyed = true;
   }
 };
 

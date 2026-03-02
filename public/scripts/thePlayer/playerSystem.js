@@ -580,15 +580,14 @@ export class PlayerSystem {
             const { loadImages } = await import('./frames.js');
             await loadImages(config);
 
-            // Access character entity and functions by name convention
-            const name = config.name; // 'Stella', 'Ben', 'Graham'
-            this.currentPlayer = characterModule[characterId]; // stella, ben, graham
-            this.updateFunction = characterModule[`update${name}`];
-            this.drawFunction = characterModule[`draw${name}`];
-
-            if (!this.currentPlayer || !this.updateFunction || !this.drawFunction) {
-                throw new Error(`Character module '${characterId}' is missing expected exports (entity: '${characterId}', update: 'update${name}', draw: 'draw${name}')`);
+            // Standardized access via default export — no naming convention needed
+            const charExports = characterModule.default;
+            if (!charExports || !charExports.entity || !charExports.update || !charExports.draw) {
+                throw new Error(`Character module '${characterId}' is missing standardized default export { entity, update, draw }`);
             }
+            this.currentPlayer = charExports.entity;
+            this.updateFunction = charExports.update;
+            this.drawFunction = charExports.draw;
             this.currentPlayer.hunger = this.needs.hunger;
             this.currentPlayer.thirst = this.needs.thirst;
             this.currentPlayer.energy = this.needs.energy;
@@ -629,7 +628,8 @@ export class PlayerSystem {
             const { loadImages } = await import('./frames.js');
             await loadImages(config);
 
-            this.currentPlayer = module.stella;
+            const fallback = module.default;
+            this.currentPlayer = fallback.entity;
 
             this.currentPlayer.hunger = this.needs.hunger;
             this.currentPlayer.thirst = this.needs.thirst;
@@ -640,8 +640,8 @@ export class PlayerSystem {
             this.currentPlayer.x = initialPos.x;
             this.currentPlayer.y = initialPos.y;
 
-            this.updateFunction = module.updateStella;
-            this.drawFunction = module.drawStella;
+            this.updateFunction = fallback.update;
+            this.drawFunction = fallback.draw;
             this.needsModifiers = config.needsModifiers || { energy: 1.0, hunger: 1.0, thirst: 1.0 };
 
             this.activeCharacter = {
