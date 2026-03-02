@@ -53,6 +53,8 @@ export const BuildSystem = {
     lastMouseUpdate: 0,
     mouseUpdateInterval: MOUSE_UPDATE_INTERVAL_MS,
     mouseUpdatePending: false,
+    // fix: stored setTimeout ID so destroy() can cancel the throttled mouse update
+    _mouseUpdateTimer: null,
     pendingMouseX: 0,
     pendingMouseY: 0,
 
@@ -81,7 +83,6 @@ export const BuildSystem = {
     _helpStyleId: 'bhp-help-style',
     _helpPanelId: 'bhp-help-panel',
     _helpPanelEl: null,
-    _mouseTimeoutId: null,
 
     /**
      * Cria o painel de ajuda do modo construção
@@ -183,13 +184,9 @@ export const BuildSystem = {
             
             if (!this.mouseUpdatePending) {
                 this.mouseUpdatePending = true;
-                this._mouseTimeoutId = setTimeout(() => {
-                    this._mouseTimeoutId = null;
-                    if (this.active) {
-                        this.processPendingMouseUpdate();
-                    } else {
-                        this.mouseUpdatePending = false;
-                    }
+                this._mouseUpdateTimer = setTimeout(() => {
+                    this._mouseUpdateTimer = null;
+                    this.processPendingMouseUpdate();
                 }, this.mouseUpdateInterval);
             }
         }
@@ -257,9 +254,9 @@ export const BuildSystem = {
     },
 
     stopBuilding() {
-        if (this._mouseTimeoutId) {
-            clearTimeout(this._mouseTimeoutId);
-            this._mouseTimeoutId = null;
+        if (this._mouseUpdateTimer) {
+            clearTimeout(this._mouseUpdateTimer);
+            this._mouseUpdateTimer = null;
         }
         this.mouseUpdatePending = false;
         this.active = false;
@@ -645,6 +642,24 @@ export const BuildSystem = {
 
     removeDebugOverlay() {
         if (this.debugElement) { this.debugElement.remove(); this.debugElement = null; }
+    },
+
+    destroy() {
+        this.stopBuilding();
+        clearTimeout(this.msgTimeout);
+        this.msgTimeout = null;
+        // fix: cleared the throttled mouse-update timer to prevent post-destroy callback
+        clearTimeout(this._mouseUpdateTimer);
+        this._mouseUpdateTimer = null;
+        this.mouseUpdatePending = false;
+
+        // Remove o painel de ajuda do DOM
+        if (this._helpPanelEl) {
+            this._helpPanelEl.remove();
+            this._helpPanelEl = null;
+        }
+
+        logger.debug('BuildSystem destruído');
     },
 
     toggleDebug() {

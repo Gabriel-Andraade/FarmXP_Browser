@@ -169,6 +169,12 @@ export const WeatherSystem = {
   lightningFlashes: [],
   lastParticleUpdate: 0,
 
+  // fix: store named handler references so destroy() can remove them
+  _onResize: null,
+  _onTimeChanged: null,
+  _onDayChanged: null,
+  _onLanguageChanged: null,
+
   init() {
     this.randomizeWeather();
 
@@ -177,17 +183,17 @@ export const WeatherSystem = {
       updateWeatherUIPanelPosition();
       updateWeatherUIPanelContent();
 
-      window.addEventListener("resize", () => {
-        updateWeatherUIPanelPosition();
-      });
+      this._onResize = () => updateWeatherUIPanelPosition();
+      this._onTimeChanged = () => updateWeatherUIPanelContent();
+      this._onDayChanged = () => updateWeatherUIPanelContent();
+      this._onLanguageChanged = () => updateWeatherUIPanelContent();
 
-      document.addEventListener("timeChanged", () => {
-        updateWeatherUIPanelContent();
-      });
-
-      document.addEventListener("dayChanged", () => {
-        updateWeatherUIPanelContent();
-      });
+      window.addEventListener("resize", this._onResize);
+      document.addEventListener("timeChanged", this._onTimeChanged);
+      document.addEventListener("dayChanged", this._onDayChanged);
+      document.addEventListener("languageChanged", this._onLanguageChanged);
+    }
+  },
 
       // Language-safe: getSeasonName() and getWeekday() call t() on every
       // invocation (no cached strings), so a single UI refresh here is enough
@@ -196,6 +202,19 @@ export const WeatherSystem = {
         updateWeatherUIPanelContent();
       });
     }
+    if (this._onDayChanged) {
+      document.removeEventListener("dayChanged", this._onDayChanged);
+      this._onDayChanged = null;
+    }
+    if (this._onLanguageChanged) {
+      document.removeEventListener("languageChanged", this._onLanguageChanged);
+      this._onLanguageChanged = null;
+    }
+
+    // Remove o painel de weather do DOM
+    const panel = document.getElementById(WEATHER_UI_ID);
+    if (panel) panel.remove();
+    _wuiCache = null;
   },
 
   getWeekday() {
