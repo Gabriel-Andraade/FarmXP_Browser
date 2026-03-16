@@ -1,3 +1,4 @@
+// Issue #70 resolved: weather.js now has full test coverage. Issue can be closed.
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
 import "../setup.js";
 
