@@ -169,32 +169,47 @@ export const WeatherSystem = {
   lightningFlashes: [],
   lastParticleUpdate: 0,
 
+  _abortController: null,
+
   init() {
     this.randomizeWeather();
 
     if (typeof window !== "undefined") {
+      // Make init idempotent: drop previously attached listeners first
+      if (this._abortController) this._abortController.abort();
+      // fix #72: use AbortController for listener cleanup
+      this._abortController = new AbortController();
+      const signal = this._abortController.signal;
+
       ensureWeatherUIPanel();
       updateWeatherUIPanelPosition();
       updateWeatherUIPanelContent();
 
       window.addEventListener("resize", () => {
         updateWeatherUIPanelPosition();
-      });
+      }, { signal });
 
       document.addEventListener("timeChanged", () => {
         updateWeatherUIPanelContent();
-      });
+      }, { signal });
 
       document.addEventListener("dayChanged", () => {
         updateWeatherUIPanelContent();
-      });
+      }, { signal });
 
       // Language-safe: getSeasonName() and getWeekday() call t() on every
       // invocation (no cached strings), so a single UI refresh here is enough
       // to display all weather panel text in the new language immediately.
       document.addEventListener("languageChanged", () => {
         updateWeatherUIPanelContent();
-      });
+      }, { signal });
+    }
+  },
+
+  destroy() {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
     }
   },
 
