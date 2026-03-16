@@ -175,6 +175,8 @@ export const WeatherSystem = {
     this.randomizeWeather();
 
     if (typeof window !== "undefined") {
+      // Make init idempotent: drop previously attached listeners first
+      if (this._abortController) this._abortController.abort();
       // fix #72: use AbortController for listener cleanup
       this._abortController = new AbortController();
       const signal = this._abortController.signal;
