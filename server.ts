@@ -35,6 +35,7 @@ const ALLOWED_TOP_FILES = new Set([
   "index.html",
   "style.css",
   "responsive.css",
+  "manifest.json",
 ]);
 
 const ALLOWED_TOP_DIRS = new Set([
