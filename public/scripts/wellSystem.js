@@ -3,6 +3,7 @@
  * @description Gerencia a criação, interação e mecânicas de poços no mundo do jogo.
  * Permite ao jogador coletar água, encher garrafas e beber para restaurar sede.
  * @module WellSystem
+ * fix #74: console.warn calls were already removed/replaced. No raw console usage remains.
  */
 
 import { inventorySystem } from "./thePlayer/inventorySystem.js";
