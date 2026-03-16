@@ -390,7 +390,7 @@ export const wellSystem = {
       playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
       wellState.waterLevel -= 5;
     } else {
-      logger.warn(`[WellSystem] ${t('well.playerNotAvailable')}`);
+      logger.error(`[WellSystem] ${t('well.playerNotAvailable')}`);
     }
     this.updateUI();
   },
