@@ -1,4 +1,4 @@
-// Issue #70 resolved: saveSystem.js now has full test coverage. Issue can be closed.
+// Issue #70 resolved: saveSystem.js now has full test coverage. Issue can be closed
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import "../setup.js";
 
