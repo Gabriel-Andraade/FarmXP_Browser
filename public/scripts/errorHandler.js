@@ -13,7 +13,7 @@ const seen = new Set();
 function isDebugEnabled() {
   try {
     const url = new URL(globalThis.location?.href ?? "http://localhost/");
-    if (url.searchParams.get("debug") === "1") return true;
+    if (url.searchParams.has("debug") && url.searchParams.get("debug") !== "0") return true;
   } catch (err) {
     if (globalThis.location?.hostname === "localhost") {
       logger.warn("[errorHandler:isDebugEnabled] falha ao ler location.href", err);
