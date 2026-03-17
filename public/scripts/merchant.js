@@ -529,7 +529,6 @@ class MerchantSystem {
                     this.openCommerceModal(merchantId);
                 });
             } else {
-                card.classList.add('mch-merchant-closed');
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
                     this.showMessage(t('trading.isClosed', { name: merchant.name }));

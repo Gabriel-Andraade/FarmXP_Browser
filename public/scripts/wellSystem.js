@@ -318,7 +318,6 @@ export const wellSystem = {
     };
     btnFillBottle.onclick = () => this.fillBottle();
 
-    overlay.classList.add('active');
     wellState.isOpen = true;
     this.updateUI();
   },

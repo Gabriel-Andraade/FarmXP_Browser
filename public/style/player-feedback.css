@@ -100,4 +100,9 @@
   .hud-critical-warning {
     animation: none;
   }
+
+  .inventory-message {
+    animation: none;
+    transition: none;
+  }
 }

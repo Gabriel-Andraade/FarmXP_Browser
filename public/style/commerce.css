@@ -734,10 +734,6 @@
     transform: scaleX(1);
 }
 
-.mch-merchant-card {
-    cursor: pointer;
-}
-
 .mch-merchant-card.mch-merchant-closed {
     opacity: 0.6;
     filter: grayscale(50%);

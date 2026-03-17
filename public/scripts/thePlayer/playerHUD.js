@@ -43,7 +43,7 @@ export class PlayerHUD {
         this.isStoreOpen = false;
         this.isConfigOpen = false;
         this.currentPlayer = null;
-        this.isExpanded = false;
+        this.isExpanded = true;
 
         // Intervalo para atualizar necessidades
         this.needsUpdateInterval = null;

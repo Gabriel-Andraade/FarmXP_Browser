@@ -31,7 +31,8 @@
   transform: scale(1.05);
 }
 
-#mobile-interact-btn:active {
+#mobile-interact-btn:active,
+#mobile-interact-btn.active {
   transform: scale(0.95);
 }
 
@@ -62,6 +63,7 @@
   /* Use CSS custom properties for dynamic positioning */
   --joystick-x: 0px;
   --joystick-y: 0px;
+
   left: calc(50% + var(--joystick-x));
   top: calc(50% + var(--joystick-y));
   transform: translate(-50%, -50%);

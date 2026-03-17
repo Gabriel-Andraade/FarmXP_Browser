@@ -97,6 +97,11 @@ function showInventoryMessage(text) {
 }
 // 🆕 FUNÇÃO PARA CONSUMIR ITENS (COMIDA/BEBIDA)
 export function consumeItem(category, itemId, quantity = 1) {
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+        logger.warn(`⚠️ Quantidade inválida para consumo: ${quantity}`);
+        return false;
+    }
+
     const item = getItem(itemId);
     if (!item) {
         logger.error('❌ Item não encontrado para consumir:', itemId);

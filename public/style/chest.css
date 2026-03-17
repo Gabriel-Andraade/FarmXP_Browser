@@ -313,12 +313,12 @@
 .cht-empty-state {
   grid-column: 1 / -1;
   text-align: center;
-  color: #aaa;
+  color: var(--color-text-muted, #aaa);
   padding: 40px;
 }
 
 .cht-unavailable {
-  color: #aaa;
+  color: var(--color-text-muted, #aaa);
   text-align: center;
 }
 
