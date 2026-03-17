@@ -683,7 +683,7 @@ function renderTabs() {
     iconSpan.textContent = catData.icon;
     btn.append(iconSpan, ` ${catData.label()}`);
     
-    btn.onclick = () => {
+    btn.addEventListener('click', () => {
       activeCategory = catKey;
       selectedSlotIndex = -1;
       updateDetailsPanel(null);
@@ -691,7 +691,7 @@ function renderTabs() {
       // Atualizar tabs visualmente
       shadowRoot.querySelectorAll('.inv-tab-btn').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
-    };
+    });
     
     tabsEl.appendChild(btn);
   });
@@ -760,14 +760,14 @@ function renderInventory() {
     }
 
     // Click handler
-    slotEl.onclick = () => {
+    slotEl.addEventListener('click', () => {
       const prevSelected = shadowRoot.querySelector('.inv-slot.selected');
       if (prevSelected) prevSelected.classList.remove('selected');
-      
+
       slotEl.classList.add('selected');
       selectedSlotIndex = index;
       updateDetailsPanel(fullItem, itemQuantity);
-    };
+    });
 
     contentEl.appendChild(slotEl);
   });
@@ -807,10 +807,10 @@ function updateDetailsPanel(item, qty) {
     const equipBtn = document.createElement('button');
     equipBtn.className = 'btn-action btn-equip';
     equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
-    equipBtn.onclick = () => {
+    equipBtn.addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
       closeInventoryModal();
-    };
+    });
     actionsDiv.appendChild(equipBtn);
   }
 
@@ -819,7 +819,7 @@ function updateDetailsPanel(item, qty) {
     const buildBtn = document.createElement('button');
     buildBtn.className = 'btn-action btn-build';
     buildBtn.textContent = `🔨 ${t('inventory.actions.build')}`;
-    buildBtn.onclick = async () => {
+    buildBtn.addEventListener('click', async () => {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
 
@@ -867,7 +867,7 @@ function updateDetailsPanel(item, qty) {
           logger.error('❌ Falha crítica ao iniciar BuildSystem:', error);
           alert(t('build.buildError'));
       }
-    };
+    });
     actionsDiv.appendChild(buildBtn);
   }
 
@@ -876,17 +876,17 @@ function updateDetailsPanel(item, qty) {
     const useBtn = document.createElement('button');
     useBtn.className = 'btn-action btn-use';
     useBtn.textContent = `🍽️ ${t('inventory.actions.consume')}`;
-    useBtn.onclick = () => {
-      document.dispatchEvent(new CustomEvent('startConsumptionRequest', { 
-        detail: { 
+    useBtn.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('startConsumptionRequest', {
+        detail: {
           category: activeCategory,
           itemId: item.id,
           quantity: 1,
           item: item,
-          fillUp: item.fillUp 
-        } 
+          fillUp: item.fillUp
+        }
       }));
-    };
+    });
     actionsDiv.appendChild(useBtn);
   }
 
@@ -894,7 +894,7 @@ function updateDetailsPanel(item, qty) {
   const dropBtn = document.createElement('button');
   dropBtn.className = 'btn-action btn-discard';
   dropBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
-  dropBtn.onclick = () => {
+  dropBtn.addEventListener('click', () => {
     if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
       const success = inventorySystem.removeItem(activeCategory, item.id, 1);
       if (success) {
@@ -905,7 +905,7 @@ function updateDetailsPanel(item, qty) {
         renderInventory();
       }
     }
-  };
+  });
   actionsDiv.appendChild(dropBtn);
 }
 
