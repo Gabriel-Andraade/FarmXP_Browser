@@ -233,8 +233,6 @@ let isSleepingGlobal = false;
 document.addEventListener("sleepStarted", () => {
     isSleeping = true;
     isSleepingGlobal = true;
-
-    Object.keys(keys).forEach(key => { keys[key] = false; });
     clearAllInputState();
 
     const mobileBtn = document.getElementById('mobile-interact-btn');
