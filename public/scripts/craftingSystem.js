@@ -499,13 +499,7 @@ export class CraftingSystem {
   destroy() {
     this.close();
     this._clearManagedTimeouts();
-    
-    if (this.handleEscapeBound) {
-      document.removeEventListener("keydown", this.handleEscapeBound);
-      this.handleEscapeBound = null;
-    }
 
-    this.isOpen = false;
     logger.debug('[Cleanup] CraftingSystem destruído');
   }
 }
