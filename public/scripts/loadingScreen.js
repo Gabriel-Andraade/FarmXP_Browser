@@ -20,6 +20,10 @@ class LoadingScreenManager {
         this._interactionBlockCount = 0;
     }
 
+    _toPercent(progress) {
+        return Math.max(0, Math.min(100, Number(progress) * 100 || 0));
+    }
+
     /**
      * Exibe a tela de carregamento inicial do jogo
      * CSS carregado externamente via style/loading.css
@@ -72,7 +76,7 @@ class LoadingScreenManager {
         const progressBar = document.getElementById('ldg-initial-progress-bar');
         const messageEl = document.getElementById('ldg-initial-message');
         if (progressBar) {
-            const pct = Math.max(0, Math.min(100, Number(progress) * 100 || 0));
+            const pct = this._toPercent(progress);
             progressBar.style.setProperty('--progress-width', `${pct}%`);
         }
         if (messageEl && message) messageEl.textContent = message;
@@ -189,7 +193,7 @@ class LoadingScreenManager {
         const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
 
         if (progressBar) {
-            const pct = Math.max(0, Math.min(100, Number(progress) * 100 || 0));
+            const pct = this._toPercent(progress);
             progressBar.style.setProperty('--progress-width', `${pct}%`);
         }
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
@@ -291,8 +295,10 @@ class LoadingScreenManager {
      */
     blockInteractions() {
         this._interactionBlockCount += 1;
-        document.body.classList.add('interactions-blocked');
-        setGameFlag('interactionsBlocked', true);
+        if (this._interactionBlockCount === 1) {
+            document.body.classList.add('interactions-blocked');
+            setGameFlag('interactionsBlocked', true);
+        }
     }
 
     /**
