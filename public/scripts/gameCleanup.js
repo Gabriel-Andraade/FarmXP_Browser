@@ -88,6 +88,20 @@ export function destroyAllSystems() {
             logger.debug('[Cleanup] WeatherSystem destruído');
         }
 
+        // CraftingSystem - Cleanup de listeners e UI
+        const craftingSystem = getSystem('crafting');
+        if (craftingSystem && typeof craftingSystem.destroy === 'function') {
+            craftingSystem.destroy();
+            logger.debug('[Cleanup] CraftingSystem destruído');
+        }
+
+        // AnimalUiPanel - Cleanup de listeners e DOM
+        const animalUiPanel = getSystem('animalUI');
+        if (animalUiPanel && typeof animalUiPanel.destroy === 'function') {
+            animalUiPanel.destroy();
+            logger.debug('[Cleanup] AnimalUiPanel destruído');
+        }
+
         // AudioManager - Cleanup de AudioContext, tracks e SFX buffers
         const audioManager = getSystem('audio');
         if (audioManager && typeof audioManager.destroy === 'function') {
