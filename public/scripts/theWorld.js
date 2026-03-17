@@ -609,7 +609,7 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
       img = cat?.[obj.type]?.img;
     }
   } catch (err) {
-    console.warn("Erro ao obter imagem do asset:", err);
+    handleWarn("Erro ao obter imagem do asset", "theWorld:renderObject", err);
     img = null;
   }
 
