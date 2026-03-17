@@ -28,11 +28,7 @@ class Logger {
 
     const urlDebug = new URLSearchParams(window.location.search).get('debug') === '1';
 
-    this.level = urlDebug
-      ? LOG_LEVELS.DEBUG
-      : isDev
-        ? LOG_LEVELS.DEBUG
-        : LOG_LEVELS.ERROR;
+    this.level = (urlDebug || isDev) ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR;
   }
 
   /**

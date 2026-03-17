@@ -575,7 +575,7 @@ class SaveSystem {
      * Obtém dados de moeda para salvar
      */
     _getCurrencyData() {
-        const currency = getSystem('currency') || window.currencyManager;
+        const currency = getSystem('currency');
         return {
             money: currency?.currentMoney ?? 1000
         };
@@ -729,7 +729,7 @@ class SaveSystem {
      * Aplica dados de moeda
      */
     _applyCurrencyData(data) {
-        const currency = getSystem('currency') || window.currencyManager;
+        const currency = getSystem('currency');
          if (currency && typeof data.money === 'number' && data.money >= 0) {
             currency.currentMoney = data.money;
             if (typeof currency._notifyChange === 'function') {
