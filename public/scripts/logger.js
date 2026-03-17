@@ -17,7 +17,7 @@ export const LOG_LEVELS = {
 class Logger {
   /**
    * cria uma instância do logger e define o nível inicial.
-   * usa DEBUG no localhost ou quando ?debug=1 na URL;
+   * usa DEBUG no localhost ou quando ?debug na URL (exceto ?debug=0);
    * caso contrário, usa ERROR.
    */
   constructor() {
@@ -26,7 +26,8 @@ class Logger {
       window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "";
 
-    const urlDebug = new URLSearchParams(window.location.search).get('debug') === '1';
+    const query = new URLSearchParams(window.location.search);
+    const urlDebug = query.has('debug') && query.get('debug') !== '0';
 
     this.level = (urlDebug || isDev) ? LOG_LEVELS.DEBUG : LOG_LEVELS.ERROR;
   }

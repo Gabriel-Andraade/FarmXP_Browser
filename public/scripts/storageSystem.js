@@ -103,7 +103,7 @@ export class StorageSystem {
   }
 
   /**
-   * Inicializa o sistema e expõe globalmente
+   * Inicializa o sistema e registra no gameState
    * @returns {void}
    */
   init() {

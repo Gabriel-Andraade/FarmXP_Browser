@@ -545,7 +545,7 @@ async function exposeGlobals() {
               logger.debug(`Spawnando ${count} animais do tipo ${type}...`);
 
               const WORLD_BOUNDS = { minX: 100, maxX: 1200, minY: 100, maxY: 700 };
-              const world = getSystem('theWorld');
+              const world = getObject('world');
 
               for (let i = 0; i < count; i++) {
                 const x = WORLD_BOUNDS.minX + Math.random() * (WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX);
@@ -557,7 +557,7 @@ async function exposeGlobals() {
               world?.markWorldChanged?.();
             },
             clearAnimals: function () {
-              const world = getSystem('theWorld');
+              const world = getObject('world');
               if (world && world.animals) {
                 const count = world.animals.length;
                 world.animals.length = 0;
@@ -566,7 +566,7 @@ async function exposeGlobals() {
               }
             },
             listAnimals: function () {
-              const world = getSystem('theWorld');
+              const world = getObject('world');
               if (world && world.animals) {
                 logger.debug(`Animais no mundo (${world.animals.length}):`);
                 let index = 0;

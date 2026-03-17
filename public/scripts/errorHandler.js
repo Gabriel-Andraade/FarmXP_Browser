@@ -6,8 +6,8 @@ const seen = new Set();
 /**
  * checks if debug mode is enabled.
  * priority order:
- * - url query ?debug=1
- * - global flags (DEBUG_MODE / __DEBUG__)
+ * - url query ?debug (except ?debug=0)
+ * - gameState debug flag
  * - localhost hostname
  */
 function isDebugEnabled() {
