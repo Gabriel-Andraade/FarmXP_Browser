@@ -161,6 +161,33 @@ input:checked + .config-slider:before {
     transform: translateY(-2px);
 }
 
+/* ===== Audio Options ===== */
+.config-option--audio {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.config-audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-volume-range {
+    width: 120px;
+    cursor: pointer;
+    accent-color: #4caf50;
+}
+
+.config-volume-value {
+    min-width: 36px;
+    text-align: center;
+    color: #fff;
+    font-size: 14px;
+}
+
 /* ===== NOVO: REMAPEAR TECLAS (menu + modal) ===== */
 
 /* Linha do menu de remapeamento */

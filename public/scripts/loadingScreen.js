@@ -70,7 +70,7 @@ class LoadingScreenManager {
     updateInitialProgress(progress, message = "") {
         const progressBar = document.getElementById('ldg-initial-progress-bar');
         const messageEl = document.getElementById('ldg-initial-message');
-        if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
+        if (progressBar) progressBar.style.setProperty('--progress-width', `${Math.min(100, progress * 100)}%`);
         if (messageEl && message) messageEl.textContent = message;
     }
 
@@ -82,9 +82,7 @@ class LoadingScreenManager {
     hideInitialLoading() {
         const loadingScreen = document.getElementById('ldg-initial-screen');
         if (loadingScreen) {
-            loadingScreen.style.transition = 'opacity 0.8s, transform 0.8s';
-            loadingScreen.style.opacity = '0';
-            loadingScreen.style.transform = 'scale(1.1)';
+            loadingScreen.classList.add('ldg-hiding');
             setTimeout(() => { if (loadingScreen.parentNode) loadingScreen.parentNode.removeChild(loadingScreen); }, 800);
         }
         this.currentScreen = null;
@@ -186,7 +184,7 @@ class LoadingScreenManager {
         const mainMsgEl = document.getElementById('ldg-sleep-main-message');
         const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
 
-        if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
+        if (progressBar) progressBar.style.setProperty('--progress-width', `${Math.min(100, progress * 100)}%`);
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
         if (detailMsgEl && detailMessage) detailMsgEl.textContent = detailMessage;
     }
@@ -285,7 +283,7 @@ class LoadingScreenManager {
      * @returns {void}
      */
     blockInteractions() {
-        document.body.style.pointerEvents = 'none';
+        document.body.classList.add('interactions-blocked');
         setGameFlag('interactionsBlocked', true);
     }
 
@@ -295,7 +293,7 @@ class LoadingScreenManager {
      * @returns {void}
      */
     unblockInteractions() {
-        document.body.style.pointerEvents = 'all';
+        document.body.classList.remove('interactions-blocked');
         setGameFlag('interactionsBlocked', false);
     }
 }

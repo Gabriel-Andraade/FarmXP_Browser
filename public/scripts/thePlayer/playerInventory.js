@@ -82,36 +82,16 @@ function showInventoryMessage(text) {
     msg.className = "inventory-message";
     msg.textContent = text;
 
-    Object.assign(msg.style, {
-        position: "fixed",
-        top: "20px",
-        right: "20px",
-        background: "rgba(255, 255, 255, 0.15)", // claro + transparente
-        color: "#f0f0f0",
-        padding: "8px 14px",
-        borderRadius: "8px",
-        backdropFilter: "blur(6px)",          // 🔥 efeito glass leve
-        fontSize: "13px",
-        fontWeight: "500",
-        boxShadow: "0 0 10px rgba(0,0,0,0.2)",
-        opacity: "0",
-        transition: "opacity 0.3s ease, transform 0.3s ease",
-        transform: "translateY(-10px)",
-        zIndex: 11000
-    });
-
     document.body.appendChild(msg);
 
     // animação de entrada
     requestAnimationFrame(() => {
-        msg.style.opacity = "1";
-        msg.style.transform = "translateY(0)";
+        msg.classList.add('visible');
     });
 
     // remove suave
     setTimeout(() => {
-        msg.style.opacity = "0";
-        msg.style.transform = "translateY(-10px)";
+        msg.classList.remove('visible');
         setTimeout(() => msg.remove(), 300);
     }, 1300);
 }

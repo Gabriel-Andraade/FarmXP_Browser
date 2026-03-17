@@ -113,6 +113,9 @@
   color: var(--color-text-primary, #fff);
   font-weight: var(--font-weight-bold, bold);
   padding-top: 8px;
+  /* CSS custom property for dynamic height */
+  --water-level: 50%;
+  height: var(--water-level);
 }
 
 /* Close Button */

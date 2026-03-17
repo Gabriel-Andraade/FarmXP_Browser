@@ -239,8 +239,8 @@ document.addEventListener("sleepStarted", () => {
 
     const mobileBtn = document.getElementById('mobile-interact-btn');
     const joystickArea = document.getElementById('joystick-area');
-    if (mobileBtn) mobileBtn.style.display = 'none';
-    if (joystickArea) joystickArea.style.display = 'none';
+    if (mobileBtn) mobileBtn.classList.add('hidden');
+    if (joystickArea) joystickArea.classList.add('hidden');
 }, { signal: controlsAbortController.signal });
 
 document.addEventListener("sleepEnded", () => {
@@ -249,7 +249,7 @@ document.addEventListener("sleepEnded", () => {
 
     if (isMobile()) {
         const joystickArea = document.getElementById('joystick-area');
-        if (joystickArea) joystickArea.style.display = 'block';
+        if (joystickArea) joystickArea.classList.remove('hidden');
     }
 }, { signal: controlsAbortController.signal });
 
@@ -283,8 +283,6 @@ export class TouchMoveSystem {
 
     setupTouchControls() {
         if (!this.mobile || !this.canvas || isSleeping) return;
-
-        this.canvas.style.touchAction = "none";
 
         this.canvas.addEventListener("pointerdown", (ev) => {
             if (isSleeping) { ev.preventDefault(); ev.stopPropagation(); return; }
@@ -401,13 +399,16 @@ export class PlayerInteractionSystem {
     updateMobileInteractionUI() {
         if (isSleeping) {
             const eButton = document.getElementById('mobile-interact-btn');
-            if (eButton) eButton.style.display = 'none';
+            if (eButton) eButton.classList.add('hidden');
             return;
         }
 
         const hasObjects = this.nearbyObjects.size > 0;
         const eButton = document.getElementById('mobile-interact-btn');
-        if (eButton) eButton.style.display = hasObjects ? 'block' : 'none';
+        if (eButton) {
+            if (hasObjects) eButton.classList.remove('hidden');
+            else eButton.classList.add('hidden');
+        }
     }
 
     setupInteractionListeners() {
@@ -501,14 +502,14 @@ export class PlayerInteractionSystem {
         button.addEventListener('touchstart', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
-            button.style.transform = 'scale(0.95)';
+            button.classList.add('active');
             this.handleInteraction();
         }, { signal: controlsAbortController.signal });
 
         button.addEventListener('touchend', (e) => {
             if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
-            button.style.transform = 'scale(1)';
+            button.classList.remove('active');
         }, { signal: controlsAbortController.signal });
 
         document.body.appendChild(button);
@@ -572,15 +573,15 @@ export class PlayerInteractionSystem {
             joystickY = (dy / distance) * maxDistance;
         }
 
-        joystick.style.left = `calc(50% + ${joystickX}px)`;
-        joystick.style.top = `calc(50% + ${joystickY}px)`;
+        joystick.style.setProperty('--joystick-x', `${joystickX}px`);
+        joystick.style.setProperty('--joystick-y', `${joystickY}px`);
 
         this.updateKeysFromJoystick(joystickX, joystickY);
     }
 
     resetJoystick(joystick) {
-        joystick.style.left = '50%';
-        joystick.style.top = '50%';
+        joystick.style.setProperty('--joystick-x', '0px');
+        joystick.style.setProperty('--joystick-y', '0px');
 
         // legado
         keys.ArrowLeft = keys.KeyA = false;
@@ -1023,7 +1024,7 @@ function _initControlsDOMReady() {
     if (!isMobile()) {
         ['mobile-interact-btn','joystick-area'].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.style.display = 'none';
+            if (el) el.classList.add('hidden');
         });
     }
 }

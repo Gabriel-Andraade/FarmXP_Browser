@@ -24,6 +24,19 @@ const createInventoryUI = () => {
       box-sizing: border-box;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
+    .inv-tab-icon {
+      font-size: 20px;
+    }
+
+    .inv-empty-subtext {
+      font-size: 14px;
+      opacity: 0.5;
+    }
+
     
     :host {
       --bg: #17160A;
@@ -530,7 +543,7 @@ const createInventoryUI = () => {
   const details = document.createElement('div');
   details.className = 'inv-details';
   details.id = 'invDetails';
-  details.style.display = 'none';
+  details.classList.add('hidden');
   const itemInfo = document.createElement('div');
   itemInfo.className = 'inv-item-info';
   const detailName = document.createElement('span');
@@ -679,7 +692,7 @@ function renderTabs() {
     const btn = document.createElement('button');
     btn.className = `inv-tab-btn ${activeCategory === catKey ? 'active' : ''}`;
     const iconSpan = document.createElement('span');
-    iconSpan.style.fontSize = '20px';
+    iconSpan.className = 'inv-tab-icon';
     iconSpan.textContent = catData.icon;
     btn.append(iconSpan, ` ${catData.label()}`);
     
@@ -711,12 +724,12 @@ function renderInventory() {
     const mainText = document.createElement('div');
     mainText.textContent = t('inventory.empty');
     const subText = document.createElement('div');
-    subText.style.cssText = 'font-size: 14px; opacity: 0.5;';
+    subText.className = 'inv-empty-subtext';
     subText.textContent = t('inventory.emptySubtext');
     emptyMsg.append(mainText, subText);
     contentEl.appendChild(emptyMsg);
     currentItems = [];
-    detailsEl.style.display = 'none';
+    detailsEl.classList.add('hidden');
     return;
   }
 
@@ -789,11 +802,11 @@ function updateDetailsPanel(item, qty) {
   if (!detailsEl) return;
   
   if (!item) {
-    detailsEl.style.display = 'none';
+    detailsEl.classList.add('hidden');
     return;
   }
 
-  detailsEl.style.display = 'flex';
+  detailsEl.classList.remove('hidden');
   const itemName = getItemName(item.id, item.name);
   shadowRoot.getElementById('detailName').textContent = `${itemName} ${qty > 1 ? `(x${qty})` : ''}`;
   shadowRoot.getElementById('detailDesc').textContent = item.description || t('inventory.noDescription');

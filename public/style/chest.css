@@ -317,6 +317,11 @@
   padding: 40px;
 }
 
+.cht-unavailable {
+  color: #aaa;
+  text-align: center;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .cht-panel {

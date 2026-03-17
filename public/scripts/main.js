@@ -427,7 +427,7 @@ function setupSleepListeners() {
       currentPlayer.direction = "down";
     }
 
-    canvas.style.cursor = "wait";
+    canvas.classList.add("cursor-wait");
   });
 
   document.addEventListener("sleepEnded", () => {
@@ -443,7 +443,7 @@ function setupSleepListeners() {
         interactionEnabled = true;
       }
 
-      canvas.style.cursor = "default";
+      canvas.classList.remove("cursor-wait");
 
       getObject('world')?.markWorldChanged?.();
 
