@@ -1,6 +1,9 @@
 /**
  * @file logger.js
  * logger configurável com níveis e saída controlada por ambiente.
+ *
+ * NOTE: cannot import gameState.js here (circular dependency),
+ * so debug detection uses URL params and localhost check only.
  */
 
 export const LOG_LEVELS = {
@@ -14,7 +17,7 @@ export const LOG_LEVELS = {
 class Logger {
   /**
    * cria uma instância do logger e define o nível inicial.
-   * usa DEBUG no localhost ou quando window.DEBUG_MODE estiver ativo;
+   * usa DEBUG no localhost ou quando ?debug=1 na URL;
    * caso contrário, usa ERROR.
    */
   constructor() {
@@ -23,7 +26,9 @@ class Logger {
       window.location.hostname === "127.0.0.1" ||
       window.location.hostname === "";
 
-    this.level = window.DEBUG_MODE
+    const urlDebug = new URLSearchParams(window.location.search).get('debug') === '1';
+
+    this.level = urlDebug
       ? LOG_LEVELS.DEBUG
       : isDev
         ? LOG_LEVELS.DEBUG

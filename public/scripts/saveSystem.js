@@ -554,7 +554,7 @@ class SaveSystem {
      * Obtém dados do inventário para salvar
      */
     _getInventoryData() {
-        const inventory = getSystem('inventory') || window.inventorySystem;
+        const inventory = getSystem('inventory');
         if (!inventory) return { categories: {}, equipped: null };
 
         const categories = {};
@@ -680,7 +680,7 @@ class SaveSystem {
      * Aplica dados do inventário
      */
     _applyInventoryData(data) {
-        const inventory = getSystem('inventory') || window.inventorySystem;
+        const inventory = getSystem('inventory');
         if (!inventory || !data.categories) return;
 
         // Limpar inventário atual

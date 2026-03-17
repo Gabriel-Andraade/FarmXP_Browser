@@ -7,7 +7,7 @@
 
 import { getItem } from "./itemUtils.js";
 import { t } from './i18n/i18n.js';
-import { registerSystem } from './gameState.js';
+import { registerSystem, getSystem } from './gameState.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
 
 /**
@@ -107,7 +107,7 @@ export class StorageSystem {
    * @returns {void}
    */
   init() {
-    window.storageSystem = this;
+    registerSystem('storage', this);
   }
 
   /**
@@ -157,10 +157,11 @@ export class StorageSystem {
    * @returns {boolean} True se a categoria existe
    */
   _inventoryCategoryExists(category) {
+    const inventory = getSystem('inventory');
     return !!(
-      window.inventorySystem &&
-      window.inventorySystem.categories &&
-      window.inventorySystem.categories[category]
+      inventory &&
+      inventory.categories &&
+      inventory.categories[category]
     );
   }
 
@@ -213,7 +214,7 @@ export class StorageSystem {
    * @returns {boolean} True se o depósito foi bem-sucedido
    */
   depositFromInventory(categoryOrId, itemIdOrQty, quantity = 1) {
-    if (!window.inventorySystem) return false;
+    if (!getSystem('inventory')) return false;
 
     let inventoryCategory = null;
     let itemId = null;
@@ -247,8 +248,8 @@ export class StorageSystem {
     const invCatOk = inventoryCategory && this._inventoryCategoryExists(inventoryCategory);
 
     const currentQuantity = invCatOk
-      ? window.inventorySystem.getItemQuantity(inventoryCategory, itemId)
-      : window.inventorySystem.getItemQuantity(itemId);
+      ? getSystem('inventory').getItemQuantity(inventoryCategory, itemId)
+      : getSystem('inventory').getItemQuantity(itemId);
 
     if (currentQuantity < qty) {
       this.showMessage(t('storage.insufficientQuantity'));
@@ -296,8 +297,8 @@ export class StorageSystem {
     if (deposited <= 0) return false;
 
     const removedOk = invCatOk
-      ? window.inventorySystem.removeItem(inventoryCategory, itemId, deposited)
-      : window.inventorySystem.removeItem(itemId, deposited);
+      ? getSystem('inventory').removeItem(inventoryCategory, itemId, deposited)
+      : getSystem('inventory').removeItem(itemId, deposited);
 
     // Se falhou remover do inventário, desfaz a adição
     if (!removedOk && removedOk !== undefined) {
@@ -318,7 +319,7 @@ export class StorageSystem {
    * @returns {boolean} True se a retirada foi bem-sucedida
    */
   withdrawToInventory(storageCategory, itemId, quantity = 1) {
-    if (!window.inventorySystem) return false;
+    if (!getSystem('inventory')) return false;
 
     if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
       console.warn("[Storage] Invalid quantity:", quantity);
@@ -341,7 +342,7 @@ export class StorageSystem {
       return false;
     }
 
-    const added = window.inventorySystem.addItem(itemId, qty);
+    const added = getSystem('inventory').addItem(itemId, qty);
     if (added) {
       this.showMessage(t('storage.withdrawn', { qty, name: getItemName(itemId, itemData.name) }));
       return true;
@@ -481,22 +482,22 @@ export class StorageSystem {
    * @returns {boolean} True se o item existe no inventário
    */
   hasItemInInventory(categoryOrId, itemId = null) {
-    if (!window.inventorySystem) return false;
+    if (!getSystem('inventory')) return false;
 
     if (typeof categoryOrId === "number") {
       if (!isValidItemId(categoryOrId)) return false;
-      return window.inventorySystem.getItemQuantity(categoryOrId) > 0;
+      return getSystem('inventory').getItemQuantity(categoryOrId) > 0;
     }
 
     const category = categoryOrId;
 
     if (this._inventoryCategoryExists(category)) {
       if (!isValidItemId(itemId)) return false;
-      return window.inventorySystem.getItemQuantity(category, itemId) > 0;
+      return getSystem('inventory').getItemQuantity(category, itemId) > 0;
     }
 
     if (!isValidItemId(itemId)) return false;
-    return window.inventorySystem.getItemQuantity(itemId) > 0;
+    return getSystem('inventory').getItemQuantity(itemId) > 0;
   }
 
   /**

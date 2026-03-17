@@ -1,4 +1,5 @@
 import { logger } from './logger.js';
+import { getDebugFlag } from './gameState.js';
 
 const seen = new Set();
 
@@ -20,8 +21,7 @@ function isDebugEnabled() {
   }
 
   return Boolean(
-    globalThis.DEBUG_MODE ||
-      globalThis.__DEBUG__ ||
+    getDebugFlag('debug') ||
       globalThis.location?.hostname === "localhost"
   );
 }
