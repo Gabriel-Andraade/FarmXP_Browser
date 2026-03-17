@@ -1,4 +1,3 @@
-// Issue #70 resolved: buildSystem.js now has full test coverage. Issue can be closed.
 import { describe, test, expect, beforeEach, beforeAll, mock } from 'bun:test';
 import "../setup.js";
 

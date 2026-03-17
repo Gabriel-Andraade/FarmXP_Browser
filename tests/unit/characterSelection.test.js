@@ -1,4 +1,3 @@
-// Issue #70 resolved: characterSelection.js now has full test coverage. Issue can be closed.
 import { describe, test, expect, beforeEach, afterEach, afterAll, mock } from 'bun:test';
 import "../setup.js";
 
