@@ -1,6 +1,7 @@
 import { playerSystem } from "./playerSystem.js";
 import { logger } from "../logger.js";
 import { t } from '../i18n/i18n.js';
+import { setObject } from "../gameState.js";
 
 export class CharacterSelection {
     constructor() {
@@ -220,7 +221,7 @@ portrait.className = 'chs-character-portrait';
             // Abrir UI de slots em modo load, com callback para startup
             saveSlotsUI.open('load', (slot, slotIndex) => {
                 // Guardar dados para aplicar depois que todos os sistemas carregarem
-                window._pendingSaveData = slot;
+                setObject('pendingSaveData', slot);
 
                 // Usar personagem do save (ou Stella como fallback)
                 const charId = slot?.data?.player?.characterId || 'stella';
