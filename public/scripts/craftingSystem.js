@@ -465,6 +465,23 @@ export class CraftingSystem {
       message.remove();
     }, 3000);
   }
+
+  /**
+   * Limpa recursos do sistema de crafting
+   * Remove listeners e fecha a UI
+   * @returns {void}
+   */
+  destroy() {
+    this.close();
+    
+    if (this.handleEscapeBound) {
+      document.removeEventListener("keydown", this.handleEscapeBound);
+      this.handleEscapeBound = null;
+    }
+
+    this.isOpen = false;
+    logger.debug('[Cleanup] CraftingSystem destruído');
+  }
 }
 
 // Instancia e exporta o sistema de crafting
