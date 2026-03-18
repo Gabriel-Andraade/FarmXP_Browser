@@ -18,7 +18,12 @@ let minimapSystem = null;
 /**
  * Initialize the minimap system. Call once after DOM is ready.
  */
-export function initMinimap() {
+export async function initMinimap() {
+  if (minimapUI && minimapSystem) {
+    logger.debug('Minimap already initialized');
+    return;
+  }
+
   try {
     minimapUI = new MinimapUI('.game');
     const canvas = minimapUI.getCanvas();
@@ -29,7 +34,7 @@ export function initMinimap() {
     }
 
     minimapSystem = new MinimapSystem(canvas, WORLD_WIDTH, WORLD_HEIGHT);
-    minimapSystem.loadIcons('assets/icons/');
+    await minimapSystem.loadIcons('assets/icons/');
 
     registerSystem('minimap', minimapSystem);
     logger.debug('Minimap fully initialized');

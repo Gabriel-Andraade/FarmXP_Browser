@@ -162,6 +162,7 @@ let frameCount = 0;
 let lastFpsUpdate = 0;
 let criticalSystemsLoaded = false;
 let interactionEnabled = false;
+let minimapUpdateDisabled = false;
 
 // Estado de simulação (travamento do jogo)
 let simulationPaused = true;
@@ -1024,10 +1025,13 @@ function gameLoop(timestamp) {
 
   if (!allAssetsLoaded) drawLoadingIndicator();
 
-  try {
-    updateMinimap(currentPlayer);
-  } catch (e) {
-    handleWarn("falha ao atualizar minimap", "main:gameLoop:minimap", e);
+  if (!minimapUpdateDisabled) {
+    try {
+      updateMinimap(currentPlayer);
+    } catch (e) {
+      minimapUpdateDisabled = true;
+      handleWarn("falha ao atualizar minimap; desativando updates até reinicialização", "main:gameLoop:minimap", e);
+    }
   }
 
   requestAnimationFrame(gameLoop);

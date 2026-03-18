@@ -388,7 +388,7 @@ class SaveSystem {
         if (data.minimap?.exploration) {
             const minimap = getSystem('minimap');
             if (minimap && minimap.importExploration) {
-                minimap.importExploration(data.minimap.exploration);
+                await minimap.importExploration(data.minimap.exploration);
             }
         }
 

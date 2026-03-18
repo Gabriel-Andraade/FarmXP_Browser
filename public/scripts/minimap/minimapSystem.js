@@ -17,6 +17,9 @@ const RENDER_THROTTLE = 3;
 const VIEWPORT_WORLD_WIDTH = 1600;
 const VIEWPORT_WORLD_HEIGHT = 1340;
 
+// Exploration grid cell size (world pixels) for fast O(1) lookup
+const EXPLORE_CELL_SIZE = 16;
+
 export class MinimapSystem {
   constructor(minimapCanvas, worldWidth, worldHeight) {
     this.canvas = minimapCanvas;
@@ -46,6 +49,9 @@ export class MinimapSystem {
     this.explorationCtx.fillStyle = '#000000';
     this.explorationCtx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
 
+    // Boolean grid for fast exploration lookup (avoids per-pixel getImageData)
+    this._explorationGrid = new Set();
+
     this.colors = {
       ground: '#2d5016',
       tree: '#228B22',
@@ -69,6 +75,7 @@ export class MinimapSystem {
   /**
    * Load icons from assets/icons/ folder
    * @param {string} basePath - Base path to icons folder
+   * @returns {Promise} Resolves when all icons finish loading (or fail)
    */
   loadIcons(basePath = 'assets/icons/') {
     const iconMap = {
@@ -81,11 +88,22 @@ export class MinimapSystem {
       graham: 'grahamIcon.png',
     };
 
-    for (const [key, filename] of Object.entries(iconMap)) {
-      const img = new Image();
-      img.src = `${basePath}${filename}`;
-      img.onload = () => { this.icons[key] = img; };
-    }
+    const promises = Object.entries(iconMap).map(([key, filename]) => {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          this.icons[key] = img;
+          resolve();
+        };
+        img.onerror = () => {
+          logger.warn(`[MinimapSystem] Failed to load icon: ${filename}`);
+          resolve();
+        };
+        img.src = `${basePath}${filename}`;
+      });
+    });
+
+    return Promise.all(promises);
   }
 
   /** Update the camera to center on player */
@@ -116,15 +134,27 @@ export class MinimapSystem {
     this.explorationCtx.beginPath();
     this.explorationCtx.arc(fx, fy, this._explorationRadiusFull, 0, Math.PI * 2);
     this.explorationCtx.fill();
+
+    // Update boolean grid for fast lookup
+    this._markExploredGrid(playerWorldX, playerWorldY, EXPLORATION_RADIUS_WORLD);
   }
 
-  /** Check if a world position has been explored */
+  /** Mark cells as explored in the boolean grid */
+  _markExploredGrid(worldX, worldY, radius) {
+    const radiusCells = Math.ceil(radius / EXPLORE_CELL_SIZE);
+    const cx = Math.floor(worldX / EXPLORE_CELL_SIZE);
+    const cy = Math.floor(worldY / EXPLORE_CELL_SIZE);
+    for (let dx = -radiusCells; dx <= radiusCells; dx++) {
+      for (let dy = -radiusCells; dy <= radiusCells; dy++) {
+        this._explorationGrid.add(`${cx + dx},${cy + dy}`);
+      }
+    }
+  }
+
+  /** Fast O(1) check if a world position has been explored */
   _isExplored(worldX, worldY) {
-    const fx = Math.round(this._fullOffsetX + worldX * this._fullScale);
-    const fy = Math.round(this._fullOffsetY + worldY * this._fullScale);
-    if (fx < 0 || fy < 0 || fx >= this.minimapWidth || fy >= this.minimapHeight) return false;
-    const pixel = this.explorationCtx.getImageData(fx, fy, 1, 1).data;
-    return pixel[0] !== 0 || pixel[1] !== 0 || pixel[2] !== 0;
+    const key = `${Math.floor(worldX / EXPLORE_CELL_SIZE)},${Math.floor(worldY / EXPLORE_CELL_SIZE)}`;
+    return this._explorationGrid.has(key);
   }
 
   /** Get the active character name and direction for player icon */
@@ -138,24 +168,47 @@ export class MinimapSystem {
 
   /**
    * Export exploration data as base64 for saving
-   * @returns {string}
+   * @returns {{ image: string, grid: string[] }}
    */
   exportExploration() {
-    return this.explorationMap.toDataURL('image/png');
+    return {
+      image: this.explorationMap.toDataURL('image/png'),
+      grid: [...this._explorationGrid],
+    };
   }
 
   /**
-   * Import exploration data from a saved base64 string
-   * @param {string} dataUrl
+   * Import exploration data from a saved state
+   * @param {string|Object} data - base64 dataUrl (legacy) or { image, grid }
+   * @returns {Promise}
    */
-  importExploration(dataUrl) {
-    if (!dataUrl) return;
-    const img = new Image();
-    img.onload = () => {
-      this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
-      this.explorationCtx.drawImage(img, 0, 0);
-    };
-    img.src = dataUrl;
+  importExploration(data) {
+    if (!data) return Promise.resolve();
+
+    // Support legacy format (plain string) and new format (object)
+    const imageUrl = typeof data === 'string' ? data : data.image;
+    const gridArr = typeof data === 'object' ? data.grid : null;
+
+    // Restore boolean grid
+    if (gridArr && Array.isArray(gridArr)) {
+      this._explorationGrid = new Set(gridArr);
+    }
+
+    if (!imageUrl) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
+        this.explorationCtx.drawImage(img, 0, 0);
+        resolve();
+      };
+      img.onerror = () => {
+        logger.warn('[MinimapSystem] Failed to load exploration data');
+        resolve();
+      };
+      img.src = imageUrl;
+    });
   }
 
   /**
@@ -213,8 +266,6 @@ export class MinimapSystem {
 
   /** Draw the explored ground for the current viewport area */
   _drawExplorationLayer(ctx) {
-    // For each minimap pixel, check if corresponding world position is explored
-    // Optimization: draw the full exploration map scaled/offset to match the viewport
     const sx = this._fullOffsetX + this._camX * this._fullScale;
     const sy = this._fullOffsetY + this._camY * this._fullScale;
     const sw = VIEWPORT_WORLD_WIDTH * this._fullScale;

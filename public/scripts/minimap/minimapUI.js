@@ -17,14 +17,15 @@ export class MinimapUI {
     this.container = document.querySelector(containerSelector);
 
     if (!this.container) {
-      logger.error(`MinimapUI: Container "${containerSelector}" not found`);
-      return;
+      throw new Error(`MinimapUI: Container "${containerSelector}" not found`);
     }
 
     this.width = MINIMAP_WIDTH;
     this.height = MINIMAP_HEIGHT;
     this.isVisible = true;
     this.canvas = null;
+    this._boundKeyHandler = null;
+    this._boundLangHandler = null;
 
     this._createStructure();
     this._setupKeyboard();
@@ -68,22 +69,24 @@ export class MinimapUI {
 
   /** Update translatable texts when language changes */
   _setupLanguageListener() {
-    document.addEventListener('languageChanged', () => {
+    this._boundLangHandler = () => {
       const btn = this._wrapper?.querySelector('#minimap-toggle');
       if (btn) btn.title = t('ui.minimapToggle');
-    });
+    };
+    document.addEventListener('languageChanged', this._boundLangHandler);
   }
 
   /** Listen for M key to toggle */
   _setupKeyboard() {
-    document.addEventListener('keydown', (e) => {
+    this._boundKeyHandler = (e) => {
       if (e.key === 'm' || e.key === 'M') {
         // Don't toggle if user is typing in an input
         const tag = document.activeElement?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
         this.toggle();
       }
-    });
+    };
+    document.addEventListener('keydown', this._boundKeyHandler);
   }
 
   /** @returns {HTMLCanvasElement} */
@@ -107,5 +110,16 @@ export class MinimapUI {
     if (frame) {
       frame.style.display = visible ? '' : 'none';
     }
+  }
+
+  /** Remove event listeners and DOM elements */
+  destroy() {
+    if (this._boundKeyHandler) {
+      document.removeEventListener('keydown', this._boundKeyHandler);
+    }
+    if (this._boundLangHandler) {
+      document.removeEventListener('languageChanged', this._boundLangHandler);
+    }
+    this._wrapper?.remove();
   }
 }
