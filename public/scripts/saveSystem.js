@@ -384,6 +384,14 @@ class SaveSystem {
             this._applyWeatherData(data.weather);
         }
 
+        // Aplicar exploração do minimap
+        if (data.minimap?.exploration) {
+            const minimap = getSystem('minimap');
+            if (minimap && minimap.importExploration) {
+                minimap.importExploration(data.minimap.exploration);
+            }
+        }
+
         logger.info('✅ Save data applied');
         this._dispatchEvent('save:applied', { saveData });
     }
@@ -526,8 +534,18 @@ class SaveSystem {
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
             world: this._getWorldData(),
-            chests: this._getChestsData()
+            chests: this._getChestsData(),
+            minimap: this._getMinimapData()
         };
+    }
+
+    /**
+     * Obtém dados de exploração do minimap para salvar
+     */
+    _getMinimapData() {
+        const minimap = getSystem('minimap');
+        if (!minimap || !minimap.exportExploration) return null;
+        return { exploration: minimap.exportExploration() };
     }
 
     /**

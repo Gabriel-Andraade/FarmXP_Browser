@@ -24,6 +24,7 @@ import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
 import { a11y } from './accessibility.js';
 import { setupAutoCleanup } from "./gameCleanup.js";
+import { initMinimap, updateMinimap } from "./minimap/minimapIntegration.js";
 
 // =============================================================================
 // VARIÁVEIS DE SISTEMAS LAZY LOADING
@@ -617,6 +618,12 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
     }
 
+    try {
+      initMinimap();
+    } catch (e) {
+      handleWarn("falha ao inicializar minimap", "main:startFullGameLoad:minimap", e);
+    }
+
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
     if (window._pendingSaveData && saveRef) {
@@ -1016,6 +1023,12 @@ function gameLoop(timestamp) {
   // (playerNeedsChanged, moneyChanged, playerReady, languageChanged, needsUpdateInterval)
 
   if (!allAssetsLoaded) drawLoadingIndicator();
+
+  try {
+    updateMinimap(currentPlayer);
+  } catch (e) {
+    handleWarn("falha ao atualizar minimap", "main:gameLoop:minimap", e);
+  }
 
   requestAnimationFrame(gameLoop);
 }
