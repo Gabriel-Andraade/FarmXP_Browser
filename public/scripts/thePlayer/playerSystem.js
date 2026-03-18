@@ -673,7 +673,6 @@ export class PlayerSystem {
             }
         });
         safeDispatch(document, event);
-
         this.dispatchNeedsUpdate();
     }
 
