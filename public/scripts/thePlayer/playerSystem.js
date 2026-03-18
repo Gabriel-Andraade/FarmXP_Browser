@@ -122,7 +122,7 @@ export class PlayerSystem {
             const { category, itemId, quantity, item, fillUp } = e.detail;
             this.consumeItem(item);
 
-            document.dispatchEvent(new CustomEvent('removeItemAfterConsumption', {
+            safeDispatch(document, new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
             }));
         }, { signal });
@@ -333,8 +333,8 @@ export class PlayerSystem {
             this.currentPlayer.applyNeedEffects(criticalMultiplier);
         }
         
-        document.dispatchEvent(new CustomEvent('needsCritical', {
-            detail: { 
+        safeDispatch(document, new CustomEvent('needsCritical', {
+            detail: {
                 hunger: this.needs.hunger,
                 thirst: this.needs.thirst,
                 energy: this.needs.energy,
@@ -403,7 +403,7 @@ export class PlayerSystem {
         this.needs.energy = GAME_BALANCE.NEEDS.MAX_VALUE;
         this.dispatchNeedsUpdate();
 
-        document.dispatchEvent(new CustomEvent('sleepCompleted'));
+        safeDispatch(document, new CustomEvent('sleepCompleted'));
     }
 
     /**
@@ -520,7 +520,7 @@ export class PlayerSystem {
         
         this.equippedItem = item;
         
-        document.dispatchEvent(new CustomEvent('itemEquipped', {
+        safeDispatch(document, new CustomEvent('itemEquipped', {
             detail: { item }
         }));
         
@@ -535,7 +535,7 @@ export class PlayerSystem {
         if (this.equippedItem) {
             this.equippedItem = null;
             
-            document.dispatchEvent(new CustomEvent('itemUnequipped'));
+            safeDispatch(document, new CustomEvent('itemUnequipped'));
             return true;
         }
         return false;
@@ -672,8 +672,8 @@ export class PlayerSystem {
                 character: this.activeCharacter 
             }
         });
-        document.dispatchEvent(event);
-        
+        safeDispatch(document, event);
+
         this.dispatchNeedsUpdate();
     }
 

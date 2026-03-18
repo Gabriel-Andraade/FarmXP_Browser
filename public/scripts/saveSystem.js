@@ -481,13 +481,11 @@ class SaveSystem {
         }
 
         // Disparar evento para atualizar UI
-        document.dispatchEvent(new CustomEvent('timeChanged', {
-            detail: { 
-                day: weather.day, 
-                time: weather.currentTime, 
-                weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null 
-            }
-        }));
+        this._dispatchEvent('timeChanged', {
+            day: weather.day,
+            time: weather.currentTime,
+            weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null
+        });
 
         logger.info('⏰ Game time reset for new game');
     }
@@ -788,13 +786,11 @@ class SaveSystem {
         if (typeof weather.updateAmbientLight === 'function') weather.updateAmbientLight();
 
         // Disparar eventos para atualizar UI
-        document.dispatchEvent(new CustomEvent('timeChanged', {
-            detail: { 
-                day: weather.day, 
-                time: weather.currentTime, 
-                weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null 
-            }
-        }));
+        this._dispatchEvent('timeChanged', {
+            day: weather.day,
+            time: weather.currentTime,
+            weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null
+        });
 
         // Resumir o sistema
         if (typeof weather.resume === 'function') weather.resume();

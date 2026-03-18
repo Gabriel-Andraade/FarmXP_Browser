@@ -536,7 +536,7 @@ export function startConsuming(itemId, player) {
     const item = getItem(itemId);
     if (!item || !item.fillUp) return false;
 
-    document.dispatchEvent(new CustomEvent('startConsumptionBar', {
+    safeDispatch(document, new CustomEvent('startConsumptionBar', {
         detail: {
             item,
             player,
