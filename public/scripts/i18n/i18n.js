@@ -7,6 +7,7 @@
 import ptBR from './pt-BR.js';
 import en from './en.js';
 import es from './es.js';
+import { safeDispatch } from '../safeDispatch.js';
 
 const STORAGE_KEY = 'farmxp_language';
 const DEFAULT_LANGUAGE = 'pt-BR';
@@ -205,7 +206,7 @@ class I18nManager {
     }
 
     // Dispatch event for UI updates
-    document.dispatchEvent(new CustomEvent('languageChanged', {
+    safeDispatch(document, new CustomEvent('languageChanged', {
       detail: { language: lang }
     }));
 

@@ -6,6 +6,7 @@
 
 import { t } from '../i18n/i18n.js';
 import { getObject, registerSystem } from '../gameState.js';
+import { safeDispatch } from '../safeDispatch.js';
 
 /**
  * limita um numero dentro de um intervalo
@@ -363,7 +364,7 @@ class UiPanel {
 
   _emitAction(actionId) {
     const ev = new CustomEvent("animalAction", { detail: { action: actionId, animal: this.target } });
-    document.dispatchEvent(ev);
+    safeDispatch(document, ev);
   }
 
   _getCanvasTransform() {

@@ -3,6 +3,7 @@ import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { getObject } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
+import { safeDispatch } from "./safeDispatch.js";
 /**
  * Tamanho do tile com zoom aplicado (pré-calculado para performance)
  * @constant {number}
@@ -337,7 +338,7 @@ function optimizeMemoryUsage() {
       const world = getObject("world");
 
       if (world?.objectDestroyed) {
-        document.dispatchEvent(new CustomEvent('cleanupDestroyedObjects'));
+        safeDispatch(document, new CustomEvent('cleanupDestroyedObjects'));
         optimizations.push('destroyedObjects');
       }
 

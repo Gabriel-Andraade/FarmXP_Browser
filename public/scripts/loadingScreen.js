@@ -1,5 +1,6 @@
 import { logger } from './logger.js';
 import { getSystem, setGameFlag } from './gameState.js';
+import { safeDispatch } from './safeDispatch.js';
 import { t } from './i18n/i18n.js';
 
 /**
@@ -258,7 +259,7 @@ class LoadingScreenManager {
         if (window.gc) { window.gc(); }
 
         // 3. Notificar sistema
-        document.dispatchEvent(new CustomEvent('sleepOptimizationsComplete'));
+        safeDispatch(document, new CustomEvent('sleepOptimizationsComplete'));
     }
 
     /**

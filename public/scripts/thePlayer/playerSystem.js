@@ -8,6 +8,7 @@
 
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
 import { logger } from '../logger.js';
+import { safeDispatch } from '../safeDispatch.js';
 import { validateRange } from '../validation.js';
 import { getSystem, registerSystem } from '../gameState.js';
 
@@ -258,7 +259,7 @@ export class PlayerSystem {
      * @returns {void}
      */
     dispatchNeedsUpdate() {
-        document.dispatchEvent(new CustomEvent('playerNeedsChanged', {
+        safeDispatch(document, new CustomEvent('playerNeedsChanged', {
             detail: {
                 hunger: Math.round(this.needs.hunger),
                 thirst: Math.round(this.needs.thirst),

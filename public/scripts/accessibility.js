@@ -19,6 +19,7 @@
 
 import { registerSystem } from './gameState.js';
 import { logger } from './logger.js';
+import { safeDispatch } from './safeDispatch.js';
 
 const STORAGE_KEY = 'farmxp_a11y';
 
@@ -118,7 +119,7 @@ class AccessibilityManager {
     if (persist) this._saveSettings();
 
     // Emit a generic change event for game systems that want to react
-    document.dispatchEvent(new CustomEvent('a11ySettingsChanged', {
+    safeDispatch(document, new CustomEvent('a11ySettingsChanged', {
       detail: { key, value, settings: this.getAllSettings() }
     }));
   }
@@ -141,7 +142,7 @@ class AccessibilityManager {
 
     if (changedAny) {
       if (persist) this._saveSettings();
-      document.dispatchEvent(new CustomEvent('a11ySettingsChanged', {
+      safeDispatch(document, new CustomEvent('a11ySettingsChanged', {
         detail: { key: '*', value: null, settings: this.getAllSettings() }
       }));
     }
@@ -154,7 +155,7 @@ class AccessibilityManager {
     this.settings = { ...DEFAULTS };
     this._applyAllSettings();
     this._saveSettings();
-    document.dispatchEvent(new CustomEvent('a11ySettingsChanged', {
+    safeDispatch(document, new CustomEvent('a11ySettingsChanged', {
       detail: { key: '*', value: null, settings: this.getAllSettings() }
     }));
   }
@@ -236,7 +237,7 @@ class AccessibilityManager {
         this._applyCssGameZoom(zoom);
 
         if (emitEvents) {
-          document.dispatchEvent(new CustomEvent('gameZoomChanged', { detail: { zoom } }));
+          safeDispatch(document, new CustomEvent('gameZoomChanged', { detail: { zoom } }));
         }
         break;
       }
@@ -246,7 +247,7 @@ class AccessibilityManager {
         this._applyColorVisionFilter(mode);
 
         if (emitEvents) {
-          document.dispatchEvent(new CustomEvent('colorVisionChanged', { detail: { mode } }));
+          safeDispatch(document, new CustomEvent('colorVisionChanged', { detail: { mode } }));
         }
         break;
       }

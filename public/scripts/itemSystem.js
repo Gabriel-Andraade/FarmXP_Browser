@@ -7,6 +7,7 @@ import { camera } from './thePlayer/cameraSystem.js';
 import { getItem } from './itemUtils.js';
 import { GAME_BALANCE } from './constants.js';
 import { registerSystem, getSystem, getObject } from './gameState.js';
+import { safeDispatch } from './safeDispatch.js';
 
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
@@ -240,7 +241,7 @@ export class ItemSystem {
             }
 
             this.lastDamageTime = Date.now();
-            document.dispatchEvent(new CustomEvent('playerAttack'));
+            safeDispatch(document, new CustomEvent('playerAttack'));
 
             this.applyDamage(id, damage);
         } catch (err) {
@@ -276,7 +277,7 @@ export class ItemSystem {
 
         obj.health -= dmg;
 
-        document.dispatchEvent(new CustomEvent('objectDamaged', {
+        safeDispatch(document, new CustomEvent('objectDamaged', {
             detail: { id, type: obj.type, x: obj.x, y: obj.y, dmg }
         }));
 

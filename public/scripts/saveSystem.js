@@ -7,6 +7,7 @@
 
 import { registerSystem, getSystem, getObject } from './gameState.js';
 import { logger } from './logger.js';
+import { safeDispatch } from './safeDispatch.js';
 import { exportWorldState, importWorldState } from './theWorld.js';
 
 const ROOT_KEY = 'farmxp_saves_v1';
@@ -861,7 +862,7 @@ class SaveSystem {
      * @param {Object} detail - Detalhes do evento
      */
     _dispatchEvent(type, detail = {}) {
-        document.dispatchEvent(new CustomEvent(type, { detail }));
+        safeDispatch(document, new CustomEvent(type, { detail }));
     }
 }
 

@@ -1,4 +1,5 @@
 import { logger } from "./logger.js";
+import { safeDispatch } from "./safeDispatch.js";
 /**
  * @file gameState.js - Centralized Game State Manager
  * @description Single source of truth for all game systems and state.
@@ -42,7 +43,7 @@ export function registerSystem(systemName, systemInstance) {
     logger.debug(`✅ Registered system: ${systemName}`);
   }
   // fix: Event-driven registration instead of polling (L40) - dispatch event for systems waiting on registration
-  document.dispatchEvent(new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
+  safeDispatch(document, new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
   return systemInstance;
 }
 
