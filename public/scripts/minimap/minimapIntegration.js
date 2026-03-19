@@ -30,6 +30,8 @@ export async function initMinimap() {
 
     if (!canvas) {
       logger.error('Minimap: failed to get canvas');
+      minimapUI = null;
+      minimapSystem = null;
       return;
     }
 
@@ -40,6 +42,8 @@ export async function initMinimap() {
     logger.debug('Minimap fully initialized');
   } catch (e) {
     logger.error('Minimap init failed:', e);
+    minimapUI = null;
+    minimapSystem = null;
   }
 }
 

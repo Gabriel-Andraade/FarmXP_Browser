@@ -145,14 +145,19 @@ export class MinimapSystem {
     const cx = Math.floor(worldX / EXPLORE_CELL_SIZE);
     const cy = Math.floor(worldY / EXPLORE_CELL_SIZE);
     const radiusSq = radius * radius;
+    const maxCellX = Math.ceil(this.worldWidth / EXPLORE_CELL_SIZE) - 1;
+    const maxCellY = Math.ceil(this.worldHeight / EXPLORE_CELL_SIZE) - 1;
     for (let dx = -radiusCells; dx <= radiusCells; dx++) {
       for (let dy = -radiusCells; dy <= radiusCells; dy++) {
+        const gridX = cx + dx;
+        const gridY = cy + dy;
+        if (gridX < 0 || gridY < 0 || gridX > maxCellX || gridY > maxCellY) continue;
         const cellCenterX = (cx + dx + 0.5) * EXPLORE_CELL_SIZE;
         const cellCenterY = (cy + dy + 0.5) * EXPLORE_CELL_SIZE;
         const distX = cellCenterX - worldX;
         const distY = cellCenterY - worldY;
         if (distX * distX + distY * distY > radiusSq) continue;
-        this._explorationGrid.add(`${cx + dx},${cy + dy}`);
+        this._explorationGrid.add(`${gridX},${gridY}`);
       }
     }
   }
@@ -219,10 +224,11 @@ export class MinimapSystem {
 
     // Support legacy format (plain string) and new format (object)
     const imageUrl = typeof data === 'string' ? data : data.image;
-    const gridArr = typeof data === 'object' ? data.grid : null;
+    const gridArr = (typeof data === 'object' && data !== null) ? data.grid : null;
+    const hasValidGrid = Array.isArray(gridArr);
 
     // Restore boolean grid
-    if (gridArr && Array.isArray(gridArr)) {
+    if (hasValidGrid) {
       this._explorationGrid = new Set(gridArr);
     }
 
@@ -235,7 +241,7 @@ export class MinimapSystem {
         this.explorationCtx.drawImage(img, 0, 0);
 
         // Rebuild grid from canvas pixels for legacy saves without grid data
-        if (!gridArr) {
+        if (!hasValidGrid) {
           this._rebuildGridFromCanvas();
         }
 
