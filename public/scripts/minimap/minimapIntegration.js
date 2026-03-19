@@ -15,6 +15,11 @@ import { logger } from '../logger.js';
 let minimapUI = null;
 let minimapSystem = null;
 
+function resetMinimapState() {
+  minimapUI = null;
+  minimapSystem = null;
+}
+
 /**
  * Initialize the minimap system. Call once after DOM is ready.
  */
@@ -30,8 +35,7 @@ export async function initMinimap() {
 
     if (!canvas) {
       logger.error('Minimap: failed to get canvas');
-      minimapUI = null;
-      minimapSystem = null;
+      resetMinimapState();
       return;
     }
 
@@ -42,8 +46,7 @@ export async function initMinimap() {
     logger.debug('Minimap fully initialized');
   } catch (e) {
     logger.error('Minimap init failed:', e);
-    minimapUI = null;
-    minimapSystem = null;
+    resetMinimapState();
   }
 }
 
