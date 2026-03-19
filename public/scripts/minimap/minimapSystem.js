@@ -139,13 +139,19 @@ export class MinimapSystem {
     this._markExploredGrid(playerWorldX, playerWorldY, EXPLORATION_RADIUS_WORLD);
   }
 
-  /** Mark cells as explored in the boolean grid */
+  /** Mark cells as explored in the boolean grid (circular) */
   _markExploredGrid(worldX, worldY, radius) {
     const radiusCells = Math.ceil(radius / EXPLORE_CELL_SIZE);
     const cx = Math.floor(worldX / EXPLORE_CELL_SIZE);
     const cy = Math.floor(worldY / EXPLORE_CELL_SIZE);
+    const radiusSq = radius * radius;
     for (let dx = -radiusCells; dx <= radiusCells; dx++) {
       for (let dy = -radiusCells; dy <= radiusCells; dy++) {
+        const cellCenterX = (cx + dx + 0.5) * EXPLORE_CELL_SIZE;
+        const cellCenterY = (cy + dy + 0.5) * EXPLORE_CELL_SIZE;
+        const distX = cellCenterX - worldX;
+        const distY = cellCenterY - worldY;
+        if (distX * distX + distY * distY > radiusSq) continue;
         this._explorationGrid.add(`${cx + dx},${cy + dy}`);
       }
     }
@@ -155,6 +161,32 @@ export class MinimapSystem {
   _isExplored(worldX, worldY) {
     const key = `${Math.floor(worldX / EXPLORE_CELL_SIZE)},${Math.floor(worldY / EXPLORE_CELL_SIZE)}`;
     return this._explorationGrid.has(key);
+  }
+
+  /** Rebuild exploration grid from canvas pixels (one-time, for legacy saves) */
+  _rebuildGridFromCanvas() {
+    this._explorationGrid = new Set();
+    const imgData = this.explorationCtx.getImageData(0, 0, this.minimapWidth, this.minimapHeight).data;
+    const cellPixelW = EXPLORE_CELL_SIZE * this._fullScale;
+    const cellPixelH = EXPLORE_CELL_SIZE * this._fullScale;
+
+    const maxCellX = Math.ceil(this.worldWidth / EXPLORE_CELL_SIZE);
+    const maxCellY = Math.ceil(this.worldHeight / EXPLORE_CELL_SIZE);
+
+    for (let gx = 0; gx < maxCellX; gx++) {
+      for (let gy = 0; gy < maxCellY; gy++) {
+        // Sample center pixel of this cell on the exploration canvas
+        const px = Math.round(this._fullOffsetX + (gx + 0.5) * cellPixelW);
+        const py = Math.round(this._fullOffsetY + (gy + 0.5) * cellPixelH);
+        if (px < 0 || py < 0 || px >= this.minimapWidth || py >= this.minimapHeight) continue;
+        const idx = (py * this.minimapWidth + px) * 4;
+        // Non-black pixel = explored
+        if (imgData[idx] !== 0 || imgData[idx + 1] !== 0 || imgData[idx + 2] !== 0) {
+          this._explorationGrid.add(`${gx},${gy}`);
+        }
+      }
+    }
+    logger.debug(`[MinimapSystem] Rebuilt exploration grid from canvas: ${this._explorationGrid.size} cells`);
   }
 
   /** Get the active character name and direction for player icon */
@@ -201,6 +233,12 @@ export class MinimapSystem {
       img.onload = () => {
         this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
         this.explorationCtx.drawImage(img, 0, 0);
+
+        // Rebuild grid from canvas pixels for legacy saves without grid data
+        if (!gridArr) {
+          this._rebuildGridFromCanvas();
+        }
+
         resolve();
       };
       img.onerror = () => {

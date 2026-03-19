@@ -52,9 +52,12 @@ export class MinimapUI {
 
     // Toggle button (map icon)
     const toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
     toggleBtn.id = 'minimap-toggle';
     toggleBtn.className = 'minimap-toggle';
     toggleBtn.title = t('ui.minimapToggle');
+    toggleBtn.setAttribute('aria-label', t('ui.minimapToggle'));
+    toggleBtn.setAttribute('aria-pressed', String(this.isVisible));
     toggleBtn.innerHTML = '<i class="fas fa-map"></i>';
     toggleBtn.addEventListener('click', () => this.toggle());
 
@@ -71,7 +74,10 @@ export class MinimapUI {
   _setupLanguageListener() {
     this._boundLangHandler = () => {
       const btn = this._wrapper?.querySelector('#minimap-toggle');
-      if (btn) btn.title = t('ui.minimapToggle');
+      if (btn) {
+        btn.title = t('ui.minimapToggle');
+        btn.setAttribute('aria-label', t('ui.minimapToggle'));
+      }
     };
     document.addEventListener('languageChanged', this._boundLangHandler);
   }
@@ -101,6 +107,8 @@ export class MinimapUI {
     if (frame) {
       frame.style.display = this.isVisible ? '' : 'none';
     }
+    const btn = this._wrapper?.querySelector('#minimap-toggle');
+    if (btn) btn.setAttribute('aria-pressed', String(this.isVisible));
   }
 
   /** Set minimap visibility */
@@ -110,6 +118,8 @@ export class MinimapUI {
     if (frame) {
       frame.style.display = visible ? '' : 'none';
     }
+    const btn = this._wrapper?.querySelector('#minimap-toggle');
+    if (btn) btn.setAttribute('aria-pressed', String(this.isVisible));
   }
 
   /** Remove event listeners and DOM elements */

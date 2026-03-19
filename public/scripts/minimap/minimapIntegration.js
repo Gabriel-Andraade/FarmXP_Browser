@@ -48,14 +48,20 @@ export async function initMinimap() {
  * @param {Object} currentPlayer - Player object with x, y properties
  */
 export function updateMinimap(currentPlayer) {
-  if (!minimapSystem || !minimapUI?.isVisible || !currentPlayer) return;
+  if (!minimapSystem || !currentPlayer) return;
 
-  minimapSystem.update(currentPlayer.x, currentPlayer.y, {
+  const worldArrays = {
     trees,
     rocks,
     thickets,
     houses,
     placedBuildings,
     placedWells,
-  });
+  };
+
+  if (minimapUI?.isVisible) {
+    minimapSystem.update(currentPlayer.x, currentPlayer.y, worldArrays);
+  } else {
+    minimapSystem.updateExploration(currentPlayer.x, currentPlayer.y);
+  }
 }
