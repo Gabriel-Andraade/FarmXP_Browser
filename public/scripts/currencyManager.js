@@ -1,6 +1,7 @@
 import { GAME_BALANCE } from './constants.js';
 import { isValidPositiveNumber, MAX_CURRENCY } from './validation.js';
 import { registerSystem } from './gameState.js';
+import { safeDispatch } from './safeDispatch.js';
 
 /**
  * Sistema de gerenciamento de moeda do jogo
@@ -187,7 +188,7 @@ export class CurrencyManager {
      * @fires document#moneyChanged
      */
     _notifyChange() {
-        document.dispatchEvent(new CustomEvent('moneyChanged', {
+        safeDispatch(document, new CustomEvent('moneyChanged', {
             detail: {
                 money: this.currentMoney,
                 oldMoney: this._lastAmount || 0,

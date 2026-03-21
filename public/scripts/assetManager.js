@@ -9,6 +9,7 @@
 import { WORLD_GENERATOR_CONFIG } from "./generatorSeeds.js";
 import { registerSystem } from "./gameState.js";
 import { logger } from "./logger.js";
+import { safeDispatch } from "./safeDispatch.js";
 
 /**
  * Configurações de performance para carregamento de assets
@@ -386,7 +387,7 @@ export const assets = {
         const startTime = performance.now();
         await loadCoreAssets();
         const loadTime = performance.now() - startTime;
-        document.dispatchEvent(new CustomEvent('assetsLoaded', {
+        safeDispatch(document, new CustomEvent('assetsLoaded', {
             detail: { stage: 'CORE', time: loadTime }
         }));
         return true;
@@ -396,7 +397,7 @@ export const assets = {
         const startTime = performance.now();
         await loadWorldAssets();
         const loadTime = performance.now() - startTime;
-        document.dispatchEvent(new CustomEvent('assetsLoaded', {
+        safeDispatch(document, new CustomEvent('assetsLoaded', {
             detail: { stage: 'WORLD', time: loadTime }
         }));
         return true;
@@ -406,7 +407,7 @@ export const assets = {
         const startTime = performance.now();
         await loadAnimalAssets();
         const loadTime = performance.now() - startTime;
-        document.dispatchEvent(new CustomEvent('assetsLoaded', {
+        safeDispatch(document, new CustomEvent('assetsLoaded', {
             detail: { stage: 'ANIMALS', time: loadTime }
         }));
         return true;

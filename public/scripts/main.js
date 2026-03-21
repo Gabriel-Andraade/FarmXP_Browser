@@ -9,6 +9,7 @@
 // =============================================================================
 import { handleError, handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
+import { safeDispatch } from "./safeDispatch.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
@@ -1049,8 +1050,8 @@ window.gameDebug = {
     worldAssetsLoaded = true;
     spawnGameAnimals();
   },
-  triggerSleep: () => document.dispatchEvent(new CustomEvent("sleepStarted")),
-  wakeUp: () => document.dispatchEvent(new CustomEvent("sleepEnded")),
+  triggerSleep: () => safeDispatch(document, new CustomEvent("sleepStarted")),
+  wakeUp: () => safeDispatch(document, new CustomEvent("sleepEnded")),
   spawnAnimals: function (count = 5, type = "Turkey") {
     if (!assets.animals || !assets.animals[type]) {
       logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));

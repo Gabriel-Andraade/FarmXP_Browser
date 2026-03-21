@@ -8,6 +8,7 @@
 
 import { GAME_BALANCE, NEEDS_UPDATE_INTERVAL_MS, SLEEP_ENERGY_RESTORE_INTERVAL_MS, FEEDBACK_MESSAGE_DURATION_MS } from '../constants.js';
 import { logger } from '../logger.js';
+import { safeDispatch } from '../safeDispatch.js';
 import { validateRange } from '../validation.js';
 import { getSystem, registerSystem } from '../gameState.js';
 
@@ -121,7 +122,7 @@ export class PlayerSystem {
             const { category, itemId, quantity, item, fillUp } = e.detail;
             this.consumeItem(item);
 
-            document.dispatchEvent(new CustomEvent('removeItemAfterConsumption', {
+            safeDispatch(document, new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
             }));
         }, { signal });
@@ -258,7 +259,7 @@ export class PlayerSystem {
      * @returns {void}
      */
     dispatchNeedsUpdate() {
-        document.dispatchEvent(new CustomEvent('playerNeedsChanged', {
+        safeDispatch(document, new CustomEvent('playerNeedsChanged', {
             detail: {
                 hunger: Math.round(this.needs.hunger),
                 thirst: Math.round(this.needs.thirst),
@@ -332,8 +333,8 @@ export class PlayerSystem {
             this.currentPlayer.applyNeedEffects(criticalMultiplier);
         }
         
-        document.dispatchEvent(new CustomEvent('needsCritical', {
-            detail: { 
+        safeDispatch(document, new CustomEvent('needsCritical', {
+            detail: {
                 hunger: this.needs.hunger,
                 thirst: this.needs.thirst,
                 energy: this.needs.energy,
@@ -402,7 +403,7 @@ export class PlayerSystem {
         this.needs.energy = GAME_BALANCE.NEEDS.MAX_VALUE;
         this.dispatchNeedsUpdate();
 
-        document.dispatchEvent(new CustomEvent('sleepCompleted'));
+        safeDispatch(document, new CustomEvent('sleepCompleted'));
     }
 
     /**
@@ -519,7 +520,7 @@ export class PlayerSystem {
         
         this.equippedItem = item;
         
-        document.dispatchEvent(new CustomEvent('itemEquipped', {
+        safeDispatch(document, new CustomEvent('itemEquipped', {
             detail: { item }
         }));
         
@@ -534,7 +535,7 @@ export class PlayerSystem {
         if (this.equippedItem) {
             this.equippedItem = null;
             
-            document.dispatchEvent(new CustomEvent('itemUnequipped'));
+            safeDispatch(document, new CustomEvent('itemUnequipped'));
             return true;
         }
         return false;
@@ -671,8 +672,7 @@ export class PlayerSystem {
                 character: this.activeCharacter 
             }
         });
-        document.dispatchEvent(event);
-        
+        safeDispatch(document, event);
         this.dispatchNeedsUpdate();
     }
 
