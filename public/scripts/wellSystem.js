@@ -47,7 +47,7 @@ const wellState = {
 };
 
 function generateId() {
-  return `well_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return `well_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
 export const wellSystem = {
