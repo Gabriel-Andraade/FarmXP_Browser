@@ -554,7 +554,7 @@ class SaveSystem {
      * Obtém dados do inventário para salvar
      */
     _getInventoryData() {
-        const inventory = getSystem('inventory') || window.inventorySystem;
+        const inventory = getSystem('inventory');
         if (!inventory) return { categories: {}, equipped: null };
 
         const categories = {};
@@ -575,7 +575,7 @@ class SaveSystem {
      * Obtém dados de moeda para salvar
      */
     _getCurrencyData() {
-        const currency = getSystem('currency') || window.currencyManager;
+        const currency = getSystem('currency');
         return {
             money: currency?.currentMoney ?? 1000
         };
@@ -680,7 +680,7 @@ class SaveSystem {
      * Aplica dados do inventário
      */
     _applyInventoryData(data) {
-        const inventory = getSystem('inventory') || window.inventorySystem;
+        const inventory = getSystem('inventory');
         if (!inventory || !data.categories) return;
 
         // Limpar inventário atual
@@ -707,18 +707,21 @@ class SaveSystem {
             logger.warn('[SaveSystem] Failed to restore items:', failedItems);
         }
 
-        // Restaurar equipados apenas se o item existir no inventário
-        if (data.equipped) {
-            // Only restore equipped if the item was successfully added
-            const equippedId = data.equipped?.id ?? data.equipped;
-            const isInInventory = Object.values(inventory.categories).some(cat =>
-                cat.items?.some(item => item.id === equippedId && item.quantity > 0)
-            );
-            if (isInInventory) {
-                inventory.equipped = data.equipped;
+        // Restore equipped state (may be null if nothing was equipped)
+        if (data.hasOwnProperty('equipped')) {
+            if (data.equipped) {
+                const equippedId = data.equipped?.id ?? data.equipped;
+                const isInInventory = Object.values(inventory.categories).some(cat =>
+                    cat.items?.some(item => item.id === equippedId && item.quantity > 0)
+                );
+                if (isInInventory) {
+                    inventory.equipped = data.equipped;
+                } else {
+                    logger.warn('[SaveSystem] Equipped item not found in restored inventory, skipping');
+                    inventory.equipped = null;
+                }
             } else {
-                logger.warn('[SaveSystem] Equipped item not found in restored inventory, skipping');
-                inventory.equipped = null; // Limpar equipado inválido
+                inventory.equipped = null;
             }
         }
 
@@ -729,7 +732,7 @@ class SaveSystem {
      * Aplica dados de moeda
      */
     _applyCurrencyData(data) {
-        const currency = getSystem('currency') || window.currencyManager;
+        const currency = getSystem('currency');
          if (currency && typeof data.money === 'number' && data.money >= 0) {
             currency.currentMoney = data.money;
             if (typeof currency._notifyChange === 'function') {
