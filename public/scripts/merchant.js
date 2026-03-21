@@ -42,6 +42,10 @@ class MerchantSystem {
         // Armazenar referência do handler do botão da loja
         this.storeBtnHandler = null;
 
+        // fix: track pending timers for cleanup in destroy()
+        this._setupRetryTimer = null;
+        this._reopenTimer = null;
+
         this.initialize();
     }
 
@@ -69,7 +73,11 @@ class MerchantSystem {
         const storeBtn = document.getElementById('storeBtn');
 
         if (!storeBtn) {
-            setTimeout(() => this.setupStoreButton(), 100);
+            // fix: store retry timer so destroy() can cancel it
+            this._setupRetryTimer = setTimeout(() => {
+                this._setupRetryTimer = null;
+                this.setupStoreButton();
+            }, 100);
             return;
         }
 
@@ -599,7 +607,9 @@ class MerchantSystem {
         if (!this.isMerchantOpen(this.currentMerchant)) {
             this.closeAllModals();
             this.showMessage(t('trading.merchantClosed', { name: this.currentMerchant.name }));
-            setTimeout(() => {
+            // fix: store reopen timer so destroy() can cancel it
+            this._reopenTimer = setTimeout(() => {
+                this._reopenTimer = null;
                 this.openMerchantsList();
             }, 500);
         }
@@ -1254,20 +1264,28 @@ class MerchantSystem {
     destroy() {
         // Remove todos os event listeners
         this.abortController.abort();
-        
+
         // Reset AbortController para permitir re-inicialização
         this.abortController = new AbortController();
 
+        // fix: clear pending timers to prevent post-destroy callbacks
+        clearTimeout(this._setupRetryTimer);
+        this._setupRetryTimer = null;
+        clearTimeout(this._reopenTimer);
+        this._reopenTimer = null;
+
         // Reset listeners flag para permitir re-setup
         this.listenersSetup = false;
-        
+
         // Clear handler reference
         this.storeBtnHandler = null;
-        
+
         // Clear referências
         this.currentMerchant = null;
         this.selectedPlayerItem = null;
         this.selectedMerchantItem = null;
+
+        logger.debug('MerchantSystem destruído');
     }
 }
 

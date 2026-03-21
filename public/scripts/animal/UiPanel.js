@@ -465,6 +465,7 @@ class UiPanel {
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   }
 
+
   _startLoop() {
     if (this._loopRunning) return;
     this._loopRunning = true;
