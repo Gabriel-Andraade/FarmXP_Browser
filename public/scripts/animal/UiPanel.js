@@ -81,7 +81,6 @@ class UiPanel {
     document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
     this._resizeSvg();
-    this._startLoop();
   }
 
   //  Método para reconstruir tudo quando o idioma muda
