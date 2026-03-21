@@ -466,7 +466,7 @@ class SaveSystem {
             weather.day = 1;
             weather.month = 1;
             weather.year = 1;
-            weather.season = 'Primavera';
+            weather.seasonKey = 'spring';
             weather.weatherType = 'clear';
             weather.weatherTimer = 0;
             weather.nextWeatherChange = 60 * 2;
@@ -593,7 +593,7 @@ class SaveSystem {
             day: weather.day ?? 1,
             month: weather.month ?? 1,
             year: weather.year ?? 1,
-            season: weather.season ?? 'Primavera',
+            seasonKey: weather.seasonKey ?? 'spring',
             weatherType: weather.weatherType ?? 'clear',
             weatherTimer: weather.weatherTimer ?? 0,
             nextWeatherChange: weather.nextWeatherChange ?? 120,
@@ -753,7 +753,7 @@ class SaveSystem {
         weather.day = data.day ?? 1;
         weather.month = data.month ?? 1;
         weather.year = data.year ?? 1;
-        weather.season = data.season ?? 'Primavera';
+        weather.seasonKey = data.seasonKey ?? 'spring';
 
         // Restaurar estado do clima
         weather.weatherTimer = data.weatherTimer ?? 0;
