@@ -470,7 +470,7 @@ export const BuildSystem = {
             });
             localStorage.setItem(key, JSON.stringify(dataToSave));
         } catch (e) {
-            console.error(`erro ao salvar ${key}:`, e);
+            logger.error(`erro ao salvar ${key}:`, e);
         }
     },
 
@@ -484,7 +484,7 @@ export const BuildSystem = {
                 }
             }
         } catch (e) {
-            console.warn(`erro ao carregar ${key}:`, e);
+            logger.warn(`erro ao carregar ${key}:`, e);
         }
         return [];
     },

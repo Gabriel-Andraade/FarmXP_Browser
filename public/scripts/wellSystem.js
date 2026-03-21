@@ -11,6 +11,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
+import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
 
 /**
@@ -380,7 +381,7 @@ export const wellSystem = {
 
   drinkFromWell() {
     if (wellState.waterLevel < 5) {
-      console.warn(`⚠️ ${t('well.insufficientWater')}`);
+      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
       return;
     }
 
@@ -389,7 +390,7 @@ export const wellSystem = {
       playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
       wellState.waterLevel -= 5;
     } else {
-      console.warn(`⚠️ ${t('well.playerNotAvailable')}`);
+      logger.error(`[WellSystem] ${t('well.playerNotAvailable')}`);
     }
     this.updateUI();
   },
@@ -408,12 +409,12 @@ export const wellSystem = {
     }
 
     if (!catFound) {
-      console.warn(`⚠️ ${t('well.noEmptyBottle')}`);
+      logger.warn(`[WellSystem] ${t('well.noEmptyBottle')}`);
       return;
     }
 
     if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
-      console.warn(`⚠️ ${t('well.insufficientWater')}`);
+      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
       return;
     }
 
