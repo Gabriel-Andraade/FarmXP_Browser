@@ -109,7 +109,7 @@ function hasEncodedTraversal(rawLower: string) {
  * Handles static file serving with directory access protection
  *
  * @security Blocks directory listing by rejecting paths ending with '/'
- * @security TODO: Add path traversal protection (see Issue #1)
+ * @security Path traversal protection implemented via safeDecode, hasEncodedTraversal, and normalizedRel checks
  */
 serve({
   port,
