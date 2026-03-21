@@ -81,7 +81,6 @@ class UiPanel {
     document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
     this._resizeSvg();
-    this._startLoop();
   }
 
   //  Método para reconstruir tudo quando o idioma muda
@@ -464,6 +463,7 @@ class UiPanel {
     const h = window.innerHeight || 1;
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   }
+
 
   _startLoop() {
     if (this._loopRunning) return;

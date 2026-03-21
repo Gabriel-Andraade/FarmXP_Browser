@@ -798,6 +798,16 @@ export const chestSystem = {
     },
     
     /**
+     * Destroys the chest system, closing any open UI.
+     * fix: added destroy() for gameCleanup auto-discovery
+     * @returns {void}
+     */
+    destroy() {
+        this.closeChestUI();
+        logger.debug('ChestSystem destruído');
+    },
+
+    /**
      * Verifica se o jogador está próximo o suficiente para interagir com algum baú
      * Calcula a distância entre o centro do jogador e cada baú
      * @param {number} playerX - Posição X do jogador

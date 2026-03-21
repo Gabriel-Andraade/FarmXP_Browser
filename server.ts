@@ -35,6 +35,7 @@ const ALLOWED_TOP_FILES = new Set([
   "index.html",
   "style.css",
   "responsive.css",
+  "manifest.json",
 ]);
 
 const ALLOWED_TOP_DIRS = new Set([
@@ -61,8 +62,8 @@ const MIME_TYPES: Record<string, string> = {
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
-  // ajuste a CSP conforme seu app (se usar cdn/inline, libere aqui)
-  // "Content-Security-Policy": "default-src 'self'",
+  "Content-Security-Policy":
+  "default-src 'self'; style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; script-src 'self';",
 };
 
 type BodyLike = ConstructorParameters<typeof Response>[0];
