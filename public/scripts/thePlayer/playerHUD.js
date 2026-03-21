@@ -43,7 +43,7 @@ export class PlayerHUD {
         this.isStoreOpen = false;
         this.isConfigOpen = false;
         this.currentPlayer = null;
-        this.isExpanded = false;
+        this.isExpanded = true;
 
         // Intervalo para atualizar necessidades
         this.needsUpdateInterval = null;
@@ -115,7 +115,7 @@ export class PlayerHUD {
         nameH3.textContent = t('player.noCharacter');
         const equippedItem = document.createElement('div');
         equippedItem.id = 'equipped-item';
-        equippedItem.style.cssText = 'display:none; font-size: 14px; color: #cfc; margin-top: 4px;';
+        equippedItem.classList.add('hidden');
 
         const infoGrid = document.createElement('div');
         infoGrid.className = 'player-info-grid';
@@ -341,17 +341,17 @@ export class PlayerHUD {
                 // fix: innerHTML → DOM API
                 equippedElement.replaceChildren();
                 const wrapper = document.createElement('div');
-                wrapper.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+                wrapper.className = 'equipped-item-wrapper';
                 const iconSpan = document.createElement('span');
                 iconSpan.textContent = item.icon || '';
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = itemName;
                 wrapper.append(iconSpan, nameSpan);
                 equippedElement.appendChild(wrapper);
-                equippedElement.style.display = 'block';
+                equippedElement.classList.remove('hidden');
             } else {
                 equippedElement.replaceChildren();
-                equippedElement.style.display = 'none';
+                equippedElement.classList.add('hidden');
             }
         }
     }
@@ -390,7 +390,8 @@ export class PlayerHUD {
         this.isExpanded = !this.isExpanded;
         const panel = document.getElementById('playerPanel');
         if (panel) {
-            panel.style.display = this.isExpanded ? 'block' : 'none';
+            if (this.isExpanded) panel.classList.remove('hidden');
+            else panel.classList.add('hidden');
         }
     }
 }

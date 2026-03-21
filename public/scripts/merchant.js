@@ -536,9 +536,7 @@ class MerchantSystem {
                 card.addEventListener('click', () => {
                     this.openCommerceModal(merchantId);
                 });
-                card.style.cursor = 'pointer';
             } else {
-                card.style.cursor = 'not-allowed';
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
                     this.showMessage(t('trading.isClosed', { name: merchant.name }));
@@ -565,10 +563,8 @@ class MerchantSystem {
                 if (card) {
                     if (isOpen) {
                         card.classList.remove('mch-merchant-closed');
-                        card.style.cursor = 'pointer';
                     } else {
                         card.classList.add('mch-merchant-closed');
-                        card.style.cursor = 'not-allowed';
                     }
                 }
             }

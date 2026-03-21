@@ -319,7 +319,6 @@ export const wellSystem = {
     };
     btnFillBottle.onclick = () => this.fillBottle();
 
-    overlay.style.display = "flex";
     wellState.isOpen = true;
     this.updateUI();
   },
@@ -342,7 +341,7 @@ export const wellSystem = {
     if (bottleQtyEl) bottleQtyEl.textContent = bottleQty.toString();
 
     if (levelEl) {
-      levelEl.style.height = `${wellState.waterLevel}%`;
+      levelEl.style.setProperty('--water-level', `${wellState.waterLevel}%`);
       levelEl.textContent = `${Math.floor(wellState.waterLevel)}%`;
     }
 

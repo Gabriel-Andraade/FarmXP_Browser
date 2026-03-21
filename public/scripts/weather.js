@@ -58,8 +58,8 @@ function ensureWeatherUIPanel() {
   }
 
   //  deixa o CSS controlar posição (remove inline style antigo que ancorava no canvas)
-  el.style.left = "";
-  el.style.top = "";
+  el.style.removeProperty('left');
+  el.style.removeProperty('top');
 
   return el;
 }
