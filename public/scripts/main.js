@@ -562,7 +562,7 @@ async function startFullGameLoad() {
     allAssetsLoaded = true;
     updateLoadingProgress(0.55, "preparando mundo...");
 
-    if (!window._pendingSaveData) {
+    if (!getObject('pendingSaveData')) {
       spawnGameAnimals();
     }
     updateLoadingProgress(0.65, "carregando sistemas...");
@@ -619,15 +619,16 @@ async function startFullGameLoad() {
 
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
-    if (window._pendingSaveData && saveRef) {
+    const pendingSave = getObject('pendingSaveData');
+    if (pendingSave && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
-        await saveRef.applySaveData(window._pendingSaveData);
+        await saveRef.applySaveData(pendingSave);
         logger.info('📂 Save aplicado do startup');
       } catch (e) {
         handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
       }
-      window._pendingSaveData = null;
+      setObject('pendingSaveData', null);
     }
 
     updateLoadingProgress(1, "pronto");
