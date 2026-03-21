@@ -488,7 +488,8 @@ export default {
     inventoryTab: 'Inventario',
     storageTab: 'Almacén',
     inventoryNotAvailable: '🎒 Sistema de inventario no disponible',
-    done: 'Hecho' // Añadido desde settingsUI.js
+    done: 'Hecho',
+    minimapToggle: 'Alternar minimapa (M)'
   },
 
   // HUD Action Buttons

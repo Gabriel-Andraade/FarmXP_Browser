@@ -487,7 +487,8 @@ export default {
     inventoryTab: 'Inventário',
     storageTab: 'Armazém',
     inventoryNotAvailable: '🎒 Sistema de inventário não disponível',
-    done: 'Concluir' // Añadido desde settingsUI.js
+    done: 'Concluir',
+    minimapToggle: 'Alternar minimapa (M)'
   },
 
   // HUD Action Buttons - MODIFICADO: usando marcadores dinâmicos {key}
