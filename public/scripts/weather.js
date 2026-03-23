@@ -211,14 +211,6 @@ export const WeatherSystem = {
       this._abortController.abort();
       this._abortController = null;
     }
-    if (this._onDayChanged) {
-      document.removeEventListener("dayChanged", this._onDayChanged);
-      this._onDayChanged = null;
-    }
-    if (this._onLanguageChanged) {
-      document.removeEventListener("languageChanged", this._onLanguageChanged);
-      this._onLanguageChanged = null;
-    }
 
     // Remove o painel de weather do DOM
     const panel = document.getElementById(WEATHER_UI_ID);
