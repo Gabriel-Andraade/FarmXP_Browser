@@ -8,7 +8,7 @@
  */
 
 import { logger } from './logger.js';
-import { getAllSystems, getSystem } from './gameState.js';
+import { getAllSystems } from './gameState.js';
 import { destroyInventoryUI } from './thePlayer/inventoryUI.js';
 import { destroyControls } from './thePlayer/control.js';
 
@@ -19,7 +19,6 @@ import { destroyControls } from './thePlayer/control.js';
  */
 export function destroyAllSystems() {
     try {
-        // fix: track partial failures so the final log reflects actual outcome
         let hadErrors = false;
         logger.info('[Cleanup] Iniciando destruição de todos os sistemas...');
 
@@ -36,8 +35,6 @@ export function destroyAllSystems() {
             }
         }
 
-        // fix: wrapped each standalone cleanup in its own try/catch to prevent
-        // a failure in one from skipping the others
         try {
             destroyInventoryUI();
             logger.debug('[Cleanup] InventoryUI destruído');
@@ -54,6 +51,11 @@ export function destroyAllSystems() {
             logger.error('[Cleanup] Erro ao destruir Controls:', err);
         }
 
+        if (hadErrors) {
+            logger.warn('[Cleanup] Cleanup concluído com falhas parciais');
+        } else {
+            logger.info('[Cleanup] Todos os sistemas foram destruídos com sucesso');
+        }
 
     } catch (error) {
         logger.error('[Cleanup] Erro durante destruição dos sistemas:', error);
