@@ -448,7 +448,8 @@ export default {
     inventoryTab: 'Inventory',
     storageTab: 'Storage',
     inventoryNotAvailable: '🎒 Inventory system not available',
-    done: 'Done'
+    done: 'Done',
+    minimapToggle: 'Toggle minimap (M)'
   },
 
   // HUD Action Buttons

@@ -24,6 +24,19 @@ const createInventoryUI = () => {
       box-sizing: border-box;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
+    .inv-tab-icon {
+      font-size: 20px;
+    }
+
+    .inv-empty-subtext {
+      font-size: 14px;
+      opacity: 0.5;
+    }
+
     
     :host {
       --bg: #17160A;
@@ -530,7 +543,7 @@ const createInventoryUI = () => {
   const details = document.createElement('div');
   details.className = 'inv-details';
   details.id = 'invDetails';
-  details.style.display = 'none';
+  details.classList.add('hidden');
   const itemInfo = document.createElement('div');
   itemInfo.className = 'inv-item-info';
   const detailName = document.createElement('span');
@@ -679,11 +692,11 @@ function renderTabs() {
     const btn = document.createElement('button');
     btn.className = `inv-tab-btn ${activeCategory === catKey ? 'active' : ''}`;
     const iconSpan = document.createElement('span');
-    iconSpan.style.fontSize = '20px';
+    iconSpan.className = 'inv-tab-icon';
     iconSpan.textContent = catData.icon;
     btn.append(iconSpan, ` ${catData.label()}`);
     
-    btn.onclick = () => {
+    btn.addEventListener('click', () => {
       activeCategory = catKey;
       selectedSlotIndex = -1;
       updateDetailsPanel(null);
@@ -691,7 +704,7 @@ function renderTabs() {
       // Atualizar tabs visualmente
       shadowRoot.querySelectorAll('.inv-tab-btn').forEach(t => t.classList.remove('active'));
       btn.classList.add('active');
-    };
+    });
     
     tabsEl.appendChild(btn);
   });
@@ -711,12 +724,12 @@ function renderInventory() {
     const mainText = document.createElement('div');
     mainText.textContent = t('inventory.empty');
     const subText = document.createElement('div');
-    subText.style.cssText = 'font-size: 14px; opacity: 0.5;';
+    subText.className = 'inv-empty-subtext';
     subText.textContent = t('inventory.emptySubtext');
     emptyMsg.append(mainText, subText);
     contentEl.appendChild(emptyMsg);
     currentItems = [];
-    detailsEl.style.display = 'none';
+    detailsEl.classList.add('hidden');
     return;
   }
 
@@ -760,14 +773,14 @@ function renderInventory() {
     }
 
     // Click handler
-    slotEl.onclick = () => {
+    slotEl.addEventListener('click', () => {
       const prevSelected = shadowRoot.querySelector('.inv-slot.selected');
       if (prevSelected) prevSelected.classList.remove('selected');
-      
+
       slotEl.classList.add('selected');
       selectedSlotIndex = index;
       updateDetailsPanel(fullItem, itemQuantity);
-    };
+    });
 
     contentEl.appendChild(slotEl);
   });
@@ -789,11 +802,11 @@ function updateDetailsPanel(item, qty) {
   if (!detailsEl) return;
   
   if (!item) {
-    detailsEl.style.display = 'none';
+    detailsEl.classList.add('hidden');
     return;
   }
 
-  detailsEl.style.display = 'flex';
+  detailsEl.classList.remove('hidden');
   const itemName = getItemName(item.id, item.name);
   shadowRoot.getElementById('detailName').textContent = `${itemName} ${qty > 1 ? `(x${qty})` : ''}`;
   shadowRoot.getElementById('detailDesc').textContent = item.description || t('inventory.noDescription');
@@ -807,10 +820,10 @@ function updateDetailsPanel(item, qty) {
     const equipBtn = document.createElement('button');
     equipBtn.className = 'btn-action btn-equip';
     equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
-    equipBtn.onclick = () => {
+    equipBtn.addEventListener('click', () => {
       document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
       closeInventoryModal();
-    };
+    });
     actionsDiv.appendChild(equipBtn);
   }
 
@@ -819,7 +832,7 @@ function updateDetailsPanel(item, qty) {
     const buildBtn = document.createElement('button');
     buildBtn.className = 'btn-action btn-build';
     buildBtn.textContent = `🔨 ${t('inventory.actions.build')}`;
-    buildBtn.onclick = async () => {
+    buildBtn.addEventListener('click', async () => {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
 
@@ -867,7 +880,7 @@ function updateDetailsPanel(item, qty) {
           logger.error('❌ Falha crítica ao iniciar BuildSystem:', error);
           alert(t('build.buildError'));
       }
-    };
+    });
     actionsDiv.appendChild(buildBtn);
   }
 
@@ -876,17 +889,17 @@ function updateDetailsPanel(item, qty) {
     const useBtn = document.createElement('button');
     useBtn.className = 'btn-action btn-use';
     useBtn.textContent = `🍽️ ${t('inventory.actions.consume')}`;
-    useBtn.onclick = () => {
-      document.dispatchEvent(new CustomEvent('startConsumptionRequest', { 
-        detail: { 
+    useBtn.addEventListener('click', () => {
+      document.dispatchEvent(new CustomEvent('startConsumptionRequest', {
+        detail: {
           category: activeCategory,
           itemId: item.id,
           quantity: 1,
           item: item,
-          fillUp: item.fillUp 
-        } 
+          fillUp: item.fillUp
+        }
       }));
-    };
+    });
     actionsDiv.appendChild(useBtn);
   }
 
@@ -894,7 +907,7 @@ function updateDetailsPanel(item, qty) {
   const dropBtn = document.createElement('button');
   dropBtn.className = 'btn-action btn-discard';
   dropBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
-  dropBtn.onclick = () => {
+  dropBtn.addEventListener('click', () => {
     if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
       const success = inventorySystem.removeItem(activeCategory, item.id, 1);
       if (success) {
@@ -905,7 +918,7 @@ function updateDetailsPanel(item, qty) {
         renderInventory();
       }
     }
-  };
+  });
   actionsDiv.appendChild(dropBtn);
 }
 

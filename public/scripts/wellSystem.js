@@ -11,6 +11,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
+import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
 
 /**
@@ -47,7 +48,7 @@ const wellState = {
 };
 
 function generateId() {
-  return `well_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return `well_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
 export const wellSystem = {
@@ -310,15 +311,14 @@ export const wellSystem = {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    closeBtn.onclick = () => this.closeWellMenu();
-    btnPullWater.onclick = () => this.startPullingWater();
-    btnDrink.onclick = () => this.drinkFromWell();
-    btnTransfer.onclick = () => {
+    closeBtn.addEventListener('click', () => this.closeWellMenu());
+    btnPullWater.addEventListener('click', () => this.startPullingWater());
+    btnDrink.addEventListener('click', () => this.drinkFromWell());
+    btnTransfer.addEventListener('click', () => {
       transferOpts.hidden = !transferOpts.hidden;
-    };
-    btnFillBottle.onclick = () => this.fillBottle();
+    });
+    btnFillBottle.addEventListener('click', () => this.fillBottle());
 
-    overlay.style.display = "flex";
     wellState.isOpen = true;
     this.updateUI();
   },
@@ -341,7 +341,7 @@ export const wellSystem = {
     if (bottleQtyEl) bottleQtyEl.textContent = bottleQty.toString();
 
     if (levelEl) {
-      levelEl.style.height = `${wellState.waterLevel}%`;
+      levelEl.style.setProperty('--water-level', `${wellState.waterLevel}%`);
       levelEl.textContent = `${Math.floor(wellState.waterLevel)}%`;
     }
 
@@ -380,7 +380,7 @@ export const wellSystem = {
 
   drinkFromWell() {
     if (wellState.waterLevel < 5) {
-      console.warn(`⚠️ ${t('well.insufficientWater')}`);
+      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
       return;
     }
 
@@ -389,7 +389,7 @@ export const wellSystem = {
       playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
       wellState.waterLevel -= 5;
     } else {
-      console.warn(`⚠️ ${t('well.playerNotAvailable')}`);
+      logger.error(`[WellSystem] ${t('well.playerNotAvailable')}`);
     }
     this.updateUI();
   },
@@ -408,12 +408,12 @@ export const wellSystem = {
     }
 
     if (!catFound) {
-      console.warn(`⚠️ ${t('well.noEmptyBottle')}`);
+      logger.warn(`[WellSystem] ${t('well.noEmptyBottle')}`);
       return;
     }
 
     if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
-      console.warn(`⚠️ ${t('well.insufficientWater')}`);
+      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
       return;
     }
 
