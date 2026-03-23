@@ -537,8 +537,8 @@ async function exposeGlobals() {
               worldAssetsLoaded = true;
               spawnGameAnimals();
             },
-            triggerSleep: () => document.dispatchEvent(new CustomEvent("sleepStarted")),
-            wakeUp: () => document.dispatchEvent(new CustomEvent("sleepEnded")),
+            triggerSleep: () => safeDispatch(document, new CustomEvent("sleepStarted")),
+            wakeUp: () => safeDispatch(document, new CustomEvent("sleepEnded")),
             spawnAnimals: function (count = 5, type = "Turkey") {
               if (!assets.animals || !assets.animals[type]) {
                 logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
@@ -1119,63 +1119,6 @@ function drawLoadingIndicator() {
 // DEBUG EXPORTS
 // =============================================================================
 
-window.gameDebug = {
-  getPerformance: () => ({ fps, coreAssetsLoaded, worldAssetsLoaded, isSleeping, simulationPaused }),
-  forceLoadAll: async () => {
-    await assets.loadAll();
-    allAssetsLoaded = true;
-    worldAssetsLoaded = true;
-    spawnGameAnimals();
-  },
-  triggerSleep: () => safeDispatch(document, new CustomEvent("sleepStarted")),
-  wakeUp: () => safeDispatch(document, new CustomEvent("sleepEnded")),
-  spawnAnimals: function (count = 5, type = "Turkey") {
-    if (!assets.animals || !assets.animals[type]) {
-      logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
-      return;
-    }
-
-    logger.debug(`Spawnando ${count} animais do tipo ${type}...`);
-
-    const WORLD_BOUNDS = { minX: 100, maxX: 1200, minY: 100, maxY: 700 };
-
-    for (let i = 0; i < count; i++) {
-      const x = WORLD_BOUNDS.minX + Math.random() * (WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX);
-      const y = WORLD_BOUNDS.minY + Math.random() * (WORLD_BOUNDS.maxY - WORLD_BOUNDS.minY);
-      addAnimal(type, assets.animals[type], x, y);
-    }
-
-    logger.debug(`${count} animais do tipo ${type} spawnados!`);
-    window.theWorld?.markWorldChanged?.();
-  },
-  clearAnimals: function () {
-    if (window.theWorld && window.theWorld.animals) {
-      const count = window.theWorld.animals.length;
-      window.theWorld.animals.length = 0;
-      logger.debug(`${count} animais removidos do mundo`);
-      window.theWorld.markWorldChanged?.();
-    }
-  },
-  listAnimals: function () {
-    if (window.theWorld && window.theWorld.animals) {
-      logger.debug(`Animais no mundo (${window.theWorld.animals.length}):`);
-      let index = 0;
-      for (const animal of window.theWorld.animals) {
-        logger.debug(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
-        index++;
-      }
-    }
-  },
-};
-
-window.debugItem = async (id) => {
-  if (!inventorySystem) await initializeInventorySystem();
-  const { getItem } = await import("./itemUtils.js");
-  const item = getItem(Number(id));
-  if (!item) return logger.error("Item não existe:", id);
-  inventorySystem.addItem(item.id, 1);
-  logger.debug(`Debug: Adicionado ${item.name}`);
-};
 
 // DEBUG_HITBOXES agora é gerenciado via gameState.js (use ?hitboxes=1 na URL)
 
