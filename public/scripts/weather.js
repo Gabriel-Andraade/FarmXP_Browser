@@ -169,47 +169,50 @@ export const WeatherSystem = {
   lightningFlashes: [],
   lastParticleUpdate: 0,
 
-  // fix: store named handler references so destroy() can remove them
-  _onResize: null,
-  _onTimeChanged: null,
-  _onDayChanged: null,
-  _onLanguageChanged: null,
+  _abortController: null,
 
   init() {
     this.randomizeWeather();
 
     if (typeof window !== "undefined") {
+      // Make init idempotent: drop previously attached listeners first
+      if (this._abortController) this._abortController.abort();
+      // fix #72: use AbortController for listener cleanup
+      this._abortController = new AbortController();
+      const signal = this._abortController.signal;
+
       ensureWeatherUIPanel();
       updateWeatherUIPanelPosition();
       updateWeatherUIPanelContent();
 
-      this._onResize = () => updateWeatherUIPanelPosition();
-      this._onTimeChanged = () => updateWeatherUIPanelContent();
-      this._onDayChanged = () => updateWeatherUIPanelContent();
-      this._onLanguageChanged = () => updateWeatherUIPanelContent();
+      window.addEventListener("resize", () => {
+        updateWeatherUIPanelPosition();
+      }, { signal });
 
-      window.addEventListener("resize", this._onResize);
-      document.addEventListener("timeChanged", this._onTimeChanged);
-      document.addEventListener("dayChanged", this._onDayChanged);
-      document.addEventListener("languageChanged", this._onLanguageChanged);
-    }
-  },
+      document.addEventListener("timeChanged", () => {
+        updateWeatherUIPanelContent();
+      }, { signal });
+
+      document.addEventListener("dayChanged", () => {
+        updateWeatherUIPanelContent();
+      }, { signal });
 
       // Language-safe: getSeasonName() and getWeekday() call t() on every
       // invocation (no cached strings), so a single UI refresh here is enough
       // to display all weather panel text in the new language immediately.
       document.addEventListener("languageChanged", () => {
         updateWeatherUIPanelContent();
-      });
+      }, { signal });
     }
-    if (this._onDayChanged) {
-      document.removeEventListener("dayChanged", this._onDayChanged);
-      this._onDayChanged = null;
+  },
+
+  destroy() {
+    if (this._abortController) {
+      this._abortController.abort();
+      this._abortController = null;
     }
-    if (this._onLanguageChanged) {
-      document.removeEventListener("languageChanged", this._onLanguageChanged);
-      this._onLanguageChanged = null;
-    }
+
+    if (typeof document === "undefined") return;
 
     // Remove o painel de weather do DOM
     const panel = document.getElementById(WEATHER_UI_ID);
