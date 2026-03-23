@@ -419,10 +419,6 @@ class AccessibilityManager {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('id', 'cvd-filters');
     svg.setAttribute('aria-hidden', 'true');
-    svg.style.position = 'absolute';
-    svg.style.width = '0';
-    svg.style.height = '0';
-    svg.style.overflow = 'hidden';
 
     const NS = 'http://www.w3.org/2000/svg';
     const filters = [

@@ -43,7 +43,7 @@ export class PlayerHUD {
         this.isStoreOpen = false;
         this.isConfigOpen = false;
         this.currentPlayer = null;
-        this.isExpanded = false;
+        this.isExpanded = true;
 
         // Intervalo para atualizar necessidades
         this.needsUpdateInterval = null;
@@ -53,29 +53,34 @@ export class PlayerHUD {
 
     init() {
         this.createHUDStructure();
-        this.bindEvents(); 
-        
-        document.addEventListener("playerNeedsChanged", (e) => {
+        this.bindEvents();
+
+        // fix: stored all event handlers as named fields for proper removal in destroy()
+        this._onPlayerNeedsChanged = (e) => {
             const { hunger, thirst, energy } = e.detail;
             this.setHUDValue('hudPlayerHunger', `${hunger}%`);
             this.setHUDValue('hudPlayerThirst', `${thirst}%`);
             this.setHUDValue('hudPlayerEnergy', `${energy}%`);
-        });
+        };
+        document.addEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
 
-        document.addEventListener('characterSelected', (e) => {
+        this._onCharacterSelected = (e) => {
             this.onCharacterSelected(e.detail.character);
-        });
+        };
+        document.addEventListener('characterSelected', this._onCharacterSelected);
 
-        document.addEventListener('playerReady', (e) => {
+        this._onPlayerReady = (e) => {
             this.onPlayerReady(e.detail.player, e.detail.character);
-        });
+        };
+        document.addEventListener('playerReady', this._onPlayerReady);
 
         // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
-        document.addEventListener('languageChanged', () => {
+        this._onLanguageChanged = () => {
             logger.info('[HUD] Idioma alterado, reconstruindo HUD...');
             this.createHUDStructure();
-            this.updatePlayerInfo(); // Atualiza os valores dinâmicos (nome, $$, etc)
-        });
+            this.updatePlayerInfo();
+        };
+        document.addEventListener('languageChanged', this._onLanguageChanged);
     }
 
     createHUDStructure() {
@@ -110,7 +115,7 @@ export class PlayerHUD {
         nameH3.textContent = t('player.noCharacter');
         const equippedItem = document.createElement('div');
         equippedItem.id = 'equipped-item';
-        equippedItem.style.cssText = 'display:none; font-size: 14px; color: #cfc; margin-top: 4px;';
+        equippedItem.classList.add('hidden');
 
         const infoGrid = document.createElement('div');
         infoGrid.className = 'player-info-grid';
@@ -173,19 +178,21 @@ export class PlayerHUD {
     }
 
     bindEvents() {
-        document.querySelectorAll('.modal-close').forEach(btn =>
-            btn.addEventListener('click', () => this.closeModals())
-        );
-
-        document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) this.closeModals();
+        document.querySelectorAll('.modal-close').forEach((btn) => {
+            btn.addEventListener('click', () => this.closeModals());
         });
+
+        this._onHudClick = (e) => {
+            if (e.target.classList.contains('modal')) this.closeModals();
+        };
+        document.addEventListener('click', this._onHudClick);
 
         // Listener para atualização de dinheiro em tempo real (documento, roda 1x)
-        document.addEventListener("moneyChanged", (e) => {
+        this._onMoneyChanged = (e) => {
             const el = document.getElementById("hudPlayerMoney");
             if (el) el.textContent = `$${e.detail.money}`;
-        });
+        };
+        document.addEventListener("moneyChanged", this._onMoneyChanged);
     }
 
     /**
@@ -334,19 +341,45 @@ export class PlayerHUD {
                 // fix: innerHTML → DOM API
                 equippedElement.replaceChildren();
                 const wrapper = document.createElement('div');
-                wrapper.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+                wrapper.className = 'equipped-item-wrapper';
                 const iconSpan = document.createElement('span');
                 iconSpan.textContent = item.icon || '';
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = itemName;
                 wrapper.append(iconSpan, nameSpan);
                 equippedElement.appendChild(wrapper);
-                equippedElement.style.display = 'block';
+                equippedElement.classList.remove('hidden');
             } else {
                 equippedElement.replaceChildren();
-                equippedElement.style.display = 'none';
+                equippedElement.classList.add('hidden');
             }
         }
+    }
+
+    destroy() {
+        // Para o intervalo de atualização de necessidades
+        if (this.needsUpdateInterval) {
+            clearInterval(this.needsUpdateInterval);
+            this.needsUpdateInterval = null;
+        }
+
+        // fix: removed all document event listeners added in init() and bindEvents()
+        document.removeEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
+        document.removeEventListener('characterSelected', this._onCharacterSelected);
+        document.removeEventListener('playerReady', this._onPlayerReady);
+        document.removeEventListener('languageChanged', this._onLanguageChanged);
+        document.removeEventListener('click', this._onHudClick);
+        document.removeEventListener('moneyChanged', this._onMoneyChanged);
+
+        // Remove elementos do DOM
+        const panel = document.getElementById('playerPanel');
+        if (panel) panel.remove();
+        // fix: replaced forEach with for...of to avoid implicit return value lint warning
+        for (const el of document.querySelectorAll('.hud-action-buttons')) {
+            el.remove();
+        }
+
+        logger.debug('PlayerHUD destruído');
     }
 
     render() {
@@ -357,7 +390,8 @@ export class PlayerHUD {
         this.isExpanded = !this.isExpanded;
         const panel = document.getElementById('playerPanel');
         if (panel) {
-            panel.style.display = this.isExpanded ? 'block' : 'none';
+            if (this.isExpanded) panel.classList.remove('hidden');
+            else panel.classList.add('hidden');
         }
     }
 }

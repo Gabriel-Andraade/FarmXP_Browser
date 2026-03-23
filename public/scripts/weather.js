@@ -58,8 +58,8 @@ function ensureWeatherUIPanel() {
   }
 
   //  deixa o CSS controlar posição (remove inline style antigo que ancorava no canvas)
-  el.style.left = "";
-  el.style.top = "";
+  el.style.removeProperty('left');
+  el.style.removeProperty('top');
 
   return el;
 }
@@ -211,6 +211,19 @@ export const WeatherSystem = {
       this._abortController.abort();
       this._abortController = null;
     }
+    if (this._onDayChanged) {
+      document.removeEventListener("dayChanged", this._onDayChanged);
+      this._onDayChanged = null;
+    }
+    if (this._onLanguageChanged) {
+      document.removeEventListener("languageChanged", this._onLanguageChanged);
+      this._onLanguageChanged = null;
+    }
+
+    // Remove o painel de weather do DOM
+    const panel = document.getElementById(WEATHER_UI_ID);
+    if (panel) panel.remove();
+    _wuiCache = null;
   },
 
   getWeekday() {

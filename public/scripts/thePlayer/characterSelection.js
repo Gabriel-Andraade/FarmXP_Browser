@@ -1,6 +1,7 @@
 import { playerSystem } from "./playerSystem.js";
 import { logger } from "../logger.js";
 import { t } from '../i18n/i18n.js';
+import { setObject } from "../gameState.js";
 
 export class CharacterSelection {
     constructor() {
@@ -50,7 +51,7 @@ export class CharacterSelection {
 
         const detailsDiv = document.createElement('div');
         detailsDiv.className = 'chs-character-details';
-        detailsDiv.style.display = 'none';
+        detailsDiv.classList.add('hidden');
         const portraitLarge = document.createElement('div');
         portraitLarge.className = 'chs-character-portrait-large';
         const portraitImg = document.createElement('img');
@@ -155,7 +156,7 @@ portrait.className = 'chs-character-portrait';
 
     show() {
         if (this.container) {
-            this.container.style.display = 'flex';
+            this.container.classList.remove('hidden');
         }
     }
 
@@ -182,7 +183,7 @@ portrait.className = 'chs-character-portrait';
         this.selectedCharacter = this.characters.find(c => c.id === characterId);
 
         const detailsSection = this.container.querySelector('.chs-character-details');
-        detailsSection.style.display = 'block';
+        detailsSection.classList.remove('hidden');
 
         detailsSection.querySelector('.chs-character-portrait-img').src = this.selectedCharacter.portrait;
         detailsSection.querySelector('.chs-character-name').textContent = this.selectedCharacter.name;
@@ -192,7 +193,7 @@ portrait.className = 'chs-character-portrait';
     }
 
     startGame() {
-        this.container.style.display = 'none';
+        this.container.classList.add('hidden');
 
         playerSystem.setActiveCharacter(this.selectedCharacter);
 
@@ -220,7 +221,7 @@ portrait.className = 'chs-character-portrait';
             // Abrir UI de slots em modo load, com callback para startup
             saveSlotsUI.open('load', (slot, slotIndex) => {
                 // Guardar dados para aplicar depois que todos os sistemas carregarem
-                window._pendingSaveData = slot;
+                setObject('pendingSaveData', slot);
 
                 // Usar personagem do save (ou Stella como fallback)
                 const charId = slot?.data?.player?.characterId || 'stella';

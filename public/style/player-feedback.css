@@ -71,9 +71,37 @@
     transform: translateX(-50%) scale(1.02);
   }
 }
+/* ================= INVENTORY MESSAGE ================= */
+.inventory-message {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: var(--color-overlay-light, rgba(255, 255, 255, 0.15));
+  color: var(--color-text-primary, #f0f0f0);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm, 8px);
+  backdrop-filter: blur(6px);
+  font-size: 13px;
+  font-weight: var(--font-weight-medium, 500);
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  transform: translateY(-10px);
+  z-index: var(--z-notification, 11000);
+}
+
+.inventory-message.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hud-need-feedback,
   .hud-critical-warning {
     animation: none;
+  }
+
+  .inventory-message {
+    transition: none;
   }
 }
