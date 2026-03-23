@@ -212,6 +212,8 @@ export const WeatherSystem = {
       this._abortController = null;
     }
 
+    if (typeof document === "undefined") return;
+
     // Remove o painel de weather do DOM
     const panel = document.getElementById(WEATHER_UI_ID);
     if (panel) panel.remove();
