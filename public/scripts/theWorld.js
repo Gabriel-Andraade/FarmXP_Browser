@@ -587,7 +587,7 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   try {
     screenPos = camera.worldToScreen(obj.x || 0, obj.y || 0);
   } catch (e) {
-    handleWarn("Failed to convert world to screen for object", "theWorld:drawSingleObject:worldToScreen", { err: e });
+    handleWarn("Erro ao obter imagem do asset", "theWorld:drawSingleObject:getAsset", err);
     screenPos = { x: obj.x || 0, y: obj.y || 0 };
   }
 
@@ -609,7 +609,7 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
       img = cat?.[obj.type]?.img;
     }
   } catch (err) {
-    console.warn("Erro ao obter imagem do asset:", err);
+    handleWarn("Erro ao obter imagem do asset", "theWorld:renderObject", err);
     img = null;
   }
 

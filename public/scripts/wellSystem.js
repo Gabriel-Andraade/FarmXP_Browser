@@ -380,7 +380,7 @@ export const wellSystem = {
 
   drinkFromWell() {
     if (wellState.waterLevel < 5) {
-      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
+      handleWarn(t('well.insufficientWater'), "wellSystem:drinkFromWell");
       return;
     }
 
@@ -389,7 +389,7 @@ export const wellSystem = {
       playerSystem.restoreNeeds(0, WELL_CONFIG.THIRST_RESTORE, 0);
       wellState.waterLevel -= 5;
     } else {
-      logger.error(`[WellSystem] ${t('well.playerNotAvailable')}`);
+      handleWarn(t('well.playerNotAvailable'), "wellSystem:drinkFromWell");
     }
     this.updateUI();
   },
@@ -408,12 +408,12 @@ export const wellSystem = {
     }
 
     if (!catFound) {
-      logger.warn(`[WellSystem] ${t('well.noEmptyBottle')}`);
+      handleWarn(t('well.noEmptyBottle'), "wellSystem:fillBottle");
       return;
     }
 
     if (wellState.waterLevel < WELL_CONFIG.WATER_PER_BOTTLE) {
-      logger.warn(`[WellSystem] ${t('well.insufficientWater')}`);
+      handleWarn(t('well.insufficientWater'), "wellSystem:fillBottle");
       return;
     }
 

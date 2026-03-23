@@ -300,7 +300,7 @@ class MerchantSystem {
     increaseQuantity() {
         // Validar que tradeQuantity é um inteiro positivo
         if (!isValidPositiveInteger(this.tradeQuantity)) {
-            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            logger.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
             this.tradeQuantity = 1;
         }
 
@@ -317,7 +317,7 @@ class MerchantSystem {
     decreaseQuantity() {
         // Validar que tradeQuantity é um inteiro positivo
         if (!isValidPositiveInteger(this.tradeQuantity)) {
-            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            logger.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
             this.tradeQuantity = 1;
         }
 
