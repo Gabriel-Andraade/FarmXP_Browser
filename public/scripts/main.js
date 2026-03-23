@@ -15,6 +15,7 @@ import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebugFlag, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
+import { MainMenu } from "./mainMenu/mainMenu.js";
 import { assets } from "./assetManager.js";
 // loadImages is now called dynamically inside playerSystem.loadCharacterModule
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
@@ -617,6 +618,16 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
     }
 
+    // Achievement system (must load BEFORE applySaveData so progress can be restored)
+    try {
+      const { AchievementTracker } = await import('./achievements/achievementTracker.js');
+      const { initAchievementNotifications } = await import('./achievements/achievementNotification.js');
+      new AchievementTracker();
+      initAchievementNotifications();
+    } catch (e) {
+      handleWarn("falha ao carregar achievement system", "main:startFullGameLoad:achievements", e);
+    }
+
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
     if (window._pendingSaveData && saveRef) {
@@ -758,8 +769,9 @@ async function initGameBootstrap() {
   simulationPaused = true;
   interactionEnabled = false;
 
-  const selection = new CharacterSelection();
-  selection.show();
+  // Show Main Menu (replaces direct CharacterSelection show)
+  const mainMenu = new MainMenu();
+  mainMenu.show();
 
   setupInteractionSystem();
 
@@ -776,6 +788,28 @@ async function initGameBootstrap() {
 
 document.addEventListener("characterSelected", () => {
   startFullGameLoad();
+});
+
+// Main Menu → New Game → show CharacterSelection
+document.addEventListener("mainMenu:newGame", () => {
+  const selection = new CharacterSelection();
+  selection.show();
+});
+
+// Main Menu → Load Game (save already set in window._pendingSaveData)
+document.addEventListener("mainMenu:loadGame", (e) => {
+  const slot = e.detail?.saveData;
+  const charId = slot?.data?.player?.characterId || 'stella';
+
+  // Set active character from save data and trigger game load
+  if (playerSystem) {
+    const character = { id: charId, name: charId.charAt(0).toUpperCase() + charId.slice(1) };
+    playerSystem.setActiveCharacter(character);
+  }
+
+  document.dispatchEvent(new CustomEvent('characterSelected', {
+    detail: { character: { id: charId } },
+  }));
 });
 
 document.addEventListener("playerReady", async (e) => {

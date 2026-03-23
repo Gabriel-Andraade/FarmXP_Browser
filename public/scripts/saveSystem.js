@@ -352,6 +352,18 @@ class SaveSystem {
 
         const data = saveData.data;
 
+        // Silenciar o tracker de conquistas durante toda a restauração
+        // para que eventos disparados pelos passos seguintes
+        // (worldObjectAdded, moneyChanged, inventoryUpdated, etc.)
+        // não incrementem/re-disparem conquistas indevidamente.
+        const tracker = getSystem('achievements');
+        if (tracker) tracker.mute();
+
+        // Restaurar conquistas primeiro para que o progresso esteja correto
+        if (data.achievements) {
+            this._applyAchievementsData(data.achievements);
+        }
+
         // Aplicar dados do jogador (async - pode trocar de personagem)
         if (data.player) {
             await this._applyPlayerData(data.player);
@@ -367,8 +379,6 @@ class SaveSystem {
             this._applyCurrencyData(data.currency);
         }
 
-
-
         // Aplicar mundo (buildings, wells)
         if (data.world) {
             this._applyWorldData(data.world);
@@ -383,6 +393,9 @@ class SaveSystem {
         if (data.weather) {
             this._applyWeatherData(data.weather);
         }
+
+        // Reativar o tracker após toda a restauração
+        if (tracker) tracker.unmute();
 
         logger.info('✅ Save data applied');
         this._dispatchEvent('save:applied', { saveData });
@@ -526,8 +539,15 @@ class SaveSystem {
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
             world: this._getWorldData(),
-            chests: this._getChestsData()
+            chests: this._getChestsData(),
+            achievements: this._getAchievementsData()
         };
+    }
+
+    _getAchievementsData() {
+        const tracker = getSystem('achievements');
+        if (!tracker) return null;
+        return tracker.getProgress();
     }
 
     /**
@@ -853,6 +873,16 @@ class SaveSystem {
         }
         
         logger.info(`[SaveSystem] ${Object.keys(data).length} chests restored`);
+    }
+
+    /**
+     * Aplica dados de conquistas
+     */
+    _applyAchievementsData(data) {
+        const tracker = getSystem('achievements');
+        if (!tracker || !data) return;
+        tracker.loadProgress(data);
+        logger.info('[SaveSystem] Achievements progress restored');
     }
 
     /**
