@@ -1,18 +1,19 @@
 import { logger } from './logger.js';
+import { getDebugFlag } from './gameState.js';
 
 const seen = new Set();
 
 /**
  * checks if debug mode is enabled.
  * priority order:
- * - url query ?debug=1
- * - global flags (DEBUG_MODE / __DEBUG__)
+ * - url query ?debug (except ?debug=0)
+ * - gameState debug flag
  * - localhost hostname
  */
 function isDebugEnabled() {
   try {
     const url = new URL(globalThis.location?.href ?? "http://localhost/");
-    if (url.searchParams.get("debug") === "1") return true;
+    if (url.searchParams.has("debug") && url.searchParams.get("debug") !== "0") return true;
   } catch (err) {
     if (globalThis.location?.hostname === "localhost") {
       logger.warn("[errorHandler:isDebugEnabled] falha ao ler location.href", err);
@@ -20,8 +21,7 @@ function isDebugEnabled() {
   }
 
   return Boolean(
-    globalThis.DEBUG_MODE ||
-      globalThis.__DEBUG__ ||
+    getDebugFlag('debug') ||
       globalThis.location?.hostname === "localhost"
   );
 }

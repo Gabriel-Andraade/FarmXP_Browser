@@ -31,7 +31,8 @@
   transform: scale(1.05);
 }
 
-#mobile-interact-btn:active {
+#mobile-interact-btn:active,
+#mobile-interact-btn.active {
   transform: scale(0.95);
 }
 
@@ -57,11 +58,15 @@
   height: 60px;
   border-radius: var(--radius-full, 50%);
   background: rgba(255, 255, 255, 0.85);
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   touch-action: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  /* Use CSS custom properties for dynamic positioning */
+  --joystick-x: 0px;
+  --joystick-y: 0px;
+
+  left: calc(50% + var(--joystick-x));
+  top: calc(50% + var(--joystick-y));
+  transform: translate(-50%, -50%);
 }
 
 /* ================= RESPONSIVO ================= */

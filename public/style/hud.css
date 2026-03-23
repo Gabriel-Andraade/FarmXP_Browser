@@ -1,5 +1,18 @@
 /* ===== CORREÇÕES DO HUD (COM PREFIXOS hud-) ===== */
 
+/* ===== Equipped Item ===== */
+#equipped-item {
+    font-size: 14px;
+    color: #cfc;
+    margin-top: 4px;
+}
+
+.equipped-item-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 /* ===== Header Superior ===== */
 .hud-top-bar-header {
     display: flex;

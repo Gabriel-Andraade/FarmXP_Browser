@@ -393,7 +393,7 @@ export const chestSystem = {
         // fix: innerHTML → DOM API
         if (!inventorySystem) {
             const unavailable = document.createElement('div');
-            unavailable.style.cssText = 'color: #aaa; text-align: center;';
+            unavailable.className = 'cht-unavailable';
             unavailable.textContent = t('ui.inventoryNotAvailable');
             container.replaceChildren(unavailable);
             return;
@@ -683,8 +683,6 @@ export const chestSystem = {
         const msg = document.createElement('div');
         msg.className = `cht-message ${type}`;
         msg.textContent = text;
-        msg.style.borderColor = type === 'error' ? '#c97878' : 
-                               type === 'success' ? '#90c978' : '#8b5a2b';
         
         document.body.appendChild(msg);
         
@@ -797,6 +795,16 @@ export const chestSystem = {
         }
     },
     
+    /**
+     * Destroys the chest system, closing any open UI.
+     * fix: added destroy() for gameCleanup auto-discovery
+     * @returns {void}
+     */
+    destroy() {
+        this.closeChestUI();
+        logger.debug('ChestSystem destruído');
+    },
+
     /**
      * Verifica se o jogador está próximo o suficiente para interagir com algum baú
      * Calcula a distância entre o centro do jogador e cada baú
