@@ -8,7 +8,7 @@
  */
 
 import { logger } from './logger.js';
-import { getAllSystems } from './gameState.js';
+import { getAllSystems, getSystem } from './gameState.js';
 import { destroyInventoryUI } from './thePlayer/inventoryUI.js';
 import { destroyControls } from './thePlayer/control.js';
 
@@ -54,26 +54,7 @@ export function destroyAllSystems() {
             logger.error('[Cleanup] Erro ao destruir Controls:', err);
         }
 
-        // CraftingSystem - Cleanup de listeners e UI
-        const craftingSystem = getSystem('crafting');
-        if (craftingSystem && typeof craftingSystem.destroy === 'function') {
-            craftingSystem.destroy();
-            logger.debug('[Cleanup] CraftingSystem destruído');
-        }
 
-        // AnimalUiPanel - Cleanup de listeners e DOM
-        const animalUiPanel = getSystem('animalUI');
-        if (animalUiPanel && typeof animalUiPanel.destroy === 'function') {
-            animalUiPanel.destroy();
-            logger.debug('[Cleanup] AnimalUiPanel destruído');
-        }
-
-        // AudioManager - Cleanup de AudioContext, tracks e SFX buffers
-        const audioManager = getSystem('audio');
-        if (audioManager && typeof audioManager.destroy === 'function') {
-            audioManager.destroy();
-            logger.debug('[Cleanup] AudioManager destruído');
-        }
     } catch (error) {
         logger.error('[Cleanup] Erro durante destruição dos sistemas:', error);
     }

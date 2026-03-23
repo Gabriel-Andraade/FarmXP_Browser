@@ -227,7 +227,6 @@ export class CraftingSystem {
         craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
         craftBtn.classList.remove("crf-disabled");
       }, 1000);
-      this._pendingTimers.push(timerId);
     }
   }
 
@@ -463,21 +462,6 @@ export class CraftingSystem {
       div.append(infoDiv, craftBtn);
       list.appendChild(div);
     });
-  }
-
-  /**
-   * Cleanup do sistema de crafting
-   * Remove listeners e fecha UI se aberta
-   * @returns {void}
-   */
-  destroy() {
-    this.close();
-    // fix: clear any pending timers (e.g. craft button re-enable timeout)
-    for (const id of this._pendingTimers) {
-      clearTimeout(id);
-    }
-    this._pendingTimers = [];
-    logger.debug('CraftingSystem destruído');
   }
 
   /**
