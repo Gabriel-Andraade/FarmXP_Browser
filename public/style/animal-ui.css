@@ -8,6 +8,7 @@
   font-family: "Segoe UI", Tahoma, sans-serif;
 }
 #animal-ui-layer.aui-visible { display: block; }
+#animal-ui-layer.aui-offscreen { opacity: 0; }
 
 /* permite interacao nos botoes e menus */
 #animal-ui-layer .aui-interactive { pointer-events: auto; }
@@ -24,6 +25,15 @@
   opacity: 0;
   transform-origin: center;
   transition: width 0.08s linear, height 0.08s linear, top 0.08s linear, left 0.08s linear;
+  /* CSS custom properties for dynamic positioning */
+  --oval-width: 100px;
+  --oval-height: 100px;
+  --oval-left: 0px;
+  --oval-top: 0px;
+  width: var(--oval-width);
+  height: var(--oval-height);
+  left: var(--oval-left);
+  top: var(--oval-top);
 }
 
 .aui-selection-oval.aui-active {
@@ -50,13 +60,17 @@
   font-size: 24px;
   cursor: pointer;
   user-select: none;
-
   z-index: 20;
 
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
   box-shadow: 0 6px 12px rgba(0,0,0,0.6);
   color: #fff;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  /* CSS custom properties for dynamic positioning */
+  --btn-left: 0px;
+  --btn-top: 0px;
+  left: var(--btn-left);
+  top: var(--btn-top);
 }
 
 .aui-btn:hover {
@@ -96,6 +110,11 @@
   pointer-events: none;
   font-size: 14px;
   backdrop-filter: blur(4px);
+  /* CSS custom properties for dynamic positioning */
+  --menu-left: 0px;
+  --menu-top: 0px;
+  left: var(--menu-left);
+  top: var(--menu-top);
 }
 
 .aui-menu.aui-visible {
@@ -213,9 +232,11 @@
 }
 .aui-bar-fill {
   height: 100%;
-  width: 50%;
   border-radius: 6px;
   background: linear-gradient(90deg, #ffd700, #2e8b57);
+  /* CSS custom property for dynamic width */
+  --bar-fill-width: 50%;
+  width: var(--bar-fill-width);
 }
 .aui-bar-val {
   width: 46px;

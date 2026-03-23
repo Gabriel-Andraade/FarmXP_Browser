@@ -80,13 +80,13 @@ export function initResponsiveUI() {
 
         if (isMobile) {
             // MODO MOBILE: Move para o retângulo cinza
-            strip.style.display = 'flex';
+            strip.classList.remove('hidden');
             elements.forEach(el => {
                 if (el) strip.appendChild(el); 
             });
         } else {
             // MODO DESKTOP: Volta para a barra original
-            strip.style.display = 'none';
+            strip.classList.add('hidden');
             if (desktopParent) {
                 elements.forEach(el => {
                     if (el) desktopParent.appendChild(el);

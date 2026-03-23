@@ -11,6 +11,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
+import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
 
 /**
@@ -47,7 +48,7 @@ const wellState = {
 };
 
 function generateId() {
-  return `well_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return `well_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
 export const wellSystem = {
@@ -310,15 +311,14 @@ export const wellSystem = {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    closeBtn.onclick = () => this.closeWellMenu();
-    btnPullWater.onclick = () => this.startPullingWater();
-    btnDrink.onclick = () => this.drinkFromWell();
-    btnTransfer.onclick = () => {
+    closeBtn.addEventListener('click', () => this.closeWellMenu());
+    btnPullWater.addEventListener('click', () => this.startPullingWater());
+    btnDrink.addEventListener('click', () => this.drinkFromWell());
+    btnTransfer.addEventListener('click', () => {
       transferOpts.hidden = !transferOpts.hidden;
-    };
-    btnFillBottle.onclick = () => this.fillBottle();
+    });
+    btnFillBottle.addEventListener('click', () => this.fillBottle());
 
-    overlay.style.display = "flex";
     wellState.isOpen = true;
     this.updateUI();
   },
@@ -341,7 +341,7 @@ export const wellSystem = {
     if (bottleQtyEl) bottleQtyEl.textContent = bottleQty.toString();
 
     if (levelEl) {
-      levelEl.style.height = `${wellState.waterLevel}%`;
+      levelEl.style.setProperty('--water-level', `${wellState.waterLevel}%`);
       levelEl.textContent = `${Math.floor(wellState.waterLevel)}%`;
     }
 

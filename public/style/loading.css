@@ -23,6 +23,11 @@
   transition: opacity 0.8s, transform 0.8s;
 }
 
+#ldg-initial-screen.ldg-hiding {
+  opacity: 0;
+  transform: scale(1.1);
+}
+
 #ldg-initial-screen .ldg-content {
   text-align: center;
   padding: 30px;
@@ -52,10 +57,12 @@
 }
 
 #ldg-initial-progress-bar {
-  width: 0%;
   height: 100%;
   background: linear-gradient(90deg, var(--color-success, #4ecca3), var(--color-success-dark, #3da58a));
   transition: width 0.3s;
+  /* CSS custom property for dynamic width */
+  --progress-width: 0%;
+  width: var(--progress-width);
 }
 
 #ldg-initial-message {
@@ -184,12 +191,14 @@
 }
 
 #ldg-sleep-progress-bar {
-  width: 0%;
   height: 100%;
   background: linear-gradient(90deg, var(--color-success, #4ecca3), var(--color-success-dark, #3da58a), var(--color-success, #4ecca3));
   background-size: 200% 100%;
   animation: ldg-gradient-shift 2s infinite linear;
   transition: width 0.5s;
+  /* CSS custom property for dynamic width */
+  --progress-width: 0%;
+  width: var(--progress-width);
 }
 
 @keyframes ldg-gradient-shift {

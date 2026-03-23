@@ -22,6 +22,8 @@
 }
 
 #gameCanvas {
+    touch-action: none;
+    cursor: default;
     display: block;
     border-radius: 12px;
     background: #7aa55c;
@@ -32,6 +34,10 @@
     max-height: 100%;
     width: auto;
     height: auto;
+}
+
+#gameCanvas.cursor-wait {
+    cursor: wait;
 }
 
 /* ===== SLEEP TRANSITION ANIMATION ===== */

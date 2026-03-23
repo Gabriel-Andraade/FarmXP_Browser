@@ -570,10 +570,10 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
         const consumeBtn = document.createElement('button');
         consumeBtn.className = 'inv-action-btn inv-consume-btn';
         consumeBtn.textContent = '🍽️ ' + t('inventory.actions.consume');
-        consumeBtn.onclick = (e) => {
+        consumeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             consumeItem(category, itemId, 1);
-        };
+        });
         buttonContainer.appendChild(consumeBtn);
     }
 
@@ -581,20 +581,20 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
         const equipBtn = document.createElement('button');
         equipBtn.className = 'inv-action-btn inv-equip-btn';
         equipBtn.textContent = '⚔️ ' + t('inventory.actions.equip');
-        equipBtn.onclick = (e) => {
+        equipBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             equipItem(category, itemId);
-        };
+        });
         buttonContainer.appendChild(equipBtn);
     }
 
     const discardBtn = document.createElement('button');
     discardBtn.className = 'inv-action-btn inv-discard-btn';
     discardBtn.textContent = '🗑️ ' + t('inventory.actions.discard');
-    discardBtn.onclick = (e) => {
+    discardBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         discardItem(category, itemId, 1);
-    };
+    });
     buttonContainer.appendChild(discardBtn);
 
     itemElement.appendChild(buttonContainer);
