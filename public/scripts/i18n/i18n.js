@@ -48,11 +48,11 @@ class I18nManager {
     if (this.translations[detectedLang]) {
       this.currentLanguage = detectedLang;
     } else {
-      console.log(`Language "${detectedLang}" not available, using default: ${DEFAULT_LANGUAGE}`);
+      logger.info(`Language "${detectedLang}" not available, using default: ${DEFAULT_LANGUAGE}`);
       this.currentLanguage = DEFAULT_LANGUAGE;
     }
 
-    console.log(`Language set to: ${this.currentLanguage}`);
+    logger.info(`Language set to: ${this.currentLanguage}`);
     return true;
   }
 
@@ -135,7 +135,7 @@ class I18nManager {
 
     // Still not found? Return key
     if (text === undefined) {
-      console.warn(`[i18n] Missing translation: ${key}`);
+      logger.warn(`[i18n] Missing translation: ${key}`);
       return key;
     }
 
@@ -193,7 +193,7 @@ class I18nManager {
    */
   setLanguage(lang) {
     if (!this.translations[lang]) {
-      console.log(`Language "${lang}" not available`);
+      logger.info(`Language "${lang}" not available`);
       return false;
     }
 
@@ -210,7 +210,7 @@ class I18nManager {
       detail: { language: lang }
     }));
 
-    console.log(`Language changed to: ${lang}`);
+    logger.info(`Language changed to: ${lang}`);
     return true;
   }
 
