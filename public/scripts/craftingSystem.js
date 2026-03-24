@@ -50,8 +50,31 @@ export class CraftingSystem {
     this.activeCategory = "all";
 
     this.handleEscapeBound = null;
-    // fix: track pending timers for cleanup in destroy()
-    this._pendingTimers = [];
+    this._timeoutIds = new Set();
+  }
+
+  /**
+   * Define um timeout gerenciado que será limpo em destroy()
+   * @param {Function} cb - Callback a executar
+   * @param {number} ms - Delay em milissegundos
+   * @returns {number} ID do timeout
+   */
+  _setManagedTimeout(cb, ms) {
+    const id = setTimeout(() => {
+      this._timeoutIds.delete(id);
+      cb();
+    }, ms);
+    this._timeoutIds.add(id);
+    return id;
+  }
+
+  /**
+   * Limpa todos os timeouts gerenciados
+   * @returns {void}
+   */
+  _clearManagedTimeouts() {
+    for (const id of this._timeoutIds) clearTimeout(id);
+    this._timeoutIds.clear();
   }
 
   /**
@@ -167,7 +190,7 @@ export class CraftingSystem {
     }
 
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise((resolve) => this._setManagedTimeout(resolve, 800));
 
     try {
       this.removeRequiredItems(recipe);
@@ -195,9 +218,7 @@ export class CraftingSystem {
     this.renderRecipeList();
 
     if (craftBtn) {
-      // fix: store setTimeout ID so destroy() can cancel it
-      const timerId = setTimeout(() => {
-        this._pendingTimers = this._pendingTimers.filter(id => id !== timerId);
+      this._setManagedTimeout(() => {
         craftBtn.disabled = false;
         // fix: innerHTML → DOM API
         craftBtn.replaceChildren();
@@ -206,7 +227,6 @@ export class CraftingSystem {
         craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
         craftBtn.classList.remove("crf-disabled");
       }, 1000);
-      this._pendingTimers.push(timerId);
     }
   }
 
@@ -445,21 +465,6 @@ export class CraftingSystem {
   }
 
   /**
-   * Cleanup do sistema de crafting
-   * Remove listeners e fecha UI se aberta
-   * @returns {void}
-   */
-  destroy() {
-    this.close();
-    // fix: clear any pending timers (e.g. craft button re-enable timeout)
-    for (const id of this._pendingTimers) {
-      clearTimeout(id);
-    }
-    this._pendingTimers = [];
-    logger.debug('CraftingSystem destruído');
-  }
-
-  /**
    * Exibe uma mensagem de feedback ao jogador
    * @param {string} text
    * @param {"success"|"error"} [type="success"]
@@ -481,9 +486,21 @@ export class CraftingSystem {
 
     document.body.appendChild(message);
 
-    setTimeout(() => {
+    this._setManagedTimeout(() => {
       message.remove();
     }, 3000);
+  }
+
+  /**
+   * Limpa recursos do sistema de crafting
+   * Remove listeners e fecha a UI
+   * @returns {void}
+   */
+  destroy() {
+    this.close();
+    this._clearManagedTimeouts();
+
+    logger.debug('[Cleanup] CraftingSystem destruído');
   }
 }
 
