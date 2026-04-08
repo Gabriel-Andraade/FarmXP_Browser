@@ -802,8 +802,14 @@ function updateDetailsPanel(item, qty) {
   // fix: innerHTML → DOM API
   actionsDiv.replaceChildren();
 
-  // 1. EQUIPAR (Ferramentas)
-  if (item.type === 'tool') {
+  // 1. EQUIPAR (Ferramentas) ou LER (Contrato)
+  if (item.questItem && item.id === 100) {
+    const readBtn = document.createElement('button');
+    readBtn.className = 'btn-action btn-equip';
+    readBtn.textContent = `📜 ${t('inventory.actions.use')}`;
+    readBtn.onclick = () => showContractPanel();
+    actionsDiv.appendChild(readBtn);
+  } else if (item.type === 'tool') {
     const equipBtn = document.createElement('button');
     equipBtn.className = 'btn-action btn-equip';
     equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
@@ -890,23 +896,25 @@ function updateDetailsPanel(item, qty) {
     actionsDiv.appendChild(useBtn);
   }
 
-  // 4. DESCARTAR (Sempre disponível)
-  const dropBtn = document.createElement('button');
-  dropBtn.className = 'btn-action btn-discard';
-  dropBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
-  dropBtn.onclick = () => {
-    if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
-      const success = inventorySystem.removeItem(activeCategory, item.id, 1);
-      if (success) {
-        if (!inventorySystem.getItemQuantity(activeCategory, item.id)) {
-          selectedSlotIndex = -1;
-          updateDetailsPanel(null);
+  // 4. DESCARTAR (não disponível para quest items)
+  if (!item.questItem) {
+    const dropBtn = document.createElement('button');
+    dropBtn.className = 'btn-action btn-discard';
+    dropBtn.textContent = `🗑️ ${t('inventory.actions.discard')}`;
+    dropBtn.onclick = () => {
+      if (confirm(t('inventory.confirmDiscard', { name: getItemName(item.id, item.name) }))) {
+        const success = inventorySystem.removeItem(activeCategory, item.id, 1);
+        if (success) {
+          if (!inventorySystem.getItemQuantity(activeCategory, item.id)) {
+            selectedSlotIndex = -1;
+            updateDetailsPanel(null);
+          }
+          renderInventory();
         }
-        renderInventory();
       }
-    }
-  };
-  actionsDiv.appendChild(dropBtn);
+    };
+    actionsDiv.appendChild(dropBtn);
+  }
 }
 
 /**
@@ -914,6 +922,111 @@ function updateDetailsPanel(item, qty) {
  * Remove todos os listeners registrados via AbortController
  * @returns {void}
  */
+// ─── Contract Panel ────────────────────────────────────────────────────────
+
+function showContractPanel() {
+  // Close inventory first
+  closeInventoryModal();
+
+  // Remove existing panel if any
+  const existing = document.getElementById('contract-panel-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'contract-panel-overlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; z-index: 10001;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(3px);
+    opacity: 0; transition: opacity 0.3s ease;
+  `;
+
+  const paper = document.createElement('div');
+  paper.style.cssText = `
+    background: #faf3e0;
+    border-radius: 6px;
+    padding: 36px 40px;
+    max-width: 520px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(180,160,120,0.3);
+    position: relative;
+  `;
+
+  const title = document.createElement('h2');
+  title.textContent = t('npc.bartolomeu.tax.contractTitle');
+  title.style.cssText = `
+    font-family: sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #3a2a1f;
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #c7a252;
+    text-align: center;
+  `;
+
+  const body = document.createElement('p');
+  body.textContent = t('npc.bartolomeu.tax.contractDescription');
+  body.style.cssText = `
+    font-family: sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #4a3a2a;
+    margin-bottom: 20px;
+  `;
+
+  const taxInfo = document.createElement('p');
+  taxInfo.textContent = t('npc.bartolomeu.tax.noteDescription', { value: 20 });
+  taxInfo.style.cssText = `
+    font-family: sans-serif;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    color: #6a5a4a;
+    background: rgba(0,0,0,0.05);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border-left: 3px solid #c7a252;
+    margin-bottom: 24px;
+  `;
+
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = t('ui.close');
+  closeBtn.style.cssText = `
+    display: block;
+    margin: 0 auto;
+    padding: 8px 28px;
+    background: #3a2a1f;
+    color: #faf3e0;
+    border: none;
+    border-radius: 8px;
+    font-family: sans-serif;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  `;
+  closeBtn.onmouseenter = () => { closeBtn.style.background = '#5a4a3f'; };
+  closeBtn.onmouseleave = () => { closeBtn.style.background = '#3a2a1f'; };
+  closeBtn.onclick = () => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 300);
+  };
+
+  paper.append(title, body, taxInfo, closeBtn);
+  overlay.appendChild(paper);
+  document.body.appendChild(overlay);
+
+  // Also close on overlay click (outside paper)
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeBtn.click();
+  });
+
+  // Fade in
+  requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+}
+
 export function destroyInventoryUI() {
   // Remove todos os event listeners via AbortController
   if (inventoryAbortController) {

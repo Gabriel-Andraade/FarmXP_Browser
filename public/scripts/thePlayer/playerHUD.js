@@ -37,6 +37,7 @@ function getKeyForAction(action) {
  */
 
 
+
 export class PlayerHUD {
     constructor() {
         this.isInventoryOpen = false;
@@ -145,6 +146,7 @@ export class PlayerHUD {
             { id: 'settingsBtn', tooltip: t('hud.settingsTooltip', { key: getKeyForAction('config') }), icon: '⚙️' },
             { id: 'inventoryBtn', tooltip: t('hud.inventoryTooltip', { key: getKeyForAction('inventory') }), icon: '🎒' },
             { id: 'commerceBtn', tooltip: t('hud.commerceTooltip', { key: getKeyForAction('merchants') }), icon: '🛒' },
+            { id: 'questsBtn', tooltip: t('quests.hud.tooltip'), icon: '📋' },
             { id: 'helpBtn', tooltip: t('hud.helpTooltip', { key: getKeyForAction('help') }), icon: '❓' },
         ];
         for (const b of buttons) {
@@ -245,6 +247,16 @@ export class PlayerHUD {
             }
             const merchantsList = document.getElementById('merchantsList');
             merchantsList?.classList?.add('active');
+        });
+
+        // Botão Quests/Missões
+        document.getElementById('questsBtn')?.addEventListener('click', async () => {
+            try {
+                const { toggleQuestPanel } = await import('../questSystem.js');
+                toggleQuestPanel();
+            } catch (e) {
+                logger.warn('Quest system não disponível', e);
+            }
         });
 
         // fix: Botão Ajuda sempre rebind após recriar HUD

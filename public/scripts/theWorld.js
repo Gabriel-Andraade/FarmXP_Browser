@@ -15,6 +15,47 @@ import { AnimalEntity } from "./animal/animalAI.js";
 import { ZOOMED_TILE_SIZE_INT, perfLog, worldToScreenFast } from "./optimizationConstants.js";
 import { CAMERA } from './constants.js';
 import { setObject, getDebugFlag, getSystem } from "./gameState.js";
+import { logger } from "./logger.js";
+
+// Lazy-loaded to avoid circular dependency (mapManager imports from theWorld)
+let _mapManager = null;
+function getMapManager() {
+  if (!_mapManager) _mapManager = getSystem('mapManager');
+  return _mapManager;
+}
+
+// Lazy-loaded city renderer (only imported when needed)
+let _cityRenderer = null;
+async function getCityRenderer() {
+  if (!_cityRenderer) {
+    try { _cityRenderer = await import('./cityRenderer.js'); } catch (e) { /* ignored */ }
+  }
+  return _cityRenderer;
+}
+// Sync version for render loop (returns null until first async load)
+let _cityRendererSync = null;
+function getCityRendererSync() { return _cityRendererSync; }
+
+// Listen for mapManager registration to clear cache
+if (typeof document !== 'undefined') {
+  document.addEventListener('mapChanged', async (e) => {
+    _mapManager = getSystem('mapManager');
+    // Pre-load city renderer when entering city
+    if (e.detail?.mapId === 'city' && !_cityRendererSync) {
+      try {
+        _cityRendererSync = await getCityRenderer();
+      } catch (err) {
+        logger.warn('[theWorld] Failed to load cityRenderer module: ' + err.message);
+      }
+    }
+  });
+  // Also listen for system registration to eagerly load city renderer
+  document.addEventListener('gamestate:registered', (e) => {
+    if (e.detail?.name === 'mapManager' && !_cityRendererSync) {
+      getCityRenderer().then(m => { _cityRendererSync = m; });
+    }
+  });
+}
 
 // =============================================================================
 // RUNTIME DETECTION
@@ -89,6 +130,9 @@ const Y_SORT_THRESHOLD = 4;
  */
 export function markWorldChanged() {
   cacheValid = false;
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('worldChanged'));
+  }
 }
 /**
  * Compacts module-scoped world arrays by removing invalid/destroyed entries.
@@ -208,14 +252,15 @@ export function placeWell(a, b, c) {
  * @param {HTMLImageElement} img - Sprite image for the animal
  * @param {number} x - Initial X position in world coordinates
  * @param {number} y - Initial Y position in world coordinates
+ * @param {Object} opts - Optional parameters (suspicious, hurt, stats, initialMood, etc.)
  * @returns {AnimalEntity} The created animal entity
  */
-export function addAnimal(assetName, img, x, y) {
+export function addAnimal(assetName, img, x, y, opts = {}) {
   if (!worldInitialized) {
     initializeWorld();
   }
 
-  const animal = new AnimalEntity(assetName, img, x, y);
+  const animal = new AnimalEntity(assetName, img, x, y, opts);
 
   if (!animal.id) {
     animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -241,6 +286,13 @@ export function addAnimal(assetName, img, x, y) {
   }
 
   markWorldChanged();
+
+  if (typeof document !== 'undefined') {
+    document.dispatchEvent(new CustomEvent('animalAdded', {
+      detail: { animal }
+    }));
+  }
+
   return animal;
 }
 
@@ -265,6 +317,12 @@ export function updateAnimals() {
       }
     }
   });
+
+  // Update quest cat (Madalena)
+  const milly = getSystem('npcMilly');
+  if (milly && typeof milly.updateMadalena === 'function') {
+    milly.updateMadalena();
+  }
 }
 
 /**
@@ -458,12 +516,75 @@ export function getSortedWorldObjects(player) {
     });
     lastPlayerY = player.y;
     lastPlayerHeight = player.height;
+
+    // Portal check (proximity detection)
+    const mgr = getMapManager();
+    if (mgr && !mgr.isMapTransitioning()) {
+      mgr.checkPortalInteraction(player.x, player.y, player.width, player.height);
+    }
+  }
+
+  // City objects (houses, cars, posts) when in city map
+  {
+    const mgr = getMapManager();
+    if (mgr && mgr.getCurrentMapId() === 'city') {
+      const cr = getCityRendererSync();
+      if (cr) {
+        const cityObjs = cr.getCityObjects();
+        allObjects.push(...cityObjs);
+      }
+    }
+  }
+
+  // NPC objects (all maps)
+  {
+    const npcSys = getSystem('npc');
+    const mgr = getMapManager();
+    if (npcSys && mgr) {
+      const mapId = mgr.getCurrentMapId();
+      const npcObjs = npcSys.getWorldObjects(mapId);
+      allObjects.push(...npcObjs);
+    }
+  }
+
+  // Quest animal (Madalena cat)
+  {
+    const milly = getSystem('npcMilly');
+    const mgr2 = getMapManager();
+    if (milly && mgr2 && typeof milly.getCatWorldObjects === 'function') {
+      const catObjs = milly.getCatWorldObjects(mgr2.getCurrentMapId());
+      allObjects.push(...catObjs);
+    }
+  }
+
+  // Portal draw object (rendered on top via high Y)
+  {
+    const mgr = getMapManager();
+    if (mgr) {
+      allObjects.push({
+        type: "PORTAL",
+        id: "map_portal",
+        x: 0, y: 99999,
+        width: 0, height: 0,
+        draw: (ctx) => mgr.drawPortal(ctx)
+      });
+    }
   }
 
   sortedWorldObjectsCache = allObjects.sort((a, b) => {
     const ay = (a.y || 0) + (a.height || 0);
     const by = (b.y || 0) + (b.height || 0);
-    return ay - by;
+    const diff = ay - by;
+
+    // Para objetos de camadas Tiled diferentes e próximos em Y,
+    // usa a ordem das camadas como desempate (camada superior renderiza por último)
+    const al = a.layerIndex;
+    const bl = b.layerIndex;
+    if (al !== undefined && bl !== undefined && al !== bl && Math.abs(diff) < 30) {
+      return al - bl;
+    }
+
+    return diff;
   });
 
   if (player) cacheValid = true;
@@ -1048,23 +1169,43 @@ export function getInitialPlayerPosition() {
  * @returns {void}
  */
 export function drawBackground(ctx) {
+  const mgr = getMapManager();
+  const bgColor = mgr ? mgr.getCurrentMap().bgColor : '#5a9367';
+  const useGrass = mgr ? mgr.getCurrentMap().useGrass : true;
+  const mapId = mgr ? mgr.getCurrentMapId() : 'farm';
+
   try {
-    ctx.fillStyle = "#5a9367";
+    ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
   } catch (e) {
     handleWarn("Failed to draw background fill", "theWorld:drawBackground:fill", { err: e });
     return;
   }
 
-  try {
-    drawGrass(ctx);
-  } catch (e) {
-    handleWarn("Failed to draw grass", "theWorld:drawBackground:grass", { err: e });
+  if (mapId === 'city') {
+    // Draw city tiles on top of the flat color
+    const cr = getCityRendererSync();
+    if (cr) {
+      try { cr.drawCityBackground(ctx); } catch (e) {
+        handleWarn("Failed to draw city background", "theWorld:drawBackground:city", { err: e });
+      }
+    }
+  } else if (useGrass) {
+    try {
+      drawGrass(ctx);
+    } catch (e) {
+      handleWarn("Failed to draw grass", "theWorld:drawBackground:grass", { err: e });
+    }
   }
 }
 
 // Offscreen canvas cache para grass tiles
 let _grassCache = null;
+
+/** Invalida o cache de grass (chamado em transições de mapa) */
+export function invalidateGrassCache() {
+  _grassCache = null;
+}
 
 function _ensureGrassCache() {
   // Buffer extra em tiles ao redor do viewport para evitar re-renders frequentes
@@ -1308,10 +1449,16 @@ export function exportWorldState() {
       width: w.width, height: w.height,
       originalType: w.originalType, name: w.name
     })) : [],
-    animals: Array.isArray(animals) ? animals.map(a => ({
-      id: a.id, x: a.x, y: a.y,
-      assetName: a.assetName
-    })) : []
+    animals: Array.isArray(animals) ? animals.map(a => {
+      // Use serialize method if available, otherwise fallback to basic fields
+      if (typeof a.serialize === 'function') {
+        return a.serialize();
+      }
+      return {
+        id: a.id, x: a.x, y: a.y,
+        assetName: a.assetName
+      };
+    }) : []
   };
 }
 
@@ -1354,7 +1501,22 @@ export function importWorldState(data) {
       placedWells.push(...payload.placedWells.map(o => ({ ...o, id: o.id || generateId() })));
     }
     if (Array.isArray(payload.animals)) {
-      animals.push(...payload.animals.map(o => ({ ...o, id: o.id || generateId() })));
+      for (const o of payload.animals) {
+        const assetData = assets.animals && assets.animals[o.assetName];
+        if (assetData) {
+          const animal = new AnimalEntity(o.assetName, assetData, o.x, o.y);
+          animal.id = o.id || generateId();
+
+          // Restore full state via deserialize if available
+          if (typeof animal.deserialize === 'function') {
+            animal.deserialize(o);
+          }
+
+          animals.push(animal);
+        } else {
+          handleWarn("Animal asset not found during import", "theWorld:importWorldState", { assetName: o.assetName });
+        }
+      }
     }
 
     if (payload.seed && typeof worldGenerator.setSeed === "function") {

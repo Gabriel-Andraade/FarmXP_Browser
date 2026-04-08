@@ -13,7 +13,8 @@
   color: var(--color-text-primary, white);
   padding: 10px 20px;
   border-radius: var(--radius-md, 10px);
-  font-size: 24px;
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 26px;
   z-index: var(--z-loading, 10000);
   animation: fadeUp 1.5s ease-out forwards;
   pointer-events: none;

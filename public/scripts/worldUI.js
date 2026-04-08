@@ -100,26 +100,6 @@ class WorldUIManager {
             if (obj.health < obj.maxHealth && obj.health > 0) {
                 this.drawHealthBar(ctx, obj);
             }
-
-            const typeLower = (obj.type || "").toLowerCase();
-            const originalTypeLower = (obj.originalType || "").toLowerCase();
-            const nameLower = (obj.name || "").toLowerCase();
-
-            const isFence =
-                typeLower.includes("fence") ||
-                originalTypeLower.includes("fence") ||
-                nameLower.includes("cerca") ||
-                nameLower.includes("fence");
-
-            const isWall =
-                typeLower.includes("wall") ||
-                originalTypeLower.includes("wall");
-
-            const isExplicitlyNonInteractable = obj.interactable === false;
-
-            if (!isFence && !isWall && !isExplicitlyNonInteractable) {
-                this.checkAndDrawInteractionPrompt(ctx, obj, player);
-            }
         }
 
         ctx.restore();

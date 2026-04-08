@@ -3,9 +3,9 @@
   position: fixed;
   inset: 0;
   z-index: 2500;
-  pointer-events: none; /* deixa passar cliques onde nao tem ui */
+  pointer-events: none;
   display: none;
-  font-family: "Segoe UI", Tahoma, sans-serif;
+  font-family: var(--font-family-pixel), monospace;
 }
 #animal-ui-layer.aui-visible { display: block; }
 
@@ -105,8 +105,9 @@
 }
 
 .aui-menu h3 {
+  font-family: var(--font-family-pixel-title), cursive;
   margin: 0 0 12px 0;
-  font-size: 16px;
+  font-size: 9px;
   color: #ffd700;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(184, 134, 11, 0.4);
@@ -185,8 +186,9 @@
 }
 .aui-name-wrap { flex: 1; min-width: 0; }
 .aui-animal-name {
+  font-family: var(--font-family-pixel-title), cursive;
   font-weight: 800;
-  font-size: 15px;
+  font-size: 10px;
   color: #fff;
   outline: none;
   white-space: nowrap;
@@ -222,4 +224,55 @@
   text-align: right;
   color: #fff;
   font-variant-numeric: tabular-nums;
+}
+
+/* ================= MOOD ROW ================= */
+.aui-mood-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(184, 134, 11, 0.25);
+}
+.aui-mood-label {
+  font-weight: 700;
+  color: #deb887;
+  font-size: 13px;
+}
+.aui-mood-value {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  text-transform: capitalize;
+}
+
+/* ================= FEEDBACK BUBBLE ================= */
+.aui-feedback {
+  position: absolute;
+  transform: translateX(-50%);
+  background: rgba(35, 25, 15, 0.92);
+  border: 1px solid #b8860b;
+  border-radius: 8px;
+  padding: 5px 14px;
+  color: #ffd700;
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.aui-feedback.aui-feedback-show {
+  opacity: 1;
+  animation: aui-feedback-float 2s ease forwards;
+}
+@keyframes aui-feedback-float {
+  0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  70%  { opacity: 1; transform: translateX(-50%) translateY(-12px); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-24px); }
 }

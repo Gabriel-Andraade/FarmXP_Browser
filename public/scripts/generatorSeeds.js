@@ -43,6 +43,10 @@ export const WORLD_GENERATOR_CONFIG = {
         PROTECTION_RADIUS: 20
     },
 
+    EXCLUSION_ZONES: [
+        { x: 2347, y: 2280, width: 150, height: 200, padding: 30 }, // pickup truck
+    ],
+
     GENERAL: {
         TILE_SIZE: TILE_SIZE,
         SEED: Date.now()
@@ -134,6 +138,27 @@ export class WorldGenerator {
         return distanceX < minDistanceX && distanceY < minDistanceY;
     }
 
+    isTooCloseToExclusionZone(worldX, worldY, objectWidth = 0, objectHeight = 0) {
+        const zones = WORLD_GENERATOR_CONFIG.EXCLUSION_ZONES;
+        if (!zones) return false;
+
+        for (const zone of zones) {
+            const objCX = worldX + objectWidth / 2;
+            const objCY = worldY + objectHeight / 2;
+            const zoneCX = zone.x + zone.width / 2;
+            const zoneCY = zone.y + zone.height / 2;
+            const pad = zone.padding || 0;
+
+            const minDX = (objectWidth + zone.width) / 2 + pad;
+            const minDY = (objectHeight + zone.height) / 2 + pad;
+
+            if (Math.abs(objCX - zoneCX) < minDX && Math.abs(objCY - zoneCY) < minDY) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Gera a casa do jogador dividida em duas partes: telhado e paredes
      * O telhado não possui colisão, as paredes possuem colisão física
@@ -218,6 +243,7 @@ export class WorldGenerator {
                 const worldY = y * TILE_SIZE;
 
                 if (this.isTooCloseToHouse(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
+                if (this.isTooCloseToExclusionZone(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
 
                 let chance = config.SPAWN_RATE;
 
@@ -258,6 +284,7 @@ export class WorldGenerator {
                 const worldY = y * TILE_SIZE;
 
                 if (this.isTooCloseToHouse(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
+                if (this.isTooCloseToExclusionZone(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
 
                 if (this.rng() < config.SPAWN_RATE) {
                     this.generatedObjects.rocks.push(this.createRock(x, y));
@@ -292,6 +319,7 @@ export class WorldGenerator {
                 const worldY = y * TILE_SIZE;
 
                 if (this.isTooCloseToHouse(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
+                if (this.isTooCloseToExclusionZone(worldX, worldY, config.WIDTH, config.HEIGHT)) continue;
 
                 if (this.rng() < config.SPAWN_RATE) {
                     this.generatedObjects.thickets.push(this.createThicket(x, y));

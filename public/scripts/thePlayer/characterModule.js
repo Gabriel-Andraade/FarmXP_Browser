@@ -12,6 +12,7 @@ import { frames } from "./frames.js";
 import { camera, CAMERA_ZOOM } from "./cameraSystem.js";
 import { collisionSystem } from "../collisionSystem.js";
 import { getDebugFlag, getSystem  } from "../gameState.js";
+import { getMovementDirection } from "./control.js";
 
 //DEBUG_HITBOXES é gerenciado via gameState.js
 /**
@@ -170,11 +171,20 @@ export function createCharacter(config) {
         const oldX = character.x;
         const oldY = character.y;
 
+        // Read movement from the remappable control system so WASD / arrows
+        // and any custom keybinds all work. Falls back to legacy `keys` if
+        // control.js isn't ready yet.
         let moveX = 0, moveY = 0;
-        if (keys.ArrowLeft) { moveX -= 1; }
-        if (keys.ArrowRight) { moveX += 1; }
-        if (keys.ArrowUp) { moveY -= 1; }
-        if (keys.ArrowDown) { moveY += 1; }
+        const dir = getMovementDirection();
+        if (dir.x || dir.y) {
+            moveX = dir.x;
+            moveY = dir.y;
+        } else if (keys) {
+            if (keys.ArrowLeft || keys.KeyA) { moveX -= 1; }
+            if (keys.ArrowRight || keys.KeyD) { moveX += 1; }
+            if (keys.ArrowUp || keys.KeyW) { moveY -= 1; }
+            if (keys.ArrowDown || keys.KeyS) { moveY += 1; }
+        }
 
         const moving = moveX !== 0 || moveY !== 0;
 

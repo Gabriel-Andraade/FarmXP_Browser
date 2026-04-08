@@ -380,6 +380,12 @@ class MerchantSystem {
         if (!merchant.schedule) return true;
         if (!WeatherSystem) return true;
 
+        // Check tax block (Lara/Thomas blocked if tax overdue, Rico exempt)
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu && bartolomeu.isMerchantBlocked && bartolomeu.isMerchantBlocked(merchant.id)) {
+            return false;
+        }
+
         const currentDayIndex = this.getCurrentDayIndex();
         const currentTime = WeatherSystem.currentTime;
 

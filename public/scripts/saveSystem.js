@@ -359,9 +359,17 @@ class SaveSystem {
         const tracker = getSystem('achievements');
         if (tracker) tracker.mute();
 
-        // Restaurar conquistas primeiro para que o progresso esteja correto
-        if (data.achievements) {
-            this._applyAchievementsData(data.achievements);
+        // Restaurar conquistas — merge com global (conquistas persistem entre saves)
+        if (tracker) {
+            tracker.mergeWithGlobal(data.achievements || null);
+        }
+
+        // Restaurar mapa (farm/city) antes dos demais dados
+        if (data.currentMap && data.currentMap !== 'farm') {
+            const mapMgr = getSystem('mapManager');
+            if (mapMgr && mapMgr.restoreMap) {
+                await mapMgr.restoreMap(data.currentMap);
+            }
         }
 
         // Aplicar dados do jogador (async - pode trocar de personagem)
@@ -392,6 +400,11 @@ class SaveSystem {
         // Aplicar clima/tempo
         if (data.weather) {
             this._applyWeatherData(data.weather);
+        }
+
+        // Aplicar flags do jogo (pickup_repaired, etc.)
+        if (data.gameFlags) {
+            this._applyGameFlags(data.gameFlags);
         }
 
         // Reativar o tracker após toda a restauração
@@ -447,6 +460,14 @@ class SaveSystem {
 
         logger.info(`🗑️ Slot ${slotIndex} deleted`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'delete' });
+
+        // Se todos os slots estão vazios, limpa conquistas globais
+        const allEmpty = root.slots.every(s => s === null);
+        if (allEmpty) {
+            const tracker = getSystem('achievements');
+            if (tracker && tracker.clearGlobal) tracker.clearGlobal();
+            logger.info('All saves deleted — global achievements cleared');
+        }
 
         return true;
     }
@@ -533,6 +554,7 @@ class SaveSystem {
      * @returns {Object} Dados serializados do jogo
      */
     _gatherGameData() {
+        const mapMgr = getSystem('mapManager');
         return {
             player: this._getPlayerData(),
             inventory: this._getInventoryData(),
@@ -540,7 +562,20 @@ class SaveSystem {
             weather: this._getWeatherData(),
             world: this._getWorldData(),
             chests: this._getChestsData(),
-            achievements: this._getAchievementsData()
+            achievements: this._getAchievementsData(),
+            gameFlags: this._getGameFlags(),
+            currentMap: mapMgr ? mapMgr.getCurrentMapId() : 'farm'
+        };
+    }
+
+    _getGameFlags() {
+        const questSys = getSystem('quests');
+        const bartolomeu = getSystem('npcBartolomeu');
+        return {
+            pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
+            battery: questSys ? questSys.getBatteryState() : null,
+            bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
+            milly_quest: (() => { const m = getSystem('npcMilly'); return m ? m.getQuestState() : 'idle'; })(),
         };
     }
 
@@ -883,6 +918,28 @@ class SaveSystem {
         if (!tracker || !data) return;
         tracker.loadProgress(data);
         logger.info('[SaveSystem] Achievements progress restored');
+    }
+
+    _applyGameFlags(flags) {
+        if (!flags) return;
+        const questSys = getSystem('quests');
+        if (questSys) {
+            if (flags.pickup_repaired) {
+                questSys.setQuestStatus('fix_pickup', 'completed');
+            }
+            if (flags.battery) {
+                questSys.setBatteryState(flags.battery);
+            }
+        }
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu && flags.bartolomeu_quest) {
+            bartolomeu.setQuestState(flags.bartolomeu_quest);
+        }
+        const milly = getSystem('npcMilly');
+        if (milly && flags.milly_quest) {
+            milly.setQuestState(flags.milly_quest);
+        }
+        logger.info('[SaveSystem] Game flags restored');
     }
 
     /**

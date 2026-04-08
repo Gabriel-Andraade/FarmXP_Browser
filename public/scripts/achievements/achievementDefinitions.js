@@ -310,17 +310,6 @@ export const ACHIEVEMENTS = [
     hidden: false,
   },
   {
-    id: 'first_hit',
-    category: 'farming',
-    icon: '💥',
-    i18nKey: 'achievements.firstHit',
-    type: 'single',
-    target: 1,
-    events: ['playerAttack'],
-    condition: () => true,
-    hidden: false,
-  },
-  {
     id: 'persistent_hitter',
     category: 'farming',
     icon: '🔨',

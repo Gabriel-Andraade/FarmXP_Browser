@@ -9,6 +9,8 @@ import { logger } from '../logger.js';
 import { registerSystem, getSystem } from '../gameState.js';
 import { ACHIEVEMENTS } from './achievementDefinitions.js';
 
+const GLOBAL_ACHIEVEMENTS_KEY = 'farmxp_achievements_global';
+
 export class AchievementTracker {
   constructor() {
     /** @type {Object<string, {current: number, unlocked: boolean, unlockedAt: number|null}>} */
@@ -20,6 +22,9 @@ export class AchievementTracker {
     for (const def of this.definitions) {
       this.progress[def.id] = { current: 0, unlocked: false, unlockedAt: null };
     }
+
+    // Restore from global storage (persists across all saves)
+    this._loadGlobal();
 
     this._boundEvents = new Map();
     this._bindEvents();
@@ -104,13 +109,70 @@ export class AchievementTracker {
           detail: { achievementId: def.id, definition: def }
         }));
 
-        // Mark save as dirty
+        // Persist to global storage + mark save dirty
+        this._saveGlobal();
         try {
           const save = getSystem('save');
           if (save && save.markDirty) save.markDirty();
         } catch (_) { /* ignore */ }
       }
     }
+  }
+
+  // ───────────────────── GLOBAL STORAGE ─────────────────────
+
+  /** Save current progress to global localStorage (cross-save persistence) */
+  _saveGlobal() {
+    try {
+      localStorage.setItem(GLOBAL_ACHIEVEMENTS_KEY, JSON.stringify(this.progress));
+    } catch (_) { /* quota exceeded etc */ }
+  }
+
+  /** Load progress from global localStorage */
+  _loadGlobal() {
+    try {
+      const raw = localStorage.getItem(GLOBAL_ACHIEVEMENTS_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      for (const def of this.definitions) {
+        if (data[def.id]) {
+          this.progress[def.id] = {
+            current: data[def.id].current || 0,
+            unlocked: !!data[def.id].unlocked,
+            unlockedAt: data[def.id].unlockedAt || null,
+          };
+        }
+      }
+      logger.debug('Achievement progress loaded from global storage');
+    } catch (_) { /* corrupted etc */ }
+  }
+
+  /** Merge save data with global — keeps the best progress for each achievement */
+  mergeWithGlobal(saveData) {
+    this._loadGlobal();
+    if (!saveData || typeof saveData !== 'object') return;
+
+    for (const def of this.definitions) {
+      const saved = saveData[def.id];
+      if (!saved) continue;
+
+      const prog = this.progress[def.id];
+      if (saved.current > prog.current) prog.current = saved.current;
+      if (saved.unlocked && !prog.unlocked) {
+        prog.unlocked = true;
+        prog.unlockedAt = saved.unlockedAt || prog.unlockedAt;
+      }
+    }
+
+    this._saveGlobal();
+    logger.debug('Achievement progress merged with global');
+  }
+
+  /** Clear global storage (called when ALL saves are deleted) */
+  clearGlobal() {
+    try { localStorage.removeItem(GLOBAL_ACHIEVEMENTS_KEY); } catch (_) { /* */ }
+    this.resetProgress();
+    logger.debug('Global achievement storage cleared');
   }
 
   // ───────────────────── PUBLIC API ─────────────────────
@@ -135,6 +197,14 @@ export class AchievementTracker {
     }
 
     logger.debug('Achievement progress loaded from save');
+  }
+
+  /** Reset all progress to initial state (used when loading a fresh save) */
+  resetProgress() {
+    for (const def of this.definitions) {
+      this.progress[def.id] = { current: 0, unlocked: false, unlockedAt: null };
+    }
+    logger.debug('Achievement progress reset');
   }
 
   /** Silencia o tracker (ignora eventos). Usar durante restore de save. */

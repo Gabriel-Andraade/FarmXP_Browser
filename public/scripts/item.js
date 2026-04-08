@@ -708,5 +708,37 @@ export const items = [
     price: 15,
     description: "Balde cheio de água",
     type: "resource"
-  }
+  },
+
+  // ==================================================================================
+  // 🔋 QUEST ITEMS
+  // Itens especiais de missão
+  // ==================================================================================
+  {
+    id: 94,
+    name: "Bateria",
+    icon: "🔋",
+    price: 0,
+    description: "Bateria para consertar a picape",
+    type: "resource",
+    questItem: true
+  },
+  {
+    id: 100,
+    name: "Contrato Municipal",
+    icon: "📜",
+    price: 0,
+    description: "Termo de compromisso assinado com o prefeito Bartolomeu.",
+    type: "resource",
+    questItem: true
+  },
+  
+{
+  id: 9991,
+  name: "Madalena",
+  icon: "🐈",
+  type: "resource",
+  questItem: true,
+  description: "Madalena está nos seus braços. Leve-a até Milly."
+}
 ];

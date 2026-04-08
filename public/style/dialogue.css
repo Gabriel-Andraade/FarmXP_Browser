@@ -1,0 +1,266 @@
+/* ─── Dialogue / Cutscene Overlay ─────────────────────────────────────────── */
+
+.dlg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+}
+
+.dlg-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ─── Portraits area ─────────────────────────────────────────────────────── */
+
+.dlg-portraits {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 4% 0 4%;
+    pointer-events: none;
+}
+
+.dlg-portrait {
+    width: 260px;
+    max-width: 30vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.3s ease;
+    filter: brightness(0.4) grayscale(0.5);
+    opacity: 0.6;
+    transform: scale(0.92) translateY(10px);
+}
+
+.dlg-portrait.active {
+    filter: brightness(1.15) drop-shadow(0 0 16px rgba(255, 235, 140, 0.7));
+    opacity: 1;
+    transform: scale(1) translateY(0);
+}
+
+.dlg-portrait img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    image-rendering: auto;
+    filter: drop-shadow(2px 6px 12px rgba(0, 0, 0, 0.5));
+}
+
+/* Graham's portrait is slightly larger */
+.dlg-portrait:has(img[src*="dialog_Graham"]) {
+    width: 295px;
+}
+
+.dlg-portrait-name {
+    font-family: var(--font-family-pixel-title), cursive;
+    text-align: center;
+    margin-top: 6px;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 5px 14px;
+    border-radius: 40px;
+    color: #f5e7d9;
+    font-size: 0.55rem;
+    letter-spacing: 1px;
+    backdrop-filter: blur(4px);
+}
+
+/* ─── Dialogue box ───────────────────────────────────────────────────────── */
+
+.dlg-box {
+    width: 90%;
+    max-width: 900px;
+    background: rgba(10, 14, 23, 0.88);
+    backdrop-filter: blur(16px);
+    border-radius: 24px;
+    margin-bottom: 4vh;
+    padding: 18px 26px;
+    border: 1px solid rgba(255, 215, 150, 0.3);
+    box-shadow:
+        0 16px 30px rgba(0, 0, 0, 0.5),
+        0 0 0 2px rgba(210, 180, 140, 0.08) inset;
+    cursor: pointer;
+    pointer-events: auto;
+    animation: dlgSlideUp 0.35s ease-out;
+}
+
+@keyframes dlgSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Speaker name */
+.dlg-speaker {
+    font-family: var(--font-family-pixel-title), cursive;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #ffc857;
+    display: inline-block;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #ffd89b, #c7a252);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-stroke: 0.4px #3a2a1f;
+}
+
+@supports not (background-clip: text) {
+    .dlg-speaker {
+        color: #FFD966;
+        text-shadow: 0 1px 2px black;
+    }
+}
+
+/* Dialogue text */
+.dlg-text {
+    font-family: var(--font-family-pixel), monospace;
+    font-size: 1.45rem;
+    line-height: 1.55;
+    color: #fef3e2;
+    font-weight: 400;
+    min-height: 3rem;
+    word-break: break-word;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Cursor blink at end of text */
+.dlg-text .dlg-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: #fef3e2;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: dlgBlink 0.7s step-end infinite;
+}
+
+@keyframes dlgBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* Next indicator */
+.dlg-next-hint {
+    font-family: var(--font-family-pixel), monospace;
+    text-align: right;
+    margin-top: 10px;
+    font-size: 0.95rem;
+    color: #cfb27c;
+    opacity: 0;
+    transition: opacity 0.3s;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 5px;
+}
+
+.dlg-next-hint.visible {
+    opacity: 0.7;
+}
+
+.dlg-next-hint .dlg-arrow {
+    font-size: 0.9rem;
+    animation: dlgBounce 1.2s infinite;
+}
+
+@keyframes dlgBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+}
+
+/* ─── Thought style (italic, dimmer) ─────────────────────────────────────── */
+
+.dlg-text.dlg-thought {
+    font-style: italic;
+    color: #c8bda8;
+}
+
+/* ─── Choice buttons ─────────────────────────────────────────────────────── */
+
+.dlg-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.dlg-choices:empty {
+    display: none;
+}
+
+.dlg-choice-btn {
+    background: rgba(255, 215, 150, 0.08);
+    border: 1px solid rgba(255, 215, 150, 0.3);
+    color: #fef3e2;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-size: 1.25rem;
+    font-family: var(--font-family-pixel), monospace;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    pointer-events: auto;
+}
+
+.dlg-choice-btn:hover {
+    background: rgba(255, 215, 150, 0.18);
+    border-color: #ffc857;
+    transform: translateX(6px);
+    box-shadow: 0 2px 12px rgba(255, 200, 87, 0.15);
+}
+
+.dlg-choice-btn:active {
+    transform: translateX(6px) scale(0.98);
+}
+
+/* ─── Highlighted text (for money, important values) ─────────────────────── */
+
+.dlg-text .dlg-highlight {
+    color: #4caf50;
+    font-weight: 700;
+    text-shadow: 0 0 6px rgba(76, 175, 80, 0.4);
+}
+
+/* ─── Mobile / small screens ─────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+    .dlg-portrait {
+        width: 140px;
+    }
+
+    .dlg-box {
+        padding: 14px 18px;
+        margin-bottom: 2vh;
+        border-radius: 18px;
+    }
+
+    .dlg-speaker {
+        font-size: 1.05rem;
+    }
+
+    .dlg-text {
+        font-size: 1rem;
+        min-height: 2.5rem;
+    }
+}

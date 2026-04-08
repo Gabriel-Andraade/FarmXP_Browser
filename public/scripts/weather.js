@@ -8,6 +8,7 @@
 import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
 import { t } from './i18n/i18n.js';
+import { getSystem } from './gameState.js';
 
 const WEATHER_UI_ID = "weather-ui-panel";
 
@@ -392,9 +393,12 @@ export const WeatherSystem = {
     if (this.seasonKey === "winter") {
       this.weatherType = rand < 0.4 ? "clear" : "blizzard";
     } else {
-      if (rand < 0.30) this.weatherType = "clear";
-      else if (rand < 0.70) this.weatherType = "rain";
-      else if (rand < 0.90) this.weatherType = "storm";
+      // Limiares cumulativos: 70% clear, 15% rain, 8% storm, 7% fog.
+      // Antes os limites de rain/storm estavam abaixo de 0.90 e nunca eram
+      // atingidos, então chuva/tempestade nunca aconteciam.
+      if (rand < 0.70) this.weatherType = "clear";
+      else if (rand < 0.85) this.weatherType = "rain";
+      else if (rand < 0.93) this.weatherType = "storm";
       else this.weatherType = "fog";
     }
 
@@ -562,20 +566,103 @@ export function drawWeatherEffects(ctx, player, canvas) {
   const height = canvas.height;
 
   if (WeatherSystem.ambientDarkness > 0) {
-    ctx.save();
-    const playerScreen = camera.worldToScreen(player.x, player.y);
-    const px = Math.max(-2000, Math.min(width + 2000, playerScreen.x));
-    const py = Math.max(-2000, Math.min(height + 2000, playerScreen.y));
-
-    const gradient = ctx.createRadialGradient(px, py, 1 * camera.zoom, px, py, 80 * camera.zoom);
     const d = WeatherSystem.ambientDarkness;
 
-    gradient.addColorStop(0, `rgba(10, 10, 25, ${d * 0.3})`);
-    gradient.addColorStop(1, `rgba(5, 5, 15, ${d * 0.95})`);
+    // Collect street light positions (city only)
+    const cityObs = getSystem('cityObstacles');
+    const streetLights = (cityObs && cityObs.isInitialized) ? cityObs.getLightPositions() : [];
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, height);
-    ctx.restore();
+    if (streetLights.length === 0) {
+      // Farm / no street lights — original single-gradient approach
+      ctx.save();
+      const playerScreen = camera.worldToScreen(player.x, player.y);
+      const px = Math.max(-2000, Math.min(width + 2000, playerScreen.x));
+      const py = Math.max(-2000, Math.min(height + 2000, playerScreen.y));
+
+      const gradient = ctx.createRadialGradient(px, py, 1 * camera.zoom, px, py, 80 * camera.zoom);
+      gradient.addColorStop(0, `rgba(10, 10, 25, ${d * 0.3})`);
+      gradient.addColorStop(1, `rgba(5, 5, 15, ${d * 0.95})`);
+
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      ctx.restore();
+    } else {
+      // City — offscreen canvas with multiple light sources
+      if (!WeatherSystem._lightCanvas) {
+        WeatherSystem._lightCanvas = document.createElement('canvas');
+      }
+      const lc = WeatherSystem._lightCanvas;
+      if (lc.width !== width || lc.height !== height) {
+        lc.width = width;
+        lc.height = height;
+      }
+      const lctx = lc.getContext('2d');
+
+      // Fill with night darkness
+      lctx.clearRect(0, 0, width, height);
+      lctx.fillStyle = `rgba(5, 5, 15, ${d * 0.95})`;
+      lctx.fillRect(0, 0, width, height);
+
+      // Punch holes for light sources using destination-out
+      lctx.globalCompositeOperation = 'destination-out';
+
+      // Player light
+      const playerScreen = camera.worldToScreen(player.x, player.y);
+      const ppx = Math.max(-2000, Math.min(width + 2000, playerScreen.x));
+      const ppy = Math.max(-2000, Math.min(height + 2000, playerScreen.y));
+      const playerR = 80 * camera.zoom;
+
+      const pGrad = lctx.createRadialGradient(ppx, ppy, 1 * camera.zoom, ppx, ppy, playerR);
+      pGrad.addColorStop(0, `rgba(0, 0, 0, ${1 - d * 0.3 / (d * 0.95 + 0.001)})`);
+      pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      lctx.fillStyle = pGrad;
+      lctx.fillRect(ppx - playerR, ppy - playerR, playerR * 2, playerR * 2);
+
+      // Street lights — read glow settings from config
+      const ls = cityObs.getLightSettings();
+      const glowCenter = ls.glowCenterOpacity ?? 0.85;
+      const glowMid = ls.glowMidOpacity ?? 0.5;
+      const glowMidStop = ls.glowMidStop ?? 0.4;
+      const tintColor = ls.warmTintColor ?? [255, 200, 80];
+      const tintIntensity = ls.warmTintIntensity ?? 0.12;
+      const tintRadiusFactor = ls.warmTintRadiusFactor ?? 0.6;
+
+      for (const light of streetLights) {
+        const sp = camera.worldToScreen(light.x, light.y);
+        const r = light.radius * camera.zoom;
+
+        // Skip off-screen lights (with generous margin)
+        if (sp.x < -r || sp.x > width + r || sp.y < -r || sp.y > height + r) continue;
+
+        const grad = lctx.createRadialGradient(sp.x, sp.y, 2 * camera.zoom, sp.x, sp.y, r);
+        grad.addColorStop(0, `rgba(0, 0, 0, ${glowCenter})`);
+        grad.addColorStop(glowMidStop, `rgba(0, 0, 0, ${glowMid})`);
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        lctx.fillStyle = grad;
+        lctx.fillRect(sp.x - r, sp.y - r, r * 2, r * 2);
+      }
+
+      lctx.globalCompositeOperation = 'source-over';
+
+      // Add warm tint over street light areas (on top of the darkness layer)
+      lctx.globalCompositeOperation = 'source-atop';
+      const [tr, tg, tb] = tintColor;
+      for (const light of streetLights) {
+        const sp = camera.worldToScreen(light.x, light.y);
+        const r = light.radius * camera.zoom;
+        if (sp.x < -r || sp.x > width + r || sp.y < -r || sp.y > height + r) continue;
+
+        const warmGrad = lctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, r * tintRadiusFactor);
+        warmGrad.addColorStop(0, `rgba(${tr}, ${tg}, ${tb}, ${d * tintIntensity})`);
+        warmGrad.addColorStop(1, `rgba(${tr}, ${tg}, ${tb}, 0)`);
+        lctx.fillStyle = warmGrad;
+        lctx.fillRect(sp.x - r, sp.y - r, r * 2, r * 2);
+      }
+      lctx.globalCompositeOperation = 'source-over';
+
+      // Draw the composed darkness onto main canvas
+      ctx.drawImage(lc, 0, 0);
+    }
   }
 
   // fix: canvas context reset — isolate lightning state

@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -o \"dispatchEvent\\(new CustomEvent\\(''''[^'''']*''''\" /c/farmingXP/public/scripts/*.js)"
-    ]
-  }
-}

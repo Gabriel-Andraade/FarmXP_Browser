@@ -216,6 +216,13 @@ export class CollisionSystem {
             offsetX: 0.1,
             offsetY: 0.25,
             originalType: "well"
+        },
+        QUEST_ANIMAL: {
+            widthRatio: 1.5,
+            heightRatio: 1.5,
+            offsetX: -0.25,
+            offsetY: -0.25,
+            originalType: "quest_animal"
         }
     };
 
@@ -248,7 +255,8 @@ export class CollisionSystem {
         const interactiveTypes = [
             "TREE", "ROCK", "THICKET", "CHEST",
             "HOUSE_WALLS", "CONSTRUCTION", "WELL",
-            "FENCE", "FENCEX", "FENCEY", "ANIMAL"
+            "FENCE", "FENCEX", "FENCEY", "ANIMAL",
+            "QUEST_ANIMAL"
         ];
         if (interactiveTypes.includes(objectType)) {
             this.registerInteractionHitbox(objectData);

@@ -1,0 +1,300 @@
+{
+    "activeFile": "city-of-goose-cape.tmx",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "": {
+            "scaleInDock": 1
+        },
+        "#houseOfMilly": {
+            "dynamicWrapping": false,
+            "scaleInEditor": 1
+        },
+        "BartolomeuCar.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "ChatGPT Image 24 de mar. de 2026, 18_41_50.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TX Plant.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TX Props.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TX Tileset Grass.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "TX Tileset Stone Ground.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "city-of-goose-cape.tmx": {
+            "expandedObjectLayers": [
+                4,
+                7
+            ],
+            "scale": 0.33,
+            "selectedLayer": 5,
+            "viewCenter": {
+                "x": 1209.0909090909092,
+                "y": 1257.5757575757577
+            }
+        },
+        "familyCar.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floor.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1.5
+        },
+        "floor2.0.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "floor2.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "furniture-1.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "furniturers.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "general house.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "goose_cape_city.tmx": {
+            "scale": 0.5,
+            "selectedLayer": 3,
+            "viewCenter": {
+                "x": 649,
+                "y": 1042
+            }
+        },
+        "houseOfAFamily.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "houseOfBartolomeu.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "houseOfBru.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1.5
+        },
+        "houseOfDoctor.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "houseOfMilly.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1.5
+        },
+        "houseOfTheTwins.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "houses.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "nature-furniture-1.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 5.5,
+            "scaleInEditor": 1
+        },
+        "nature_furniture.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "owlishmedia_pixel_tiles.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 0.75,
+            "scaleInEditor": 1.5
+        },
+        "post.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "postDown.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "road.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "roads2W.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "sBlueCar.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "sGreenPickup.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "stone-ground.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "streets.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "table.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tiled/city-of-goose-cape.tmx": {
+            "expandedObjectLayers": [
+                4
+            ],
+            "scale": 1.5,
+            "selectedLayer": 4,
+            "viewCenter": {
+                "x": 1187.3333333333333,
+                "y": 1112
+            }
+        },
+        "tilesets/TX Plant.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/TX Props.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/TX Tileset Stone Ground.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/automobile.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/houses.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/nature.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/parkFurniture.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/post.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/stone-ground.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/streets.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "tilesets/table.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "two-story-house1.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1.5
+        },
+        "two-story-house2.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1.5
+        }
+    },
+    "last.exportedFilePath": "C:/farmingXP/public/city_map/tiled",
+    "last.imagePath": "C:/farmingXP/public/city_map",
+    "map.lastUsedExportFilter": "Todos os Ficheiros (*)",
+    "map.lastUsedFormat": "tmx",
+    "openFiles": [
+        "city-of-goose-cape.tmx",
+        "nature_furniture.tsx",
+        "floor2.0.tsx",
+        "tilesets/streets.tsx",
+        "tilesets/TX Tileset Stone Ground.tsx",
+        "tilesets/nature.tsx",
+        "tilesets/houses.tsx",
+        "tilesets/automobile.tsx",
+        "tilesets/TX Props.tsx",
+        "tilesets/TX Plant.tsx",
+        "tilesets/table.tsx",
+        "tilesets/post.tsx",
+        "tilesets/parkFurniture.tsx"
+    ],
+    "project": "",
+    "recentFiles": [
+        "tilesets/parkFurniture.tsx",
+        "tilesets/post.tsx",
+        "tilesets/table.tsx",
+        "tilesets/TX Plant.tsx",
+        "tilesets/TX Props.tsx",
+        "tilesets/automobile.tsx",
+        "tilesets/houses.tsx",
+        "tilesets/nature.tsx",
+        "tilesets/TX Tileset Stone Ground.tsx",
+        "tilesets/streets.tsx",
+        "floor2.0.tsx",
+        "nature_furniture.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.type": 1
+}

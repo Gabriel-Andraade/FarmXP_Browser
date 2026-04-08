@@ -144,6 +144,7 @@ export default {
     food: 'Comida',
     resources: 'Recursos',
     animals: 'Animales',
+    resource: 'Recurso',
   },
 
   // Inventory System
@@ -371,7 +372,9 @@ export default {
     76: 'Vara de Madera',
     43: 'Cerca de Madera',
     49: 'Tela de Lana',
-    93: 'Pozo de Agua'
+    93: 'Pozo de Agua',
+    94: 'Batería',
+    100: 'Contrato Municipal'
   },
 
   // Recipe names by ID - para traducción dinámica
@@ -535,6 +538,9 @@ export default {
 
   // Animals
   animals: {
+    bull: 'Toro',
+    calf: 'Ternero',
+    chick: 'Pollito',
     chicken: 'Gallina',
     cow: 'Vaca',
     pig: 'Cerdo',
@@ -553,13 +559,37 @@ export default {
     actions: {
       pet: 'Acariciar',
       guide: 'Guiar',
+      unguide: 'Dejar de Guiar',
       feed: 'Alimentar',
       close: 'Cerrar'
     },
     stats: {
       hunger: 'Hambre',
       thirst: 'Sed',
-      morale: 'Moral'
+      morale: 'Moral',
+      mood: 'Humor'
+    },
+    mood: {
+      sleeping: 'Durmiendo',
+      hurt: 'Herido',
+      suspicious: 'Desconfiado',
+      angry: 'Enfadado',
+      sad: 'Triste',
+      hungry: 'Hambriento',
+      needy: 'Necesitado',
+      calm: 'Tranquilo'
+    },
+    feedback: {
+      pet_ok: 'Le encantaron las caricias!',
+      gained_trust: 'Ganaste su confianza!',
+      sleeping: 'Durmiendo... Zzz',
+      suspicious_flee: 'Se alejó, desconfiado...',
+      angry: 'Muy enfadado para caricias!',
+      max_pets: 'Ya tuvo suficientes caricias hoy.',
+      fed: 'Comió feliz!',
+      no_food: 'Sin alimento en el inventario!',
+      suspicious: 'Demasiado desconfiado para comer...',
+      no_inventory: 'Inventario no disponible.'
     },
     type: {
       unknown: 'Desconocido'
@@ -841,6 +871,367 @@ export default {
     notAvailable: 'Función de construcción no disponible.',
     notAvailableAfter: 'Función de construcción no disponible después de cargar.',
     buildError: 'Error al entrar en modo de construcción. Consulta la consola.'
+  },
+
+  // Misiones
+  quests: {
+    title: 'Misiones',
+    noQuests: 'No hay misiones disponibles.',
+    status: {
+      available: 'Disponible',
+      active: 'En progreso',
+      completed: 'Completada',
+    },
+    fixPickup: {
+      title: 'Reparar la Camioneta',
+      description: 'La camioneta verde está rota. Encuentra una batería en el almacén para repararla y desbloquear el viaje a la ciudad.',
+      bubbleNotRepaired: 'hmm... necesito reparar esta camioneta...',
+      bubbleNoBattery: 'Necesito una batería para repararla... creo que vi una en el almacén.',
+      bubbleRepairing: 'Instalando la batería en la camioneta...',
+      bubbleRepaired: '¡Camioneta reparada! ¡Ahora puedo viajar a la ciudad!',
+      batteryHint: 'Pulsa E para recoger la batería',
+      batteryPickedUp: '¡Tengo la batería! Ahora necesito llevarla a la camioneta.',
+    },
+    hud: {
+      tooltip: 'Misiones',
+    },
+    hint: 'Pulsa E',
+    traveling: 'Viajando a ciudad...',
+  },
+
+  // Dialogue system
+  dialogue: {
+    advanceHint: 'Haz clic o pulsa Espacio',
+    talkHint: 'Pulsa E para hablar con {name}',
+  },
+
+  // NPC Bartolomeu dialogues
+  npc: {
+    bartolomeu: {
+      sleeping: '*durmiendo* ...zZzZz...',
+      playerHi: 'Eh... ¿hola?',
+      wakeUp: {
+        stella: '*se despierta* ...¿eh? ¿Y quién eres tú, chica? ¿Qué haces aquí en este fin del mundo?',
+        ben: '*se despierta* ...¿eh? ¿Y quién eres tú, chaval? ¿Dónde están tus padres?',
+        graham: '*traga saliva* S-sí, ¿señor? ¿Qué necesita?',
+        default: '*se despierta* ...¿quién eres?',
+      },
+      playerIntro: {
+        stella: 'Bueno... me mudé aquí hace poco y estoy viviendo en la casa de mi abuelo... mi tío me dijo que este pueblo es el más cercano y que todos lo conocían también.',
+        ben: 'Mis padres me mandaron aquí a cuidar la casa y el terreno de mi abuelo. También me dijeron que la gente de aquí lo conocía y que podrían ayudarme en lo que necesitara.',
+        graham: 'Me mudé aquí, estoy en la antigua casa de mi abuelo. Me recomendaron este pueblo. Y usted sería... el alcalde, ¿correcto? Bartolomeu.',
+        default: 'Me mudé aquí hace poco.',
+      },
+      bartolomeuIntro: {
+        graham: '¡Así es! ¡Alcalde de Capa de Ganso! Este pequeño pueblo con bosques, ranchos, granjas y animales. ¡Espero que se sienta más que bienvenido! ¡Y no ande mucho de noche! Porque bueno... el presupuesto está corto, incluso con donaciones todavía no podemos pagar farolas nuevas...',
+        default: 'Bueno, soy Bartolomeu, ¡alcalde de Capa de Ganso! Este pequeño pueblo con bosques, ranchos, granjas y animales. ¡Espero que seas más que bienvenido! ¡Y no andes mucho de noche! Porque bueno... el presupuesto está corto, incluso con donaciones todavía no podemos pagar farolas nuevas...',
+      },
+      playerReaction: {
+        stella: 'Bueno... creo que puedo ayudar.',
+        ben: 'Oooh...',
+        graham: 'Basándome en el valor, tal vez pueda ayudar.',
+        default: 'Entiendo...',
+      },
+      gilbertLine: {
+        ben: 'Bueno... tu abuelito debe haber sido... Gilbert, ¿verdad? ¡Quizás ahora las noches de Capa de Ganso se conviertan en día! Pues bien. Tu abuelo tenía un terreno muy sólido, ¡quizás puedas juntar unos {money}! Tranquilo, ¡lo descontaré de los impuestos, jajajaja!',
+        stella: 'Mirándote bien... tu abuelo es Gilbert, ¿correcto? ¡Quizás ahora las noches de Capa de Ganso se conviertan en día! Pues bien. Tu abuelo tenía un terreno muy sólido, ¡quizás puedas juntar unos {money}! Tranquilo, ¡lo descontaré de los impuestos, jajajaja!',
+        graham: 'Hmm... tu abuelo debe haber sido Gilbert, ¿verdad? ¡Quizás ahora las noches de Capa de Ganso se conviertan en día! Pues bien. Tu abuelo tenía un terreno muy sólido, ¡quizás puedas juntar unos {money}! Tranquilo, ¡lo descontaré de los impuestos, jajajaja!',
+        default: 'Tu abuelo tenía un buen terreno. ¡Quizás puedas juntar {money}!',
+      },
+      merchantQuestion: 'Un terreno hermoso, quizás unas plantaciones y árboles puedan darte ganancias. ¿Ya conoces nuestros 3 pilares de la economía?',
+      merchantYes: '¡Sí, ya los conozco!',
+      merchantNo: 'No, ¿quiénes son?',
+      merchantKnown: '¡Perfecto! ¡Véndeles tu material! Y cuando hayas acumulado tu dinero, ¡ven a hablar conmigo!',
+      merchantExplain: '¡Pulsa U o el botón 🛒 para abrir los mercaderes! Allí encontrarás a Lara, Rico y Thomas. Puedes vender cualquier recurso e ítems a cualquiera de ellos, ¡pero si vendes el ítem correcto a cada uno según su profesión, quizás paguen mejor!',
+      playerThought: '(Ok... el alcalde no debe estar muy bien de la cabeza...)',
+      questOffer: '¡Bueno entonces joven! ¿Aceptas ayudar a este humilde pueblo?',
+      questWhisper: '*susurrando* ¡Puedo darte un descuento de hasta 2% en los impuestos de tu tierra, eh! jaja...',
+      questAcceptQ: '¿Aceptas?',
+      questAcceptOpt: 'Veré qué puedo hacer.',
+      questDeclineOpt: 'No sé... vuelvo después.',
+      questAccepted: '¡Ok! ¡Junta {money} y vuelve aquí! ¡Nos vemos por ahí, joven!!!!',
+      questDeclined: '... ¿entonces puedo volver a mi siesta en mi banco después de mi paseo en Plymouth Cuda? Hasta luego.',
+      // Declined revisit
+      declinedGreet: '¡Hola de nuevo, joven! ¿Necesitas algo?',
+      declinedAcceptOpt: 'Bueno... puedo ayudar después de todo.',
+      declinedLeaveOpt: 'Nada importante, solo paseando.',
+      declinedAccepted: '¡Excelente! ¡Junta {money} y vuelve aquí!',
+      declinedLeave: '¡Está bien! ¡Disfruta el pueblo entonces!',
+      // Quest active
+      activeGreet: '¡Hey joven! ¿Lograste juntar el dinero?',
+      activePlayerHas: '¡Sí! Tengo {money}.',
+      activeDeliverPrompt: '¡Perfecto! ¡Con {money} podremos iluminar este pueblo!',
+      activeDeliverOpt: 'Entregar {money} (se descontará de tu saldo)',
+      activeWaitOpt: 'Todavía no, vuelvo después.',
+      activeDelivered: '¡Muchas gracias joven! ¡El pueblo lo agradece! ¡Ahora sí tendremos farolas nuevas!',
+      activeDiscount: '¡Desconté el 2% de impuesto como prometí, jajajaja! ¡Hasta luego!',
+      activeWait: '¡Sin prisa! ¡Cuando estés listo, vuelve aquí!',
+      activeNotEnoughGreet: '¡Hey joven! ¿Cómo van las cosas?',
+      activeNotEnoughPlayer: 'Todavía estoy juntando... tengo {money} por ahora.',
+      activeNotEnoughBart: '¡Falta un poco todavía! Necesito {money}. ¡Sigue vendiendo tus recursos! ¡Hasta luego!',
+      // Completed
+      completedGreet: '¡Hey joven! ¡El pueblo está cada vez mejor gracias a ti!',
+      completedPlayer: '¡Qué bien! Me alegra ayudar.',
+      completedBart: '¡Sigue así! ¡Capa de Ganso cuenta contigo!',
+
+      // ── Quest 2: Tiendas nuevas + Impuestos ──
+      q2: {
+        // Saludo inicial
+        greet: {
+          ben: '¡Hola querido joven! ¿Cómo va la granja, eh?',
+          graham: 'Hola de nuevo, ¿tienes un momento?',
+          stella: '¡Señorita! ¿Todo bien?',
+        },
+        playerHi: 'Eh.. hola, sí todo bien.',
+        bartExcited: '¡¡¡¡¡Genial!!!!! *Bartolomeu se emociona* Bueno, ¡tengo algunas cositas que debo poner aquí pronto! Pero antes... bueno, necesitaría que firmaras este documento...',
+        playerAbout: 'Sobre...',
+        bartCutsOff: '¡¡¡Espera!!! ¿Ni siquiera me has dicho tu nombre? ¿Quién serías tú? ¡Una gran falta de respeto con tu querido alcalde, no? ¡Jajajaja!',
+        // Nombre del jugador
+        nameIntro: {
+          graham: '*suspira* Graham, Graham Enderfield.',
+          ben: '*traga saliva* Soy Ben, un placer Sr. alcalde.',
+          stella: 'Stella, pero ¿de qué se trata este contrato?',
+        },
+        bartAfterNameStella: '*carraspea* Le explicaré señorita Stella.',
+        bartPleasure: {
+          graham: '¡Un placer señor!',
+          ben: '¡Un placer joven!',
+          stella: '¡Un placer señora!',
+        },
+        // Explicación de las tiendas
+        bartShops: 'Pienso en abrir tres tienditas más, aparte de la del centro.',
+        playerCenter: '¿Pero aquí no es el centro?',
+        bartLaugh: '¿Qué? *Aguanta la risa* Bueno... siguiendo la calle de abajo llegas al centro, ¡esto es solo una de las esquinitas jajajaja!',
+
+        // Opciones ronda 1
+        choiceContinue: 'Está bien... continúa.',
+        choiceWhatIGet: '¿Y qué gano yo con esto?',
+        choiceWhereSign: 'Está bien, ¿dónde firmo?',
+        choiceNotToday: 'Hoy no.',
+
+        // Bartolomeu suspira (rechazo)
+        bartSigh: '*suspira* Está bien entonces... estaré aquí si cambias de opinión.',
+
+        // Si elige "continuar"
+        bartExplainShops: '¡¡Ok!! Como tengo algunos amigos cercanos que son vendedores, como Doña Claudia y el señor Carlos, ¡pienso en invitarlos a abrir su tiendita por aquí! Carlos tiene una panadería y Claudia vende flores. ¿Interesante no?',
+        shopReaction: {
+          stella: 'Pan fresquito... y flores... de hecho, necesito decorar un poco esa casa.',
+          ben: 'Eso está bien...',
+          graham: '¿Y usted no tiene condiciones para pagar de nuevo?',
+        },
+        bartShopReply: {
+          stella: '¡¡¡Sí sí señorita!!!',
+          ben: '¡¡Claro!! ¿Aceptas?',
+          graham: '*traga saliva, desviando la mirada hacia su coche y volviendo a Graham* ¡No es ni cuestión de eso hijo mío, ajajaja!',
+        },
+
+        // Si elige "qué gano"
+        bartExplainGain: 'Bueno, ¡con la panadería de Carlos y la floristería de Claudia, el pueblo va a crecer! Y puedo volver a reducirte un 2% de los impuestos de tu tierra, ¿qué te parece?',
+
+        // Opciones ronda 2
+        choice2Sign: 'Firmar.',
+        choice2WhatGain: '¿Pero qué puedo ganar?',
+        choice2Refuse: '*se queda pensativo*',
+
+        // Firma
+        bartThanks: '¡Maravilloso! Aquí, firma en esta línea... ¡listo! ¡Muchas gracias! ¡Pronto las tienditas estarán en pie!',
+
+        // Retorno tras rechazo
+        declinedGreet: 'Ah, hola. ¿Qué deseas?',
+        declinedExplain: 'Explícame de qué se trata.',
+        declinedSign: 'Puedo firmar.',
+        declinedVisit: 'Vine a verte.',
+        bartVisitReply: {
+          stella: 'Estaré aquí, sabes que no me escaparé tan pronto.',
+          default: '*se ríe*',
+        },
+        stellaVisitReply: '... ¿vale?',
+
+        // Misión activa (después de firmar)
+        activeGreet: '¡Hola! ¡Las tiendas están casi listas! ¡Ah, y no te olvides de los impuestos, eh!',
+      },
+
+      // ── Sistema de Impuestos ──
+      tax: {
+        noteTitle: 'Día de Pago',
+        noteDescription: 'Paga la tasa de {value} monedas. Se cobra cada 10 días.',
+        contractTitle: 'Contrato Municipal',
+        contractDescription: 'Acuerdo de compromiso firmado con el alcalde Bartolomeu. Los impuestos han subido y cada 10 días se cobrará una tasa para financiar la panadería y floristería del pueblo.',
+        paid: '¡Impuesto pagado! -{value} monedas.',
+        notEnough: '¡No tienes monedas suficientes para pagar el impuesto!',
+        reminder: '¡Día de pago! Paga la tasa de {value} monedas.',
+        payOption: 'Pagar {value} monedas.',
+        laterOption: 'Después pago...',
+        thanksPaid: '¡Muy bien! ¡Gracias por el pago, joven! ¡El pueblo lo agradece!',
+        warnLater: 'Hmm... ¡no tardes mucho, eh! Sin los impuestos al día, algunos mercaderes podrían negarse a hacer negocios contigo...',
+      },
+      // Diálogo libre — tras completar la misión 1 y firmar el contrato
+      free: {
+        greet: '¿Alguna duda, {name}?',
+        choicePassing: 'No, solo estoy de paso.',
+        choiceShops: '¿Qué tiendas van a abrir?',
+        graham: {
+          l1: 'Pareces un soldadito, ¿luchaste en alguna guerra?',
+          l2: 'Sí. Fui infante de marina.',
+          l3: '¡Qué interesante! ¡Yo también serví en el ejército!',
+          l4: '¿Unidad?',
+          l5: '*piensa* ...',
+          l6: 'Lo olvidé. *fuerza una sonrisa*',
+          l7: '*murmura*',
+        },
+        ben: {
+          l1: 'Mira de no quedarte hasta tarde en la calle, entonces.',
+          l2: 'Mhm.',
+          l3: '¿Qué? ¿Te comió la lengua el gato?',
+          l4: 'No soy alérgico a los gatos.',
+          l5: '*murmura* ¿Cuántos años tienes?',
+          l6: '17.',
+          l7: 'Qué joven con suerte, ¡una granja entera con 17 años! A tu edad yo estaba revocando paredes.',
+          l8: 'Solo quiero saber cómo voy a cuidar de todo ese matorral... *sonríe a Bartolomeu y se da la vuelta para irse*',
+        },
+        stella: {
+          l1: '¿Qué te parece dar una vuelta uno de estos días? ¡Esa máquina es una bestia!',
+          l2: '*frunce el ceño*',
+          l3: '¿Y qué coche es ese?',
+          l4: '¡¡Es un Plymouth Cuda!! ¡Motor V8 426 Hemi! ¡Con un consumo precioso de unos 25 litros cada 100 km!! ¡Este compañero del 72 es fenomenal! *se levanta del banco emocionado* ¿Te gusta, bella dama?',
+          l5: '*frunce el ceño con una sonrisa débil y forzada* Qué... guay... vaya... *desvía la mirada*',
+          l6: '¿Te animas a una vueltita? *guiña un ojo con una sonrisa*',
+          l7: 'No... estoy ocupada, ¿vale? Para la próxima, chau chau.',
+          l8: '*saluda con una sonrisa*',
+          l9: 'Qué alcalde más raro... *piensa mientras se da la vuelta para salir, suspirando*',
+        },
+        shops: {
+          l1: 'Una panadería y una floristería. Pronto habrá más opciones de comida. *susurra* ¡Qué bueno dejar de comer la comida de Lara! *vuelve a hablar normal* Y claro, ¡las flores! ¡Para mejorar el ánimo de todos!',
+          l2: 'Esto está... un poco... *mira alrededor* vacío, la verdad.',
+          l3: '*carraspea* La verdad es que necesitamos mejorar las cosas...',
+        },
+      },
+    },
+    milly: {
+      // Observando al jugador pasar
+      watching: '*una señora te está observando desde la ventana...*',
+      // Opciones iniciales
+      choiceAsk: '¿Hola? ¿Todo bien?',
+      choiceIgnore: '*ignorar*',
+      choiceStare: '*devolver la mirada*',
+      // Tras elegir "preguntar" o "encarar"
+      catQuestion: 'Hola... ¿viniste a llevarte mis gatos?',
+      playerWhat: '¿Qué?',
+      catYell: '*habla más fuerte desde la ventana* ¿¡VINISTE A LLEVARTE MIS GATOS!?',
+      // Reacción por personaje
+      playerReaction: {
+        stella: '¡No no! ¡Te juro que no!',
+        ben: '*se asusta*',
+        graham: '*cruza los brazos*',
+      },
+      millyReaction: {
+        stella: 'Hmhmh está bien...',
+        ben: '¡JAJAJAJAJA levántate muchacho! *tose de tanto reír*',
+        graham: 'Vaya, eres bastante fuerte, hijo mío.',
+      },
+      // Presentación
+      millyIntro: 'Soy Milly. ¿Son nuevos residentes de Capa de Ganso? ¿De este pueblito viejo?',
+      playerMoved: 'Sí... me mudé aquí recientemente, viviendo en la antigua casa de Gilbert.',
+      millyGilbert: '¿¿¿Gilbert??? ¿¿¿Son los nietitos de Gilbert????????',
+      playerYes: '¿Sí...?',
+      millySigh: 'Aah, Gilbert... *suspira*',
+      millyFarewell: 'Lo extraño mucho... espero que cuiden bien de su granja, ¿eh?...',
+
+      // ── Quest: Madalena ──
+      q2: {
+        // Milly inicia la conversación sobre Gilbert
+        gilbertMemory: {
+          stella: 'Gilbert era un hombre maravilloso... siempre traía leche fresca para mis gatos por la mañana.',
+          ben: 'Gilbert era un señor muy amable... siempre venía por la mañana a traer leche para mis gatos.',
+          graham: 'Gilbert... era un gran hombre. Siempre traía leche para mis gatos, sin falta.',
+        },
+        playerAboutGilbert: {
+          stella: '¿Él hacía eso...? *sonríe* Parece que el abuelo era querido por todos aquí...',
+          ben: '...¿en serio? No lo sabía.',
+          graham: 'Hmm. Eso suena a algo que él haría.',
+        },
+        millyNod: 'Sí sí... *suspira* Pero bueno, ¡hablemos de cosas buenas!',
+
+        // Presentación de los gatos
+        catsIntro: '¡Tengo cinco gatos! Déjame presentártelos: está Bigotito, Peluda, Sardina, Princesa...',
+        catsPause: '...y Madalena.',
+        millyWorried: '*la expresión de Milly cambia*',
+        millyExplain: 'Madalena... tuvo una cirugía recientemente. Pero justo después de volver, ¡la pícara se escapó por la ventana!',
+        millyTeary: 'Estoy tan preocupada... probablemente no se ha recuperado del todo...',
+
+        // Reacción del jugador
+        playerReaction: {
+          stella: '¡Ay no... pobrecita! ¿A dónde fue?',
+          ben: '...¿se escapó? ¿Pero está herida?',
+          graham: 'Entiendo. ¿Hacia qué dirección fue?',
+        },
+        millyDirection: 'La vi correr hacia la granja... probablemente a los terrenos de Gilbert. Siempre le gustó ese lugar...',
+
+        // Opción de aceptar
+        choiceAccept: '¡Voy a buscarla!',
+        choiceNotNow: 'Ahora no puedo...',
+
+        // Aceptar
+        millyGrateful: {
+          stella: '¡Ay querida, muchas gracias!! ¡Madalena es una gatita gris oscura, muy chiquita! ¡Ten cuidado de no asustarla!',
+          ben: '¡Muchas gracias hijo! ¡Madalena es gris oscurita, chiquitita! Ve despacio cerca de ella, ¿sí?',
+          graham: '¡Muchas gracias joven! Es una gatita gris oscura, muy pequeña. Sea gentil con ella, por favor.',
+        },
+
+        // Rechazar
+        millyUnderstand: 'Está bien... pero si cambias de opinión, por favor... está sola allá afuera...',
+
+        // Diálogo de retorno (mientras no la encuentra)
+        returnGreet: '¿Encontraste a Madalena...?',
+        returnNotYet: 'Todavía no... pero estoy buscando.',
+        returnMillySad: 'Por favor... debe estar tan asustada...',
+
+        // Al encontrar a Madalena en la granja
+        foundMadalena: '*Madalena maúlla suavemente al verte...*',
+        playerFoundReaction: {
+          stella: '¡Te encontré! Ven gatita... tranquila... *recoge a Madalena con cuidado*',
+          ben: 'Eh... te encontré... ven... *extiende las manos despacio*',
+          graham: '*se agacha lentamente* ...ven aquí.',
+        },
+        catCaught: '*Madalena se acurruca en tus brazos*',
+
+        // Entregar a Milly
+        deliverGreet: '¡¡MADALENA!! *los ojos de Milly se llenan de lágrimas*',
+        millyJoy: '¡¡Mi bebé!! Ay... *abraza a Madalena* ¡Gracias... gracias, gracias!!',
+        millyReward: {
+          stella: '¡Querida, muchas gracias de verdad! Toma, acepta estas monedas... no es mucho, ¡pero es de corazón!',
+          ben: '¡Hijo, gracias!! ¡Toma, un regalito para ti! No es mucho pero...',
+          graham: 'Joven, le estoy eternamente agradecida. Acepte esto, por favor. Es lo mínimo que puedo hacer.',
+        },
+        playerFinish: {
+          stella: '¡No hace falta! ...pero gracias. ¡Me alegra que esté bien!',
+          ben: 'Ah... gracias. Me alegra que esté bien.',
+          graham: 'Se lo agradezco. Cuídela bien.',
+        },
+        millyEnd: '¡Claro que sí! ¡Y ven a visitarnos cuando quieras, eh? ¡A los gatos les encantaste!',
+      },
+      // Diálogo libre — tras completar la misión de Madalena
+      free: {
+        ben: {
+          l1: '¡Ay, mi cielo! ¿Cómo estás? ¿Vienes a ver a los mininos?',
+          l2: '¡Ah, hola! Estoy bien, todavía aprendiendo cosas de la granja...',
+          l3: 'Si quieres, ven a desayunar conmigo. ¡Te puedo enseñar algunas cositas! *sonríe*',
+          l4: '*esboza una sonrisa y le hace un pulgar arriba a Milly*',
+        },
+        stella: {
+          l1: 'Hola jovencita, ¿qué tal? ¿Cómo van los negocios de la granja, eh?',
+          l2: 'Va bien... todavía no sé algunas cositas, pero... creo que estoy progresando.',
+          l3: '¡Me alegro! Pero no te esfuerces demasiado, ¿vale? Si hay algo muy pesado puedes llamar a los hombres de aquí, te pueden ayudar. ¡Ah, y no olvides venir a almorzar conmigo!',
+          l4: '*sonríe y se despide con la mano*',
+        },
+        graham: {
+          l1: 'Hola muchacho, ¿cómo va la granja? ¿Estás comiendo bien por allá?',
+          l2: 'Buenos días, ¿está usted bien? La granja va bien y sí, estoy comiendo bien.',
+          l3: '¡Me alegro, hijo mío! Ven a almorzar conmigo algún día. ¡A los gatos y a mí nos encantará tu compañía!',
+          l4: '*sonríe* Cuente con ello, vendré.',
+        },
+      },
+    },
   },
 
   // Panel de atajos
