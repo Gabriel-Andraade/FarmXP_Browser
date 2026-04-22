@@ -245,10 +245,10 @@ describe('CharacterSelection (Production Implementation)', () => {
   });
 
   describe('show', () => {
-    test('should set container display to flex', () => {
-      cs.container.style.display = 'none';
+    test('should remove hidden class from container', () => {
+      cs.container.classList.add('hidden');
       cs.show();
-      expect(cs.container.style.display).toBe('flex');
+      expect(cs.container.classList.contains('hidden')).toBe(false);
     });
 
     test('should not throw without container', () => {

@@ -6,6 +6,7 @@
 
 import { t } from '../i18n/i18n.js';
 import { getObject, registerSystem } from '../gameState.js';
+import { safeDispatch } from '../safeDispatch.js';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -78,7 +79,6 @@ class UiPanel {
     }, { signal });
 
     this._resizeSvg();
-    this._startLoop();
   }
 
   rebuildInterface() {
@@ -459,13 +459,13 @@ class UiPanel {
   _setBar(key, value) {
     const bar = this.infoMenu.querySelector(`[data-role="bar-${key}"]`);
     const val = this.infoMenu.querySelector(`[data-role="val-${key}"]`);
-    if (bar) bar.style.width = `${value}%`;
+    if (bar) bar.style.setProperty('--bar-fill-width', `${value}%`);
     if (val) val.textContent = `${value}%`;
   }
 
   _emitAction(actionId) {
     const ev = new CustomEvent("animalAction", { detail: { action: actionId, animal: this.target } });
-    document.dispatchEvent(ev);
+    safeDispatch(document, ev);
   }
 
   _getCanvasTransform() {
@@ -503,16 +503,16 @@ class UiPanel {
     const cyInt = topLeftInt.y + sprHInt / 2;
     const margin = Math.max(sprWInt, sprHInt);
     const out = cxInt < -margin || cyInt < -margin || cxInt > internalW + margin || cyInt > internalH + margin;
-    if (out) { this.layer.style.opacity = "0"; return; }
-    this.layer.style.opacity = "1";
+    if (out) { this.layer.classList.add("aui-offscreen"); return; }
+    this.layer.classList.remove("aui-offscreen");
     const cx = rect.left + (cxInt * scaleX);
     const cy = rect.top + (cyInt * scaleY);
     let diameter = Math.max(sprWInt * scaleX, sprHInt * scaleY) * 1.12;
     diameter = clamp(diameter, 64, 220);
-    this.oval.style.width = `${diameter}px`;
-    this.oval.style.height = `${diameter}px`;
-    this.oval.style.left = `${cx - diameter / 2}px`;
-    this.oval.style.top = `${cy - diameter / 2}px`;
+    this.oval.style.setProperty('--oval-width', `${diameter}px`);
+    this.oval.style.setProperty('--oval-height', `${diameter}px`);
+    this.oval.style.setProperty('--oval-left', `${cx - diameter / 2}px`);
+    this.oval.style.setProperty('--oval-top', `${cy - diameter / 2}px`);
     const orbitRadius = diameter / 2 + 48;
     const angleLeft = (-155 * Math.PI) / 180;
     const angleRight = (-25 * Math.PI) / 180;
@@ -521,10 +521,10 @@ class UiPanel {
     const btnRx = cx + Math.cos(angleRight) * orbitRadius;
     const btnRy = cy + Math.sin(angleRight) * orbitRadius;
     const halfBtn = 54 / 2;
-    this.leftBtn.style.left = `${btnLx - halfBtn}px`;
-    this.leftBtn.style.top = `${btnLy - halfBtn}px`;
-    this.rightBtn.style.left = `${btnRx - halfBtn}px`;
-    this.rightBtn.style.top = `${btnRy - halfBtn}px`;
+    this.leftBtn.style.setProperty('--btn-left', `${btnLx - halfBtn}px`);
+    this.leftBtn.style.setProperty('--btn-top', `${btnLy - halfBtn}px`);
+    this.rightBtn.style.setProperty('--btn-left', `${btnRx - halfBtn}px`);
+    this.rightBtn.style.setProperty('--btn-top', `${btnRy - halfBtn}px`);
     const pad = 12;
     const actRect = this.actionsMenu.getBoundingClientRect();
     const infoRect = this.infoMenu.getBoundingClientRect();
@@ -536,10 +536,10 @@ class UiPanel {
     let infoY = btnRy - infoRect.height / 2;
     infoX = clamp(infoX, pad, window.innerWidth - pad - infoRect.width);
     infoY = clamp(infoY, pad, window.innerHeight - pad - infoRect.height);
-    this.actionsMenu.style.left = `${actX}px`;
-    this.actionsMenu.style.top = `${actY}px`;
-    this.infoMenu.style.left = `${infoX}px`;
-    this.infoMenu.style.top = `${infoY}px`;
+    this.actionsMenu.style.setProperty('--menu-left', `${actX}px`);
+    this.actionsMenu.style.setProperty('--menu-top', `${actY}px`);
+    this.infoMenu.style.setProperty('--menu-left', `${infoX}px`);
+    this.infoMenu.style.setProperty('--menu-top', `${infoY}px`);
     this._resizeSvg();
     const actConnectX = actX + actRect.width;
     const actConnectY = actY + actRect.height / 2;
@@ -572,6 +572,7 @@ class UiPanel {
     const h = window.innerHeight || 1;
     this.svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
   }
+
 
   _startLoop() {
     if (this._loopRunning) return;

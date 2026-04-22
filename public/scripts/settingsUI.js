@@ -187,7 +187,6 @@ function loadVolume(key) {
 function createVolumeRow({ id, i18nLabel, i18nHint, fallbackLabel, fallbackHint, currentValue, eventName }) {
   const option = document.createElement('div');
   option.className = 'config-option config-option--audio';
-  option.style.cssText = 'display: flex; align-items: center; gap: 12px; flex-wrap: wrap;';
 
   const left = document.createElement('div');
 
@@ -205,7 +204,7 @@ function createVolumeRow({ id, i18nLabel, i18nHint, fallbackLabel, fallbackHint,
   left.appendChild(hint);
 
   const right = document.createElement('div');
-  right.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+  right.className = 'config-audio-controls';
 
   const range = document.createElement('input');
   range.type = 'range';
@@ -214,11 +213,11 @@ function createVolumeRow({ id, i18nLabel, i18nHint, fallbackLabel, fallbackHint,
   range.max = '100';
   range.value = String(Math.round(currentValue * 100));
   range.setAttribute('aria-label', safeT(i18nLabel, fallbackLabel));
-  range.style.cssText = 'width: 120px; cursor: pointer; accent-color: #4caf50;';
+  range.className = 'config-volume-range';
 
   const valueLabel = document.createElement('span');
   valueLabel.id = `${id}Value`;
-  valueLabel.style.cssText = 'min-width: 36px; text-align: center; color: #fff; font-size: 14px;';
+  valueLabel.className = 'config-volume-value';
   valueLabel.textContent = `${Math.round(currentValue * 100)}%`;
 
   range.addEventListener('input', () => {

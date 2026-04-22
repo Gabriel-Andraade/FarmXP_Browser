@@ -232,11 +232,10 @@ const audioManager = {
 
   /* ── listeners ────────────────────────────── */
 
+  // fix: stored all event handlers as named references for proper cleanup in destroy()
   _setupEventListeners() {
-    this._evtHandlers = {
-      timeChanged: (e) => {
-        this._onTimeChanged(e.detail.time);
-      },
+    this._handlers = {
+      timeChanged: (e) => this._onTimeChanged(e.detail.time),
       sleepStarted: () => {
         this._isSleeping = true;
         this._stopCurrentTrack();
@@ -287,13 +286,13 @@ const audioManager = {
         else if (type === 'thicket') this.playSfx3D('thick_hit', x, y, { category: 'ambient' });
       },
     };
-    for (const [evt, fn] of Object.entries(this._evtHandlers)) {
+    for (const [evt, fn] of Object.entries(this._handlers)) {
       document.addEventListener(evt, fn);
     }
   },
 
   _setupUserInteraction() {
-    this._unlockFn = () => {
+    this._unlockHandler = () => {
       if (this._userInteracted) return;
       this._userInteracted = true;
 
@@ -310,14 +309,14 @@ const audioManager = {
         }
       }
 
-      document.removeEventListener('click', this._unlockFn);
-      document.removeEventListener('keydown', this._unlockFn);
-      document.removeEventListener('pointerdown', this._unlockFn);
+      document.removeEventListener('click', this._unlockHandler);
+      document.removeEventListener('keydown', this._unlockHandler);
+      document.removeEventListener('pointerdown', this._unlockHandler);
     };
 
-    document.addEventListener('click', this._unlockFn, { once: false });
-    document.addEventListener('keydown', this._unlockFn, { once: false });
-    document.addEventListener('pointerdown', this._unlockFn, { once: false });
+    document.addEventListener('click', this._unlockHandler, { once: false });
+    document.addEventListener('keydown', this._unlockHandler, { once: false });
+    document.addEventListener('pointerdown', this._unlockHandler, { once: false });
   },
 
   /* ── lógica de troca de track ────────────── */
@@ -986,6 +985,52 @@ const audioManager = {
     }
   },
 
+  /* ── cleanup ─────────────────────────────── */
+
+  destroy() {
+    this._destroyed = true;
+    // Para toda reprodução ativa
+    this._stopCurrentTrack();
+    this._stopRain();
+    this._stopFog();
+
+    // fix: removed all document event listeners registered by _setupEventListeners()
+    if (this._handlers) {
+      for (const [event, handler] of Object.entries(this._handlers)) {
+        document.removeEventListener(event, handler);
+      }
+      this._handlers = null;
+    }
+
+    // fix: removed user interaction listeners registered by _setupUserInteraction()
+    if (this._unlockHandler) {
+      document.removeEventListener('click', this._unlockHandler);
+      document.removeEventListener('keydown', this._unlockHandler);
+      document.removeEventListener('pointerdown', this._unlockHandler);
+      this._unlockHandler = null;
+    }
+
+    // Fecha o AudioContext (libera recursos do sistema)
+    if (this._sfxCtx) {
+      this._sfxCtx.close().catch(() => {});
+      this._sfxCtx = null;
+      this._sfxMaster = null;
+    }
+
+    // Limpa caches de buffer
+    this._sfxBufferPromises.clear();
+    this._sfxBuffers.clear();
+
+    // Reset de estado
+    this._initialized = false;
+    this._userInteracted = false;
+    // fix: reset _isSleeping to avoid stale sleep state blocking _onTimeChanged() on re-init
+    this._isSleeping = false;
+    this._phase = 'idle';
+
+    logger.debug('AudioManager destruído');
+  },
+
   /* ── save / load ──────────────────────────── */
 
   getSaveData() {
@@ -1003,40 +1048,6 @@ const audioManager = {
     if (typeof data.animalVolume === 'number') this.setAnimalVolume(data.animalVolume);
   },
 
-  destroy() {
-    this._stopCurrentTrack();
-    this._stopRain();
-    this._stopFog();
-
-    // Remove document event listeners
-    if (this._evtHandlers) {
-      for (const [evt, fn] of Object.entries(this._evtHandlers)) {
-        document.removeEventListener(evt, fn);
-      }
-      this._evtHandlers = null;
-    }
-
-    // Remove interaction-unlock listeners
-    if (this._unlockFn) {
-      document.removeEventListener('click', this._unlockFn);
-      document.removeEventListener('keydown', this._unlockFn);
-      document.removeEventListener('pointerdown', this._unlockFn);
-      this._unlockFn = null;
-    }
-
-    if (this._sfxCtx && this._sfxCtx.state !== 'closed') {
-      this._sfxCtx.close().catch(() => {});
-    }
-    this._sfxCtx = null;
-    this._sfxMaster = null;
-    this._sfxBuffers.clear();
-    this._sfxBufferPromises.clear();
-
-    this._initialized = false;
-    this._userInteracted = false;
-    this._isSleeping = false;
-    this._destroyed = true;
-  }
 };
 
 export { audioManager };

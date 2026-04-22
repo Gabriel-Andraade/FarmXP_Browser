@@ -3,6 +3,6 @@ enabled = true
 ignore = ["public/city_map/**/*.tsx"]
 
 [test]
-coverage = false
+coverage = true
 coverageDir = "coverage"
 coverageReporter = ["text", "lcov"]

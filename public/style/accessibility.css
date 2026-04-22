@@ -1,5 +1,13 @@
 /* ===== ACCESSIBILITY (a11y) ===== */
 
+/* Hidden SVG filter container */
+#cvd-filters {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
 /* Screen-reader only: visually hidden but accessible */
 .sr-only {
     position: absolute;

@@ -241,8 +241,4 @@ export function runValidationTests() {
     return results;
 }
 
-// Auto-run tests if this script is loaded
-if (typeof window !== 'undefined') {
-    window.runValidationTests = runValidationTests;
-    logger.info('💡 Validation tests loaded. Run runValidationTests() in console to execute.');
-}
+// Run via: import('./validationTests.js').then(m => m.runValidationTests())

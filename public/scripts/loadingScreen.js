@@ -1,5 +1,6 @@
 import { logger } from './logger.js';
 import { getSystem, setGameFlag } from './gameState.js';
+import { safeDispatch } from './safeDispatch.js';
 import { t } from './i18n/i18n.js';
 
 /**
@@ -17,6 +18,11 @@ class LoadingScreenManager {
         this.currentScreen = null;
         this.sleepScreen = null;
         this.sleepProgress = 0;
+        this._interactionBlockCount = 0;
+    }
+
+    _toPercent(progress) {
+        return Math.max(0, Math.min(100, Number(progress) * 100 || 0));
     }
 
     /**
@@ -70,7 +76,10 @@ class LoadingScreenManager {
     updateInitialProgress(progress, message = "") {
         const progressBar = document.getElementById('ldg-initial-progress-bar');
         const messageEl = document.getElementById('ldg-initial-message');
-        if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
+        if (progressBar) {
+            const pct = this._toPercent(progress);
+            progressBar.style.setProperty('--progress-width', `${pct}%`);
+        }
         if (messageEl && message) messageEl.textContent = message;
     }
 
@@ -82,9 +91,7 @@ class LoadingScreenManager {
     hideInitialLoading() {
         const loadingScreen = document.getElementById('ldg-initial-screen');
         if (loadingScreen) {
-            loadingScreen.style.transition = 'opacity 0.8s, transform 0.8s';
-            loadingScreen.style.opacity = '0';
-            loadingScreen.style.transform = 'scale(1.1)';
+            loadingScreen.classList.add('ldg-hiding');
             setTimeout(() => { if (loadingScreen.parentNode) loadingScreen.parentNode.removeChild(loadingScreen); }, 800);
         }
         this.currentScreen = null;
@@ -186,7 +193,10 @@ class LoadingScreenManager {
         const mainMsgEl = document.getElementById('ldg-sleep-main-message');
         const detailMsgEl = document.getElementById('ldg-sleep-detail-message');
 
-        if (progressBar) progressBar.style.width = `${Math.min(100, progress * 100)}%`;
+        if (progressBar) {
+            const pct = this._toPercent(progress);
+            progressBar.style.setProperty('--progress-width', `${pct}%`);
+        }
         if (mainMsgEl && mainMessage) mainMsgEl.textContent = mainMessage;
         if (detailMsgEl && detailMessage) detailMsgEl.textContent = detailMessage;
     }
@@ -258,7 +268,7 @@ class LoadingScreenManager {
         if (window.gc) { window.gc(); }
 
         // 3. Notificar sistema
-        document.dispatchEvent(new CustomEvent('sleepOptimizationsComplete'));
+        safeDispatch(document, new CustomEvent('sleepOptimizationsComplete'));
     }
 
     /**
@@ -285,8 +295,11 @@ class LoadingScreenManager {
      * @returns {void}
      */
     blockInteractions() {
-        document.body.style.pointerEvents = 'none';
-        setGameFlag('interactionsBlocked', true);
+        this._interactionBlockCount += 1;
+        if (this._interactionBlockCount === 1) {
+            document.body.classList.add('interactions-blocked');
+            setGameFlag('interactionsBlocked', true);
+        }
     }
 
     /**
@@ -295,8 +308,11 @@ class LoadingScreenManager {
      * @returns {void}
      */
     unblockInteractions() {
-        document.body.style.pointerEvents = 'all';
-        setGameFlag('interactionsBlocked', false);
+        this._interactionBlockCount = Math.max(0, this._interactionBlockCount - 1);
+        if (this._interactionBlockCount === 0) {
+            document.body.classList.remove('interactions-blocked');
+            setGameFlag('interactionsBlocked', false);
+        }
     }
 }
 

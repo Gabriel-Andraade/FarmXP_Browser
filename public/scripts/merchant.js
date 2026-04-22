@@ -42,6 +42,10 @@ class MerchantSystem {
         // Armazenar referência do handler do botão da loja
         this.storeBtnHandler = null;
 
+        // fix: track pending timers for cleanup in destroy()
+        this._setupRetryTimer = null;
+        this._reopenTimer = null;
+
         this.initialize();
     }
 
@@ -69,7 +73,11 @@ class MerchantSystem {
         const storeBtn = document.getElementById('storeBtn');
 
         if (!storeBtn) {
-            setTimeout(() => this.setupStoreButton(), 100);
+            // fix: store retry timer so destroy() can cancel it
+            this._setupRetryTimer = setTimeout(() => {
+                this._setupRetryTimer = null;
+                this.setupStoreButton();
+            }, 100);
             return;
         }
 
@@ -292,7 +300,7 @@ class MerchantSystem {
     increaseQuantity() {
         // Validar que tradeQuantity é um inteiro positivo
         if (!isValidPositiveInteger(this.tradeQuantity)) {
-            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            logger.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
             this.tradeQuantity = 1;
         }
 
@@ -309,7 +317,7 @@ class MerchantSystem {
     decreaseQuantity() {
         // Validar que tradeQuantity é um inteiro positivo
         if (!isValidPositiveInteger(this.tradeQuantity)) {
-            console.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
+            logger.warn('[Merchant] Invalid tradeQuantity, resetting to 1');
             this.tradeQuantity = 1;
         }
 
@@ -534,9 +542,7 @@ class MerchantSystem {
                 card.addEventListener('click', () => {
                     this.openCommerceModal(merchantId);
                 });
-                card.style.cursor = 'pointer';
             } else {
-                card.style.cursor = 'not-allowed';
                 card.addEventListener('click', (e) => {
                     e.preventDefault();
                     this.showMessage(t('trading.isClosed', { name: merchant.name }));
@@ -563,10 +569,8 @@ class MerchantSystem {
                 if (card) {
                     if (isOpen) {
                         card.classList.remove('mch-merchant-closed');
-                        card.style.cursor = 'pointer';
                     } else {
                         card.classList.add('mch-merchant-closed');
-                        card.style.cursor = 'not-allowed';
                     }
                 }
             }
@@ -605,7 +609,9 @@ class MerchantSystem {
         if (!this.isMerchantOpen(this.currentMerchant)) {
             this.closeAllModals();
             this.showMessage(t('trading.merchantClosed', { name: this.currentMerchant.name }));
-            setTimeout(() => {
+            // fix: store reopen timer so destroy() can cancel it
+            this._reopenTimer = setTimeout(() => {
+                this._reopenTimer = null;
                 this.openMerchantsList();
             }, 500);
         }
@@ -1260,20 +1266,28 @@ class MerchantSystem {
     destroy() {
         // Remove todos os event listeners
         this.abortController.abort();
-        
+
         // Reset AbortController para permitir re-inicialização
         this.abortController = new AbortController();
 
+        // fix: clear pending timers to prevent post-destroy callbacks
+        clearTimeout(this._setupRetryTimer);
+        this._setupRetryTimer = null;
+        clearTimeout(this._reopenTimer);
+        this._reopenTimer = null;
+
         // Reset listeners flag para permitir re-setup
         this.listenersSetup = false;
-        
+
         // Clear handler reference
         this.storeBtnHandler = null;
-        
+
         // Clear referências
         this.currentMerchant = null;
         this.selectedPlayerItem = null;
         this.selectedMerchantItem = null;
+
+        logger.debug('MerchantSystem destruído');
     }
 }
 

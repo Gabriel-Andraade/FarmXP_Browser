@@ -9,6 +9,7 @@
 // =============================================================================
 import { handleError, handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
+import { safeDispatch } from "./safeDispatch.js";
 import { initResponsiveUI } from "./responsive.js";
 import { perfLog, OPTIMIZATION_CONFIG } from "./optimizationConstants.js";
 import { collisionSystem } from "./collisionSystem.js";
@@ -25,6 +26,7 @@ import { PlayerHUD } from "./thePlayer/playerHUD.js";
 import { i18n, t } from "./i18n/i18n.js";
 import { a11y } from './accessibility.js';
 import { setupAutoCleanup } from "./gameCleanup.js";
+import { initMinimap, updateMinimap } from "./minimap/minimapIntegration.js";
 
 // =============================================================================
 // VARIÁVEIS DE SISTEMAS LAZY LOADING
@@ -162,6 +164,7 @@ let frameCount = 0;
 let lastFpsUpdate = 0;
 let criticalSystemsLoaded = false;
 let interactionEnabled = false;
+let minimapUpdateDisabled = false;
 
 // Estado de simulação (travamento do jogo)
 let simulationPaused = true;
@@ -466,7 +469,7 @@ function setupSleepListeners() {
       currentPlayer.direction = "down";
     }
 
-    canvas.style.cursor = "wait";
+    canvas.classList.add("cursor-wait");
   });
 
   document.addEventListener("sleepEnded", () => {
@@ -482,7 +485,7 @@ function setupSleepListeners() {
         interactionEnabled = true;
       }
 
-      canvas.style.cursor = "default";
+      canvas.classList.remove("cursor-wait");
 
       getObject('world')?.markWorldChanged?.();
 
@@ -563,8 +566,68 @@ async function exposeGlobals() {
         // Inicializar flags de debug via URL
         initDebugFlagsFromUrl();
 
-        // Expor debug se flag estiver habilitada
-        exposeDebug();
+        // Expor debug se flag estiver habilitada (incluindo gameDebug)
+        exposeDebug({
+          gameDebug: {
+            getPerformance: () => ({ fps, coreAssetsLoaded, worldAssetsLoaded, isSleeping, simulationPaused }),
+            forceLoadAll: async () => {
+              await assets.loadAll();
+              allAssetsLoaded = true;
+              worldAssetsLoaded = true;
+              spawnGameAnimals();
+            },
+            triggerSleep: () => safeDispatch(document, new CustomEvent("sleepStarted")),
+            wakeUp: () => safeDispatch(document, new CustomEvent("sleepEnded")),
+            spawnAnimals: function (count = 5, type = "Turkey") {
+              if (!assets.animals || !assets.animals[type]) {
+                logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
+                return;
+              }
+
+              logger.debug(`Spawnando ${count} animais do tipo ${type}...`);
+
+              const WORLD_BOUNDS = { minX: 100, maxX: 1200, minY: 100, maxY: 700 };
+              const world = getObject('world');
+
+              for (let i = 0; i < count; i++) {
+                const x = WORLD_BOUNDS.minX + Math.random() * (WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX);
+                const y = WORLD_BOUNDS.minY + Math.random() * (WORLD_BOUNDS.maxY - WORLD_BOUNDS.minY);
+                addAnimal(type, assets.animals[type], x, y);
+              }
+
+              logger.debug(`${count} animais do tipo ${type} spawnados!`);
+              world?.markWorldChanged?.();
+            },
+            clearAnimals: function () {
+              const world = getObject('world');
+              if (world && world.animals) {
+                const count = world.animals.length;
+                world.animals.length = 0;
+                logger.debug(`${count} animais removidos do mundo`);
+                world.markWorldChanged?.();
+              }
+            },
+            listAnimals: function () {
+              const world = getObject('world');
+              if (world && world.animals) {
+                logger.debug(`Animais no mundo (${world.animals.length}):`);
+                let index = 0;
+                for (const animal of world.animals) {
+                  logger.debug(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
+                  index++;
+                }
+              }
+            },
+            debugItem: async (id) => {
+              if (!inventorySystem) await initializeInventorySystem();
+              const { getItem } = await import("./itemUtils.js");
+              const item = getItem(Number(id));
+              if (!item) return logger.error("Item não existe:", id);
+              inventorySystem.addItem(item.id, 1);
+              logger.debug(`Debug: Adicionado ${item.name}`);
+            },
+          },
+        });
 
         logger.debug("Sistemas registrados no gameState");
     } catch (error) {
@@ -601,7 +664,7 @@ async function startFullGameLoad() {
     allAssetsLoaded = true;
     updateLoadingProgress(0.55, "preparando mundo...");
 
-    if (!window._pendingSaveData) {
+    if (!getObject('pendingSaveData')) {
       spawnGameAnimals();
     }
 
@@ -736,15 +799,16 @@ async function startFullGameLoad() {
 
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
-    if (window._pendingSaveData && saveRef) {
+    const pendingSave = getObject('pendingSaveData');
+    if (pendingSave && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
-        await saveRef.applySaveData(window._pendingSaveData);
+        await saveRef.applySaveData(pendingSave);
         logger.info('📂 Save aplicado do startup');
       } catch (e) {
         handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
       }
-      window._pendingSaveData = null;
+      setObject('pendingSaveData', null);
     }
 
     updateLoadingProgress(1, "pronto");
@@ -1319,6 +1383,15 @@ function gameLoop(timestamp) {
 
   if (!allAssetsLoaded) drawLoadingIndicator();
 
+  if (!minimapUpdateDisabled) {
+    try {
+      updateMinimap(currentPlayer);
+    } catch (e) {
+      minimapUpdateDisabled = true;
+      handleWarn("falha ao atualizar minimap; desativando updates até reinicialização", "main:gameLoop:minimap", e);
+    }
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
@@ -1342,63 +1415,6 @@ function drawLoadingIndicator() {
 // DEBUG EXPORTS
 // =============================================================================
 
-window.gameDebug = {
-  getPerformance: () => ({ fps, coreAssetsLoaded, worldAssetsLoaded, isSleeping, simulationPaused }),
-  forceLoadAll: async () => {
-    await assets.loadAll();
-    allAssetsLoaded = true;
-    worldAssetsLoaded = true;
-    spawnGameAnimals();
-  },
-  triggerSleep: () => document.dispatchEvent(new CustomEvent("sleepStarted")),
-  wakeUp: () => document.dispatchEvent(new CustomEvent("sleepEnded")),
-  spawnAnimals: function (count = 5, type = "Turkey") {
-    if (!assets.animals || !assets.animals[type]) {
-      logger.error(`Tipo de animal "${type}" não encontrado. Tipos disponíveis:`, Object.keys(assets.animals || {}));
-      return;
-    }
-
-    logger.debug(`Spawnando ${count} animais do tipo ${type}...`);
-
-    const WORLD_BOUNDS = { minX: 100, maxX: 1200, minY: 100, maxY: 700 };
-
-    for (let i = 0; i < count; i++) {
-      const x = WORLD_BOUNDS.minX + Math.random() * (WORLD_BOUNDS.maxX - WORLD_BOUNDS.minX);
-      const y = WORLD_BOUNDS.minY + Math.random() * (WORLD_BOUNDS.maxY - WORLD_BOUNDS.minY);
-      addAnimal(type, assets.animals[type], x, y);
-    }
-
-    logger.debug(`${count} animais do tipo ${type} spawnados!`);
-    window.theWorld?.markWorldChanged?.();
-  },
-  clearAnimals: function () {
-    if (window.theWorld && window.theWorld.animals) {
-      const count = window.theWorld.animals.length;
-      window.theWorld.animals.length = 0;
-      logger.debug(`${count} animais removidos do mundo`);
-      window.theWorld.markWorldChanged?.();
-    }
-  },
-  listAnimals: function () {
-    if (window.theWorld && window.theWorld.animals) {
-      logger.debug(`Animais no mundo (${window.theWorld.animals.length}):`);
-      let index = 0;
-      for (const animal of window.theWorld.animals) {
-        logger.debug(`  ${index + 1}. ${animal.assetName || "Animal"} em (${Math.round(animal.x)}, ${Math.round(animal.y)})`);
-        index++;
-      }
-    }
-  },
-};
-
-window.debugItem = async (id) => {
-  if (!inventorySystem) await initializeInventorySystem();
-  const { getItem } = await import("./itemUtils.js");
-  const item = getItem(Number(id));
-  if (!item) return logger.error("Item não existe:", id);
-  inventorySystem.addItem(item.id, 1);
-  logger.debug(`Debug: Adicionado ${item.name}`);
-};
 
 // DEBUG_HITBOXES agora é gerenciado via gameState.js (use ?hitboxes=1 na URL)
 

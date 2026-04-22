@@ -1,4 +1,5 @@
 import { logger } from '../logger.js';
+import { safeDispatch } from '../safeDispatch.js';
 import { consumeItem, equipItem, discardItem } from './playerInventory.js';
 import { mapTypeToCategory, INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getItem, getStackLimit, isPlaceable, isConsumable as itemUtilsIsConsumable, getConsumptionData as itemUtilsGetConsumptionData, getAllItems } from '../itemUtils.js';
@@ -70,7 +71,7 @@ export class InventorySystem {
         this.lastUIUpdate = now;
         this.uiUpdateTimer = null;
         
-        document.dispatchEvent(new CustomEvent('inventoryUpdated', {
+        safeDispatch(document, new CustomEvent('inventoryUpdated', {
             detail: { inventory: this.getInventory() }
         }));
     }
@@ -535,7 +536,7 @@ export function startConsuming(itemId, player) {
     const item = getItem(itemId);
     if (!item || !item.fillUp) return false;
 
-    document.dispatchEvent(new CustomEvent('startConsumptionBar', {
+    safeDispatch(document, new CustomEvent('startConsumptionBar', {
         detail: {
             item,
             player,
@@ -570,10 +571,10 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
         const consumeBtn = document.createElement('button');
         consumeBtn.className = 'inv-action-btn inv-consume-btn';
         consumeBtn.textContent = '🍽️ ' + t('inventory.actions.consume');
-        consumeBtn.onclick = (e) => {
+        consumeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             consumeItem(category, itemId, 1);
-        };
+        });
         buttonContainer.appendChild(consumeBtn);
     }
 
@@ -581,20 +582,20 @@ export function addItemActionButtons(itemElement, item, category, itemId) {
         const equipBtn = document.createElement('button');
         equipBtn.className = 'inv-action-btn inv-equip-btn';
         equipBtn.textContent = '⚔️ ' + t('inventory.actions.equip');
-        equipBtn.onclick = (e) => {
+        equipBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             equipItem(category, itemId);
-        };
+        });
         buttonContainer.appendChild(equipBtn);
     }
 
     const discardBtn = document.createElement('button');
     discardBtn.className = 'inv-action-btn inv-discard-btn';
     discardBtn.textContent = '🗑️ ' + t('inventory.actions.discard');
-    discardBtn.onclick = (e) => {
+    discardBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         discardItem(category, itemId, 1);
-    };
+    });
     buttonContainer.appendChild(discardBtn);
 
     itemElement.appendChild(buttonContainer);
