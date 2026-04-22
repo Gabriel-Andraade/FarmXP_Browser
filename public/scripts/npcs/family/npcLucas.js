@@ -110,6 +110,8 @@ let stateTimer = 0;
 let stateDuration = IDLE_MIN_MS;
 let lastTickTime = 0;
 let aiInterval = null;
+let visibilityInterval = null;
+let pendingVisibilityInterval = null;
 
 // ─── Sprite preload ─────────────────────────────────────────────────────────
 
@@ -732,8 +734,8 @@ function register() {
     stateTimer = performance.now();
     if (!aiInterval) aiInterval = setInterval(tick, 50);
 
-    setInterval(updateVisibility, 2000);
-    setInterval(checkPendingChange, 500);
+    if (!visibilityInterval) visibilityInterval = setInterval(updateVisibility, 2000);
+    if (!pendingVisibilityInterval) pendingVisibilityInterval = setInterval(checkPendingChange, 500);
 
     logger.info('[Lucas] NPC registered in city (free-roam)');
 }

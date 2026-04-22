@@ -307,6 +307,9 @@ export class StorageSystem {
     }
 
     this.showMessage(t('storage.deposited', { qty: deposited, name: getItemName(itemId, itemData.name) }));
+    document.dispatchEvent(new CustomEvent('itemStored', {
+      detail: { itemId, quantity: deposited, category: storageCategory }
+    }));
     return true;
   }
 
@@ -377,12 +380,14 @@ export class StorageSystem {
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
+    const beforeQuantity = this.getItemQuantity(itemId);
     const result = this._addToCategory(category, itemId, qty);
+    const addedQuantity = this.getItemQuantity(itemId) - beforeQuantity;
 
     // Dispatch event for quest system
-    if (result) {
+    if (result && addedQuantity > 0) {
       document.dispatchEvent(new CustomEvent('itemStored', {
-        detail: { itemId, quantity: qty, category }
+        detail: { itemId, quantity: addedQuantity, category }
       }));
     }
 

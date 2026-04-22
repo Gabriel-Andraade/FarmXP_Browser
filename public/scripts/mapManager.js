@@ -199,86 +199,91 @@ export async function triggerPortalTransition() {
     hidePortalHint();
     blockInteractions();
 
-    // Show transition overlay
-    showTransitionScreen(portal.label);
+    let targetMapId = currentMapId;
+    try {
+        // Show transition overlay
+        showTransitionScreen(portal.label);
 
-    // Small delay for UX
-    await wait(800);
+        // Small delay for UX
+        await wait(800);
 
-    if (currentMapId === 'farm') {
-        // Save farm state before leaving
-        savedFarmState = snapshotFarmState();
-        clearWorldObjects();
-        // Pre-load city assets
-        if (!areCityAssetsLoaded()) {
-            await loadCityAssets();
-        }
-        // Ensure cityRenderer module is ready for sync rendering
-        await ensureCityRendererReady();
-        // Register city house hitboxes when entering city
-        cityHouseSystem.registerHouseHitboxes();
-        await cityObstaclesSystem.registerObstacles();
-        // Re-register NPC hitboxes (cleared by collisionSystem.clear())
-        const npcSys = getSystem('npc');
-        if (npcSys) npcSys.registerHitboxesForMap('city');
-    } else {
-        // Leaving city — clear city-only objects and hitboxes
-        cityHouseSystem.clearHouseHitboxes();
-        cityObstaclesSystem.clearObstacles();
-        clearWorldObjects();
-        invalidateCityCache();
-    }
-
-    // Switch map
-    const targetMapId = portal.targetMap;
-    const targetSpawn = portal.targetSpawn;
-    currentMapId = targetMapId;
-
-    // Update camera bounds
-    const map = MAPS[targetMapId];
-    updateCameraBounds(map.width, map.height);
-
-    if (targetMapId === 'farm' && savedFarmState) {
-        restoreFarmState(savedFarmState);
-    }
-
-    // Teleport player
-    const player = getObject('currentPlayer');
-    if (player) {
-        player.x = targetSpawn.x;
-        player.y = targetSpawn.y;
-    }
-
-    markWorldChanged();
-    invalidateGrassCache();
-
-    // Register portal hitbox for collision system
-    registerPortalHitbox();
-
-    // Re-register NPC hitboxes for target map
-    const npcSysAfter = getSystem('npc');
-    if (npcSysAfter) npcSysAfter.registerHitboxesForMap(targetMapId);
-
-    // Re-register Madalena hitbox if quest is active on the farm
-    if (targetMapId === 'farm') {
-        const millyAfter = getSystem('npcMilly');
-        if (millyAfter && typeof millyAfter.reregisterHitbox === 'function') {
-            millyAfter.reregisterHitbox();
+        if (currentMapId === 'farm') {
+            // Save farm state before leaving
+            savedFarmState = snapshotFarmState();
+            clearWorldObjects();
+            // Pre-load city assets
+            if (!areCityAssetsLoaded()) {
+                await loadCityAssets();
+            }
+            // Ensure cityRenderer module is ready for sync rendering
+            await ensureCityRendererReady();
+            // Register city house hitboxes when entering city
+            cityHouseSystem.registerHouseHitboxes();
+            await cityObstaclesSystem.registerObstacles();
+            // Re-register NPC hitboxes (cleared by collisionSystem.clear())
+            const npcSys = getSystem('npc');
+            if (npcSys) npcSys.registerHitboxesForMap('city');
+        } else {
+            // Leaving city — clear city-only objects and hitboxes
+            cityHouseSystem.clearHouseHitboxes();
+            cityObstaclesSystem.clearObstacles();
+            clearWorldObjects();
+            invalidateCityCache();
         }
 
-        // Re-register the house door interaction hitbox — collisionSystem.clear()
-        // dropped it during the map transition.
-        const houseAfter = getSystem('house');
-        if (houseAfter && typeof houseAfter.reregisterDoorHitbox === 'function') {
-            houseAfter.reregisterDoorHitbox();
+        // Switch map
+        targetMapId = portal.targetMap;
+        const targetSpawn = portal.targetSpawn;
+        currentMapId = targetMapId;
+
+        // Update camera bounds
+        const map = MAPS[targetMapId];
+        updateCameraBounds(map.width, map.height);
+
+        if (targetMapId === 'farm' && savedFarmState) {
+            restoreFarmState(savedFarmState);
         }
+
+        // Teleport player
+        const player = getObject('currentPlayer');
+        if (player) {
+            player.x = targetSpawn.x;
+            player.y = targetSpawn.y;
+        }
+
+        markWorldChanged();
+        invalidateGrassCache();
+
+        // Register portal hitbox for collision system
+        registerPortalHitbox();
+
+        // Re-register NPC hitboxes for target map
+        const npcSysAfter = getSystem('npc');
+        if (npcSysAfter) npcSysAfter.registerHitboxesForMap(targetMapId);
+
+        // Re-register Madalena hitbox if quest is active on the farm
+        if (targetMapId === 'farm') {
+            const millyAfter = getSystem('npcMilly');
+            if (millyAfter && typeof millyAfter.reregisterHitbox === 'function') {
+                millyAfter.reregisterHitbox();
+            }
+
+            // Re-register the house door interaction hitbox — collisionSystem.clear()
+            // dropped it during the map transition.
+            const houseAfter = getSystem('house');
+            if (houseAfter && typeof houseAfter.reregisterDoorHitbox === 'function') {
+                houseAfter.reregisterDoorHitbox();
+            }
+        }
+
+        await wait(700);
+    } catch (err) {
+        logger.error('[MapManager] Transition failed', err);
+    } finally {
+        hideTransitionScreen();
+        unblockInteractions();
+        isTransitioning = false;
     }
-
-    await wait(700);
-
-    hideTransitionScreen();
-    unblockInteractions();
-    isTransitioning = false;
 
     logger.info(`Map transitioned to: ${targetMapId}`);
     document.dispatchEvent(new CustomEvent('mapChanged', { detail: { mapId: targetMapId } }));

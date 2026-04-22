@@ -719,14 +719,19 @@ async function startFullGameLoad() {
 
     // Auto-select a save slot for new games so auto-save and beforeunload work
     if (saveRef && saveRef.activeSlot === null && !window._pendingSaveData) {
-      // Find first empty slot, or fall back to slot 0
-      let targetSlot = 0;
+      // Find first empty slot; if none, skip auto-creation so we don't silently
+      // overwrite an existing save. The player will pick a slot via the menu.
+      let targetSlot = -1;
       for (let i = 0; i < 3; i++) {
         if (!saveRef.getSlotMeta(i)) { targetSlot = i; break; }
       }
-      saveRef.createOrOverwriteSlot(targetSlot, { saveName: `Save ${targetSlot + 1}` });
-      saveRef.selectActiveSlot(targetSlot);
-      logger.info(`💾 Auto-created save slot ${targetSlot} for new game`);
+      if (targetSlot >= 0) {
+        saveRef.createOrOverwriteSlot(targetSlot, { saveName: `Save ${targetSlot + 1}` });
+        saveRef.selectActiveSlot(targetSlot);
+        logger.info(`💾 Auto-created save slot ${targetSlot} for new game`);
+      } else {
+        logger.warn('💾 All 3 save slots occupied; auto-save disabled until player picks a slot');
+      }
     }
 
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
@@ -776,12 +781,8 @@ function setupPortalKeyListener() {
     if (e.key !== 'e' && e.key !== 'E') return;
     if (simulationPaused || isSleeping) return;
 
-    // Try NPC interaction first
-    const npcSys = getSystem('npc');
-    if (npcSys && npcSys.tryInteract()) {
-      e.stopImmediatePropagation();
-      return;
-    }
+    // NPCs are already handled by npcSystem's capture-phase listener
+    // (stopImmediatePropagation runs before this listener when an NPC is near).
 
     const mapMgr = getSystem('mapManager');
     if (!mapMgr || mapMgr.isMapTransitioning()) return;
@@ -813,8 +814,8 @@ function setupCityHouseKeyListener() {
     if (house) {
       e.stopImmediatePropagation();
       // TODO: Implementar ação ao interagir com casa
-      // Por enquanto, apenas mostra mensagem
-      showMessage(`Entrando em: ${house.name}`);
+      const hud = getSystem('hud');
+      hud?.showNotification?.(`Entrando em: ${house.name}`, 'info', 2000);
     }
   });
 }

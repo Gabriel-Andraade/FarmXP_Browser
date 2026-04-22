@@ -231,7 +231,7 @@ export class CollisionSystem {
 
         const typeKey = (object.type || "").toString().toUpperCase();
 
-        if (typeKey === "ANIMAL") {
+        if (typeKey === "ANIMAL" || typeKey === "QUEST_ANIMAL") {
             const orig = object.original || object.object || null;
             const assetName = (orig && (orig.assetName || orig.assetname || orig.name))
                 ? (orig.assetName || orig.assetname || orig.name).toString().toUpperCase()

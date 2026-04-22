@@ -47,6 +47,9 @@ export async function loadCityAssets() {
     } catch (e) {
         logger.warn('[CityRenderer] Failed to load map JSON: ' + e.message);
         assetsLoading = false;
+        // Unblock any awaiters so map transition can surface an error instead of hanging.
+        readyListeners.forEach(resolve => resolve());
+        readyListeners.length = 0;
         return;
     }
 
@@ -171,6 +174,7 @@ function resolveTile(gid) {
 
 function buildBackgroundCache() {
     if (!mapData || !assetsLoaded) return;
+    if (!mapData.layers || !Array.isArray(mapData.layers)) return;
 
     const w = mapData.width * mapData.tilewidth;   // 2560
     const h = mapData.height * mapData.tileheight;  // 2560
@@ -183,9 +187,6 @@ function buildBackgroundCache() {
     // Fill with base color
     offCtx.fillStyle = '#7a7a7a';
     offCtx.fillRect(0, 0, w, h);
-
-    // Render each tile layer in order (skip object groups)
-    if (!mapData.layers || !Array.isArray(mapData.layers)) return;
 
     for (const layer of mapData.layers) {
         if (layer.type !== 'tilelayer' || !layer.data || !Array.isArray(layer.data)) continue;

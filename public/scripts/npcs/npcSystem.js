@@ -212,6 +212,12 @@ function registerHitboxesForMap(mapId) {
 
         collisionSystem.interactionHitboxes.set(hitboxId, hitbox);
         collisionSystem._interGrid.insert(hitboxId, hitbox);
+
+        // Physical collision hitbox was also wiped by collisionSystem.clear()
+        const physId = `npc_${npc.id}_phys`;
+        const ph = collisionSystem.createPlayerHitbox(npc.x, npc.y, npc.width, npc.height);
+        collisionSystem.removeHitbox(physId);
+        collisionSystem.addHitbox(physId, 'NPC', ph.x, ph.y, ph.width, ph.height, npc);
     }
 
     markWorldChanged();

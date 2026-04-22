@@ -216,6 +216,17 @@ export class AnimalEntity {
     updateStats() {
         const now = performance.now();
         const elapsed = now - this._lastDecayTime;
+        
+        // Reset daily pet counts BEFORE checking decay interval
+        const daySys = getSystem('dayNight') || getSystem('weather');
+        if (daySys && daySys.dayCount != null) {
+            const currentDay = daySys.dayCount;
+            if (currentDay !== this.lastPetDay) {
+                this.lastPetDay = currentDay;
+                this.petsToday = 0;
+            }
+        }
+
         if (elapsed < STATS_DECAY_INTERVAL_MS) return;
 
         const minutes = elapsed / 60_000;
@@ -232,15 +243,6 @@ export class AnimalEntity {
                 this.stats.moral = Math.max(0, this.stats.moral - 0.1 * minutes);
             } else if (wt === 'rain') {
                 this.stats.moral = Math.max(0, this.stats.moral - 0.03 * minutes);
-            }
-        }
-
-        const daySys = getSystem('dayNight') || getSystem('weather');
-        if (daySys && daySys.dayCount != null) {
-            const currentDay = daySys.dayCount;
-            if (currentDay !== this.lastPetDay) {
-                this.lastPetDay = currentDay;
-                this.petsToday = 0;
             }
         }
 
@@ -581,9 +583,11 @@ export class AnimalEntity {
         if (this._mood !== AnimalMood.CALM) {
             const emoji = this.moodEmoji;
             if (emoji) {
+                ctx.save();
                 ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.fillText(emoji, Math.floor(screenPos.x + zoomedWidth / 2), Math.floor(screenPos.y - 4 * camera.zoom));
+                ctx.restore();
             }
         }
     }
@@ -606,6 +610,8 @@ export class AnimalEntity {
 
     deserialize(data) {
         if (!data) return;
+        if (Number.isFinite(data.x)) this.x = data.x;
+        if (Number.isFinite(data.y)) this.y = data.y;
         if (data.stats) {
             this.stats.hunger = data.stats.hunger ?? this.stats.hunger;
             this.stats.thirst = data.stats.thirst ?? this.stats.thirst;

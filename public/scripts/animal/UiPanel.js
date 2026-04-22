@@ -250,9 +250,10 @@ class UiPanel {
         e.stopImmediatePropagation();
       }
     };
-    window.addEventListener("keydown", blockKeysWhileEditing, true);
-    window.addEventListener("keyup", blockKeysWhileEditing, true);
-    window.addEventListener("keypress", blockKeysWhileEditing, true);
+    const sig = this._abortController?.signal;
+    window.addEventListener("keydown", blockKeysWhileEditing, { capture: true, signal: sig });
+    window.addEventListener("keyup", blockKeysWhileEditing, { capture: true, signal: sig });
+    window.addEventListener("keypress", blockKeysWhileEditing, { capture: true, signal: sig });
 
     nameEl.addEventListener("blur", () => {
       if (!this.target) return;

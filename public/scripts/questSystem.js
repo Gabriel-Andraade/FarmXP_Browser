@@ -226,6 +226,8 @@ function showPlayerThoughtDialogue(text) {
  * - Repaired → allow travel (return true)
  * @returns {boolean} true if travel should proceed
  */
+let repairTimer = null;
+
 export function handlePickupInteraction() {
     const q = quests.fix_pickup;
 
@@ -247,11 +249,28 @@ export function handlePickupInteraction() {
     }
 
     // Has battery — repair!
-    removeBatteryFromInventory();
+    const removed = removeBatteryFromInventory();
+    if (!removed) {
+        // If removal failed, bail out and don't mark quest as completed
+        showPlayerThoughtDialogue(t('quests.fixPickup.bubbleNoBattery'));
+        return false;
+    }
+    
     lockPlayerMovement();
     showSpeechBubble(t('quests.fixPickup.bubbleRepairing'), 2000);
 
-    setTimeout(() => {
+    // Clear any previous timer
+    if (repairTimer) {
+        clearTimeout(repairTimer);
+        repairTimer = null;
+    }
+
+    repairTimer = setTimeout(() => {
+        repairTimer = null;
+        
+        // Guard: only complete if quest is still active and player is locked
+        if (q.status !== 'active' || !playerLockedForRepair) return;
+        
         q.status = 'completed';
         unlockPlayerMovement();
         showPlayerThoughtDialogue(t('quests.fixPickup.bubbleRepaired'));

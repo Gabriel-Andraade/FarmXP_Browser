@@ -164,7 +164,10 @@ function buildIdleDialogue() {
         text: t(`${K}.ignore`),
         setPortrait: { side: 'right', src: JEREMY_DIALOG_00 },
         end: true,
-        action: () => { dialogueState = 'rejected'; },
+        action: () => {
+            dialogueState = 'rejected';
+            try { getSystem('save')?.markDirty?.(); } catch (_) { /* ignore */ }
+        },
     });
 
     return config;

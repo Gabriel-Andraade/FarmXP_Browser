@@ -1,3 +1,7 @@
+[linter]
+enabled = true
+ignore = ["public/city_map/**/*.tsx"]
+
 [test]
 coverage = false
 coverageDir = "coverage"

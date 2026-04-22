@@ -1048,6 +1048,9 @@ function playerHasMilk() {
 }
 
 function consumeMilkAndReward() {
+    // Guarda contra re-entrada — evita recompensa dupla se o fluxo for reaberto
+    // antes do estado persistir (ex.: duas interações concorrentes).
+    if (milkQuestState === 'delivered') return false;
     const inv = getSystem('inventory') || window.inventorySystem;
     if (!inv) return false;
     // Double-check antes de remover — evita trocar estado/marcar save sem o item.

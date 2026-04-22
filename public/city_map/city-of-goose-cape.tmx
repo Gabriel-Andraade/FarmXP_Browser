@@ -138,12 +138,6 @@
   <object id="434" gid="2545" x="1108.33" y="1731" width="52" height="167"/>
   <object id="435" gid="2545" x="1494.33" y="1707" width="52" height="167"/>
   <object id="370" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="415" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="416" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="417" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="418" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="419" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
-  <object id="420" gid="2546" x="706" y="1663" width="56.3333" height="169.667"/>
   <object id="421" gid="2546" x="1372" y="1489" width="56.3333" height="169.667"/>
   <object id="422" gid="2546" x="134.667" y="1711.33" width="56.3333" height="169.667"/>
   <object id="423" gid="2546" x="134.333" y="1504" width="56.3333" height="169.667"/>
@@ -151,18 +145,6 @@
   <object id="425" gid="2546" x="702" y="2325" width="56.3333" height="169.667"/>
   <object id="387" gid="2547" x="2218.5" y="2539" width="41" height="155.667"/>
   <object id="391" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="392" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="393" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="394" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="395" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="396" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="397" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="398" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="399" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="400" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="401" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="402" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
-  <object id="403" gid="2547" x="491.5" y="804.166" width="41" height="155.667"/>
   <object id="404" gid="2547" x="909.5" y="902.166" width="41" height="155.667"/>
   <object id="405" gid="2547" x="1761.5" y="1248.17" width="41" height="155.667"/>
   <object id="409" gid="2547" x="1899" y="2540.17" width="41" height="155.667"/>

@@ -373,19 +373,16 @@ function buildQuest2IntroDialogue() {
     lines.push({ side: 'left', text: tChar(`${Q}.shopReaction`, charId) });
     lines.push({ side: 'right', text: tChar(`${Q}.bartShopReply`, charId) });
 
-    // Escolhas rodada 2
-    const signIdx2 = lines.length + 1;
-    const whatGainIdx2 = lines.length + 2;
-    const refuseIdx2 = lines.length + 3;
-
+    // Round-2 choice — pushed now, patched later once all targets exist.
+    const round2ChoiceIdx = lines.length;
     lines.push({
         side: 'right',
         type: 'choice',
         text: '',
         options: [
-            { text: t(`${Q}.choice2Sign`), value: 'sign', next: signIdx2, onSelect: () => onSignContract() },
-            { text: t(`${Q}.choice2WhatGain`), value: 'what_gain', next: whatGainIdx2 },
-            { text: t(`${Q}.choice2Refuse`), value: 'refuse', next: refuseIdx2, onSelect: () => { quest2State = 'declined'; } },
+            { text: t(`${Q}.choice2Sign`), value: 'sign', next: 0, onSelect: () => onSignContract() },
+            { text: t(`${Q}.choice2WhatGain`), value: 'what_gain', next: 0 },
+            { text: t(`${Q}.choice2Refuse`), value: 'refuse', next: 0, onSelect: () => { quest2State = 'declined'; } },
         ],
     });
 
@@ -393,32 +390,25 @@ function buildQuest2IntroDialogue() {
     const thanksIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartThanks`), end: true });
 
-    // whatGainIdx2: explica ganho → volta pro sign
-    const explainGainReturnIdx = lines.length + 1;
+    // whatGainIdx2: explica ganho → nested choice
+    const explainGainIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartExplainGain`) });
+    const nestedChoiceIdx = lines.length;
     lines.push({
         side: 'right',
         type: 'choice',
         text: '',
         options: [
             { text: t(`${Q}.choice2Sign`), value: 'sign', next: thanksIdx, onSelect: () => onSignContract() },
-            { text: t(`${Q}.choice2Refuse`), value: 'refuse', next: refuseIdx2 + 1, onSelect: () => { quest2State = 'declined'; } },
+            { text: t(`${Q}.choice2Refuse`), value: 'refuse', next: 0, onSelect: () => { quest2State = 'declined'; } },
         ],
     });
 
     // refuseIdx2: suspiro
+    const bartSighIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartSigh`), end: true });
 
-    // ── whatIGetIdx: explicação do ganho direto ──
-    // Fix: we need to point continueIdx, whatIGetIdx, whereSignIdx, notTodayIdx
-    // They were set before lines were pushed, so let's recalculate:
-    // Actually the indices were set correctly because they point to lines.length at that moment.
-    // But we pushed more lines since. We need to fix this.
-
-    // The approach: whatIGetIdx, whereSignIdx, notTodayIdx point to lines that don't exist yet.
-    // We need to add them now. Let's use a different approach with placeholder patching.
-
-    // We'll mark the actual target indices now:
+    // whatIGetIdx: explicação do ganho direto
     const whatIGetActualIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartExplainGain`) });
     lines.push({
@@ -439,12 +429,22 @@ function buildQuest2IntroDialogue() {
     const notTodayActualIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartSigh`), end: true, action: () => { quest2State = 'declined'; } });
 
-    // Patch the choice options to point to the correct indices
+    // Patch top-level choice (round-1) options
     const choiceLine = lines[continueIdx - 1]; // the choice line
     choiceLine.options[0].next = explainShopsIdx;
     choiceLine.options[1].next = whatIGetActualIdx;
     choiceLine.options[2].next = whereSignActualIdx;
     choiceLine.options[3].next = notTodayActualIdx;
+
+    // Patch round-2 choice options (pushed before targets existed)
+    const round2Choice = lines[round2ChoiceIdx];
+    round2Choice.options[0].next = thanksIdx;
+    round2Choice.options[1].next = explainGainIdx;
+    round2Choice.options[2].next = bartSighIdx;
+
+    // Patch nested what_gain choice refuse option
+    const nestedChoice = lines[nestedChoiceIdx];
+    nestedChoice.options[1].next = bartSighIdx;
 
     return { left, right, lines };
 }
@@ -685,17 +685,19 @@ function onDayChanged(e) {
         logger.warn(`[Tax] Overdue! Lara and Thomas blocked since day ${taxDueDay}`);
     }
 
-    // Issue new tax every TAX_INTERVAL_DAYS
+    // Issue new tax every TAX_INTERVAL_DAYS, but don't overwrite if already pending
     if (day % TAX_INTERVAL_DAYS === 0 && lastTaxDay < day) {
-        taxPending = true;
-        taxDueDay = day;
+        if (!taxPending) {
+            taxPending = true;
+            taxDueDay = day;
 
-        const taxAmount = calculateTax();
-        document.dispatchEvent(new CustomEvent('showNotification', {
-            detail: { message: t('npc.bartolomeu.tax.reminder', { value: taxAmount }) }
-        }));
+            const taxAmount = calculateTax();
+            document.dispatchEvent(new CustomEvent('showNotification', {
+                detail: { message: t('npc.bartolomeu.tax.reminder', { value: taxAmount }) }
+            }));
 
-        logger.info(`[Tax] Tax of ${taxAmount} due on day ${day}`);
+            logger.info(`[Tax] Tax of ${taxAmount} due on day ${day}`);
+        }
     }
 }
 

@@ -60,7 +60,7 @@ const CAT_HITBOX_OFFSET_Y = 0;
 const DEBUG_MADALENA_BOX = false;
 // Seta de debug apontando para a Madalena (clamp na borda quando off-screen).
 // Remover esse bloco/flag não quebra a quest.
-const DEBUG_MADALENA_ARROW = true;
+const DEBUG_MADALENA_ARROW = false;
 
 // ─── State ──────────────────────────────────────────────────────────────────
 let millyRegistered = false;

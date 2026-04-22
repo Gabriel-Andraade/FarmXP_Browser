@@ -88,15 +88,26 @@ export class AchievementTracker {
       // Calculate increment
       let increment = 1;
       if (typeof def.increment === 'function') {
-        try { increment = def.increment(detail) || 1; } catch (_) { increment = 1; }
+        try {
+          const value = def.increment(detail);
+          increment = Number.isFinite(value) ? value : 1;
+        } catch (_) { increment = 1; }
       }
 
       if (def.type === 'threshold') {
         // For threshold: the condition itself checks the value, so just mark complete
         prog.current = def.target;
       } else {
+        if (increment <= 0) continue;
         prog.current += increment;
       }
+
+      // Persist partial progress so it survives reloads before unlocking.
+      // markDirty is cheap (sets a flag); autosave handles the actual write.
+      try {
+        const save = getSystem('save');
+        if (save && save.markDirty) save.markDirty();
+      } catch (_) { /* ignore */ }
 
       // Check completion
       if (prog.current >= def.target && !prog.unlocked) {

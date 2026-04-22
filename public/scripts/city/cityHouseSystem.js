@@ -175,36 +175,14 @@ export class CityHouseSystem {
     registerHouseHitboxes() {
         if (this.isInitialized) return;
 
-        for (const house of this.houses) {
-            if (house.x === 0 && house.y === 0 && house.width === 0 && house.height === 0) {
-                logger.warn(`[CityHouseSystem] House ${house.id} has no coordinates defined yet`);
-                continue;
-            }
-
-            const hitbox = {
-                id: house.id,
-                type: 'CITY_HOUSE',
-                x: house.x,
-                y: house.y,
-                width: house.width,
-                height: house.height,
-                originalType: 'city_house',
-                owner: house.owner,
-                name: house.name,
-                description: house.description,
-                houseType: house.houseType
-            };
-
-            collisionSystem.addHitbox(hitbox.id, hitbox.type, hitbox.x, hitbox.y, hitbox.width, hitbox.height);
-            this.houseHitboxes.set(house.id, hitbox);
-
-            logger.debug(`[CityHouseSystem] Hitbox registered: ${house.id} (${house.name})`);
-        }
+        this._reRegisterHitboxes();
 
         this.isInitialized = true;
         this.setupProximityCheck();
-        this.startHotReload();
-        logger.info('[CityHouseSystem] House hitboxes registered and hot-reload active');
+        if (typeof window !== 'undefined' && window.__FARMXP_DEBUG_HITBOXES) {
+            this.startHotReload();
+        }
+        logger.info('[CityHouseSystem] House hitboxes registered');
     }
 
     /**
@@ -376,8 +354,16 @@ export class CityHouseSystem {
         house.height = height;
 
         if (this.houseHitboxes.has(houseId)) {
+            const existing = this.houseHitboxes.get(houseId);
             collisionSystem.removeHitbox(houseId);
             collisionSystem.addHitbox(houseId, 'CITY_HOUSE', x, y, width, height);
+            this.houseHitboxes.set(houseId, {
+                ...existing,
+                x,
+                y,
+                width,
+                height
+            });
             logger.debug(`[CityHouseSystem] Hitbox updated: ${houseId}`);
         }
     }

@@ -161,12 +161,22 @@ function resumeGame() {
 
 // ─── Typewriter ─────────────────────────────────────────────────────────────
 
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+}
+
 /**
  * Converte *ação* em <span class="dlg-action">ação</span>.
  * Texto fora dos asteriscos fica normal.
  */
 function formatActionMarkup(text) {
-    return text.replace(/\*([^*]+)\*/g, '<span class="dlg-action">$1</span>');
+    return escapeHtml(text).replace(/\*([^*]+)\*/g, '<span class="dlg-action">$1</span>');
 }
 
 /**
@@ -230,7 +240,7 @@ function typeText(text, speed = TYPEWRITER_SPEED) {
                         html += '</span>';
                         actionOpen = false;
                     }
-                    html += seg.char === '<' ? '&lt;' : seg.char === '>' ? '&gt;' : seg.char;
+                    html += escapeHtml(seg.char);
                 }
                 if (actionOpen) html += '</span>';
                 textEl.innerHTML = html;
