@@ -216,8 +216,10 @@ export function createCharacter(config) {
                 }
             }
 
-            character.x = Math.max(0, Math.min(WORLD_WIDTH - character.width, character.x));
-            character.y = Math.max(0, Math.min(WORLD_HEIGHT - character.height, character.y));
+            const mapW = camera._mapWidth || WORLD_WIDTH;
+            const mapH = camera._mapHeight || WORLD_HEIGHT;
+            character.x = Math.max(0, Math.min(mapW - character.width, character.x));
+            character.y = Math.max(0, Math.min(mapH - character.height, character.y));
         } else {
             character.isMoving = false;
             character.frame = idleFrame;

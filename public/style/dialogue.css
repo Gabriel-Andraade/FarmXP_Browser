@@ -196,6 +196,13 @@
     color: #c8bda8;
 }
 
+/* ─── Inline action (only *action* parts, not the whole line) ────────────── */
+
+.dlg-action {
+    font-style: italic;
+    color: #c8bda8;
+}
+
 /* ─── Choice buttons ─────────────────────────────────────────────────────── */
 
 .dlg-choices {

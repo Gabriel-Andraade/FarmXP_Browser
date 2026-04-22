@@ -9,10 +9,12 @@ import { registerSystem, getObject, getSystem } from './gameState.js';
 import { collisionSystem } from './collisionSystem.js';
 import { t } from './i18n/i18n.js';
 import { logger } from './logger.js';
+import { getTutorialQuests } from './npcs/tutorialQuests.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const BATTERY_ITEM_ID = 94; // ID do item bateria em item.js
+const MILK_BOTTLE_ITEM_ID = 95; // ID da garrafa de leite fresco em item.js
 
 // Pickup truck position (same as mapManager portal)
 const PICKUP = {
@@ -37,10 +39,13 @@ const QUEST_DEFINITIONS = {
 
 const quests = {};
 let isPanelOpen = false;
+let panelRefreshHandler = null;
 let hitboxRegistered = false;
 
 /** Whether the battery has been seeded into the house storage */
 let batterySeededInStorage = false;
+/** Whether the milk bottle has been seeded into the house storage */
+let milkBottleSeededInStorage = false;
 /** Whether the player is locked near the pickup (repairing) */
 let playerLockedForRepair = false;
 
@@ -76,7 +81,14 @@ export function seedBatteryInStorage() {
 
     const storage = getSystem('storage') || window.storageSystem;
     if (!storage) {
-        logger.warn('[QuestSystem] StorageSystem not available yet, will retry battery seeding');
+        // Storage ainda não carregou (houseSystem importa depois do questSystem).
+        // Agenda nova tentativa; desiste após ~15s.
+        seedBatteryInStorage._retries = (seedBatteryInStorage._retries || 0) + 1;
+        if (seedBatteryInStorage._retries > 30) {
+            logger.warn('[QuestSystem] StorageSystem never became available — battery not seeded');
+            return;
+        }
+        setTimeout(seedBatteryInStorage, 500);
         return;
     }
 
@@ -105,6 +117,48 @@ export function seedBatteryInStorage() {
         logger.info('[QuestSystem] Battery seeded into house storage (armazém)');
     } else {
         logger.warn('[QuestSystem] Failed to seed battery into storage');
+    }
+}
+
+/**
+ * Seeds the fresh milk bottle into the house storage for John's milk quest.
+ */
+export function seedMilkBottleInStorage() {
+    if (milkBottleSeededInStorage) return;
+
+    const storage = getSystem('storage') || window.storageSystem;
+    if (!storage) {
+        seedMilkBottleInStorage._retries = (seedMilkBottleInStorage._retries || 0) + 1;
+        if (seedMilkBottleInStorage._retries > 30) {
+            logger.warn('[QuestSystem] StorageSystem never became available — milk bottle not seeded');
+            return;
+        }
+        setTimeout(seedMilkBottleInStorage, 500);
+        return;
+    }
+
+    const resourceItems = storage.storage?.resources || [];
+    const alreadyInStorage = resourceItems.some(s => s.itemId === MILK_BOTTLE_ITEM_ID);
+    if (alreadyInStorage) {
+        milkBottleSeededInStorage = true;
+        return;
+    }
+
+    const inv = getSystem('inventory') || window.inventorySystem;
+    if (inv) {
+        const inInv = inv.getItemQuantity(MILK_BOTTLE_ITEM_ID);
+        if (inInv > 0) {
+            milkBottleSeededInStorage = true;
+            return;
+        }
+    }
+
+    const added = storage._addToCategory('resources', MILK_BOTTLE_ITEM_ID, 1);
+    if (added) {
+        milkBottleSeededInStorage = true;
+        logger.info('[QuestSystem] Milk bottle seeded into house storage (armazém)');
+    } else {
+        logger.warn('[QuestSystem] Failed to seed milk bottle into storage');
     }
 }
 
@@ -147,6 +201,22 @@ function unlockPlayerMovement() {
     logger.info('[QuestSystem] Player movement unlocked');
 }
 
+// ─── Player-thought dialogue (substitui bolhas da picape) ───────────────────
+
+function showPlayerThoughtDialogue(text) {
+    const dlg = getSystem('dialogue');
+    if (!dlg) return;
+    const playerSys = getSystem('player');
+    const charId = playerSys?.activeCharacter?.id || 'stella';
+    const playerName = { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[charId] || 'Stella';
+    const playerPortrait =
+        `assets/character/${charId}/dialog_${charId.charAt(0).toUpperCase() + charId.slice(1)}_00.png`;
+    dlg.start({
+        left: { name: playerName, portrait: playerPortrait },
+        lines: [{ side: 'left', text, end: true }],
+    });
+}
+
 // ─── Pickup interaction (called from mapManager) ────────────────────────────
 
 /**
@@ -172,7 +242,7 @@ export function handlePickupInteraction() {
     }
 
     if (!playerHasBattery()) {
-        showSpeechBubble(t('quests.fixPickup.bubbleNoBattery'), 3500);
+        showPlayerThoughtDialogue(t('quests.fixPickup.bubbleNoBattery'));
         return false;
     }
 
@@ -184,12 +254,19 @@ export function handlePickupInteraction() {
     setTimeout(() => {
         q.status = 'completed';
         unlockPlayerMovement();
-        document.dispatchEvent(new CustomEvent('questUpdated', { detail: { id: 'fix_pickup', status: 'completed' } }));
-        showSpeechBubble(t('quests.fixPickup.bubbleRepaired'), 4000);
+        showPlayerThoughtDialogue(t('quests.fixPickup.bubbleRepaired'));
 
-        // Mark save as dirty
-        const save = getSystem('save');
-        if (save) save.markDirty();
+        // Registry aplica XP, dispara questUpdated e marca save.
+        const registry = getSystem('questRegistry');
+        if (registry?.complete) {
+            registry.complete('fix_pickup');
+        } else {
+            document.dispatchEvent(new CustomEvent('questUpdated', {
+                detail: { id: 'fix_pickup', status: 'completed' },
+            }));
+            const save = getSystem('save');
+            if (save) save.markDirty();
+        }
 
         logger.info('[QuestSystem] Picape consertada com bateria!');
     }, 2000);
@@ -291,56 +368,83 @@ export function openQuestPanel() {
     closeBtn.addEventListener('click', () => closeQuestPanel());
     header.append(h2, closeBtn);
 
+    // ── Tabs ──
+    const tabBar = document.createElement('div');
+    tabBar.style.cssText = 'display: flex; border-bottom: 2px solid rgba(255,255,255,0.1); margin: 0 16px;';
+
+    const tabActive = document.createElement('button');
+    tabActive.style.cssText = 'flex: 1; padding: 10px; background: none; border: none; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; border-bottom: 3px solid #ff9800; transition: all 0.2s;';
+
+    const tabCompleted = document.createElement('button');
+    tabCompleted.style.cssText = 'flex: 1; padding: 10px; background: none; border: none; color: #888; font-size: 14px; font-weight: 500; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s;';
+
+    tabBar.append(tabActive, tabCompleted);
+
+    // ── Content ──
     const content = document.createElement('div');
     content.style.cssText = 'padding: 16px; max-height: 400px; overflow-y: auto;';
 
-    const questEntries = Object.values(quests);
-    if (questEntries.length === 0) {
-        const empty = document.createElement('p');
-        empty.textContent = t('quests.noQuests');
-        empty.style.cssText = 'color: #aaa; text-align: center; padding: 30px;';
-        content.appendChild(empty);
-    } else {
-        for (const q of questEntries) {
-            const card = document.createElement('div');
-            card.style.cssText = `
-                background: rgba(255,255,255,0.08);
-                border-radius: 10px;
-                padding: 14px;
-                margin-bottom: 10px;
-                border-left: 4px solid ${q.status === 'completed' ? '#4caf50' : q.status === 'active' ? '#ff9800' : '#888'};
-            `;
+    let currentTab = 'active';
 
-            const titleRow = document.createElement('div');
-            titleRow.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 6px;';
-            const icon = document.createElement('span');
-            icon.textContent = q.icon;
-            icon.style.fontSize = '20px';
-            const title = document.createElement('span');
-            title.textContent = t(`quests.fixPickup.title`);
-            title.style.cssText = 'font-weight: 600; font-size: 16px; color: #fff;';
-
-            const statusKey = `quests.status.${q.status}`;
-            const badge = document.createElement('span');
-            badge.textContent = q.status === 'completed' ? '✅' : q.status === 'active' ? '🔶' : '⬜';
-            badge.title = t(statusKey);
-            badge.style.cssText = 'margin-left: auto; font-size: 14px;';
-            titleRow.append(icon, title, badge);
-
-            const desc = document.createElement('p');
-            desc.textContent = t(`quests.fixPickup.description`);
-            desc.style.cssText = 'color: #ccc; font-size: 13px; margin: 0; line-height: 1.4;';
-
-            const statusText = document.createElement('p');
-            statusText.textContent = t(statusKey);
-            statusText.style.cssText = `color: ${q.status === 'completed' ? '#4caf50' : q.status === 'active' ? '#ff9800' : '#888'}; font-size: 12px; margin-top: 6px; font-weight: 500;`;
-
-            card.append(titleRow, desc, statusText);
-            content.appendChild(card);
+    function renderQuestList(questList, emptyKey) {
+        content.innerHTML = '';
+        if (questList.length === 0) {
+            const empty = document.createElement('p');
+            empty.textContent = t(emptyKey);
+            empty.style.cssText = 'color: #aaa; text-align: center; padding: 30px;';
+            content.appendChild(empty);
+            return;
+        }
+        for (const q of questList) {
+            content.appendChild(buildQuestCard(q));
         }
     }
 
-    container.append(header, content);
+    function refresh() {
+        const all = gatherAllQuests();
+        const active = all.filter(q => q.status !== 'completed');
+        const completed = all.filter(q => q.status === 'completed');
+        tabActive.textContent = `${t('quests.tabActive')} (${active.length})`;
+        tabCompleted.textContent = `${t('quests.tabCompleted')} (${completed.length})`;
+        if (currentTab === 'active') {
+            renderQuestList(active, 'quests.noActiveQuests');
+        } else {
+            renderQuestList(completed, 'quests.noCompletedQuests');
+        }
+    }
+
+    refresh();
+
+    tabActive.addEventListener('click', () => {
+        if (currentTab === 'active') return;
+        currentTab = 'active';
+        tabActive.style.color = '#fff';
+        tabActive.style.fontWeight = '600';
+        tabActive.style.borderBottomColor = '#ff9800';
+        tabCompleted.style.color = '#888';
+        tabCompleted.style.fontWeight = '500';
+        tabCompleted.style.borderBottomColor = 'transparent';
+        refresh();
+    });
+
+    tabCompleted.addEventListener('click', () => {
+        if (currentTab === 'completed') return;
+        currentTab = 'completed';
+        tabCompleted.style.color = '#fff';
+        tabCompleted.style.fontWeight = '600';
+        tabCompleted.style.borderBottomColor = '#4caf50';
+        tabActive.style.color = '#888';
+        tabActive.style.fontWeight = '500';
+        tabActive.style.borderBottomColor = 'transparent';
+        refresh();
+    });
+
+    // Re-renderiza quando inventário ou estado de missão mudam enquanto o painel está aberto.
+    panelRefreshHandler = () => { if (isPanelOpen) refresh(); };
+    document.addEventListener('inventoryUpdated', panelRefreshHandler);
+    document.addEventListener('questUpdated', panelRefreshHandler);
+
+    container.append(header, tabBar, content);
     modal.appendChild(container);
 
     modal.addEventListener('click', (e) => {
@@ -350,8 +454,154 @@ export function openQuestPanel() {
     document.body.appendChild(modal);
 }
 
+/**
+ * Gathers all visible quests from local definitions + NPC systems.
+ * Bartolomeu quest 2 (contract/tax) is permanent and never shown.
+ *
+ * Metadata (icon/titleKey/descKey) vem do questRegistry. Este aggregator
+ * só decide QUAIS quests aparecem e em que STATUS (active/completed) —
+ * além de computar `desc` dinâmico quando a quest tem progresso visível.
+ */
+function gatherAllQuests() {
+    const result = [];
+    const registry = getSystem('questRegistry');
+
+    // Helper local: monta uma entry a partir do registry + overrides.
+    const entryFromRegistry = (id, status, overrides = {}) => {
+        const meta = registry?.getPanelMeta?.(id);
+        return {
+            id,
+            icon: meta?.icon ?? '',
+            status,
+            titleKey: meta?.titleKey ?? '',
+            descKey: meta?.descKey ?? '',
+            ...overrides,
+        };
+    };
+
+    // 0. Tutorial quests (sempre visíveis)
+    try {
+        const tutorials = getTutorialQuests();
+        if (tutorials?.getQuestsForPanel) {
+            result.push(...tutorials.getQuestsForPanel());
+        }
+    } catch (e) {
+        logger.warn('[QuestSystem] tutorialQuests indisponível', e);
+    }
+
+    // 1. Local quests (fix_pickup)
+    for (const q of Object.values(quests)) {
+        result.push(entryFromRegistry(q.id, q.status));
+    }
+
+    // 2. Bartolomeu quest 1 (R$ 1000) — only when accepted or completed
+    const bart = getSystem('npcBartolomeu');
+    if (bart) {
+        const bartState = bart.getQuestState();
+        const q1 = bartState?.quest1 ?? bartState;
+        if (q1 === 'accepted') {
+            result.push(entryFromRegistry('bartolomeu_q1', 'active'));
+        } else if (q1 === 'completed') {
+            result.push(entryFromRegistry('bartolomeu_q1', 'completed'));
+        }
+        // quest 2 is permanent (tax), never shown
+    }
+
+    // 3. Milly quest (find Madalena) — only when quest_active, cat_found, or completed
+    const milly = getSystem('npcMilly');
+    if (milly) {
+        const millyState = milly.getQuestState();
+        const mq = millyState?.quest ?? millyState;
+        if (mq === 'quest_active' || mq === 'cat_found') {
+            result.push(entryFromRegistry('milly_q1', 'active'));
+        } else if (mq === 'completed') {
+            result.push(entryFromRegistry('milly_q1', 'completed'));
+        }
+    }
+
+    // 4. John milk quest — active when in_progress, completed when delivered
+    const john = getSystem('npcJohn');
+    if (john) {
+        const mq = john.getQuestState()?.milkQuest;
+        if (mq === 'in_progress') {
+            result.push(entryFromRegistry('john_milk', 'active'));
+        } else if (mq === 'delivered') {
+            result.push(entryFromRegistry('john_milk', 'completed'));
+        }
+    }
+
+    // 5. Lucas secret quest
+    const lucas = getSystem('npcLucas');
+    if (lucas) {
+        const sq = lucas.getQuestState()?.secretQuest;
+        if (sq === 'in_progress') {
+            const prog = lucas.getMaterialProgress?.() || null;
+            let desc;
+            if (prog?.ready) {
+                desc = t('quests.lucasSecret.ready');
+            } else if (prog) {
+                desc = t('quests.lucasSecret.progress', {
+                    screws: prog.screws.have,
+                    screwsNeed: prog.screws.need,
+                    wood: prog.wood.have,
+                    woodNeed: prog.wood.need,
+                });
+            }
+            result.push(entryFromRegistry('lucas_secret', 'active', { desc }));
+        } else if (sq === 'delivered') {
+            result.push(entryFromRegistry('lucas_secret', 'completed'));
+        }
+    }
+
+    return result;
+}
+
+function buildQuestCard(q) {
+    const card = document.createElement('div');
+    const borderColor = q.status === 'completed' ? '#4caf50' : q.status === 'active' ? '#ff9800' : '#888';
+    card.style.cssText = `
+        background: rgba(255,255,255,0.08);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 10px;
+        border-left: 4px solid ${borderColor};
+    `;
+
+    const titleRow = document.createElement('div');
+    titleRow.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 6px;';
+    const icon = document.createElement('span');
+    icon.textContent = q.icon;
+    icon.style.fontSize = '20px';
+    const title = document.createElement('span');
+    title.textContent = t(q.titleKey);
+    title.style.cssText = 'font-weight: 600; font-size: 16px; color: #fff;';
+
+    const statusKey = `quests.status.${q.status}`;
+    const badge = document.createElement('span');
+    badge.textContent = q.status === 'completed' ? '✅' : q.status === 'active' ? '🔶' : '⬜';
+    badge.title = t(statusKey);
+    badge.style.cssText = 'margin-left: auto; font-size: 14px;';
+    titleRow.append(icon, title, badge);
+
+    const desc = document.createElement('p');
+    desc.textContent = q.desc || t(q.descKey);
+    desc.style.cssText = 'color: #ccc; font-size: 13px; margin: 0; line-height: 1.4; white-space: pre-line;';
+
+    const statusText = document.createElement('p');
+    statusText.textContent = t(statusKey);
+    statusText.style.cssText = `color: ${borderColor}; font-size: 12px; margin-top: 6px; font-weight: 500;`;
+
+    card.append(titleRow, desc, statusText);
+    return card;
+}
+
 export function closeQuestPanel() {
     isPanelOpen = false;
+    if (panelRefreshHandler) {
+        document.removeEventListener('inventoryUpdated', panelRefreshHandler);
+        document.removeEventListener('questUpdated', panelRefreshHandler);
+        panelRefreshHandler = null;
+    }
     const modal = document.getElementById('questsModal');
     if (modal) modal.remove();
 }
@@ -404,6 +654,7 @@ registerPickupHitbox();
 // Seed battery into storage after a short delay (wait for storageSystem to init)
 setTimeout(() => {
     seedBatteryInStorage();
+    seedMilkBottleInStorage();
 }, 500);
 
 const questAPI = {
@@ -418,10 +669,12 @@ const questAPI = {
     handlePickupInteraction,
     registerPickupHitbox,
     seedBatteryInStorage,
+    seedMilkBottleInStorage,
     getBatteryState,
     setBatteryState,
     quests,
     BATTERY_ITEM_ID,
+    MILK_BOTTLE_ITEM_ID,
 };
 
 registerSystem('quests', questAPI);

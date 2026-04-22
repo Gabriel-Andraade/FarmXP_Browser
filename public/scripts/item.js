@@ -732,6 +732,15 @@ export const items = [
     type: "resource",
     questItem: true
   },
+  {
+    id: 95,
+    name: "Garrafa de Leite Fresco",
+    icon: "🥛",
+    price: 0,
+    description: "Leite fresco tirado da vaca. Entregue para John.",
+    type: "resource",
+    questItem: true
+  },
   
 {
   id: 9991,

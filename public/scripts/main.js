@@ -605,6 +605,22 @@ async function startFullGameLoad() {
       spawnGameAnimals();
     }
 
+    // XP System — load before questSystem so quest rewards can grant XP.
+    try {
+      await import('./xpSystem.js');
+      await import('./xpNotification.js');
+    } catch (e) {
+      handleWarn("falha ao carregar xpSystem", "main:startFullGameLoad:xpSystem", e);
+    }
+
+    // Quest Registry — catálogo central de quests. Carrega ANTES do questSystem
+    // e dos NPCs, que chamam questRegistry.complete(id) ao finalizar quests.
+    try {
+      await import('./quests/questRegistry.js');
+    } catch (e) {
+      handleWarn("falha ao carregar questRegistry", "main:startFullGameLoad:questRegistry", e);
+    }
+
     // Quest System — load early so pickup hitbox is registered before first frame
     try {
       await import('./questSystem.js');
@@ -615,9 +631,17 @@ async function startFullGameLoad() {
     // Dialogue & NPC Systems
     try {
       await import('./dialogueSystem.js');
-      await import('./npcSystem.js');
-      await import('./npcBartolomeu.js');
-      await import('./npcMilly.js');
+      await import('./npcs/npcSystem.js');
+      await import('./npcs/npcBartolomeu.js');
+      await import('./npcs/npcMilly.js');
+      await import('./npcs/npcJuan.js');
+      await import('./npcs/npcBru.js');
+      await import('./npcs/npcCouple.js');
+      await import('./npcs/npcJeremy.js');
+      await import('./npcs/family/npcJohn.js');
+      await import('./npcs/family/npcLucas.js');
+      await import('./npcs/family/npcIsabela.js');
+      await import('./npcs/family/npcMolly.js');
     } catch (e) {
       handleWarn("falha ao carregar NPC/dialogue systems", "main:startFullGameLoad:npc", e);
     }
@@ -925,6 +949,9 @@ document.addEventListener("characterSelected", () => {
 
 // Main Menu → New Game → show CharacterSelection
 document.addEventListener("mainMenu:newGame", () => {
+  // Reseta XP/Level para não herdar progresso de uma sessão anterior.
+  const xp = getSystem('xp');
+  if (xp?.reset) xp.reset();
   const selection = new CharacterSelection();
   selection.show();
 });
@@ -1101,6 +1128,16 @@ function setupDebugCoordinatesDisplay() {
       const cityObsSys = getSystem('cityObstacles');
       if (cityObsSys) {
         cityObsSys._debugDraw = showCoordinatePanel;
+      }
+
+      // Ativa/desativa hot-reload dos NPCs (edita JS, salva, vê ao vivo)
+      const npcSys = getSystem('npc');
+      if (npcSys) {
+        if (showCoordinatePanel) {
+          npcSys.startNpcHotReload();
+        } else {
+          npcSys.stopNpcHotReload();
+        }
       }
     }
   });

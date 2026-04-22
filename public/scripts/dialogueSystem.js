@@ -50,6 +50,7 @@ let isActive = false;
 let currentConfig = null;
 let currentLineIndex = 0;
 let typewriterTimer = null;
+let fadeOutTimer = null;
 let isTyping = false;
 let fullTextRevealed = false;
 let waitingForChoice = false;
@@ -160,41 +161,99 @@ function resumeGame() {
 
 // ─── Typewriter ─────────────────────────────────────────────────────────────
 
+/**
+ * Converte *ação* em <span class="dlg-action">ação</span>.
+ * Texto fora dos asteriscos fica normal.
+ */
+function formatActionMarkup(text) {
+    return text.replace(/\*([^*]+)\*/g, '<span class="dlg-action">$1</span>');
+}
+
+/**
+ * Retorna o texto puro (sem asteriscos) para cálculo de comprimento do typewriter.
+ */
+function stripAsterisks(text) {
+    return text.replace(/\*/g, '');
+}
+
 function typeText(text, speed = TYPEWRITER_SPEED) {
     clearTypewriter();
+    if (!textEl || !nextHint) return; // overlay foi destruído entre frames
     isTyping = true;
     fullTextRevealed = false;
     nextHint.classList.remove('visible');
-    textEl.textContent = '';
+    textEl.innerHTML = '';
 
-    // Choice/action lines may omit text — guard against undefined.
     const safeText = typeof text === 'string' ? text : '';
-    let charIndex = 0;
+    const hasActions = /\*[^*]+\*/.test(safeText);
 
-    function tick() {
-        if (charIndex < safeText.length) {
-            textEl.textContent = safeText.substring(0, charIndex + 1);
-            charIndex++;
-            typewriterTimer = setTimeout(tick, speed);
-        } else {
-            finishTyping();
+    if (!hasActions) {
+        // Texto simples — typewriter char a char via textContent (seguro)
+        let charIndex = 0;
+        function tick() {
+            if (!textEl) return;
+            if (charIndex < safeText.length) {
+                textEl.textContent = safeText.substring(0, charIndex + 1);
+                charIndex++;
+                typewriterTimer = setTimeout(tick, speed);
+            } else {
+                finishTyping();
+            }
         }
-    }
+        if (safeText.length === 0) { textEl.textContent = ''; finishTyping(); return; }
+        tick();
+    } else {
+        // Texto com *ações* — typewriter sobre texto limpo, renderiza HTML a cada tick
+        const cleanText = stripAsterisks(safeText);
+        // Mapeia cada char do cleanText → { char, isAction }
+        const segments = [];
+        let inAction = false;
+        for (let i = 0; i < safeText.length; i++) {
+            if (safeText[i] === '*') { inAction = !inAction; continue; }
+            segments.push({ char: safeText[i], isAction: inAction });
+        }
 
-    if (safeText.length === 0) {
-        textEl.textContent = '';
-        finishTyping();
-        return;
+        let charIndex = 0;
+        function tick() {
+            if (!textEl) return;
+            if (charIndex < segments.length) {
+                charIndex++;
+                // Build HTML up to charIndex
+                let html = '';
+                let actionOpen = false;
+                for (let i = 0; i < charIndex; i++) {
+                    const seg = segments[i];
+                    if (seg.isAction && !actionOpen) {
+                        html += '<span class="dlg-action">';
+                        actionOpen = true;
+                    } else if (!seg.isAction && actionOpen) {
+                        html += '</span>';
+                        actionOpen = false;
+                    }
+                    html += seg.char === '<' ? '&lt;' : seg.char === '>' ? '&gt;' : seg.char;
+                }
+                if (actionOpen) html += '</span>';
+                textEl.innerHTML = html;
+                typewriterTimer = setTimeout(tick, speed);
+            } else {
+                finishTyping();
+            }
+        }
+        if (segments.length === 0) { textEl.innerHTML = ''; finishTyping(); return; }
+        tick();
     }
-
-    tick();
 }
 
 function revealFullText() {
     clearTypewriter();
     const line = currentConfig.lines[currentLineIndex];
     if (line) {
-        textEl.textContent = line.text;
+        const text = typeof line.text === 'string' ? line.text : '';
+        if (/\*[^*]+\*/.test(text)) {
+            textEl.innerHTML = formatActionMarkup(text);
+        } else {
+            textEl.textContent = text;
+        }
     }
     finishTyping();
 }
@@ -202,6 +261,8 @@ function revealFullText() {
 function finishTyping() {
     isTyping = false;
     fullTextRevealed = true;
+
+    if (!textEl || !nextHint || !currentConfig) return;
 
     const line = currentConfig.lines[currentLineIndex];
 
@@ -300,27 +361,27 @@ function showLine(index) {
     leftPortrait.classList.toggle('active', isLeft);
     rightPortrait.classList.toggle('active', !isLeft);
 
-    // Update speaker name
-    const speaker = isLeft ? currentConfig.left : currentConfig.right;
-    speakerEl.textContent = speaker.name;
-
-    // Texto mostrado: se a linha tiver asteriscos *...* significa
-    // ação/pensamento/sussurro — renderiza em itálico cinza e remove
-    // os asteriscos para não poluir. Linhas marcadas com `thought: true`
-    // continuam funcionando como antes.
+    // Texto: linhas com `thought: true` ficam inteiramente em itálico cinza.
+    // Textos com *ação* inline — só a parte entre asteriscos fica itálico cinza.
     const rawText = typeof line.text === 'string' ? line.text : '';
-    const hasAsteriskAction = /\*[^*]+\*/.test(rawText);
-    const cleanText = hasAsteriskAction ? rawText.replace(/\*/g, '') : rawText;
 
-    textEl.classList.toggle('dlg-thought', !!line.thought || hasAsteriskAction);
+    textEl.classList.toggle('dlg-thought', !!line.thought);
 
-    // Run action callback if provided
+    // Run action callback BEFORE setting speaker name so action can swap speaker
     if (line.action) {
         line.action();
     }
 
-    // Typewrite the text
-    typeText(cleanText);
+    // Update speaker name (after action so swaps take effect)
+    const speaker = isLeft ? currentConfig.left : currentConfig.right;
+    speakerEl.textContent = speaker.name;
+
+    // Sync portrait name labels so they reflect current speaker
+    if (leftName) leftName.textContent = currentConfig.left?.name || '';
+    if (rightName) rightName.textContent = currentConfig.right?.name || '';
+
+    // Typewrite the text (with inline action markup support)
+    typeText(rawText);
 }
 
 // ─── Input handling ─────────────────────────────────────────────────────────
@@ -383,20 +444,36 @@ function onKeyDown(e) {
  * @param {Function} [config.onEnd] - Callback when dialogue ends
  */
 function start(config) {
-    if (isActive) {
-        logger.warn('[DialogueSystem] Already active, ignoring start()');
-        return;
-    }
-
     if (!config.lines || config.lines.length === 0) {
         logger.warn('[DialogueSystem] No lines provided');
         return;
     }
 
+    // If a previous dialogue is still fading out, force cleanup immediately
+    if (isActive) {
+        logger.warn('[DialogueSystem] Force-ending previous dialogue for new start()');
+        clearTypewriter();
+        hideChoices();
+        isActive = false;
+    }
+
+    // Cancela o fade-out pendente do end() anterior — se deixarmos ele disparar,
+    // destroyOverlay() é chamado sobre o overlay NOVO que acabamos de criar,
+    // zerando textEl e causando "Cannot set properties of null" no typewriter.
+    if (fadeOutTimer) {
+        clearTimeout(fadeOutTimer);
+        fadeOutTimer = null;
+    }
+
+    // Destroy any leftover overlay from a previous fade-out
+    destroyOverlay();
+
     currentConfig = config;
     currentLineIndex = 0;
     isActive = true;
     waitingForChoice = false;
+    isTyping = false;
+    fullTextRevealed = false;
 
     // Pause game
     pauseGame();
@@ -429,6 +506,7 @@ function start(config) {
 
     // Activate overlay
     requestAnimationFrame(() => {
+        if (!overlay) return; // guard: end() may have been called between frames
         overlay.classList.add('active');
         showLine(0);
     });
@@ -446,25 +524,32 @@ function end() {
     hideChoices();
     isActive = false;
 
+    // Save onEnd before clearing config — it may chain into a new dialogue
+    const onEndCallback = currentConfig?.onEnd;
+
+    // Clean up state immediately so a chained start() doesn't conflict
+    currentConfig = null;
+    currentLineIndex = 0;
+    isTyping = false;
+    fullTextRevealed = false;
+    waitingForChoice = false;
+
     // Fade out
     if (overlay) {
         overlay.classList.remove('active');
     }
 
-    // Cleanup after transition
-    setTimeout(() => {
+    // Cleanup after transition — guarda o timer para poder cancelar se um novo
+    // diálogo iniciar antes dele disparar (evita destruir o overlay novo).
+    if (fadeOutTimer) clearTimeout(fadeOutTimer);
+    fadeOutTimer = setTimeout(() => {
+        fadeOutTimer = null;
         destroyOverlay();
         resumeGame();
 
-        if (currentConfig?.onEnd) {
-            currentConfig.onEnd();
+        if (onEndCallback) {
+            onEndCallback();
         }
-
-        currentConfig = null;
-        currentLineIndex = 0;
-        isTyping = false;
-        fullTextRevealed = false;
-        waitingForChoice = false;
 
         logger.info('[DialogueSystem] Dialogue ended');
     }, 400);

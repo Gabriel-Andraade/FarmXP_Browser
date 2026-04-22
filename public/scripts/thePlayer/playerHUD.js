@@ -71,6 +71,15 @@ export class PlayerHUD {
             this.onPlayerReady(e.detail.player, e.detail.character);
         });
 
+        // XP / Level — reage aos eventos do xpSystem.
+        document.addEventListener('xpGained', (e) => this.updateXPDisplay(e.detail));
+        document.addEventListener('levelUp', (e) => this.updateXPDisplay({
+            level: e.detail.level,
+            xp: e.detail.carryXp,
+            xpToNext: e.detail.xpToNext,
+        }));
+        document.addEventListener('xpRestored', (e) => this.updateXPDisplay(e.detail));
+
         // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
         document.addEventListener('languageChanged', () => {
             logger.info('[HUD] Idioma alterado, reconstruindo HUD...');
@@ -320,8 +329,13 @@ export class PlayerHUD {
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;
 
         this.setHUDValue('hudPlayerName', this.currentPlayer.name || t('player.noCharacter'));
-        this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
-        this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
+
+        const xp = getSystem('xp');
+        const lvl = xp?.getLevel?.() ?? 1;
+        const curXp = xp?.getXP?.() ?? 0;
+        const xpMax = xp?.getXPToNext?.() ?? 100;
+        this.setHUDValue('hudPlayerLevel', String(lvl));
+        this.setHUDValue('hudPlayerXP', `${curXp}/${xpMax}`);
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
@@ -336,6 +350,20 @@ export class PlayerHUD {
     setHUDValue(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
+    }
+
+    /**
+     * Atualiza o display de XP/Level via eventos do xpSystem.
+     * @param {{level?:number, xp?:number, xpToNext?:number}} detail
+     */
+    updateXPDisplay(detail) {
+        if (!detail) return;
+        const xp = getSystem('xp');
+        const lvl = detail.level ?? xp?.getLevel?.() ?? 1;
+        const cur = detail.xp ?? xp?.getXP?.() ?? 0;
+        const max = detail.xpToNext ?? xp?.getXPToNext?.() ?? 100;
+        this.setHUDValue('hudPlayerLevel', String(lvl));
+        this.setHUDValue('hudPlayerXP', `${cur}/${max}`);
     }
 
     updateEquippedItem(item) {

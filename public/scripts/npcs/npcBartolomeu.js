@@ -6,10 +6,10 @@
  * @module NpcBartolomeu
  */
 
-import { getSystem, registerSystem } from './gameState.js';
-import { i18n, t } from './i18n/i18n.js';
-import { logger } from './logger.js';
-import { placedBuildings, placedWells } from './theWorld.js';
+import { getSystem, registerSystem } from '../gameState.js';
+import { i18n, t } from '../i18n/i18n.js';
+import { logger } from '../logger.js';
+import { placedBuildings, placedWells } from '../theWorld.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -268,6 +268,9 @@ function buildQuestActiveDialogue() {
                             const currency = getSystem('currency');
                             if (currency) currency.spend(QUEST_COST, 'quest_bartolomeu_city');
                             questState = 'completed';
+                            // Registry aplica XP e dispara questUpdated.
+                            const registry = getSystem('questRegistry');
+                            if (registry?.complete) registry.complete('bartolomeu_q1');
                         },
                     },
                     {

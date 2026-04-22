@@ -10,15 +10,15 @@
  * A Madalena nasce em frente à casa da fazenda, com fallback seguro.
  */
 
-import { getSystem, registerSystem } from './gameState.js';
-import { i18n } from './i18n/i18n.js';
-import { camera } from './thePlayer/cameraSystem.js';
-import { WeatherSystem } from './weather.js';
-import { markWorldChanged, getInitialPlayerPosition } from './theWorld.js';
-import { WORLD_GENERATOR_CONFIG } from './generatorSeeds.js';
-import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE } from './worldConstants.js';
-import { collisionSystem } from './collisionSystem.js';
-import { logger } from './logger.js';
+import { getSystem, registerSystem } from '../gameState.js';
+import { i18n } from '../i18n/i18n.js';
+import { camera } from '../thePlayer/cameraSystem.js';
+import { WeatherSystem } from '../weather.js';
+import { markWorldChanged, getInitialPlayerPosition } from '../theWorld.js';
+import { WORLD_GENERATOR_CONFIG } from '../generatorSeeds.js';
+import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE } from '../worldConstants.js';
+import { collisionSystem } from '../collisionSystem.js';
+import { logger } from '../logger.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const SPRITE_DAY = 'assets/character/milly/milly_window_00.png';
@@ -499,6 +499,15 @@ function buildFirstDialogue() {
     left: { name: getPlayerName(), portrait: playerPortrait },
     right: { name: 'Milly', portrait: DIALOGUE_PORTRAIT },
     lines,
+    onEnd: () => {
+      // Chain into quest dialogue automatically (skip if player chose "ignore")
+      if (questState === 'intro_done') {
+        const dlg = getSystem('dialogue');
+        if (dlg) {
+          setTimeout(() => dlg.start(buildQuestDialogue()), 150);
+        }
+      }
+    },
   };
 }
 
@@ -636,13 +645,18 @@ function buildDeliverDialogue() {
         end: true,
         action: () => {
           questState = 'completed';
-          const currency = getSystem('currency');
-          if (currency?.earn) {
-            currency.earn(QUEST_REWARD, 'quest_milly_madalena');
-          }
+          // Remove o item da quest ANTES do registry, pra não contar o item
+          // como "bônus" se o registry futuramente distribuir itens.
           const inventory = getSystem('inventory');
           if (inventory?.removeItem) {
             inventory.removeItem('resources', MADALENA_ITEM_ID, 1);
+          }
+          const registry = getSystem('questRegistry');
+          if (registry?.complete) {
+            registry.complete('milly_q1');
+          } else {
+            const currency = getSystem('currency');
+            if (currency?.earn) currency.earn(QUEST_REWARD, 'quest_milly_madalena');
           }
         },
       },

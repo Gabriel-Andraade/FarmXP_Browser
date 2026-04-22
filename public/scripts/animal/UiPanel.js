@@ -234,17 +234,45 @@ class UiPanel {
     this.infoMenu.append(infoTitle, infoHeader, moodRow, barsContainer);
 
     const nameEl = this.infoMenu.querySelector('[data-role="name"]');
-    nameEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); nameEl.blur(); }
-    });
+
+    // Bloqueia teclas globais (WASD, I, etc.) enquanto o campo está em foco.
+    // Captura em fase de capture no window para interceptar antes dos sistemas do jogo.
+    // Importante: Enter/Escape precisam de preventDefault AQUI, pois o
+    // stopImmediatePropagation abaixo impede o listener do próprio nameEl
+    // de rodar — sem o preventDefault, o Enter insere um &nbsp; no
+    // contenteditable (que .trim() não remove).
+    const blockKeysWhileEditing = (e) => {
+      if (document.activeElement === nameEl) {
+        if (e.key === "Escape" || e.key === "Enter") {
+          e.preventDefault();
+          if (e.type === "keydown") nameEl.blur();
+        }
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener("keydown", blockKeysWhileEditing, true);
+    window.addEventListener("keyup", blockKeysWhileEditing, true);
+    window.addEventListener("keypress", blockKeysWhileEditing, true);
+
     nameEl.addEventListener("blur", () => {
       if (!this.target) return;
-      const v = (nameEl.textContent || "").trim();
+      // Remove espaços invisíveis (&nbsp; U+00A0, zero-width) e colapsa whitespace
+      // antes do trim — o contenteditable pode deixar resíduos mesmo após o fix acima.
+      const raw = nameEl.textContent || "";
+      const v = raw.replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, " ").replace(/\s+/g, " ").trim();
+      nameEl.textContent = v;
       const key = auiGetAnimalKey(this.target);
       this.target.customName = v || "";
       const map = auiLoadNameMap();
       if (v) map[key] = v; else delete map[key];
       auiSaveNameMap(map);
+
+      // Dispatch event for quest system
+      if (v) {
+        document.dispatchEvent(new CustomEvent('animalNamed', {
+          detail: { animal: this.target, name: v }
+        }));
+      }
     });
 
     this.layer.appendChild(this.infoMenu);

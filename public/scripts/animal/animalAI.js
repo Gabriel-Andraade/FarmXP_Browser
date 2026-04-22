@@ -277,6 +277,12 @@ export class AnimalEntity {
         this.petsToday++;
         this.stats.moral = Math.min(100, this.stats.moral + PET_MORAL_GAIN);
         this.recalcMood();
+
+        // Dispatch event for quest system
+        document.dispatchEvent(new CustomEvent('animalPetted', {
+            detail: { animal: this, assetName: this.assetName }
+        }));
+
         return { success: true, message: 'pet_ok' };
     }
 

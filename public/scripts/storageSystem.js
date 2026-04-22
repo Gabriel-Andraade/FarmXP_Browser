@@ -377,7 +377,16 @@ export class StorageSystem {
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
-    return this._addToCategory(category, itemId, qty);
+    const result = this._addToCategory(category, itemId, qty);
+
+    // Dispatch event for quest system
+    if (result) {
+      document.dispatchEvent(new CustomEvent('itemStored', {
+        detail: { itemId, quantity: qty, category }
+      }));
+    }
+
+    return result;
   }
 
   /**

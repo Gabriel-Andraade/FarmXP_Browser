@@ -177,13 +177,16 @@ export default {
   // Player HUD
   player: {
     noCharacter: 'Sem personagem',
-    level: 'Level',
+    level: 'Nível',
     xp: 'XP',
     hunger: 'Fome',
     thirst: 'Sede',
     energy: 'Energia',
     money: 'Dinheiro',
-    health: 'Saúde'
+    health: 'Saúde',
+    xpGain: '+{amount} XP',
+    levelUp: 'Nível {level}!',
+    levelUpSub: 'Você subiu de nível!',
   },
 
   // Trading/Merchant System
@@ -864,22 +867,60 @@ export default {
     wellError: 'erro ao colocar poço',
     wellLoading: 'sistema de poços carregando...',
     placed: 'colocado! ({remaining} restante)',
-    placeError: 'erro ao colocar objeto',
-    worldNotAvailable: 'erro: theWorld.addWorldObject não disponível',
-    variant: 'variante: {name}',
-    notAvailable: 'Função de construção não disponível.',
-    notAvailableAfter: 'Função de construção não disponível após carregamento.',
-    buildError: 'Erro ao entrar no modo de construção. Verifique o console.'
   },
 
-  // Quests / Missões
+  // Quests
   quests: {
     title: 'Missões',
     noQuests: 'Nenhuma missão disponível.',
+    tabActive: 'Em andamento',
+    tabCompleted: 'Concluídas',
+    noActiveQuests: 'Nenhuma missão em andamento.',
+    noCompletedQuests: 'Nenhuma missão concluída.',
     status: {
       available: 'Disponível',
       active: 'Em andamento',
       completed: 'Concluída',
+    },
+    bartolomeu: {
+      title: 'Ajudar a Cidade',
+      description: 'Junte R$ 1.000 e entregue ao Bartolomeu para ajudar a cidade de Capa de Ganso.',
+    },
+    milly: {
+      title: 'Encontrar Madalena',
+      description: 'Encontre a gatinha Madalena que fugiu para a fazenda e devolva-a para Milly.',
+    },
+    johnMilk: {
+      title: 'Leite para a família',
+      description: 'Leve um pouco de leite fresco para o John. A Isabela tá reclamando que a geladeira tá vazia.',
+    },
+    lucasSecret: {
+      title: 'Projeto secreto do Lucas',
+      description: 'Lucas precisa de 3 parafusos e 5 madeiras para um projeto escondido do pai.',
+      progress: 'Materiais coletados:\nPregos: {screws}/{screwsNeed}\nMadeira: {wood}/{woodNeed}',
+      ready: 'Você já tem tudo que o Lucas pediu — pode entregar pra ele!',
+    },
+    tutorial: {
+      firstMeeting: {
+        title: 'Se apresentar',
+        description: 'Vá até a cidade e puxe assunto com alguém — seu avô falava bem do John.',
+      },
+      petAnimal: {
+        title: 'Carinho de gente',
+        description: 'Faça carinho em 1 animal da fazenda.',
+      },
+      nameAnimal: {
+        title: 'Batismo',
+        description: 'Dê um nome pra 1 animal da fazenda.',
+      },
+      exploreCity: {
+        title: 'Além da cerca',
+        description: 'Conheça Cabo Ganso — atravesse o portal da picape.',
+      },
+      storeItem: {
+        title: 'Arrume a casa',
+        description: 'Guarde 1 item no armazém da casa.',
+      },
     },
     fixPickup: {
       title: 'Consertar a Picape',
@@ -1231,6 +1272,341 @@ export default {
         },
       },
     },
+
+    // ── Bru & Juan — diálogo de introdução ──
+    bruJuan: {
+      bruRant: 'AAAH! que saco!! esse aplicativo de taxi demora tanto! ninguem aceita essa porcaria de corrida!!',
+
+      choiceApproach: 'Aproximar sem fazer barulho.',
+      choiceLeave: 'Deixar quietos.',
+
+      approachStella: '*acena com a mão*',
+      approachGraham: '*pigarreia*',
+      approachBen: '*aparece de frente para Bru*',
+
+      bruWho: 'ah... *franze a testa, olhando para {name}*, quem é tu?',
+
+      introStella: 'olá... sou moradora nova, me chamo Stella e tô conhecendo a região.',
+      introGraham: 'está tudo bem? aparenta... estressada. Ah, me chamo Graham, conhecendo a região.',
+      introBen: 'oi.. t-tudo bem com o celular? *cora levemente*, ah e-e... me chamo Ben. sou novo na cidade',
+
+      bruGreetDefault: 'ah.. prazer... Sou Bru *retorna o olhar para o celular*',
+      bruTaxiFar: 'cacete!!! esse taxi tá longe! *suspira de estresse*',
+      bruGreetBen: 'tá, legal garoto, só tô esperando meu taxi *retorna a olhar para o celular*.',
+
+      playerHelp: 'quer ajuda com algo?',
+
+      bruWarning: 'Se aquele homem ali atrás pedir dinheiro, não dê é um alcoólatra ok?',
+
+      playerLooks: '*você olha para o lado e vê um homem caido no chão, com uma garrafa na mão se levantando.*',
+
+      juanIntro: 'o-opa *arrota*, sou Juan. o esposo.....',
+      bruInterrupt: 'EX... esposo, ex.',
+      juanCorrect: 'bom.... *suspira*, ex esposo da Bru, sou Juan, e quem é você?',
+
+      toJuanStella: 'Stella, prazer.. Juan',
+      toJuanBen: 'Me chamo Ben, sou novo por aqui',
+      toJuanGraham: 'Graham.',
+
+      juanLunch: 'bom... prazer é todo meu, qualquer dia podemos marcar de almoçar em casa como boas-vindas.',
+
+      bruCook: 'e se você for fazer comida então, por que eu não vou gastar meu ultimos centavos para suas coisas.',
+
+      juanIgnore: '*abre um sorriso forçado*, ignorem ela gente! ela... tá meia estressada por conta do serviço e eu sei cozinhar tá? não compro coisas feitas.... *engole seco*',
+
+      farewellStella: '*abre um pequeno sorriso, e gesticula com a cabeça concordando* bom... um prazer conhecer vocês, até depois.',
+      farewellGraham: 'Certo. Foi um prazer, bom dia para vocês.',
+
+      benLookThought: '*cruza os braços, trocando o olhar entre....*',
+      benLookBru: 'Bru...',
+      benLookJuan: 'Juan...',
+      benFarewell: 'bom... acho que vou indo, boa sorte no trabalho e... {greeting}',
+
+      greetMorning: 'bom dia',
+      greetAfternoon: 'boa tarde',
+    },
+
+    family: {
+      // ── Bolhas de interação (pré-diálogo) ──
+      lucasWave: '*acena de volta e continua no que estava fazendo*',
+      isabelaCallDad: '*olha surpresa* Paaaaai! Tem gente aqui!',
+      isabelaStillHere: '*tira o olho do celular* Ainda tá aí? Tudo bem? Paaaai!',
+      isabelaBusy: '*bufando no celular* agora não...',
+      mollySilent: '*Molly te sorri, mas está ocupada*',
+
+      // ── Abertura (Lucas e John) ──
+      lucasDoubt: 'Sei não pai... tá certo mesmo?',
+      johnHmm: 'Hm.... acho que invertemos algo.',
+      lucasSerious: 'Hm..... sério pai?',
+
+      // ── Isabela no celular ──
+      isabelaLaugh: '*ri olhando para celular*',
+      johnIsa1: 'Isa.',
+      isabelaStillLaughing: '*rindo ainda no celular*',
+      johnIsabela: 'Isabela!',
+
+      // ── Isabela nota o player ──
+      isabelaNoticeStella: 'aaai que fooi? *nota a Stella* Quem... é você?',
+      isabelaNoticeBen: 'aaai que fooi? *nota o Ben* Pai, tem um menino aqui, amigo do Lucas?',
+      isabelaNoticeGraham: 'aaai que fooi? *nota o Graham* *olha de cima a baixo* Que braço... digo... pai tem um homem aqui.',
+
+      // ── John cumprimenta ──
+      johnHello: 'Olá?',
+      playerIntro: 'Olá... sou {name}.',
+      lucasHi: 'Oie.',
+      johnLost: 'E está perdido?',
+
+      // ── Stella branch ──
+      stellaNotLost: 'Não não.. estou conhecendo o bairro, me mudei para cá faz um tempo.',
+      johnAlone: 'Sozinha?',
+      stellaGilbert: 'Sim... conheciam o senhor Gilbert? era meu avô.',
+      johnCondolencesStella: 'Meus pêsames, não consegui comparecer ao enterro Stella. Creio que está morando na casa dele?',
+      stellaYes: 'Sim, estou sim.',
+      johnIntroFamily: 'Entendo... Bom, me chamo John, John Alexander Miller, este é meu filho mais velho Lucas, *Lucas acena a mão*, aquela no celular sentada é a Isabela.',
+      isabelaWelcome: 'Bem vindo a essa cidade minúscula.',
+      johnIsa2: 'Isa.',
+      isabelaMumble: '*murmura voltando pro celular*',
+
+      // ── Graham branch ──
+      grahamNotLost: 'Não, conhecendo o bairro.',
+      johnRelative: 'Parente de alguém?',
+      grahamGilbert: 'Gilbert, o fazendeiro que faleceu semana passada.',
+      johnCondolencesGraham: 'Neto dele? Meus pêsames, não consegui comparecer.',
+      grahamMissHim: 'Já sinto falta dele. E quem são as crianças?',
+      isabelaCutIn: 'Sou Isabela, pode me chamar de Isa, o pateta ali é o Lucas.',
+      lucasPateta: 'Opa, e ela que é pateta.',
+      johnIntroAll: 'Sou John, ele é Lucas e ela é Isabela.',
+      isabelaWave: '*acena com a mão*',
+      johnMarine: 'Fuzileiro?',
+      grahamNavy: 'Sim, marinha?',
+      johnAirForce: 'Aeronáutica, batalhão?',
+      graham107: '107° batalhão.',
+      johnPilot: 'Piloto de caça.',
+      lucasCool: 'Que legal, outro do exército.',
+      johnFarewellGraham: 'Bom Graham, prazer em conhecer, o que precisar me procure ou chame minha esposa Molly.',
+      isabelaFarewellGraham: '*sorrindo* Ou eu! E bom... bem vindo a Capa de Ganso!',
+      lucasFrown: '*franze a testa para Isabela*',
+      grahamSameToYou: 'Digo o mesmo a todos. Aliás estou na fazenda do meu avô.',
+      johnGoodWalk: 'Ok, tenha um bom passeio.',
+
+      // ── Ben branch ──
+      benNotLost: 'Ah não... conhecendo o pessoal daqui do bairro.',
+      johnParents: 'E onde estão seus pais?',
+      benFarm: 'Bom... meio que cuidando da fazenda do meu avô.',
+      johnGilbert: 'Gilbert?',
+      benYes: 'Sim.',
+      johnCondolencesBen: 'Conheci o Gilbert, meus pêsames, ele fará falta aqui.',
+      isabelaFarmer: 'Então tu é o neto do fazendeiro?',
+      benBlush: '*cora* S-sim.',
+      isabelaAge: 'Cê tem oque? 15 anos?',
+      ben17: '17...',
+      lucasAge: 'Sério? Você tem a idade da minha irmã, mas parece bem novo, diferente dela.',
+      isabelaShutUp: 'Cala boca pirralho!',
+      johnNotNow: 'Isa, Lucas. Agora não.',
+      johnIntroBen: 'Bom, este é meu garoto mais velho e minha garota mais velha, Lucas e Isabela.',
+      johnFullIntroBen: 'Sou John Alexander Miller garoto, precisando de algo, não hesite em me chamar, ou chamar minha esposa Molly ok?',
+      benFarewell: 'Tá bom... eu... se precisarem de algo me avisem ok? Vou tá lá na fazenda... tchau pessoal.',
+      johnLucasWave: '*acenam com a mão*',
+      isabelaBackToPhone: '*volta para o celular*',
+
+      // ── Quest: Leite para a família ──
+      milk: {
+        greeting: 'Olá {name}. Tudo certo por aí na fazenda?',
+        replyStella: 'Tá indo, tá indo! Ainda me acostumando com tudo.',
+        replyGraham: 'Sob controle. A rotina ajuda.',
+        replyBen: 'A-ah... tá indo, mais ou menos.',
+        johnOfValue: 'Fico contente em ouvir. Seu avô era um homem de muito valor.',
+        isabelaShout: 'Paaaaaai... cadê o leite???',
+        johnNoShout: '*respira fundo* Isabela, não grita, por favor.',
+        isabelaMumble: '*murmura alto* meu deus, acabou o leite, ninguém avisa nada nessa casa...',
+        johnApology: '*baixo, para você* Peço desculpas pela cena. Molly saiu cedo e eu deveria ter passado no mercado. Acabei esquecendo.',
+        johnAskMilk: '{name}, se não for incômodo, posso te pedir um favor. Se tiver leite sobrando na sua fazenda, eu compro de você. Me pouparia uma viagem até a cidade agora.',
+        choiceAccept: 'Pode deixar, trago um pra você.',
+        choiceAskPrice: 'Quanto você paga?',
+        choiceDecline: 'Agora não vai dar, desculpa.',
+        acceptStella: 'Deixa comigo! Acho que tenho sim, já volto.',
+        acceptGraham: 'Deixa comigo. Trago agora.',
+        acceptBen: 'A-ah... acho que tenho sim. Já trago.',
+        johnThanks: 'Agradeço, de verdade. Fico te devendo essa.',
+        isabelaThanksMurmur: '*do fundo* ...obrigada, acho.',
+        askPriceStella: 'E quanto você paga, ein?',
+        askPriceGraham: 'Quanto tá pagando?',
+        askPriceBen: 'H-hmm... paga quanto?',
+        johnPrice: 'Preço justo, pode confiar. 50 moedas pelo leite. Me parece razoável, combina com você?',
+        priceOkStella: 'Combina sim, já volto.',
+        priceOkGraham: 'Fechado.',
+        priceOkBen: 'T-tá bom... já trago.',
+        declineStella: 'Aaah, agora tô meio enrolada, desculpa!',
+        declineGraham: 'Agora não dá. Fica pra outra.',
+        declineBen: 'A-ah... agora não dá, desculpa.',
+        johnDeclineReply: 'Tranquilo, fica para outro dia. Obrigado mesmo assim.',
+        isabelaDeclineMurmur: '*murmura* ótimo, que maravilha, sem leite de novo...',
+        johnSolve: '*baixo* Já resolvo, Isa.',
+        fourthWall: 'Bom, assim que o desenvolvedor adicionar o sistema completo dos animais, ok. Você retorna para que a quest seja feita.',
+        playerThought: '*pensando* ok...? ele falou com quem?',
+        askIfGot: 'Conseguiu? Me salvou, {name}.',
+        handStella: '*entrega o leite* Toma, fresquinho fresquinho.',
+        handGraham: '*estende o leite* Toma.',
+        handBen: 'T-toma. Espero que sirva.',
+        johnPerfect: 'Perfeito. Aqui está o combinado, muito obrigado.',
+        isabelaGrab: '*aparece rápido, pega o leite* valeu. *volta pro celular e some*',
+        johnShake: '*balança a cabeça* Essa menina...',
+        askStill: 'E aí, conseguiu o leite?',
+        stillStella: 'Ainda não, me dá mais um tempinho!',
+        stillGraham: 'Ainda não. Volto depois.',
+        stillBen: 'A-ainda não consegui... desculpa.',
+        johnTranquilo: 'Tranquilo, sem pressa nenhuma.',
+        questDone: 'Valeu mais uma vez pelo leite de outro dia. Qualquer coisa, sabe onde me achar.',
+      },
+
+      // ── Quest: Projeto secreto do Lucas ──
+      lucasQ: {
+        psiu: 'Psiu, {name}... chega aqui, rapidinho.',
+        reactStella: 'Oi Lucas, que foi?',
+        reactGraham: 'Fala.',
+        reactBen: 'A-aconteceu algo?',
+        secretAsk: 'É segredo, viu? Promete que não fala pro meu pai?',
+        promiseStella: 'Hmhmh, é pra namoradinha?',
+        promiseGraham: 'Nada proibido, moleque?',
+        promiseBen: 'P-prometo!',
+        lucasDeny: 'Q-que??? Não, nada disso! Nada proibido também, juro! É só um projeto meu, no fundo do quintal. Se meu pai descobrir ele vai querer ajudar e aí perde a graça, saca?',
+        askMaterials: 'Tu tem parafuso sobrando? Uns 3 dava pro gasto. E umas 5 madeiras também.',
+        choiceAccept: 'Consigo sim, já volto.',
+        choiceCurious: 'O que tu tá montando?',
+        choiceDecline: 'Agora não dá.',
+        curiousStella: 'Olha olha, o que é ein?',
+        curiousGraham: 'Por que guardar segredo?',
+        curiousBen: 'H-hmm... e o que que é?',
+        lucasSurprise: 'Ahhh é surpresa! Se der certo eu te mostro. Se não der, melhor ninguém saber que eu tentei.',
+        okStella: 'Se não for nada errado ok.',
+        okGraham: 'Tá. Mas nada de roubada, né?',
+        okBen: 'T-tá bom então.',
+        lucasSwear: 'Juro que não! É coisa boa.',
+        lucasThanks: 'Valeu demais, {name}! Tô te devendo uma.',
+        afterAcceptStella: 'E depois eu quero ver viu?',
+        afterAcceptGraham: 'Depois me conta o que é, moleque.',
+        afterAcceptBen: 'T-tá bom, já volto.',
+        declineStella: 'Agora não dá, depois a gente vê.',
+        declineGraham: 'Não tenho sobrando.',
+        declineBen: 'A-ah... agora não tenho não.',
+        lucasDeclineReply: 'Tranquilo, sem estresse. Se sobrar um dia, me avisa.',
+        askBrought: 'Trouxe mesmo? Salvou minha vida!',
+        bringStella: '*entrega* Toma aí, 3 parafusos e 5 madeiras. Agora eu QUERO ver o que é ein.',
+        bringGraham: '*coloca na mão dele* Pronto. Nada de roubada, moleque.',
+        bringBen: 'T-toma. Era isso, né?',
+        lucasJoy: 'É isso mesmo! Valeu, valeu, valeu!',
+        lucasComeBack: 'Bom, retorna aqui depois!! Te mostro tudo que já fiz!',
+        finalStella: 'Tô ansiosa pra ver!',
+        finalGraham: 'Beleza, moleque.',
+        finalBen: 'T-tá bom, volto sim.',
+        questDone: 'E aí {name}! Segue firme, depois te mostro tudo.',
+        noMaterialsStella: 'Ainda não consegui os materiais, me dá um tempo.',
+        noMaterialsGraham: 'Ainda não tenho. Volto depois.',
+        noMaterialsBen: 'A-ainda não consegui... desculpa.',
+        lucasWait: 'Tranquilo, sem pressa.',
+      },
+
+      // ── Molly (esposa do John) ──
+      molly: {
+        greet: 'Oh, olá querido(a)! Você é da família do senhor Gilbert, não é?',
+        replyStella: 'Sou sim! Stella, neta dele. Prazer.',
+        replyGraham: 'Sim, neto. Graham.',
+        replyBen: 'S-sim... eu sou o Ben, o neto dele.',
+        intro: 'Que bom te conhecer! Sou Molly, esposa do John. Se precisar de qualquer coisa, é só bater na porta de casa.',
+        farewell: 'Bom, vou continuar minha caminhada. Até qualquer hora!',
+        repeat: 'Oi de novo, {name}! Aproveita o dia.',
+      },
+    },
+
+    jeremy: {
+      tryStella: 'Oi, tudo bem? Sou nova por aqui, me chamo Stella.',
+      tryGraham: 'E aí, beleza? Me chamo Graham.',
+      tryBen: 'O-oi... meu nome é Ben. Tudo bem?',
+      stare: '*levanta o olhar do celular e encara sem expressão*',
+      ignore: '*volta a olhar o celular sem dizer nada*',
+      wave: '*acena com a mão*',
+      postReactionStella: '*o ignora*',
+      postReactionGraham: '*acena com a cabeça em resposta*',
+      postReactionBen: '*devolve o aceno*',
+    },
+
+    couple: {
+  // Abertura
+  maryTease: "para bobo!!! hoje eu tô de folga",
+  noahReply: "ué e essa roupa de escritorio?",
+  maryCosplay: "é pro cosplay! já já chega a peruca.",
+  noahJeremyLook: "aaaha, e o outro ali já vai tarde trabalhar *olha para Jeremy*",
+  jeremyTaxi: "e tenho culpa que não chega o taxi?",
+  coupleYes: "sim",
+  jeremyMurmur: "*murmura*",
+  maryNotice: "*nota {name}* oi?",
+  greetMorning: "bom dia",
+  greetAfternoon: "boa tarde",
+  noahGreet: "opa! {greeting}!",
+
+  // Escolhas iniciais
+  choiceHello: "olá.",
+  choiceCosplay: "cosplay?",
+  choiceWave: "*acenar e sair*",
+  playerWave: "*acena e sai*",
+
+  // Branch "olá"
+  coupleOpa: "opa!",
+  newHereF: "tudo bem contigo? Aparenta ser nova, como se chama?",
+  newHereM: "tudo bem contigo? Aparenta ser novo, como se chama?",
+
+  introStella: "é, sou nova mesmo, mudei pra cá para cuidar do terreno do meu avô, sou Stella.",
+  introGraham: "uhum, novo por aqui, aliás, cuidando da casa do meu avô, Graham.",
+  introBen: "é, vim pra cá recentemente ficar na casa do meu avô, me chamo Ben.",
+
+  maryGilbert: "Gilbert?",
+  playerYes: "sim.",
+  noahCondolence: "ah... é mesmo, infelizmente ele não está entre nós.",
+  maryCosplayJudge: "hmmm, agora acho que não vou ter mais um avaliador de cosplay....",
+  noahNote: "verdade... ele sempre dava uma nota",
+
+  // Branch "cosplay?" (compartilhada)
+  maryCosplayExplain: "ah sim! sou cosplayer!! tanto de animes, séries, jogos.... praticamente se tiver um evento eu vou!",
+  maryIntro: "ah e claro eu sou Mary!",
+  noahIntro: "E eu sou Noah, sou desenhista.",
+  maryPraise: "o melhor artista desse planeta! ❤️",
+  noahPraise: "claro, tenho a melhor cosplayer me amando!",
+  coupleLaugh: "*risos tímidos*",
+
+  jeremyComplainF: "dá para terem um respeito na frente da moça?",
+  jeremyComplainM: "dá para terem um respeito na frente do pirralho?",
+
+  playerTurn: "*se vira para o lado*",
+
+  playerReactionJeremyStella: "agora decidiu não me ignorar?",
+  playerReactionJeremyBen: "o-oi",
+  playerReactionJeremyGraham: "", // Graham ignora
+  playerReactionJeremyNew: "ah oi.",
+
+  jeremyIntro: "me chamo Jeremy.",
+
+  playerResponseStella: "*abre um sorriso falso, voltando a atenção para Mary & Noah*",
+  playerResponseBen: "prazer Jeremy.",
+  playerResponseGraham: "", // sem fala
+
+  noahDismiss: "liga não! ele é todo frustradinho mesmo.",
+  jeremyLawsuit: "ainda te dou um processo",
+  maryFifthTime: "essa já é a quinta vez do dia que disse que vai processa-lo.",
+  noahExplain: "Bom, esse pateta chamado de Jeremy é meu irmão gêmeo, como pode ver, Mary é minha esposa, qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+  noahInvite: "qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+  maryCook: "sim!! posso preparar algo para gente!!!",
+  noahWeCook: "a gente prepara gata!",
+  maryBlush: "*ri timidamente* para bobinho!",
+  jeremyTaxiFinal: "vem logo taxista.....",
+
+  // Diálogo livre (pós-intro)
+  freeGreet: "E aí, tudo bem? Volte sempre!",
+  jeremyWave: "*acena com a mão*",
+  postReactionStella: "*ignora*",
+  postReactionGraham: "*acena com a cabeça*",
+  postReactionBen: "*devolve o aceno*",
+},
+
   },
 
   // Painel de atalhos
