@@ -1,0 +1,167 @@
+{
+  "houses": [
+    {
+      "id": "hitboxHouseBru",
+      "name": "houseOfBru",
+      "owner": "Bru",
+      "houseType": "small",
+      "description": "small house of Bru",
+      "x": 90,
+      "y": 323,
+      "width": 350,
+      "height": 140
+    },
+    {
+      "id": "hitboxHouseFamily",
+      "name": "houseOfAFamily",
+      "owner": "family",
+      "houseType": "medium",
+      "description": "house of the family",
+      "x": 273,
+      "y": 1200,
+      "width": 234,
+      "height": 223
+    },
+    {
+      "id": "hitboxHouseTwins",
+      "name": "houseOfTheTwins",
+      "owner": "Twins",
+      "houseType": "large_double",
+      "description": "house with two floors",
+      "x": 1182,
+      "y": 378,
+      "width": 210,
+      "height": 215
+    },
+    {
+      "id": "hitboxHouseBart1",
+      "name": "houseOfBartolomeu",
+      "owner": "Bartolomeu",
+      "houseType": "large_double",
+      "description": "the mayor house - parte 1",
+      "x": 1918,
+      "y": 615,
+      "width": 439,
+      "height": 171
+    },
+    {
+      "id": "hitboxHouseBart2",
+      "name": "houseOfBartolomeu",
+      "owner": "Bartolomeu",
+      "houseType": "large_double",
+      "description": "the mayor house - parte 2 (L)",
+      "x": 1918,
+      "y": 790,
+      "width": 439,
+      "height": 25
+    },
+    {
+      "id": "hitboxHouseMilly",
+      "name": "houseOfMilly",
+      "owner": "Milly",
+      "houseType": "medium",
+      "description": "medium house of Milly",
+      "x": 2276,
+      "y": 1740,
+      "width": 174,
+      "height": 178
+    }
+  ],
+  "obstacleTypes": {
+    "tree_city-00": {
+      "offsetX": 50,
+      "offsetY": 135,
+      "width": 10,
+      "height": 10
+    },
+    "tree_city-01": {
+      "offsetX": 40,
+      "offsetY": 130,
+      "width": 10,
+      "height": 10
+    },
+    "postLeft": {
+      "offsetX": 27,
+      "offsetY": 155,
+      "width": 20,
+      "height": 10,
+      "lightOffsetX": 5,
+      "lightOffsetY": 15,
+      "lightRadius": 150
+    },
+    "postRight": {
+      "offsetX": 0,
+      "offsetY": 160,
+      "width": 28,
+      "height": 10,
+      "lightOffsetX": 25,
+      "lightOffsetY": 15,
+      "lightRadius": 150
+    },
+    "postUp": {
+      "offsetX": 7,
+      "offsetY": 147,
+      "width": 28,
+      "height": 10,
+      "lightOffsetX": 18,
+      "lightOffsetY": 10,
+      "lightRadius": 150
+    },
+    "Brown_SPORT_CLEAN_All_024": {
+      "offsetX": 8,
+      "offsetY": 15,
+      "width": 120,
+      "height": 90
+    },
+    "White_WAGON_CLEAN_All_012": {
+      "offsetX": 8,
+      "offsetY": 20,
+      "width": 118,
+      "height": 110
+    },
+    "table": {
+      "offsetX": 0,
+      "offsetY": 0,
+      "width": 35,
+      "height": 35
+    },
+    "fontDown": {
+      "offsetX": 6,
+      "offsetY": 25,
+      "width": 81,
+      "height": 44
+    },
+    "fontUp": {
+      "offsetX": -15,
+      "offsetY": 32,
+      "width": 75,
+      "height": 10
+    },
+    "stoneBanch-00": {
+      "offsetX": 0,
+      "offsetY": 0,
+      "width": 25,
+      "height": 50
+    },
+    "stoneBanch-01": {
+      "offsetX": 0,
+      "offsetY": 0,
+      "width": 25,
+      "height": 50
+    },
+    "stoneBanch-02": {
+      "offsetX": 0,
+      "offsetY": 0,
+      "width": 60,
+      "height": 35
+    }
+  },
+  "streetLightSettings": {
+    "glowCenterOpacity": 0.85,
+    "glowMidOpacity": 0.5,
+    "glowMidStop": 0.4,
+    "warmTintColor": [255, 200, 80],
+    "warmTintIntensity": 0.12,
+    "warmTintRadiusFactor": 0.6
+  }
+}

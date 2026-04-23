@@ -51,6 +51,8 @@
   --font-family-primary: 'Segoe UI', Tahoma, sans-serif;
   --font-family-mono: 'Courier New', monospace;
   --font-family-serif: 'Georgia', serif;
+  --font-family-pixel: 'VT323', monospace;
+  --font-family-pixel-title: 'Press Start 2P', cursive;
 
   --font-size-xs: 0.75rem;   /* 12px */
   --font-size-sm: 0.875rem;  /* 14px */

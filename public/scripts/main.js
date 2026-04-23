@@ -16,6 +16,7 @@ import { collisionSystem } from "./collisionSystem.js";
 import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebugFlag, installLegacyGlobals, initDebugFlagsFromUrl, exposeDebug } from "./gameState.js";
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
+import { MainMenu } from "./mainMenu/mainMenu.js";
 import { assets } from "./assetManager.js";
 // loadImages is now called dynamically inside playerSystem.loadCharacterModule
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
@@ -322,7 +323,7 @@ function setupInteractionSystem() {
     if (checkGameFlag('interactionsBlocked')) return;
 
     if (e.code === "KeyE") {
-      playerInteractionSystem?.tryInteract?.();
+      playerInteractionSystem?.handleInteraction?.();
     }
   });
 
@@ -366,12 +367,50 @@ function setupInteractionSystem() {
         chestSystem?.openChest?.(objectId);
         break;
       case "house":
-        houseSystem?.openHouseMenu?.();
+        // Toggle handled by houseSystem's own E key listener
         break;
       case "well":
         wellSystem?.openWellMenu?.();
         break;
+      case "npc": {
+        const npcSys = getSystem('npc');
+        if (npcSys) npcSys.tryInteract();
+        break;
+      }
+      case "quest_animal": {
+        const milly = getSystem('npcMilly');
+        if (milly && typeof milly.onCatInteract === 'function') {
+          milly.onCatInteract();
+        }
+        break;
+      }
     }
+  });
+
+  // ─── Animal interaction handler (pet / feed / guide) ───
+  document.addEventListener("animalAction", (e) => {
+    const { action, animal } = e.detail || {};
+    if (!animal || typeof animal.pet !== 'function') return;
+
+    let result;
+    switch (action) {
+      case 'pet':
+        result = animal.pet();
+        break;
+      case 'feed':
+        result = animal.feed();
+        break;
+      case 'guide':
+        result = animal.guide();
+        break;
+      default:
+        return;
+    }
+
+    // Dispatch result for UI feedback / achievements
+    document.dispatchEvent(new CustomEvent('animalActionResult', {
+      detail: { action, animal, ...result }
+    }));
   });
 }
 
@@ -628,6 +667,48 @@ async function startFullGameLoad() {
     if (!getObject('pendingSaveData')) {
       spawnGameAnimals();
     }
+
+    // XP System — load before questSystem so quest rewards can grant XP.
+    try {
+      await import('./xpSystem.js');
+      await import('./xpNotification.js');
+    } catch (e) {
+      handleWarn("falha ao carregar xpSystem", "main:startFullGameLoad:xpSystem", e);
+    }
+
+    // Quest Registry — catálogo central de quests. Carrega ANTES do questSystem
+    // e dos NPCs, que chamam questRegistry.complete(id) ao finalizar quests.
+    try {
+      await import('./quests/questRegistry.js');
+    } catch (e) {
+      handleWarn("falha ao carregar questRegistry", "main:startFullGameLoad:questRegistry", e);
+    }
+
+    // Quest System — load early so pickup hitbox is registered before first frame
+    try {
+      await import('./questSystem.js');
+    } catch (e) {
+      handleWarn("falha ao carregar questSystem", "main:startFullGameLoad:questSystem", e);
+    }
+
+    // Dialogue & NPC Systems
+    try {
+      await import('./dialogueSystem.js');
+      await import('./npcs/npcSystem.js');
+      await import('./npcs/npcBartolomeu.js');
+      await import('./npcs/npcMilly.js');
+      await import('./npcs/npcJuan.js');
+      await import('./npcs/npcBru.js');
+      await import('./npcs/npcCouple.js');
+      await import('./npcs/npcJeremy.js');
+      await import('./npcs/family/npcJohn.js');
+      await import('./npcs/family/npcLucas.js');
+      await import('./npcs/family/npcIsabela.js');
+      await import('./npcs/family/npcMolly.js');
+    } catch (e) {
+      handleWarn("falha ao carregar NPC/dialogue systems", "main:startFullGameLoad:npc", e);
+    }
+
     updateLoadingProgress(0.65, "carregando sistemas...");
 
     await exposeGlobals();
@@ -660,6 +741,15 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
     }
 
+    // Map Manager (farm ↔ city transitions)
+    try {
+      await import('./mapManager.js');
+      setupPortalKeyListener();
+      setupCityHouseKeyListener();
+    } catch (e) {
+      handleWarn("falha ao carregar mapManager", "main:startFullGameLoad:mapManager", e);
+    }
+
     try {
       const audioModule = await import('./audioManager.js');
       audioModule.audioManager.init();
@@ -680,15 +770,39 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
     }
 
+    // Achievement system (must load BEFORE applySaveData so progress can be restored)
     try {
-      initMinimap();
+      const { AchievementTracker } = await import('./achievements/achievementTracker.js');
+      const { initAchievementNotifications } = await import('./achievements/achievementNotification.js');
+      new AchievementTracker();
+      initAchievementNotifications();
     } catch (e) {
-      handleWarn("falha ao inicializar minimap", "main:startFullGameLoad:minimap", e);
+      handleWarn("falha ao carregar achievement system", "main:startFullGameLoad:achievements", e);
+    }
+
+    // Fonte única de verdade para "há save pendente?" — evita que o bloco de
+    // auto-slot e o de restore leiam lugares diferentes e divergirem.
+    const pendingSave = getObject('pendingSaveData') ?? window._pendingSaveData ?? null;
+
+    // Auto-select a save slot for new games so auto-save and beforeunload work
+    if (saveRef && saveRef.activeSlot === null && !pendingSave) {
+      // Find first empty slot; if none, skip auto-creation so we don't silently
+      // overwrite an existing save. The player will pick a slot via the menu.
+      let targetSlot = -1;
+      for (let i = 0; i < 3; i++) {
+        if (!saveRef.getSlotMeta(i)) { targetSlot = i; break; }
+      }
+      if (targetSlot >= 0) {
+        saveRef.createOrOverwriteSlot(targetSlot, { saveName: `Save ${targetSlot + 1}` });
+        saveRef.selectActiveSlot(targetSlot);
+        logger.info(`💾 Auto-created save slot ${targetSlot} for new game`);
+      } else {
+        logger.warn('💾 All 3 save slots occupied; auto-save disabled until player picks a slot');
+      }
     }
 
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
-    const pendingSave = getObject('pendingSaveData');
     if (pendingSave && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
@@ -719,6 +833,58 @@ async function startFullGameLoad() {
   } finally {
     gameStartInProgress = false;
   }
+}
+
+// =============================================================================
+// PORTAL (MAP TRANSITION) KEY LISTENER
+// =============================================================================
+
+let _portalListenerAdded = false;
+function setupPortalKeyListener() {
+  if (_portalListenerAdded) return;
+  _portalListenerAdded = true;
+
+  document.addEventListener('keydown', async (e) => {
+    if (e.key !== 'e' && e.key !== 'E') return;
+    if (simulationPaused || isSleeping) return;
+
+    // NPCs are already handled by npcSystem's capture-phase listener
+    // (stopImmediatePropagation runs before this listener when an NPC is near).
+
+    const mapMgr = getSystem('mapManager');
+    if (!mapMgr || mapMgr.isMapTransitioning()) return;
+
+    const player = currentPlayer;
+    if (!player) return;
+
+    const near = mapMgr.checkPortalInteraction(player.x, player.y, player.width, player.height);
+    if (near) {
+      e.stopImmediatePropagation();
+      await mapMgr.triggerPortalTransition();
+    }
+  });
+}
+
+let _cityHouseListenerAdded = false;
+function setupCityHouseKeyListener() {
+  if (_cityHouseListenerAdded) return;
+  _cityHouseListenerAdded = true;
+
+  document.addEventListener('keydown', async (e) => {
+    if (e.key !== 'e' && e.key !== 'E') return;
+    if (simulationPaused || isSleeping) return;
+
+    const cityHouseSys = getSystem('cityHouse');
+    if (!cityHouseSys) return;
+
+    const house = cityHouseSys.getHouseInteractable();
+    if (house) {
+      e.stopImmediatePropagation();
+      // TODO: Implementar ação ao interagir com casa
+      const hud = getSystem('hud');
+      hud?.showNotification?.(`Entrando em: ${house.name}`, 'info', 2000);
+    }
+  });
 }
 
 // =============================================================================
@@ -828,8 +994,9 @@ async function initGameBootstrap() {
   simulationPaused = true;
   interactionEnabled = false;
 
-  const selection = new CharacterSelection();
-  selection.show();
+  // Show Main Menu (replaces direct CharacterSelection show)
+  const mainMenu = new MainMenu();
+  mainMenu.show();
 
   setupInteractionSystem();
 
@@ -848,11 +1015,37 @@ document.addEventListener("characterSelected", () => {
   startFullGameLoad();
 });
 
+// Main Menu → New Game → show CharacterSelection
+document.addEventListener("mainMenu:newGame", () => {
+  // Reseta XP/Level para não herdar progresso de uma sessão anterior.
+  const xp = getSystem('xp');
+  if (xp?.reset) xp.reset();
+  const selection = new CharacterSelection();
+  selection.show();
+});
+
+// Main Menu → Load Game (save already set in window._pendingSaveData)
+document.addEventListener("mainMenu:loadGame", (e) => {
+  const slot = e.detail?.saveData;
+  const charId = slot?.data?.player?.characterId || 'stella';
+
+  // Set active character from save data and trigger game load
+  if (playerSystem) {
+    const character = { id: charId, name: charId.charAt(0).toUpperCase() + charId.slice(1) };
+    playerSystem.setActiveCharacter(character);
+  }
+
+  document.dispatchEvent(new CustomEvent('characterSelected', {
+    detail: { character: { id: charId } },
+  }));
+});
+
 document.addEventListener("playerReady", async (e) => {
   currentPlayer = e.detail.player;
   updatePlayer = e.detail.updateFunction;
 
   setupControls(currentPlayer);
+  setupDebugCoordinatesDisplay();
 
   try {
     if (!playerSystem) await initializePlayerSystem();
@@ -954,6 +1147,105 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+
+// =============================================================================
+// DEBUG HELPER - Mostra coordenadas do mundo em tempo real
+// =============================================================================
+
+let debugCoordinates = { screenX: 0, screenY: 0, worldX: 0, worldY: 0 };
+let showCoordinatePanel = false;
+let debugCoordinatesDisplayInitialized = false;
+
+function setupDebugCoordinatesDisplay() {
+  if (!canvas) return;
+  // playerReady dispara em cada save-reload/character-swap — sem esse guard,
+  // mousemove/keydown ficariam acumulando e F2 alternaria múltiplas vezes.
+  if (debugCoordinatesDisplayInitialized) return;
+  debugCoordinatesDisplayInitialized = true;
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const screenX = e.clientX - rect.left;
+    const screenY = e.clientY - rect.top;
+
+    if (camera) {
+      const worldPos = camera.screenToWorld(screenX, screenY);
+      debugCoordinates = {
+        screenX: Math.round(screenX),
+        screenY: Math.round(screenY),
+        worldX: Math.round(worldPos.x),
+        worldY: Math.round(worldPos.y)
+      };
+    }
+  });
+
+  // F2 toggle do painel de coordenadas
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') {
+      e.preventDefault();
+      showCoordinatePanel = !showCoordinatePanel;
+      logger.debug(`[DEBUG] Painel de coordenadas: ${showCoordinatePanel ? 'ON' : 'OFF'}`);
+
+      // Ativa/desativa hot-reload das hitboxes da cidade
+      const cityHouseSys = getSystem('cityHouse');
+      if (cityHouseSys) {
+        if (showCoordinatePanel) {
+          cityHouseSys._debugDraw = true;
+          cityHouseSys.startHotReload();
+        } else {
+          cityHouseSys._debugDraw = false;
+          cityHouseSys.stopHotReload();
+        }
+      }
+
+      const cityObsSys = getSystem('cityObstacles');
+      if (cityObsSys) {
+        cityObsSys._debugDraw = showCoordinatePanel;
+      }
+
+      // Ativa/desativa hot-reload dos NPCs (edita JS, salva, vê ao vivo)
+      const npcSys = getSystem('npc');
+      if (npcSys) {
+        if (showCoordinatePanel) {
+          npcSys.startNpcHotReload();
+        } else {
+          npcSys.stopNpcHotReload();
+        }
+      }
+    }
+  });
+
+  logger.debug('[DEBUG] Coordenadas do mundo ativadas. Pressione F2 para exibir o painel.');
+}
+
+function drawDebugCoordinates(ctx) {
+  if (!showCoordinatePanel && !getDebugFlag('hitboxes')) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.fillRect(10, 10, 280, 90);
+
+  ctx.fillStyle = '#00FF00';
+  ctx.font = '13px monospace';
+  ctx.fillText(`Screen: (${debugCoordinates.screenX}, ${debugCoordinates.screenY})`, 20, 32);
+  ctx.fillText(`World:  (${debugCoordinates.worldX}, ${debugCoordinates.worldY})`, 20, 52);
+  ctx.fillText(`Zoom: ${camera?.zoom.toFixed(2) || 1}`, 20, 72);
+
+  // Crosshair no cursor (mundo)
+  if (camera) {
+    const sp = camera.worldToScreen(debugCoordinates.worldX, debugCoordinates.worldY);
+    ctx.strokeStyle = 'rgba(0, 255, 0, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(sp.x - 12, sp.y);
+    ctx.lineTo(sp.x + 12, sp.y);
+    ctx.moveTo(sp.x, sp.y - 12);
+    ctx.lineTo(sp.x, sp.y + 12);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
 
 // =============================================================================
 // GAME LOOP PRINCIPAL
@@ -1060,6 +1352,18 @@ function gameLoop(timestamp) {
     } catch (e) {
       handleWarn("falha no debug de hitboxes", "main:gameLoop:debugHitboxes", e);
     }
+  }
+
+  // Painel de coordenadas (F2) — independente do debug de hitboxes
+  drawDebugCoordinates(ctx);
+
+  // Debug hitboxes da cidade (F2): casas em vermelho, obstáculos em azul
+  if (showCoordinatePanel) {
+    const cityHouseSys = getSystem('cityHouse');
+    if (cityHouseSys) cityHouseSys.drawDebugHitboxes(ctx);
+
+    const cityObsSys = getSystem('cityObstacles');
+    if (cityObsSys) cityObsSys.drawDebugHitboxes(ctx);
   }
 
   if (!simulationPaused) {

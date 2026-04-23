@@ -42,6 +42,7 @@ const ALLOWED_TOP_DIRS = new Set([
   "assets",
   "scripts",
   "style",
+  "city_map",
 ]);
 
 const MIME_TYPES: Record<string, string> = {
@@ -52,6 +53,7 @@ const MIME_TYPES: Record<string, string> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
+  ".jfif": "image/jpeg",
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",

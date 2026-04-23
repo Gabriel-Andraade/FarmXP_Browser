@@ -166,6 +166,17 @@ export class StorageSystem {
   }
 
   /**
+   * Adiciona recursos diretamente ao armazenamento na categoria 'resources'.
+   * Wrapper público usado por quests para evitar acoplar-se ao _addToCategory.
+   * @param {number} itemId - ID do item a adicionar
+   * @param {number} [quantity=1] - Quantidade a adicionar
+   * @returns {boolean} True se pelo menos um item foi adicionado
+   */
+  addResource(itemId, quantity = 1) {
+    return this._addToCategory('resources', itemId, quantity);
+  }
+
+  /**
    * Adiciona itens a uma categoria específica do armazenamento
    * Gerencia stacking automático e criação de novos stacks quando necessário
    * @private
@@ -309,6 +320,9 @@ export class StorageSystem {
     }
 
     this.showMessage(t('storage.deposited', { qty: deposited, name: getItemName(itemId, itemData.name) }));
+    document.dispatchEvent(new CustomEvent('itemStored', {
+      detail: { itemId, quantity: deposited, category: storageCategory }
+    }));
     return true;
   }
 
@@ -380,7 +394,18 @@ export class StorageSystem {
     if (!itemData) return false;
 
     const category = this.mapItemTypeToCategory(itemData.type);
-    return this._addToCategory(category, itemId, qty);
+    const beforeQuantity = this.getItemQuantity(itemId);
+    const result = this._addToCategory(category, itemId, qty);
+    const addedQuantity = this.getItemQuantity(itemId) - beforeQuantity;
+
+    // Dispatch event for quest system
+    if (result && addedQuantity > 0) {
+      document.dispatchEvent(new CustomEvent('itemStored', {
+        detail: { itemId, quantity: addedQuantity, category }
+      }));
+    }
+
+    return result;
   }
 
   /**

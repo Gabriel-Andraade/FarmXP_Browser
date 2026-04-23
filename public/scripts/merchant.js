@@ -388,6 +388,12 @@ class MerchantSystem {
         if (!merchant.schedule) return true;
         if (!WeatherSystem) return true;
 
+        // Check tax block (Lara/Thomas blocked if tax overdue, Rico exempt)
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu && bartolomeu.isMerchantBlocked && bartolomeu.isMerchantBlocked(merchant.id)) {
+            return false;
+        }
+
         const currentDayIndex = this.getCurrentDayIndex();
         const currentTime = WeatherSystem.currentTime;
 
@@ -441,6 +447,14 @@ class MerchantSystem {
     getMerchantStatus(merchant) {
         if (!merchant.schedule) return t('trading.open');
         if (!WeatherSystem) return t('trading.statusUnknown');
+
+        // Tax block vem antes do horário: senão o card renderiza fechado
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu?.isMerchantBlocked?.(merchant.id)) {
+            const taxBlockedKey = 'trading.taxBlocked';
+            const txt = t(taxBlockedKey);
+            return txt === taxBlockedKey ? t('trading.alreadyClosed', { time: '--:--' }) : txt;
+    }
 
         const currentDayIndex = this.getCurrentDayIndex();
         const currentDayName = WeatherSystem.getWeekday(); // nome traduzido para exibição

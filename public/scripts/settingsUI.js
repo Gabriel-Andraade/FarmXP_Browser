@@ -897,10 +897,13 @@ if (typeof document !== 'undefined') {
   }
 }
 
+export { openKeybindsModal };
+
 export default {
   initSettingsUI,
   translateDOM,
   getKeybinds,
   setKeybinds,
   resetKeybinds,
+  openKeybindsModal,
 };

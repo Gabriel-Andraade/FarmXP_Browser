@@ -57,10 +57,10 @@ export class HouseSystem {
     }
 
     checkPlayerProximity() {
-        // fix: Using getObject instead of fallback pattern for consistency (L374)
         const currentPlayer = getObject('currentPlayer');
         if (!this.houseInteractionHitbox || !currentPlayer) {
             this.isPlayerNearDoor = false;
+            this.hideDoorHint();
             return;
         }
 
@@ -71,15 +71,27 @@ export class HouseSystem {
             currentPlayer.height
         );
 
-        const wasPlayerNear = this.isPlayerNearDoor;
+        const wasNear = this.isPlayerNearDoor;
         this.isPlayerNearDoor = collisionSystem.checkCollision(playerHitbox, this.houseInteractionHitbox);
 
-        if (this.isPlayerNearDoor && !wasPlayerNear && !this.isMenuOpen) {
-            this.showDoorHint();
+        // Sync isMenuOpen with DOM (handles external removal by HUD closeModals etc.)
+        if (this.isMenuOpen) {
+            const modal = document.querySelector('.hse-house-modal');
+            if (!modal || !modal.classList.contains('active')) {
+                this.isMenuOpen = false;
+                if (modal) modal.remove();
+            }
         }
 
-        if (!this.isPlayerNearDoor && wasPlayerNear) {
+        // Player walked away → close menu and hint
+        if (!this.isPlayerNearDoor && wasNear) {
             this.hideDoorHint();
+            if (this.isMenuOpen) this.closeHouseMenu();
+        }
+
+        // Player is near and menu is closed → show hint
+        if (this.isPlayerNearDoor && !this.isMenuOpen && !document.getElementById('doorHint')) {
+            this.showDoorHint();
         }
     }
 
@@ -120,6 +132,26 @@ export class HouseSystem {
         this.createDoorHitbox(houseWalls);
     }
 
+    /**
+     * Re-registers the house door interaction hitbox after a map transition
+     * cleared `collisionSystem.interactionHitboxes`. Idempotent — safe to call
+     * multiple times.
+     */
+    reregisterDoorHitbox() {
+        const houseWalls = this.findHouseWalls();
+        if (!houseWalls) {
+            // House walls themselves not yet restored — try again shortly.
+            clearTimeout(this._setupRetryTimer);
+            this._setupRetryTimer = setTimeout(() => {
+                this._setupRetryTimer = null;
+                this.reregisterDoorHitbox();
+            }, 500);
+            return;
+        }
+        this.createDoorHitbox(houseWalls);
+        logger.info('[HouseSystem] House door interaction hitbox re-registered');
+    }
+
     findHouseWalls() {
         for (const [, hitbox] of collisionSystem.hitboxes) {
             if (hitbox.type === 'HOUSE_WALLS') return hitbox;
@@ -134,8 +166,8 @@ export class HouseSystem {
         this.houseInteractionHitbox = {
             id: 'house_door_interaction',
             type: 'HOUSE_DOOR',
-            x: houseWalls.x + (houseWalls.width - doorWidth) / 8 + 165,
-            y: houseWalls.y + houseWalls.height - doorHeight,
+            x: houseWalls.x + (houseWalls.width - doorWidth) / 6 + 130,
+            y: houseWalls.y + (houseWalls.height - doorHeight) / 3 + 8,
             width: doorWidth,
             height: doorHeight,
             originalType: 'house'
@@ -153,8 +185,13 @@ export class HouseSystem {
             if (e.key === 'Escape' && (this.isMenuOpen || document.querySelector('.storage-modal'))) {
                 if (document.querySelector('.storage-modal')) this.closeStorageModal();
                 else this.closeHouseMenu();
-            } else if ((e.key === 'e' || e.key === 'E') && this.isPlayerNearDoor && !this.isMenuOpen) {
-                this.openHouseMenu();
+            } else if (!e.repeat && (e.key === 'e' || e.key === 'E') && this.isPlayerNearDoor) {
+                // Toggle: open/close like inventory (ignora key-repeat senão abre/fecha ao segurar)
+                if (this.isMenuOpen) {
+                    this.closeHouseMenu();
+                } else {
+                    this.openHouseMenu();
+                }
             }
         };
         document.addEventListener('keydown', this._onKeyDown);
@@ -190,7 +227,6 @@ export class HouseSystem {
     }
 
     openHouseMenu() {
-        if (this.isMenuOpen) return;
         this.isMenuOpen = true;
         this.hideDoorHint();
         this.createHouseMenu();
@@ -198,7 +234,9 @@ export class HouseSystem {
 
     // fix: innerHTML → DOM API
     createHouseMenu() {
-        this.closeHouseMenu();
+        // Remove old modal if any (without resetting isMenuOpen)
+        const oldModal = document.querySelector('.hse-house-modal');
+        if (oldModal) oldModal.remove();
 
         const modal = document.createElement('div');
         modal.className = 'modal hse-house-modal active';
@@ -225,6 +263,16 @@ export class HouseSystem {
             { action: 'save', text: `💾 ${t('house.saveGame')}` },
             { action: 'load', text: `📂 ${t('house.loadGame')}` },
         ];
+
+        // Show tax payment button if tax is pending
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu && bartolomeu.isTaxPending && bartolomeu.isTaxPending()) {
+            const taxAmount = bartolomeu.calculateTax();
+            actions.push({
+                action: 'payTax',
+                text: `📜 ${t('npc.bartolomeu.tax.noteTitle')} — ${taxAmount} 🪙`,
+            });
+        }
         for (const act of actions) {
             const btn = document.createElement('button');
             btn.className = 'hse-house-option';
@@ -285,6 +333,14 @@ export class HouseSystem {
             case 'load':
                 this.openLoadMenu();
                 break;
+            case 'payTax': {
+                const bart = getSystem('npcBartolomeu');
+                if (bart && bart.payTax) {
+                    bart.payTax();
+                    this.closeHouseMenu();
+                }
+                break;
+            }
         }
     }
 

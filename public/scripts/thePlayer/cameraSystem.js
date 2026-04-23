@@ -28,12 +28,16 @@ export const camera = {
     height: ZOOMED_VIEWPORT_HEIGHT,
     zoom: CAMERA_ZOOM,
     
+    /** Dynamic map bounds — overridden by mapManager on transition */
+    _mapWidth: WORLD_WIDTH,
+    _mapHeight: WORLD_HEIGHT,
+
     follow(target) {
         this.x = target.x - this.width / 2 + target.width / 2;
         this.y = target.y - this.height / 2 + target.height / 2;
-        
-        this.x = Math.max(0, Math.min(WORLD_WIDTH - this.width, this.x));
-        this.y = Math.max(0, Math.min(WORLD_HEIGHT - this.height, this.y));
+
+        this.x = Math.max(0, Math.min(this._mapWidth - this.width, this.x));
+        this.y = Math.max(0, Math.min(this._mapHeight - this.height, this.y));
     },
     
     worldToScreen(x, y) {

@@ -35,7 +35,13 @@ function getKeyForAction(action) {
  * @param {string} fallbackName - Nome padrão se tradução não existir
  * @returns {string} Nome traduzido
  */
-
+function getItemName(itemId, fallbackName = '') {
+    const translatedName = t(`itemNames.${itemId}`);
+    if (translatedName === `itemNames.${itemId}`) {
+        return fallbackName;
+    }
+    return translatedName || fallbackName;
+}
 
 export class PlayerHUD {
     constructor() {
@@ -73,6 +79,20 @@ export class PlayerHUD {
             this.onPlayerReady(e.detail.player, e.detail.character);
         };
         document.addEventListener('playerReady', this._onPlayerReady);
+
+        // XP / Level — store handlers para remoção correta em destroy()
+        this._onXpGained = (e) => this.updateXPDisplay(e.detail);
+        document.addEventListener('xpGained', this._onXpGained);
+
+        this._onLevelUp = (e) => this.updateXPDisplay({
+            level: e.detail.level,
+            xp: e.detail.carryXp,
+            xpToNext: e.detail.xpToNext,
+        });
+        document.addEventListener('levelUp', this._onLevelUp);
+
+        this._onXpRestored = (e) => this.updateXPDisplay(e.detail);
+        document.addEventListener('xpRestored', this._onXpRestored);
 
         // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
         this._onLanguageChanged = () => {
@@ -150,6 +170,7 @@ export class PlayerHUD {
             { id: 'settingsBtn', tooltip: t('hud.settingsTooltip', { key: getKeyForAction('config') }), icon: '⚙️' },
             { id: 'inventoryBtn', tooltip: t('hud.inventoryTooltip', { key: getKeyForAction('inventory') }), icon: '🎒' },
             { id: 'commerceBtn', tooltip: t('hud.commerceTooltip', { key: getKeyForAction('merchants') }), icon: '🛒' },
+            { id: 'questsBtn', tooltip: t('quests.hud.tooltip'), icon: '📋' },
             { id: 'helpBtn', tooltip: t('hud.helpTooltip', { key: getKeyForAction('help') }), icon: '❓' },
         ];
         for (const b of buttons) {
@@ -254,6 +275,16 @@ export class PlayerHUD {
             merchantsList?.classList?.add('active');
         });
 
+        // Botão Quests/Missões
+        document.getElementById('questsBtn')?.addEventListener('click', async () => {
+            try {
+                const { toggleQuestPanel } = await import('../questSystem.js');
+                toggleQuestPanel();
+            } catch (e) {
+                logger.warn('Quest system não disponível', e);
+            }
+        });
+
         // fix: Botão Ajuda sempre rebind após recriar HUD
         const helpBtns = document.querySelectorAll('#helpBtn');
         const helpBtn = helpBtns[helpBtns.length - 1];
@@ -315,8 +346,13 @@ export class PlayerHUD {
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;
 
         this.setHUDValue('hudPlayerName', this.currentPlayer.name || t('player.noCharacter'));
-        this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
-        this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
+
+        const xp = getSystem('xp');
+        const lvl = xp?.getLevel?.() ?? 1;
+        const curXp = xp?.getXP?.() ?? 0;
+        const xpMax = xp?.getXPToNext?.() ?? 100;
+        this.setHUDValue('hudPlayerLevel', String(lvl));
+        this.setHUDValue('hudPlayerXP', `${curXp}/${xpMax}`);
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
@@ -331,6 +367,20 @@ export class PlayerHUD {
     setHUDValue(id, value) {
         const el = document.getElementById(id);
         if (el) el.textContent = value;
+    }
+
+    /**
+     * Atualiza o display de XP/Level via eventos do xpSystem.
+     * @param {{level?:number, xp?:number, xpToNext?:number}} detail
+     */
+    updateXPDisplay(detail) {
+        if (!detail) return;
+        const xp = getSystem('xp');
+        const lvl = detail.level ?? xp?.getLevel?.() ?? 1;
+        const cur = detail.xp ?? xp?.getXP?.() ?? 0;
+        const max = detail.xpToNext ?? xp?.getXPToNext?.() ?? 100;
+        this.setHUDValue('hudPlayerLevel', String(lvl));
+        this.setHUDValue('hudPlayerXP', `${cur}/${max}`);
     }
 
     updateEquippedItem(item) {
@@ -367,6 +417,9 @@ export class PlayerHUD {
         document.removeEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
         document.removeEventListener('characterSelected', this._onCharacterSelected);
         document.removeEventListener('playerReady', this._onPlayerReady);
+        document.removeEventListener('xpGained', this._onXpGained);
+        document.removeEventListener('levelUp', this._onLevelUp);
+        document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);

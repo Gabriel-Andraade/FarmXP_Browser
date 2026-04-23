@@ -16,6 +16,173 @@ const MAX_SLOTS = 3;
 const SAVE_VERSION = 1;
 const AUTO_SAVE_INTERVAL_MS = 60000;
 
+// ─── Data version & migrations ─────────────────────────────────────────────
+// SAVE_DATA_VERSION tracks the game data schema. Every time we add new fields,
+// rename IDs, remove systems, etc., bump this number and add a migration.
+// Migrations run sequentially: save v1 → v2 → v3 → ... → current.
+//
+// HOW TO ADD A MIGRATION:
+//   1. Bump SAVE_DATA_VERSION
+//   2. Add an entry to MIGRATIONS with the new version as key
+//   3. The function receives the save's `data` object and mutates it in place
+//   4. For item/entity ID remaps, use the helper `remapIds()`
+
+const SAVE_DATA_VERSION = 5;
+
+/**
+ * Migration functions keyed by target version.
+ * Each receives the save `data` object and mutates it.
+ */
+const MIGRATIONS = {
+    // v1 → v2: Add NPC quest states for Bru/Juan, ensure animals array exists
+    2: (data) => {
+        // Ensure gameFlags exists
+        if (!data.gameFlags) data.gameFlags = {};
+
+        // Add Bru dialogue state
+        if (!data.gameFlags.bru_quest) {
+            data.gameFlags.bru_quest = { dialogue: 'idle' };
+        }
+
+        // Ensure world has animals array
+        if (data.world && !data.world.animals) {
+            data.world.animals = [];
+        }
+
+        logger.info('[Migration v2] Added bru_quest, ensured animals array');
+    },
+
+    // v2 → v3: Add John family dialogue state
+    3: (data) => {
+        if (!data.gameFlags) data.gameFlags = {};
+
+        if (!data.gameFlags.john_quest) {
+            data.gameFlags.john_quest = { dialogue: 'idle' };
+        }
+
+        logger.info('[Migration v3] Added john_quest');
+    },
+
+    // v3 → v4: Add John milk quest + Lucas secret quest states
+    4: (data) => {
+        if (!data.gameFlags) data.gameFlags = {};
+
+        if (!data.gameFlags.john_quest) {
+            data.gameFlags.john_quest = { dialogue: 'idle', milkQuest: 'idle' };
+        } else if (!data.gameFlags.john_quest.milkQuest) {
+            data.gameFlags.john_quest.milkQuest = 'idle';
+        }
+
+        if (!data.gameFlags.lucas_quest) {
+            data.gameFlags.lucas_quest = { secretQuest: 'idle' };
+        }
+
+        logger.info('[Migration v4] Added john milk quest + lucas secret quest');
+    },
+
+    // v4 → v5: Add Molly dialogue state
+    5: (data) => {
+        if (!data.gameFlags) data.gameFlags = {};
+
+        if (!data.gameFlags.molly_quest) {
+            data.gameFlags.molly_quest = { dialogue: 'idle' };
+        }
+
+        logger.info('[Migration v5] Added molly_quest');
+    },
+};
+
+/**
+ * Runs all pending migrations on a save's data object.
+ * Mutates `data` in place and returns it.
+ *
+ * @param {Object} data - The save's `.data` object
+ * @returns {Object} The migrated data
+ */
+function migrateSaveData(data) {
+    if (!data) return data;
+
+    const fromVersion = data._dataVersion || 1;
+    if (fromVersion >= SAVE_DATA_VERSION) return data;
+
+    logger.info(`[SaveSystem] Migrating save from data v${fromVersion} → v${SAVE_DATA_VERSION}`);
+
+    for (let v = fromVersion + 1; v <= SAVE_DATA_VERSION; v++) {
+        if (MIGRATIONS[v]) {
+            try {
+                MIGRATIONS[v](data);
+                logger.info(`[SaveSystem] Migration v${v} applied`);
+            } catch (err) {
+                logger.error(`[SaveSystem] Migration v${v} failed:`, err);
+            }
+        }
+    }
+
+    data._dataVersion = SAVE_DATA_VERSION;
+    return data;
+}
+
+/**
+ * Remaps entity IDs across the entire save data.
+ * Useful when items, buildings, or animals change their numeric ID between versions.
+ *
+ * @param {Object} data - The save's `.data` object
+ * @param {Object} maps - Remap tables keyed by category
+ * @param {Object} [maps.items]     - { oldId: newId, ... } for inventory items
+ * @param {Object} [maps.buildings] - { oldType: newType, ... } for placed buildings
+ * @param {Object} [maps.animals]   - { oldType: newType, ... } for animals
+ */
+function remapIds(data, maps) {
+    if (!maps || !data) return;
+
+    // Remap inventory item IDs
+    if (maps.items && data.inventory?.categories) {
+        const itemMap = maps.items;
+        for (const cat of Object.values(data.inventory.categories)) {
+            if (!Array.isArray(cat)) continue;
+            for (const item of cat) {
+                if (itemMap[item.id] !== undefined) {
+                    logger.info(`[Remap] Item ${item.id} → ${itemMap[item.id]}`);
+                    item.id = itemMap[item.id];
+                }
+            }
+        }
+        // Remap equipped item
+        if (data.inventory.equipped) {
+            const eqId = data.inventory.equipped?.id ?? data.inventory.equipped;
+            if (itemMap[eqId] !== undefined) {
+                if (typeof data.inventory.equipped === 'object') {
+                    data.inventory.equipped.id = itemMap[eqId];
+                } else {
+                    data.inventory.equipped = itemMap[eqId];
+                }
+            }
+        }
+    }
+
+    // Remap building types in world
+    if (maps.buildings && data.world?.placedBuildings) {
+        const bldMap = maps.buildings;
+        for (const b of data.world.placedBuildings) {
+            if (bldMap[b.type] !== undefined) {
+                logger.info(`[Remap] Building ${b.type} → ${bldMap[b.type]}`);
+                b.type = bldMap[b.type];
+            }
+        }
+    }
+
+    // Remap animal types in world
+    if (maps.animals && data.world?.animals) {
+        const aniMap = maps.animals;
+        for (const a of data.world.animals) {
+            if (aniMap[a.type] !== undefined) {
+                logger.info(`[Remap] Animal ${a.type} → ${aniMap[a.type]}`);
+                a.type = aniMap[a.type];
+            }
+        }
+    }
+}
+
 /**
  * Formata milissegundos para HH:MM:SS
  * @param {number} ms - Tempo em milissegundos
@@ -328,6 +495,13 @@ class SaveSystem {
                 return null;
             }
 
+            // Run migrations on old saves
+            if (slot.data) {
+                slot.data = migrateSaveData(slot.data);
+                // Persist migrated data so we don't re-migrate next time
+                this._writeRoot(root);
+            }
+
             // Selecionar como ativo
             this.selectActiveSlot(slotIndex);
 
@@ -351,46 +525,91 @@ class SaveSystem {
             return;
         }
 
+        // Ensure migrations are applied (defensive — loadSlot already does this)
+        saveData.data = migrateSaveData(saveData.data);
+
         const data = saveData.data;
 
-        // Aplicar dados do jogador (async - pode trocar de personagem)
-        if (data.player) {
-            await this._applyPlayerData(data.player);
-        }
+        // Silenciar o tracker de conquistas durante toda a restauração
+        // para que eventos disparados pelos passos seguintes
+        // (worldObjectAdded, moneyChanged, inventoryUpdated, etc.)
+        // não incrementem/re-disparem conquistas indevidamente.
+        const tracker = getSystem('achievements');
+        if (tracker) tracker.mute();
 
-        // Aplicar inventário
-        if (data.inventory) {
-            this._applyInventoryData(data.inventory);
-        }
-
-        // Aplicar dinheiro
-        if (data.currency) {
-            this._applyCurrencyData(data.currency);
-        }
-
-
-
-        // Aplicar mundo (buildings, wells)
-        if (data.world) {
-            this._applyWorldData(data.world);
-        }
-
-        // Aplicar baús
-        if (data.chests) {
-            this._applyChestsData(data.chests);
-        }
-
-        // Aplicar clima/tempo
-        if (data.weather) {
-            this._applyWeatherData(data.weather);
-        }
-
-        // Aplicar exploração do minimap
-        if (data.minimap?.exploration) {
-            const minimap = getSystem('minimap');
-            if (minimap && minimap.importExploration) {
-                await minimap.importExploration(data.minimap.exploration);
+        try {
+            // Restaurar conquistas — merge com global (conquistas persistem entre saves)
+            if (tracker) {
+                tracker.mergeWithGlobal(data.achievements || null);
             }
+
+            // Aplicar dados do jogador (async - pode trocar de personagem)
+            if (data.player) {
+                await this._applyPlayerData(data.player);
+            }
+
+            // Aplicar inventário
+            if (data.inventory) {
+                this._applyInventoryData(data.inventory);
+            }
+
+            // Aplicar dinheiro
+            if (data.currency) {
+                this._applyCurrencyData(data.currency);
+            }
+
+            // Aplicar mundo (buildings, wells) ANTES do restoreMap: o map manager
+            // snapshota o live-theWorld em savedFarmState ao entrar em city; se
+            // restoreMap rodasse antes, snapshot seria tirado do mundo ainda vazio
+            // e o save de city perderia a farm ao voltar.
+            if (data.world) {
+                this._applyWorldData(data.world);
+            }
+
+            // Agora sim restaura o mapa (city snapshota a farm correta acima).
+            if (data.currentMap && data.currentMap !== 'farm') {
+                const mapMgr = getSystem('mapManager');
+                if (mapMgr && mapMgr.restoreMap) {
+                    await mapMgr.restoreMap(data.currentMap);
+                }
+            }
+
+            // Aplicar baús
+            if (data.chests) {
+                this._applyChestsData(data.chests);
+            }
+
+            // Aplicar clima/tempo
+            if (data.weather) {
+                this._applyWeatherData(data.weather);
+            }
+
+            // Aplicar flags do jogo (pickup_repaired, etc.)
+            if (data.gameFlags) {
+                this._applyGameFlags(data.gameFlags);
+            }
+
+            // Aplicar XP/Level (emite `xpRestored` → HUD reage).
+            if (data.xp) {
+                const xp = getSystem('xp');
+                if (xp?.setState) xp.setState(data.xp);
+            } else {
+                // Save antigo sem XP: reseta pro padrão pra não herdar do slot anterior.
+                const xp = getSystem('xp');
+                if (xp?.reset) xp.reset();
+            }
+
+            // Aplicar exploração do minimap (agora vive no top-level do save)
+            const minimapData = data.minimap ?? data.gameFlags?.minimap ?? null;
+            if (minimapData?.exploration) {
+                const minimap = getSystem('minimap');
+                if (minimap && minimap.importExploration) {
+                    await minimap.importExploration(minimapData.exploration);
+                }
+            }
+        } finally {
+            // Tem que correr mesmo em erro — se não, conquistas ficam mudas até o fim da sessão.
+            if (tracker) tracker.unmute();
         }
 
         logger.info('✅ Save data applied');
@@ -443,6 +662,14 @@ class SaveSystem {
 
         logger.info(`🗑️ Slot ${slotIndex} deleted`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'delete' });
+
+        // Se todos os slots estão vazios, limpa conquistas globais
+        const allEmpty = root.slots.every(s => s === null);
+        if (allEmpty) {
+            const tracker = getSystem('achievements');
+            if (tracker && tracker.clearGlobal) tracker.clearGlobal();
+            logger.info('All saves deleted — global achievements cleared');
+        }
 
         return true;
     }
@@ -527,15 +754,57 @@ class SaveSystem {
      * @returns {Object} Dados serializados do jogo
      */
     _gatherGameData() {
+        const mapMgr = getSystem('mapManager');
+        const xp = getSystem('xp');
+        // Quando o jogador está na city, theWorld já foi limpo pelo mapManager;
+        // a farm vive só em `savedFarmState`. Sem esse fallback o save perde
+        // toda a farm (árvores/animais/construções).
+        const inCity = mapMgr?.getCurrentMapId?.() === 'city';
+        const savedFarm = inCity && mapMgr?.getSavedFarmState ? mapMgr.getSavedFarmState() : null;
         return {
+            _dataVersion: SAVE_DATA_VERSION,
             player: this._getPlayerData(),
             inventory: this._getInventoryData(),
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
-            world: this._getWorldData(),
+            world: savedFarm ?? this._getWorldData(),
             chests: this._getChestsData(),
-            minimap: this._getMinimapData()
+            achievements: this._getAchievementsData(),
+            gameFlags: this._getGameFlags(),
+            minimap: this._getMinimapData(),
+            xp: xp?.getState ? xp.getState() : null,
+            currentMap: mapMgr ? mapMgr.getCurrentMapId() : 'farm'
         };
+    }
+
+    _getGameFlags() {
+        const questSys = getSystem('quests');
+        const bartolomeu = getSystem('npcBartolomeu');
+        const milly = getSystem('npcMilly');
+        const bru = getSystem('npcBru');
+        const john = getSystem('npcJohn');
+        const lucas = getSystem('npcLucas');
+        const isabela = getSystem('npcIsabela');
+        const molly = getSystem('npcMolly');
+        const tutorials = getSystem('tutorialQuests');
+        return {
+            pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
+            battery: questSys ? questSys.getBatteryState() : null,
+            bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
+            milly_quest: milly ? milly.getQuestState() : 'idle',
+            bru_quest: bru ? bru.getQuestState() : { dialogue: 'idle' },
+            john_quest: john ? john.getQuestState() : { dialogue: 'idle', milkQuest: 'idle' },
+            lucas_quest: lucas ? lucas.getQuestState() : { secretQuest: 'idle' },
+            isabela_quest: isabela ? isabela.getQuestState() : { hasNoticed: false },
+            molly_quest: molly ? molly.getQuestState() : { dialogue: 'idle' },
+            tutorial_quests: tutorials ? tutorials.getQuestState() : null,
+        };
+    }
+
+    _getAchievementsData() {
+        const tracker = getSystem('achievements');
+        if (!tracker) return null;
+        return tracker.getProgress();
     }
 
     /**
@@ -871,6 +1140,62 @@ class SaveSystem {
         }
         
         logger.info(`[SaveSystem] ${Object.keys(data).length} chests restored`);
+    }
+
+    /**
+     * Aplica dados de conquistas
+     */
+    _applyAchievementsData(data) {
+        const tracker = getSystem('achievements');
+        if (!tracker || !data) return;
+        tracker.loadProgress(data);
+        logger.info('[SaveSystem] Achievements progress restored');
+    }
+
+    _applyGameFlags(flags) {
+        if (!flags) return;
+        const questSys = getSystem('quests');
+        if (questSys) {
+            if (flags.pickup_repaired) {
+                questSys.setQuestStatus('fix_pickup', 'completed');
+            }
+            if (flags.battery) {
+                questSys.setBatteryState(flags.battery);
+            }
+        }
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu && flags.bartolomeu_quest) {
+            bartolomeu.setQuestState(flags.bartolomeu_quest);
+        }
+        const milly = getSystem('npcMilly');
+        if (milly && flags.milly_quest) {
+            milly.setQuestState(flags.milly_quest);
+        }
+        const bru = getSystem('npcBru');
+        if (bru && flags.bru_quest) {
+            bru.setQuestState(flags.bru_quest);
+        }
+        const john = getSystem('npcJohn');
+        if (john && flags.john_quest) {
+            john.setQuestState(flags.john_quest);
+        }
+        const lucas = getSystem('npcLucas');
+        if (lucas && flags.lucas_quest) {
+            lucas.setQuestState(flags.lucas_quest);
+        }
+        const isabela = getSystem('npcIsabela');
+        if (isabela && flags.isabela_quest) {
+            isabela.setQuestState(flags.isabela_quest);
+        }
+        const molly = getSystem('npcMolly');
+        if (molly && flags.molly_quest) {
+            molly.setQuestState(flags.molly_quest);
+        }
+        const tutorials = getSystem('tutorialQuests');
+        if (tutorials && flags.tutorial_quests) {
+            tutorials.setQuestState(flags.tutorial_quests);
+        }
+        logger.info('[SaveSystem] Game flags restored');
     }
 
     /**

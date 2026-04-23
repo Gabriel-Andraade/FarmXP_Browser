@@ -12,13 +12,126 @@
  * const hungerLabel = ptBR.player.hunger; // 'Fome'
  */
 export default {
-  // Main Menu
+  // Achievements
+  achievements: {
+    title: 'Conquistas',
+    unlocked: 'Conquista Desbloqueada!',
+    locked: 'Bloqueada',
+    hidden: '???',
+    progress: '{current}/{target}',
+    category: {
+      all: 'Todas',
+      farming: 'Fazenda',
+      animals: 'Animais',
+      economy: 'Economia',
+      exploration: 'Exploração',
+      survival: 'Sobrevivência',
+    },
+    firstSteps:    { title: 'Primeiros Passos',     description: 'Comece sua aventura na fazenda' },
+    nightOwl:      { title: 'Coruja Noturna',        description: 'Fique acordado até as 22h' },
+    firstTree:     { title: 'Madeira!',              description: 'Derrube sua primeira árvore' },
+    lumberjack:    { title: 'Lenhador',              description: 'Derrube 50 árvores' },
+    stoneBreaker:  { title: 'Quebra-Pedras',         description: 'Quebre 25 pedras' },
+    firstBuild:    { title: 'Construtor',            description: 'Construa sua primeira estrutura' },
+    animalFriend:  { title: 'Amigo dos Animais',     description: 'Acaricie um animal pela primeira vez' },
+    rancher:       { title: 'Fazendeiro',            description: 'Alimente animais 20 vezes' },
+    firstCoin:     { title: 'Primeira Moeda',        description: 'Ganhe dinheiro pela primeira vez' },
+    wealthyFarmer: { title: 'Fazendeiro Rico',       description: 'Tenha $5.000 de uma vez' },
+    bigSpender:    { title: 'Gastão',                description: 'Gaste um total de $10.000' },
+    hoarder:       { title: 'Acumulador',            description: 'Possua 50 itens únicos' },
+    earlyBird:     { title: 'Madrugador',            description: 'Complete sua primeira noite de sono' },
+    closeCall:     { title: 'Por um Fio',            description: 'Deixe uma necessidade chegar ao nível crítico' },
+    survivor7:     { title: 'Sobrevivente',          description: 'Sobreviva 7 dias na fazenda' },
+    // ── 40 conquistas adicionais ──
+    treeHugger:       { title: 'Abraça-Árvore',        description: 'Derrube 100 árvores' },
+    deforestation:    { title: 'Desmatamento',         description: 'Derrube 250 árvores' },
+    rockSolid:        { title: 'Rocha Sólida',         description: 'Quebre 100 pedras' },
+    quarryMaster:     { title: 'Mestre Pedreiro',      description: 'Quebre 250 pedras' },
+    masterBuilder:    { title: 'Mestre Construtor',    description: 'Construa 25 estruturas' },
+    fenceEnthusiast:  { title: 'Entusiasta de Cercas', description: 'Coloque 50 cercas' },
+    wellDigger:       { title: 'Cavador de Poço',      description: 'Coloque seu primeiro poço' },
+    firstHit:         { title: 'Primeiro Golpe',       description: 'Ataque um objeto pela primeira vez' },
+    persistentHitter: { title: 'Implacável',           description: 'Ataque objetos 500 vezes' },
+    thicketClearer:   { title: 'Limpador de Mato',     description: 'Limpe 10 arbustos' },
+    petLover:         { title: 'Amante de Pets',       description: 'Acaricie animais 50 vezes' },
+    animalWhisperer:  { title: 'Encantador de Animais', description: 'Acaricie animais 100 vezes' },
+    firstShear:       { title: 'Primeira Tosquia',     description: 'Tosqueie um animal pela primeira vez' },
+    firstCollect:     { title: 'Caçador de Ovos',      description: 'Colete um produto animal pela primeira vez' },
+    feedingFrenzy:    { title: 'Frenesi Alimentar',    description: 'Alimente animais 100 vezes' },
+    dedicatedCaretaker: { title: 'Cuidador Dedicado',  description: 'Interaja com animais 200 vezes' },
+    pennyPincher:     { title: 'Pão-Duro',             description: 'Tenha $1.000 de uma vez' },
+    tycoon:           { title: 'Magnata',              description: 'Tenha $25.000 de uma vez' },
+    millionaire:      { title: 'Milionário',           description: 'Tenha $100.000 de uma vez' },
+    firstPurchase:    { title: 'Primeira Compra',      description: 'Compre algo pela primeira vez' },
+    generousSpender:  { title: 'Gastador Generoso',    description: 'Gaste um total de $50.000' },
+    itemCollector10:  { title: 'Colecionador',         description: 'Possua 10 itens únicos' },
+    itemCollector25:  { title: 'Entusiasta',           description: 'Possua 25 itens únicos' },
+    discardKing:      { title: 'Faxina Geral',         description: 'Descarte 20 itens' },
+    midnightWanderer: { title: 'Andarilho da Meia-Noite', description: 'Fique acordado até a meia-noite' },
+    marathonRunner:   { title: 'Maratonista',          description: 'Ande 10.000 passos' },
+    speedWalker:      { title: 'Caminhante Veloz',     description: 'Ande 50.000 passos' },
+    worldTraveler:    { title: 'Viajante do Mundo',    description: 'Ande 200.000 passos' },
+    weekOne:          { title: 'Uma Semana',           description: 'Alcance o dia 7' },
+    monthOne:         { title: 'Um Mês',               description: 'Alcance o dia 30' },
+    stormChaser:      { title: 'Caçador de Tempestades', description: 'Presencie uma tempestade' },
+    fogWalker:        { title: 'Caminhante na Névoa',  description: 'Presencie um dia de névoa' },
+    gourmet:          { title: 'Gourmet',              description: 'Consuma 50 itens' },
+    foodie:           { title: 'Guloso',               description: 'Consuma 100 itens' },
+    firstMeal:        { title: 'Primeira Refeição',    description: 'Coma ou beba algo pela primeira vez' },
+    survivor30:       { title: 'Sobrevivente Mensal',  description: 'Sobreviva 30 dias na fazenda' },
+    veteranFarmer:    { title: 'Fazendeiro Veterano',  description: 'Sobreviva 100 dias na fazenda' },
+    ironWill:         { title: 'Vontade de Ferro',     description: 'Tenha as três necessidades em nível crítico' },
+    toolMaster:       { title: 'Mestre das Ferramentas', description: 'Equipe ferramentas 10 vezes' },
+    blizzardSurvivor: { title: 'Sobrevivente da Nevasca', description: 'Presencie uma nevasca' },
+  },
+
+  // Main Menu (legacy keys)
   menu: {
     play: 'Jogar',
     continue: 'Continuar',
     newGame: 'Novo Jogo',
     settings: 'Configurações',
     quit: 'Sair',
+  },
+
+  // Gallery
+  gallery: {
+    title: 'Galeria',
+    newReward: 'Nova imagem enviada para a Galeria!',
+    imageNotCreated: 'Imagem ainda n\u00e3o criada!',
+    rewardSentToGallery: 'Esta recompensa foi enviada para sua Galeria!',
+    noUnlockedImages: 'Nenhuma imagem desbloqueada ainda. Complete conquistas para ganhar recompensas!',
+    photosEmpty: 'Nenhuma foto ainda.',
+    notesEmpty: 'Nenhuma nota ainda.',
+    screenshotsEmpty: 'Nenhuma captura de tela ainda.',
+    tabs: {
+      unlockedImages: 'Imagens Desbloqueadas',
+      characters: 'Personagens',
+      photos: 'Fotos',
+      notes: 'Notas',
+      screenshots: 'Capturas de Tela',
+    },
+  },
+
+  // Main Menu Screen
+  mainMenu: {
+    subtitle: 'menu principal',
+    play: 'Jogar',
+    settings: 'Configurações',
+    gallery: 'Galeria',
+    achievements: 'Conquistas',
+    credits: 'Créditos',
+    feedback: 'Feedback',
+    quit: 'Sair',
+    newGame: 'Novo Jogo',
+    loadGame: 'Carregar Jogo',
+    back: 'Voltar',
+    comingSoon: 'Em breve',
+    galleryComingSoon: 'Sistema de galeria em breve!',
+    achievementsComingSoon: 'Sistema de conquistas em breve!',
+    feedbackComingSoon: 'Sistema de feedback em breve!',
+    creditsText: 'FarmingXP \u2014 Feito por Gabriel Andrade :D\n\nAgradecimentos especiais a todos os apoiadores e jogadores incríveis que tornam este projeto possível!',
+    quitMessage: 'Obrigado por jogar FarmingXP!',
   },
 
   // Categories (used across multiple systems)
@@ -31,6 +144,7 @@ export default {
     food: 'Comida',
     resources: 'Recursos',
     animals: 'Animais',
+    resource: 'Recurso',
   },
 
   // Inventory System
@@ -63,13 +177,16 @@ export default {
   // Player HUD
   player: {
     noCharacter: 'Sem personagem',
-    level: 'Level',
+    level: 'Nível',
     xp: 'XP',
     hunger: 'Fome',
     thirst: 'Sede',
     energy: 'Energia',
     money: 'Dinheiro',
-    health: 'Saúde'
+    health: 'Saúde',
+    xpGain: '+{amount} XP',
+    levelUp: 'Nível {level}!',
+    levelUpSub: 'Você subiu de nível!',
   },
 
   // Trading/Merchant System
@@ -258,7 +375,9 @@ export default {
     76: 'Haste de Madeira',
     43: 'Cerca de Madeira',
     49: 'Tecido de Lã',
-    93: 'Poço de Água'
+    93: 'Poço de Água',
+    94: 'Bateria',
+    100: 'Contrato Municipal'
   },
 
   // Recipe names by ID - para tradução dinâmica
@@ -421,6 +540,9 @@ export default {
 
   // Animals
   animals: {
+    bull: 'Touro',
+    calf: 'Bezerro',
+    chick: 'Pintinho',
     chicken: 'Galinha',
     cow: 'Vaca',
     pig: 'Porco',
@@ -439,13 +561,37 @@ export default {
     actions: {
       pet: 'Acariciar',
       guide: 'Guiar',
+      unguide: 'Parar de Guiar',
       feed: 'Alimentar',
       close: 'Fechar'
     },
     stats: {
       hunger: 'Fome',
       thirst: 'Sede',
-      morale: 'Moral'
+      morale: 'Moral',
+      mood: 'Humor'
+    },
+    mood: {
+      sleeping: 'Dormindo',
+      hurt: 'Machucado',
+      suspicious: 'Desconfiado',
+      angry: 'Irritado',
+      sad: 'Triste',
+      hungry: 'Faminto',
+      needy: 'Carente',
+      calm: 'Calmo'
+    },
+    feedback: {
+      pet_ok: 'Gostou do carinho!',
+      gained_trust: 'Ganhou confiança!',
+      sleeping: 'Está dormindo... Zzz',
+      suspicious_flee: 'Se afastou, desconfiado...',
+      angry: 'Muito irritado para carinho!',
+      max_pets: 'Já recebeu carinho suficiente hoje.',
+      fed: 'Se alimentou!',
+      no_food: 'Sem ração no inventário!',
+      suspicious: 'Desconfiado demais para comer...',
+      no_inventory: 'Inventário indisponível.'
     },
     type: {
       unknown: 'Desconhecido'
@@ -722,12 +868,746 @@ export default {
     wellError: 'erro ao colocar poço',
     wellLoading: 'sistema de poços carregando...',
     placed: 'colocado! ({remaining} restante)',
-    placeError: 'erro ao colocar objeto',
-    worldNotAvailable: 'erro: theWorld.addWorldObject não disponível',
-    variant: 'variante: {name}',
-    notAvailable: 'Função de construção não disponível.',
-    notAvailableAfter: 'Função de construção não disponível após carregamento.',
-    buildError: 'Erro ao entrar no modo de construção. Verifique o console.'
+  },
+
+  // Quests
+  quests: {
+    title: 'Missões',
+    noQuests: 'Nenhuma missão disponível.',
+    tabActive: 'Em andamento',
+    tabCompleted: 'Concluídas',
+    noActiveQuests: 'Nenhuma missão em andamento.',
+    noCompletedQuests: 'Nenhuma missão concluída.',
+    status: {
+      available: 'Disponível',
+      active: 'Em andamento',
+      completed: 'Concluída',
+    },
+    bartolomeu: {
+      title: 'Ajudar a Cidade',
+      description: 'Junte R$ 1.000 e entregue ao Bartolomeu para ajudar a cidade de Capa de Ganso.',
+    },
+    milly: {
+      title: 'Encontrar Madalena',
+      description: 'Encontre a gatinha Madalena que fugiu para a fazenda e devolva-a para Milly.',
+    },
+    johnMilk: {
+      title: 'Leite para a família',
+      description: 'Leve um pouco de leite fresco para o John. A Isabela tá reclamando que a geladeira tá vazia.',
+    },
+    lucasSecret: {
+      title: 'Projeto secreto do Lucas',
+      description: 'Lucas precisa de 3 parafusos e 5 madeiras para um projeto escondido do pai.',
+      progress: 'Materiais coletados:\nPregos: {screws}/{screwsNeed}\nMadeira: {wood}/{woodNeed}',
+      ready: 'Você já tem tudo que o Lucas pediu — pode entregar pra ele!',
+    },
+    tutorial: {
+      firstMeeting: {
+        title: 'Se apresentar',
+        description: 'Vá até a cidade e puxe assunto com alguém — seu avô falava bem do John.',
+      },
+      petAnimal: {
+        title: 'Carinho de gente',
+        description: 'Faça carinho em 1 animal da fazenda.',
+      },
+      nameAnimal: {
+        title: 'Batismo',
+        description: 'Dê um nome pra 1 animal da fazenda.',
+      },
+      exploreCity: {
+        title: 'Além da cerca',
+        description: 'Conheça Cabo Ganso — atravesse o portal da picape.',
+      },
+      storeItem: {
+        title: 'Arrume a casa',
+        description: 'Guarde 1 item no armazém da casa.',
+      },
+    },
+    fixPickup: {
+      title: 'Consertar a Picape',
+      description: 'A picape verde está quebrada. Encontre uma bateria no armazém para consertá-la e desbloquear a viagem para a cidade.',
+      bubbleNotRepaired: 'hmm... preciso consertar essa picape...',
+      bubbleNoBattery: 'Preciso de uma bateria para consertar... acho que vi uma no armazém.',
+      bubbleRepairing: 'Instalando a bateria na picape...',
+      bubbleRepaired: 'Picape consertada! Agora posso viajar para a cidade!',
+      batteryHint: 'Pressione E para pegar a bateria',
+      batteryPickedUp: 'Peguei a bateria! Agora preciso levá-la até a picape.',
+    },
+    hud: {
+      tooltip: 'Missões',
+    },
+    hint: 'Pressione E',
+    traveling: 'Viajando para cidade...',
+  },
+
+  // Dialogue system
+  dialogue: {
+    advanceHint: 'Clique ou pressione Espaço',
+    talkHint: 'Pressione E para falar com {name}',
+  },
+
+  // NPC Bartolomeu dialogues
+  npc: {
+    bartolomeu: {
+      sleeping: '*dormindo* ...zZzZz...',
+      playerHi: 'Ah... oi?',
+      wakeUp: {
+        stella: '*acorda* ...hã? E quem é você, guria? O que faz aqui nesse fim de mundo?',
+        ben: '*acorda* ...hã? E quem é você, pirralho? Cadê teus pais?',
+        graham: '*engole seco* Si-sim? O que deseja, senhor?',
+        default: '*acorda* ...quem é você?',
+      },
+      playerIntro: {
+        stella: 'Bom... eu me mudei recentemente para cá e estou morando na casa do meu avô... meu tio me disse que essa cidade é a mais próxima e todos o conheciam também.',
+        ben: 'Meus pais me mandaram para cá, cuidar da casa e do terreno do meu avô. E também essa cidade aqui, falaram pra mim que conheciam ele e que poderiam me ajudar qualquer coisa.',
+        graham: 'Mudei para cá, estou na antiga casa de meu avô. E me recomendaram esta cidade. E você seria... o prefeito correto? Bartolomeu.',
+        default: 'Me mudei recentemente para cá.',
+      },
+      bartolomeuIntro: {
+        graham: 'Sou sim! Prefeito daqui da Capa de Ganso! Essa pequenina cidade onde transita florestas, ranchos, fazendas e animais. Espero que seja mais do que bem-vindo! E não ande muito à noite! Pois bom... o orçamento tá curto, mesmo com doações ainda estamos sem condições para novos postes...',
+        default: 'Bom, sou Bartolomeu, prefeito daqui da Capa de Ganso! Essa pequenina cidade onde transita florestas, ranchos, fazendas e animais. Espero que seja mais do que bem-vindo! E não ande muito à noite! Pois bom... o orçamento tá curto, mesmo com doações ainda estamos sem condições para novos postes...',
+      },
+      playerReaction: {
+        stella: 'Bom... acho que posso ajudar.',
+        ben: 'Aaaah...',
+        graham: 'Baseando no valor, talvez eu possa ajudar.',
+        default: 'Entendo...',
+      },
+      gilbertLine: {
+        ben: 'Bom... seu vovô deve ter sido o... Gilbert, certo? Talvez agora as noites de Capa de Ganso se tornem dia! Pois bem. Seu avô tinha um terreno muito sólido, talvez você consiga juntar uns {money}! Relaxa, descontarei do imposto, hahahaha!',
+        stella: 'Olhando bem para você... seu avô é Gilbert, correto? Talvez agora as noites de Capa de Ganso se tornem dia! Pois bem. Seu avô tinha um terreno muito sólido, talvez você consiga juntar uns {money}! Relaxa, descontarei do imposto, hahahaha!',
+        graham: 'Hmm... seu avô deve ter sido o Gilbert, certo? Talvez agora as noites de Capa de Ganso se tornem dia! Pois bem. Seu avô tinha um terreno muito sólido, talvez você consiga juntar uns {money}! Relaxa, descontarei do imposto, hahahaha!',
+        default: 'Seu avô tinha um bom terreno. Talvez você consiga juntar {money}!',
+      },
+      merchantQuestion: 'Um terreno belíssimo, talvez umas plantações e árvores possam te dar lucro. Já conheceu nossos 3 pontas da economia?',
+      merchantYes: 'Sim, já conheço!',
+      merchantNo: 'Não, quem são?',
+      merchantKnown: 'Perfeito! Venda para eles o seu material! E aí, acumulando seu dinheiro, venha falar comigo!',
+      merchantExplain: 'Pressione U ou o botão 🛒 para abrir os mercadores! Lá você vai encontrar a Lara, o Rico e o Thomas. Você pode vender para qualquer um deles qualquer recurso e itens, mas se vender o item correto para cada um e suas profissões, talvez eles paguem melhor!',
+      playerThought: '(Ok... o prefeito não deve bater muito bem da cabeça...)',
+      questOffer: 'Ok então jovem! Aceita ajudar essa humilde cidade?',
+      questWhisper: '*sussurrando* Posso te dar desconto de até 2% nos impostos da tua terra, ein! rsrs...',
+      questAcceptQ: 'Aceitas?',
+      questAcceptOpt: 'Vou ver o que consigo.',
+      questDeclineOpt: 'Sei não... volto depois.',
+      questAccepted: 'Ok! Junte {money} e volte aqui! Se vemos por aí meu jovem!!!!',
+      questDeclined: '... então posso tirar meu cochilo no meu banco pós rolê de plymouth cuda? Até depois.',
+      // Declined revisit
+      declinedGreet: 'Olá novamente, jovem! Precisa de algo?',
+      declinedAcceptOpt: 'Bom... posso ajudar sim.',
+      declinedLeaveOpt: 'Nada demais, só dando uma volta.',
+      declinedAccepted: 'Excelente! Junte {money} e volte aqui!',
+      declinedLeave: 'Tudo bem! Aproveite a cidade então!',
+      // Quest active
+      activeGreet: 'E aí jovem! Conseguiu juntar o dinheiro?',
+      activePlayerHas: 'Sim! Tenho {money}.',
+      activeDeliverPrompt: 'Perfeito! Com {money} vamos conseguir iluminar essa cidade!',
+      activeDeliverOpt: 'Entregar {money} (será descontado do seu saldo)',
+      activeWaitOpt: 'Ainda não, volto depois.',
+      activeDelivered: 'Muito obrigado jovem! A cidade agradece! Agora sim teremos postes novos!',
+      activeDiscount: 'Descontei os 2% do imposto como prometido, hahahaha! Até mais!',
+      activeWait: 'Sem pressa! Quando estiver pronto, volte aqui!',
+      activeNotEnoughGreet: 'E aí jovem! Como vão as coisas?',
+      activeNotEnoughPlayer: 'Ainda estou juntando... tenho {money} por enquanto.',
+      activeNotEnoughBart: 'Falta um pouco ainda! Preciso de {money}. Continue vendendo seus recursos! Até mais!',
+      // Completed
+      completedGreet: 'E aí jovem! A cidade está cada vez melhor graças a você!',
+      completedPlayer: 'Que bom! Fico feliz em ajudar.',
+      completedBart: 'Continue assim! Capa de Ganso conta com você!',
+
+      // ── Quest 2: Lojas novas + Impostos ──
+      q2: {
+        // Saudação inicial
+        greet: {
+          ben: 'Olá caro jovem! como anda a fazenda ein?',
+          graham: 'Olá novamente, tem um tempo?',
+          stella: 'Moça! tudo bem?',
+        },
+        playerHi: 'Ah.. oi, sim tudo bem.',
+        bartExcited: 'Ótimo!!!!! *Bartolomeu se empolga* bo, estou com certas coisinhas que devo colocar aqui em breve! Mas antes... bom, precisaria que assinasse esse termo...',
+        playerAbout: 'Sobre...',
+        bartCutsOff: 'Alias!!! Nem sequer me disse seu nome não? Quem seria você? Uma falta grandiosa de respeito com seu prefeito querido não? Hahahaah!',
+        // Nome do player
+        nameIntro: {
+          graham: '*suspira* Graham, Graham Enderfield.',
+          ben: '*engole seco* Sou Ben, prazer Sr. prefeito.',
+          stella: 'Stella, mas sobre o que é esse contrato?',
+        },
+        bartAfterNameStella: '*pigarreia* Explicarei senhorita Stella.',
+        bartPleasure: {
+          graham: 'Prazer senhor!',
+          ben: 'Prazer jovem!',
+          stella: 'Prazer senhora!',
+        },
+        // Explicação das lojas
+        bartShops: 'Penso em abrir mais três lojinhas, fora a do centro.',
+        playerCenter: 'Mas aqui não é o centro?',
+        bartLaugh: 'O que? *Segura a risada* Bom... seguindo a rua lá de baixo você vai para o centro, aqui é só um dos cantinhos hahaahahaha!',
+
+        // Escolhas rodada 1
+        choiceContinue: 'Tá bom né... continue.',
+        choiceWhatIGet: 'E o que irei ganhar com isso?',
+        choiceWhereSign: 'Tá bom, onde assino?',
+        choiceNotToday: 'Hoje não.',
+
+        // Bartolomeu suspira (recusa)
+        bartSigh: '*suspira* Tudo bem então... estarei aqui caso mude de ideia.',
+
+        // Se escolher "continue"
+        bartExplainShops: 'Ok!! Como tenho alguns amigos próximos vendedores, como Dona Cláudia e senhor Carlos, eu penso em chamá-los para abrir a lojinha deles por aqui! Carlos tem uma padaria e Cláudia vende flores. Interessante não?',
+        shopReaction: {
+          stella: 'Pães fresquinhos... e flores... aliás, preciso enfeitar um pouco aquela casa.',
+          ben: 'Isso é bom...',
+          graham: 'E você está sem condições para pagar novamente?',
+        },
+        bartShopReply: {
+          stella: 'Sim sim senhorita!!!',
+          ben: 'Claro!! Aceita?',
+          graham: '*engole em seco, desviando o olhar para seu carro e voltando para Graham* Não é nem questão disso meu filho, ahahahha!',
+        },
+
+        // Se escolher "o que ganho"
+        bartExplainGain: 'Bom, com a padaria do Carlos e a floricultura da Cláudia, a cidade vai crescer! E posso novamente diminuir 2% dos impostos da tua terra, que tal?',
+
+        // Escolhas rodada 2
+        choice2Sign: 'Assinar.',
+        choice2WhatGain: 'Mas o que posso ganhar?',
+        choice2Refuse: '*fica pensativo*',
+
+        // Assinatura
+        bartThanks: 'Maravilha! Aqui, assine aqui nessa linha... pronto! Muito obrigado jovem! Em breve as lojinhas estarão de pé!',
+
+        // Retorno após recusa
+        declinedGreet: 'Ah, olá. O que deseja?',
+        declinedExplain: 'Me explica sobre o que é.',
+        declinedSign: 'Posso assinar.',
+        declinedVisit: 'Vim te ver.',
+        bartVisitReply: {
+          stella: 'Estarei aqui, sabe que não fugirei tão cedo.',
+          default: '*dá uma risada*',
+        },
+        stellaVisitReply: '... tá?',
+
+        // Quest ativa (após assinar)
+        activeGreet: 'Olá! As lojas estão quase prontas! Ah, e não se esqueça dos impostos ein!',
+      },
+
+      // ── Sistema de Impostos ──
+      tax: {
+        noteTitle: 'Dia de Pagamento',
+        noteDescription: 'Pague a taxa de {value} moedas. Cobrado a cada 10 dias.',
+        contractTitle: 'Contrato Municipal',
+        contractDescription: 'Termo de compromisso assinado com o prefeito Bartolomeu. Os impostos sofreram um aumento e a cada 10 dias será cobrada uma taxa para financiar a padaria e floricultura da cidade.',
+        paid: 'Imposto pago! -{value} moedas.',
+        notEnough: 'Você não tem moedas suficientes para pagar o imposto!',
+        reminder: 'Dia de pagamento! Pague a taxa de {value} moedas.',
+        payOption: 'Pagar {value} moedas.',
+        laterOption: 'Depois eu pago...',
+        thanksPaid: 'Muito bem! Obrigado pelo pagamento, jovem! A cidade agradece!',
+        warnLater: 'Hmm... não demore muito ein! Sem o imposto em dia, alguns mercadores podem não aceitar negociar contigo...',
+      },
+      // Diálogo livre — após completar quest 1 e assinar o contrato
+      free: {
+        greet: 'Alguma dúvida {name}?',
+        choicePassing: 'Não, somente passando por aqui.',
+        choiceShops: 'Que lojas irão abrir?',
+        graham: {
+          l1: 'Você parece um soldadinho, lutou em guerra?',
+          l2: 'Sim. Fui um fuzileiro naval.',
+          l3: 'Que interessante! Eu fui também do exército!',
+          l4: 'Unidade?',
+          l5: '*pensa* ...',
+          l6: 'Esqueci. *força um sorriso*',
+          l7: '*murmura*',
+        },
+        ben: {
+          l1: 'Vê se não fica até tarde na rua então.',
+          l2: 'Hmhm.',
+          l3: 'O quê? Gato comeu a língua?',
+          l4: 'Não sou alérgico a gatos.',
+          l5: '*murmura* Quantos cê tem?',
+          l6: '17 anos.',
+          l7: 'Que jovem de sorte, ganhou uma fazenda com 17 anos. Na sua idade eu tava rebocando paredes.',
+          l8: 'Quero saber como é que vou cuidar daquele matagal todo isso sim... *sorri para Bartolomeu e se vira para ir embora*',
+        },
+        stella: {
+          l1: 'Qualquer dia desses aceita dar uma voltinha? Aquela máquina é uma fera!',
+          l2: '*franze a testa*',
+          l3: 'E que carro é esse?',
+          l4: 'É um Plymouth Cuda!! Motor V8 426 Hemi! Com um belo consumo de 4 km por litro!! Esse camarada de 1972 é fenomenal!!! *levanta do banco empolgado* Gostou, bela-dama?',
+          l5: '*franze a testa, dando um sorriso fraco e fajuto* Que... legal... uau... *desvia o olhar*',
+          l6: 'Topa um rolezinho? *pisca um olho, dando um sorriso*',
+          l7: 'Não... tô ocupada, tá? Passo pra próxima, tchau tchau.',
+          l8: '*acena com um sorriso*',
+          l9: 'Que prefeito estranho... *pensa enquanto se vira para sair, suspirando*',
+        },
+        shops: {
+          l1: 'Padaria e floricultura. Em breve vai ter mais opções de alimentação. *sussurra* Bom que paramos de comer a comida da Lara! *volta a falar normal* E claro, as flores! Pra melhorar o climinha de todo mundo!',
+          l2: 'Aqui... é meio... *olha ao redor*, vazio mesmo.',
+          l3: '*pigarreia* Precisamos mesmo melhorar as coisas...',
+        },
+      },
+    },
+    milly: {
+      // Observando o player passar
+      watching: '*uma senhora está te observando da janela...*',
+      // Escolhas iniciais
+      choiceAsk: 'Oi? Tudo bem?',
+      choiceIgnore: '*ignorar*',
+      choiceStare: '*encarar de volta*',
+      // Após escolha "perguntar" ou "encarar"
+      catQuestion: 'Oi... veio pegar meus gatos?',
+      playerWhat: 'O quê?',
+      catYell: '*fala mais alto da janela* VEIO PEGAR MEUS GATOS??',
+      // Reação por personagem
+      playerReaction: {
+        stella: 'Não não! Eu juro que não!!',
+        ben: '*se assusta*',
+        graham: '*cruza os braços*',
+      },
+      millyReaction: {
+        stella: 'Hmhmh ok...',
+        ben: 'AHAHAHAHAHA levanta menino! *tosse de tanto rir*',
+        graham: 'Uau, você é bem fortinho meu filho.',
+      },
+      // Apresentação
+      millyIntro: 'Eu sou Milly. São novos moradores da Capa de Ganso? Dessa cidadezinha véia?',
+      playerMoved: 'Sim... me mudei para cá recentemente, morando na antiga casa de Gilbert.',
+      millyGilbert: 'Gilbert??? São os netinhos de Gilbert????????',
+      playerYes: 'Sim...?',
+      millySigh: 'Aah, Gilbert... *suspira*',
+      millyFarewell: 'Estou morrendo de saudades dele... espero que vocês cuidem bem da fazenda dele ein...',
+
+      // ── Quest: Madalena ──
+      q2: {
+        // Milly inicia conversa sobre Gilbert
+        gilbertMemory: {
+          stella: 'Gilbert era um homem maravilhoso... sempre trazia leite fresquinho para os meus gatos de manhã.',
+          ben: 'Gilbert era um senhor muito gentil... sempre vinha aqui de manhãzinha trazer leite pros meus gatos.',
+          graham: 'Gilbert... era um grande homem. Sempre trazia leite para os meus gatos, sem falta.',
+        },
+        playerAboutGilbert: {
+          stella: 'Ele fazia isso...? *sorri* Parece que vovô era querido por todos aqui...',
+          ben: '...é? Eu não sabia disso.',
+          graham: 'Hmm. Isso soa como algo que ele faria.',
+        },
+        millyNod: 'Sim sim... *suspira* Mas enfim, vamos falar de coisa boa!',
+
+        // Apresentação dos gatos
+        catsIntro: 'Eu tenho cinco gatos! Deixa eu te apresentar: tem o Bigodinho, a Felpuda, o Sardinha, a Princesa...',
+        catsPause: '...e a Madalena.',
+        millyWorried: '*o olhar da Milly muda*',
+        millyExplain: 'A Madalena... ela fez uma cirurgia recentemente. Mas logo depois que voltou, a danada fugiu pela janela!',
+        millyTeary: 'Estou tão preocupada... ela nem deve estar totalmente recuperada ainda...',
+
+        // Reação do player
+        playerReaction: {
+          stella: 'Ah não... coitadinha! Para onde ela foi?',
+          ben: '...fugiu? Mas ela tá machucada?',
+          graham: 'Entendo. Para que direção ela foi?',
+        },
+        millyDirection: 'Eu vi ela correr na direção da fazenda... provavelmente para os terrenos do Gilbert. Ela sempre gostou de lá...',
+
+        // Escolha de aceitar
+        choiceAccept: 'Eu vou procurar ela!',
+        choiceNotNow: 'Agora não posso...',
+
+        // Aceitar
+        millyGrateful: {
+          stella: 'Ah querida, muito obrigada!! A Madalena é uma gatinha escura, bem pequenina! Cuidado para não assustá-la!',
+          ben: 'Obrigada meu filho! A Madalena é escurinha, pequenina! Vai devagar perto dela, tá?',
+          graham: 'Muito obrigada jovem! Ela é uma gatinha escura, bem pequena. Seja gentil com ela, por favor.',
+        },
+
+        // Recusar
+        millyUnderstand: 'Tudo bem... mas se mudar de ideia, por favor... ela está sozinha lá fora...',
+
+        // Diálogo de retorno (enquanto não encontrou)
+        returnGreet: 'Conseguiu encontrar a Madalena...?',
+        returnNotYet: 'Ainda não... mas estou procurando.',
+        returnMillySad: 'Por favor... ela deve estar tão assustada...',
+
+        // Ao encontrar a Madalena na fazenda
+        foundMadalena: '*Madalena mia suavemente ao te ver...*',
+        playerFoundReaction: {
+          stella: 'Achei você! Vem cá gatinha... calma... *pega a Madalena com cuidado*',
+          ben: 'Ei... achei você... vem... *estende as mãos devagar*',
+          graham: '*se agacha lentamente* ...vem cá.',
+        },
+        catCaught: '*Madalena se aconchega nos seus braços*',
+
+        // Entregar para Milly
+        deliverGreet: 'A MADALENA!! *os olhos da Milly se enchem de lágrimas*',
+        millyJoy: 'Minha filhinha!! Ah... *abraça a Madalena* Obrigada... obrigada, obrigada!!',
+        millyReward: {
+          stella: 'Querida, muito obrigada de verdade! Tome, aceita esses trocados... não é muito, mas é de coração!',
+          ben: 'Meu filho, obrigada!! Toma aqui, um presentinho pra você! Não é muito mas...',
+          graham: 'Jovem, sou eternamente grata. Aceite isso, por favor. É o mínimo que posso fazer.',
+        },
+        playerFinish: {
+          stella: 'Não precisa! ...mas obrigada. Fico feliz que ela esteja bem!',
+          ben: 'Ah... valeu. Fico feliz que ela tá bem.',
+          graham: 'Agradeço. Cuide bem dela.',
+        },
+        millyEnd: 'Pode deixar! E venha visitar a gente quando quiser, viu? Os gatos adoraram você!',
+      },
+      // Diálogo livre — após completar a quest da Madalena
+      free: {
+        ben: {
+          l1: 'Oooi meu queridinho! Tudo bem com você? Veio ver os miaus?',
+          l2: 'Ah oi! Tô ótimo, ainda aprendendo sobre as coisas de fazenda...',
+          l3: 'Se quiser, venha comer e tomar café comigo! Posso ensinar umas coisinhas! *dá um sorriso*',
+          l4: '*abre um sorriso e dá um joia para Milly*',
+        },
+        stella: {
+          l1: 'Oi jovenzinha, tudo bem? Como vão os negócios da fazenda, ein?',
+          l2: 'Tá indo bem... ainda não sei umas coisinhas, mas... acho que tô progredindo.',
+          l3: 'Fico feliz! Mas não se esforça, tá bom? Se for algo muito braçal pode chamar os homens daqui, podem ajudar! Ah, e não esquece de vir aqui almoçar comigo!',
+          l4: '*dá um sorriso e acena como despedida*',
+        },
+        graham: {
+          l1: 'Olá moço, como vai indo a fazenda? Tá comendo direitinho lá?',
+          l2: 'Bom dia, tudo bem com a senhora? A fazenda vai bem e sim, estou comendo direito.',
+          l3: 'Fico feliz, meu filho! Depois venha almoçar comigo! Eu e os gatos vamos amar a sua companhia.',
+          l4: '*sorri* Pode deixar que eu venho.',
+        },
+      },
+    },
+
+    // ── Bru & Juan — diálogo de introdução ──
+    bruJuan: {
+      bruRant: 'AAAH! que saco!! esse aplicativo de taxi demora tanto! ninguem aceita essa porcaria de corrida!!',
+
+      choiceApproach: 'Aproximar sem fazer barulho.',
+      choiceLeave: 'Deixar quietos.',
+
+      approachStella: '*acena com a mão*',
+      approachGraham: '*pigarreia*',
+      approachBen: '*aparece de frente para Bru*',
+
+      bruWho: 'ah... *franze a testa, olhando para {name}*, quem é tu?',
+
+      introStella: 'olá... sou moradora nova, me chamo Stella e tô conhecendo a região.',
+      introGraham: 'está tudo bem? aparenta... estressada. Ah, me chamo Graham, conhecendo a região.',
+      introBen: 'oi.. t-tudo bem com o celular? *cora levemente*, ah e-e... me chamo Ben. sou novo na cidade',
+
+      bruGreetDefault: 'ah.. prazer... Sou Bru *retorna o olhar para o celular*',
+      bruTaxiFar: 'cacete!!! esse taxi tá longe! *suspira de estresse*',
+      bruGreetBen: 'tá, legal garoto, só tô esperando meu taxi *retorna a olhar para o celular*.',
+
+      playerHelp: 'quer ajuda com algo?',
+
+      bruWarning: 'Se aquele homem ali atrás pedir dinheiro, não dê é um alcoólatra ok?',
+
+      playerLooks: '*você olha para o lado e vê um homem caido no chão, com uma garrafa na mão se levantando.*',
+
+      juanIntro: 'o-opa *arrota*, sou Juan. o esposo.....',
+      bruInterrupt: 'EX... esposo, ex.',
+      juanCorrect: 'bom.... *suspira*, ex esposo da Bru, sou Juan, e quem é você?',
+
+      toJuanStella: 'Stella, prazer.. Juan',
+      toJuanBen: 'Me chamo Ben, sou novo por aqui',
+      toJuanGraham: 'Graham.',
+
+      juanLunch: 'bom... prazer é todo meu, qualquer dia podemos marcar de almoçar em casa como boas-vindas.',
+
+      bruCook: 'e se você for fazer comida então, por que eu não vou gastar meu ultimos centavos para suas coisas.',
+
+      juanIgnore: '*abre um sorriso forçado*, ignorem ela gente! ela... tá meia estressada por conta do serviço e eu sei cozinhar tá? não compro coisas feitas.... *engole seco*',
+
+      farewellStella: '*abre um pequeno sorriso, e gesticula com a cabeça concordando* bom... um prazer conhecer vocês, até depois.',
+      farewellGraham: 'Certo. Foi um prazer, bom dia para vocês.',
+
+      benLookThought: '*cruza os braços, trocando o olhar entre....*',
+      benLookBru: 'Bru...',
+      benLookJuan: 'Juan...',
+      benFarewell: 'bom... acho que vou indo, boa sorte no trabalho e... {greeting}',
+
+      greetMorning: 'bom dia',
+      greetAfternoon: 'boa tarde',
+    },
+
+    family: {
+      // ── Bolhas de interação (pré-diálogo) ──
+      lucasWave: '*acena de volta e continua no que estava fazendo*',
+      isabelaCallDad: '*olha surpresa* Paaaaai! Tem gente aqui!',
+      isabelaStillHere: '*tira o olho do celular* Ainda tá aí? Tudo bem? Paaaai!',
+      isabelaBusy: '*bufando no celular* agora não...',
+      mollySilent: '*Molly te sorri, mas está ocupada*',
+
+      // ── Abertura (Lucas e John) ──
+      lucasDoubt: 'Sei não pai... tá certo mesmo?',
+      johnHmm: 'Hm.... acho que invertemos algo.',
+      lucasSerious: 'Hm..... sério pai?',
+
+      // ── Isabela no celular ──
+      isabelaLaugh: '*ri olhando para celular*',
+      johnIsa1: 'Isa.',
+      isabelaStillLaughing: '*rindo ainda no celular*',
+      johnIsabela: 'Isabela!',
+
+      // ── Isabela nota o player ──
+      isabelaNoticeStella: 'aaai que fooi? *nota a Stella* Quem... é você?',
+      isabelaNoticeBen: 'aaai que fooi? *nota o Ben* Pai, tem um menino aqui, amigo do Lucas?',
+      isabelaNoticeGraham: 'aaai que fooi? *nota o Graham* *olha de cima a baixo* Que braço... digo... pai tem um homem aqui.',
+
+      // ── John cumprimenta ──
+      johnHello: 'Olá?',
+      playerIntro: 'Olá... sou {name}.',
+      lucasHi: 'Oie.',
+      johnLost: 'E está perdido?',
+
+      // ── Stella branch ──
+      stellaNotLost: 'Não não.. estou conhecendo o bairro, me mudei para cá faz um tempo.',
+      johnAlone: 'Sozinha?',
+      stellaGilbert: 'Sim... conheciam o senhor Gilbert? era meu avô.',
+      johnCondolencesStella: 'Meus pêsames, não consegui comparecer ao enterro Stella. Creio que está morando na casa dele?',
+      stellaYes: 'Sim, estou sim.',
+      johnIntroFamily: 'Entendo... Bom, me chamo John, John Alexander Miller, este é meu filho mais velho Lucas, *Lucas acena a mão*, aquela no celular sentada é a Isabela.',
+      isabelaWelcome: 'Bem vindo a essa cidade minúscula.',
+      johnIsa2: 'Isa.',
+      isabelaMumble: '*murmura voltando pro celular*',
+
+      // ── Graham branch ──
+      grahamNotLost: 'Não, conhecendo o bairro.',
+      johnRelative: 'Parente de alguém?',
+      grahamGilbert: 'Gilbert, o fazendeiro que faleceu semana passada.',
+      johnCondolencesGraham: 'Neto dele? Meus pêsames, não consegui comparecer.',
+      grahamMissHim: 'Já sinto falta dele. E quem são as crianças?',
+      isabelaCutIn: 'Sou Isabela, pode me chamar de Isa, o pateta ali é o Lucas.',
+      lucasPateta: 'Opa, e ela que é pateta.',
+      johnIntroAll: 'Sou John, ele é Lucas e ela é Isabela.',
+      isabelaWave: '*acena com a mão*',
+      johnMarine: 'Fuzileiro?',
+      grahamNavy: 'Sim, marinha?',
+      johnAirForce: 'Aeronáutica, batalhão?',
+      graham107: '107° batalhão.',
+      johnPilot: 'Piloto de caça.',
+      lucasCool: 'Que legal, outro do exército.',
+      johnFarewellGraham: 'Bom Graham, prazer em conhecer, o que precisar me procure ou chame minha esposa Molly.',
+      isabelaFarewellGraham: '*sorrindo* Ou eu! E bom... bem vindo a Capa de Ganso!',
+      lucasFrown: '*franze a testa para Isabela*',
+      grahamSameToYou: 'Digo o mesmo a todos. Aliás estou na fazenda do meu avô.',
+      johnGoodWalk: 'Ok, tenha um bom passeio.',
+
+      // ── Ben branch ──
+      benNotLost: 'Ah não... conhecendo o pessoal daqui do bairro.',
+      johnParents: 'E onde estão seus pais?',
+      benFarm: 'Bom... meio que cuidando da fazenda do meu avô.',
+      johnGilbert: 'Gilbert?',
+      benYes: 'Sim.',
+      johnCondolencesBen: 'Conheci o Gilbert, meus pêsames, ele fará falta aqui.',
+      isabelaFarmer: 'Então tu é o neto do fazendeiro?',
+      benBlush: '*cora* S-sim.',
+      isabelaAge: 'Cê tem oque? 15 anos?',
+      ben17: '17...',
+      lucasAge: 'Sério? Você tem a idade da minha irmã, mas parece bem novo, diferente dela.',
+      isabelaShutUp: 'Cala boca pirralho!',
+      johnNotNow: 'Isa, Lucas. Agora não.',
+      johnIntroBen: 'Bom, este é meu garoto mais velho e minha garota mais velha, Lucas e Isabela.',
+      johnFullIntroBen: 'Sou John Alexander Miller garoto, precisando de algo, não hesite em me chamar, ou chamar minha esposa Molly ok?',
+      benFarewell: 'Tá bom... eu... se precisarem de algo me avisem ok? Vou tá lá na fazenda... tchau pessoal.',
+      johnLucasWave: '*acenam com a mão*',
+      isabelaBackToPhone: '*volta para o celular*',
+
+      // ── Quest: Leite para a família ──
+      milk: {
+        greeting: 'Olá {name}. Tudo certo por aí na fazenda?',
+        replyStella: 'Tá indo, tá indo! Ainda me acostumando com tudo.',
+        replyGraham: 'Sob controle. A rotina ajuda.',
+        replyBen: 'A-ah... tá indo, mais ou menos.',
+        johnOfValue: 'Fico contente em ouvir. Seu avô era um homem de muito valor.',
+        isabelaShout: 'Paaaaaai... cadê o leite???',
+        johnNoShout: '*respira fundo* Isabela, não grita, por favor.',
+        isabelaMumble: '*murmura alto* meu deus, acabou o leite, ninguém avisa nada nessa casa...',
+        johnApology: '*baixo, para você* Peço desculpas pela cena. Molly saiu cedo e eu deveria ter passado no mercado. Acabei esquecendo.',
+        johnAskMilk: '{name}, se não for incômodo, posso te pedir um favor. Se tiver leite sobrando na sua fazenda, eu compro de você. Me pouparia uma viagem até a cidade agora.',
+        choiceAccept: 'Pode deixar, trago um pra você.',
+        choiceAskPrice: 'Quanto você paga?',
+        choiceDecline: 'Agora não vai dar, desculpa.',
+        acceptStella: 'Deixa comigo! Acho que tenho sim, já volto.',
+        acceptGraham: 'Deixa comigo. Trago agora.',
+        acceptBen: 'A-ah... acho que tenho sim. Já trago.',
+        johnThanks: 'Agradeço, de verdade. Fico te devendo essa.',
+        isabelaThanksMurmur: '*do fundo* ...obrigada, acho.',
+        askPriceStella: 'E quanto você paga, ein?',
+        askPriceGraham: 'Quanto tá pagando?',
+        askPriceBen: 'H-hmm... paga quanto?',
+        johnPrice: 'Preço justo, pode confiar. 50 moedas pelo leite. Me parece razoável, combina com você?',
+        priceOkStella: 'Combina sim, já volto.',
+        priceOkGraham: 'Fechado.',
+        priceOkBen: 'T-tá bom... já trago.',
+        declineStella: 'Aaah, agora tô meio enrolada, desculpa!',
+        declineGraham: 'Agora não dá. Fica pra outra.',
+        declineBen: 'A-ah... agora não dá, desculpa.',
+        johnDeclineReply: 'Tranquilo, fica para outro dia. Obrigado mesmo assim.',
+        isabelaDeclineMurmur: '*murmura* ótimo, que maravilha, sem leite de novo...',
+        johnSolve: '*baixo* Já resolvo, Isa.',
+        fourthWall: 'Bom, assim que o desenvolvedor adicionar o sistema completo dos animais, ok. Você retorna para que a quest seja feita.',
+        playerThought: '*pensando* ok...? ele falou com quem?',
+        askIfGot: 'Conseguiu? Me salvou, {name}.',
+        handStella: '*entrega o leite* Toma, fresquinho fresquinho.',
+        handGraham: '*estende o leite* Toma.',
+        handBen: 'T-toma. Espero que sirva.',
+        johnPerfect: 'Perfeito. Aqui está o combinado, muito obrigado.',
+        isabelaGrab: '*aparece rápido, pega o leite* valeu. *volta pro celular e some*',
+        johnShake: '*balança a cabeça* Essa menina...',
+        askStill: 'E aí, conseguiu o leite?',
+        stillStella: 'Ainda não, me dá mais um tempinho!',
+        stillGraham: 'Ainda não. Volto depois.',
+        stillBen: 'A-ainda não consegui... desculpa.',
+        johnTranquilo: 'Tranquilo, sem pressa nenhuma.',
+        questDone: 'Valeu mais uma vez pelo leite de outro dia. Qualquer coisa, sabe onde me achar.',
+      },
+
+      // ── Quest: Projeto secreto do Lucas ──
+      lucasQ: {
+        psiu: 'Psiu, {name}... chega aqui, rapidinho.',
+        reactStella: 'Oi Lucas, que foi?',
+        reactGraham: 'Fala.',
+        reactBen: 'A-aconteceu algo?',
+        secretAsk: 'É segredo, viu? Promete que não fala pro meu pai?',
+        promiseStella: 'Hmhmh, é pra namoradinha?',
+        promiseGraham: 'Nada proibido, moleque?',
+        promiseBen: 'P-prometo!',
+        lucasDeny: 'Q-que??? Não, nada disso! Nada proibido também, juro! É só um projeto meu, no fundo do quintal. Se meu pai descobrir ele vai querer ajudar e aí perde a graça, saca?',
+        askMaterials: 'Tu tem parafuso sobrando? Uns 3 dava pro gasto. E umas 5 madeiras também.',
+        choiceAccept: 'Consigo sim, já volto.',
+        choiceCurious: 'O que tu tá montando?',
+        choiceDecline: 'Agora não dá.',
+        curiousStella: 'Olha olha, o que é ein?',
+        curiousGraham: 'Por que guardar segredo?',
+        curiousBen: 'H-hmm... e o que que é?',
+        lucasSurprise: 'Ahhh é surpresa! Se der certo eu te mostro. Se não der, melhor ninguém saber que eu tentei.',
+        okStella: 'Se não for nada errado ok.',
+        okGraham: 'Tá. Mas nada de roubada, né?',
+        okBen: 'T-tá bom então.',
+        lucasSwear: 'Juro que não! É coisa boa.',
+        lucasThanks: 'Valeu demais, {name}! Tô te devendo uma.',
+        afterAcceptStella: 'E depois eu quero ver viu?',
+        afterAcceptGraham: 'Depois me conta o que é, moleque.',
+        afterAcceptBen: 'T-tá bom, já volto.',
+        declineStella: 'Agora não dá, depois a gente vê.',
+        declineGraham: 'Não tenho sobrando.',
+        declineBen: 'A-ah... agora não tenho não.',
+        lucasDeclineReply: 'Tranquilo, sem estresse. Se sobrar um dia, me avisa.',
+        askBrought: 'Trouxe mesmo? Salvou minha vida!',
+        bringStella: '*entrega* Toma aí, 3 parafusos e 5 madeiras. Agora eu QUERO ver o que é ein.',
+        bringGraham: '*coloca na mão dele* Pronto. Nada de roubada, moleque.',
+        bringBen: 'T-toma. Era isso, né?',
+        lucasJoy: 'É isso mesmo! Valeu, valeu, valeu!',
+        lucasComeBack: 'Bom, retorna aqui depois!! Te mostro tudo que já fiz!',
+        finalStella: 'Tô ansiosa pra ver!',
+        finalGraham: 'Beleza, moleque.',
+        finalBen: 'T-tá bom, volto sim.',
+        questDone: 'E aí {name}! Segue firme, depois te mostro tudo.',
+        noMaterialsStella: 'Ainda não consegui os materiais, me dá um tempo.',
+        noMaterialsGraham: 'Ainda não tenho. Volto depois.',
+        noMaterialsBen: 'A-ainda não consegui... desculpa.',
+        lucasWait: 'Tranquilo, sem pressa.',
+      },
+
+      // ── Molly (esposa do John) ──
+      molly: {
+        greet: 'Oh, olá querido(a)! Você é da família do senhor Gilbert, não é?',
+        replyStella: 'Sou sim! Stella, neta dele. Prazer.',
+        replyGraham: 'Sim, neto. Graham.',
+        replyBen: 'S-sim... eu sou o Ben, o neto dele.',
+        intro: 'Que bom te conhecer! Sou Molly, esposa do John. Se precisar de qualquer coisa, é só bater na porta de casa.',
+        farewell: 'Bom, vou continuar minha caminhada. Até qualquer hora!',
+        repeat: 'Oi de novo, {name}! Aproveita o dia.',
+      },
+    },
+
+    jeremy: {
+      tryStella: 'Oi, tudo bem? Sou nova por aqui, me chamo Stella.',
+      tryGraham: 'E aí, beleza? Me chamo Graham.',
+      tryBen: 'O-oi... meu nome é Ben. Tudo bem?',
+      stare: '*levanta o olhar do celular e encara sem expressão*',
+      ignore: '*volta a olhar o celular sem dizer nada*',
+      wave: '*acena com a mão*',
+      postReactionStella: '*o ignora*',
+      postReactionGraham: '*acena com a cabeça em resposta*',
+      postReactionBen: '*devolve o aceno*',
+    },
+
+    couple: {
+  // Abertura
+  maryTease: "para bobo!!! hoje eu tô de folga",
+  noahReply: "ué e essa roupa de escritorio?",
+  maryCosplay: "é pro cosplay! já já chega a peruca.",
+  noahJeremyLook: "aaaha, e o outro ali já vai tarde trabalhar *olha para Jeremy*",
+  jeremyTaxi: "e tenho culpa que não chega o taxi?",
+  coupleYes: "sim",
+  jeremyMurmur: "*murmura*",
+  maryNotice: "*nota {name}* oi?",
+  greetMorning: "bom dia",
+  greetAfternoon: "boa tarde",
+  noahGreet: "opa! {greeting}!",
+
+  // Escolhas iniciais
+  choiceHello: "olá.",
+  choiceCosplay: "cosplay?",
+  choiceWave: "*acenar e sair*",
+  playerWave: "*acena e sai*",
+
+  // Branch "olá"
+  coupleOpa: "opa!",
+  newHereF: "tudo bem contigo? Aparenta ser nova, como se chama?",
+  newHereM: "tudo bem contigo? Aparenta ser novo, como se chama?",
+
+  introStella: "é, sou nova mesmo, mudei pra cá para cuidar do terreno do meu avô, sou Stella.",
+  introGraham: "uhum, novo por aqui, aliás, cuidando da casa do meu avô, Graham.",
+  introBen: "é, vim pra cá recentemente ficar na casa do meu avô, me chamo Ben.",
+
+  maryGilbert: "Gilbert?",
+  playerYes: "sim.",
+  noahCondolence: "ah... é mesmo, infelizmente ele não está entre nós.",
+  maryCosplayJudge: "hmmm, agora acho que não vou ter mais um avaliador de cosplay....",
+  noahNote: "verdade... ele sempre dava uma nota",
+
+  // Branch "cosplay?" (compartilhada)
+  maryCosplayExplain: "ah sim! sou cosplayer!! tanto de animes, séries, jogos.... praticamente se tiver um evento eu vou!",
+  maryIntro: "ah e claro eu sou Mary!",
+  noahIntro: "E eu sou Noah, sou desenhista.",
+  maryPraise: "o melhor artista desse planeta! ❤️",
+  noahPraise: "claro, tenho a melhor cosplayer me amando!",
+  coupleLaugh: "*risos tímidos*",
+
+  jeremyComplainF: "dá para terem um respeito na frente da moça?",
+  jeremyComplainM: "dá para terem um respeito na frente do pirralho?",
+
+  playerTurn: "*se vira para o lado*",
+
+  playerReactionJeremyStella: "agora decidiu não me ignorar?",
+  playerReactionJeremyBen: "o-oi",
+  playerReactionJeremyGraham: "", // Graham ignora
+  playerReactionJeremyNew: "ah oi.",
+
+  jeremyIntro: "me chamo Jeremy.",
+
+  playerResponseStella: "*abre um sorriso falso, voltando a atenção para Mary & Noah*",
+  playerResponseBen: "prazer Jeremy.",
+  playerResponseGraham: "", // sem fala
+
+  noahDismiss: "liga não! ele é todo frustradinho mesmo.",
+  jeremyLawsuit: "ainda te dou um processo",
+  maryFifthTime: "essa já é a quinta vez do dia que disse que vai processa-lo.",
+  noahExplain: "Bom, esse pateta chamado de Jeremy é meu irmão gêmeo, como pode ver, Mary é minha esposa, qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+  noahInvite: "qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+  maryCook: "sim!! posso preparar algo para gente!!!",
+  noahWeCook: "a gente prepara gata!",
+  maryBlush: "*ri timidamente* para bobinho!",
+  jeremyTaxiFinal: "vem logo taxista.....",
+
+  // Diálogo livre (pós-intro)
+  freeGreet: "E aí, tudo bem? Volte sempre!",
+  jeremyWave: "*acena com a mão*",
+  postReactionStella: "*ignora*",
+  postReactionGraham: "*acena com a cabeça*",
+  postReactionBen: "*devolve o aceno*",
+},
+
   },
 
   // Painel de atalhos

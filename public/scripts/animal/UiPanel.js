@@ -1,24 +1,16 @@
 /**
- * @file UiPanel.js - painel de ui do animal
- * Atualizado para suportar troca dinâmica de idiomas
+ * @file UiPanel.js - animal ui panel
+ * Shows stats (hunger, thirst, moral), mood, and actions (pet, guide, feed).
+ * Updated to support dynamic language switching and mood system.
  */
-
 
 import { t } from '../i18n/i18n.js';
 import { getObject, registerSystem } from '../gameState.js';
 import { safeDispatch } from '../safeDispatch.js';
 
-/**
- * limita um numero dentro de um intervalo
- * @param {number} n
- * @param {number} min
- * @param {number} max
- * @returns {number}
- */
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
-
 
 const AUI_NAME_STORAGE_KEY = "farmxp_animal_names_v1";
 
@@ -53,6 +45,7 @@ class UiPanel {
     this.rightBtn = null;
     this.actionsMenu = null;
     this.infoMenu = null;
+    this._feedbackEl = null;
 
     this._abortController = new AbortController();
 
@@ -60,8 +53,6 @@ class UiPanel {
   }
 
   init() {
-    // CSS agora é externo - incluir o arquivo CSS separado no HTML
-
     this.layer = document.getElementById("animal-ui-layer");
     if (!this.layer) {
       this.layer = document.createElement("div");
@@ -69,7 +60,6 @@ class UiPanel {
       document.body.appendChild(this.layer);
     }
 
-    // Cria o DOM inicial
     this._createDOM();
 
     const signal = this._abortController.signal;
@@ -81,33 +71,32 @@ class UiPanel {
     window.addEventListener("resize", () => this._resizeSvg(), { signal });
     document.addEventListener('languageChanged', () => this.rebuildInterface(), { signal });
 
+    document.addEventListener('animalActionResult', (e) => {
+      if (!this.visible || !this.target) return;
+      const { action, success, message } = e.detail || {};
+      this._showFeedback(action, success, message);
+      this.updateContent();
+    }, { signal });
+
     this._resizeSvg();
   }
 
-  //  Método para reconstruir tudo quando o idioma muda
   rebuildInterface() {
-      if (this.layer) {
-          // fix: innerHTML → DOM API
-          this.layer.replaceChildren(); // Limpa o antigo
-          this._createDOM(); // Cria novo com idioma atual
-          
-          // Se estava aberto, atualiza o conteúdo do animal
-          if (this.visible && this.target) {
-              this.updateContent();
-              // Re-aplica estado visual
-              this.layer.classList.add("aui-visible");
-              this.oval.classList.add("aui-active");
-              this.actionsMenu.classList.toggle("aui-visible", this.showActions);
-              this.infoMenu.classList.toggle("aui-visible", this.showInfo);
-              this.updatePositions(true);
-          }
+    if (this.layer) {
+      this.layer.replaceChildren();
+      this._createDOM();
+      if (this.visible && this.target) {
+        this.updateContent();
+        this.layer.classList.add("aui-visible");
+        this.oval.classList.add("aui-active");
+        this.actionsMenu.classList.toggle("aui-visible", this.showActions);
+        this.infoMenu.classList.toggle("aui-visible", this.showInfo);
+        this.updatePositions(true);
       }
+    }
   }
 
-  // fix: innerHTML → DOM API
   _createDOM() {
-    //  Importante: t() é chamado aqui. Se o idioma mudar, precisamos chamar _createDOM de novo.
-    
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.classList.add("aui-lines");
     this.svg.setAttribute("width", "100%");
@@ -142,9 +131,10 @@ class UiPanel {
     this.rightBtn.addEventListener("click", (e) => { e.stopPropagation(); this.toggleInfo(); });
     this.layer.appendChild(this.rightBtn);
 
+    // Actions menu
     this.actionsMenu = document.createElement("div");
     this.actionsMenu.className = "aui-menu aui-interactive";
-    
+
     const actionsTitle = document.createElement('h3');
     actionsTitle.textContent = t('animal.ui.interactions');
     const actionsContainer = document.createElement('div');
@@ -164,6 +154,7 @@ class UiPanel {
       iconSpan.className = 'icon';
       iconSpan.textContent = item.icon;
       const labelSpan = document.createElement('span');
+      labelSpan.className = 'aui-action-label';
       labelSpan.textContent = item.label;
       btn.append(iconSpan, labelSpan);
       btn.addEventListener("click", (e) => {
@@ -176,9 +167,10 @@ class UiPanel {
     this.actionsMenu.append(actionsTitle, actionsContainer);
     this.layer.appendChild(this.actionsMenu);
 
+    // Info menu
     this.infoMenu = document.createElement("div");
     this.infoMenu.className = "aui-menu aui-interactive";
-    
+
     const infoTitle = document.createElement('h3');
     infoTitle.textContent = t('animal.ui.info');
 
@@ -201,6 +193,18 @@ class UiPanel {
     nameWrap.append(animalName, animalType);
     infoHeader.append(genderCircle, nameWrap);
 
+    // Mood indicator
+    const moodRow = document.createElement('div');
+    moodRow.className = 'aui-mood-row';
+    const moodLabel = document.createElement('span');
+    moodLabel.className = 'aui-mood-label';
+    moodLabel.textContent = t('animal.stats.mood') || 'Mood';
+    const moodValue = document.createElement('span');
+    moodValue.className = 'aui-mood-value';
+    moodValue.dataset.role = 'mood';
+    moodRow.append(moodLabel, moodValue);
+
+    // Stats bars
     const barsContainer = document.createElement('div');
     barsContainer.className = 'aui-bars';
     const barStats = [
@@ -228,23 +232,64 @@ class UiPanel {
       barsContainer.appendChild(row);
     }
 
-    this.infoMenu.append(infoTitle, infoHeader, barsContainer);
+    this.infoMenu.append(infoTitle, infoHeader, moodRow, barsContainer);
 
     const nameEl = this.infoMenu.querySelector('[data-role="name"]');
-    nameEl.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); nameEl.blur(); }
-    });
+
+    // Bloqueia teclas globais (WASD, I, etc.) enquanto o campo está em foco.
+    // Captura em fase de capture no window para interceptar antes dos sistemas do jogo.
+    // Importante: Enter/Escape precisam de preventDefault AQUI, pois o
+    // stopImmediatePropagation abaixo impede o listener do próprio nameEl
+    // de rodar — sem o preventDefault, o Enter insere um &nbsp; no
+    // contenteditable (que .trim() não remove).
+    const blockKeysWhileEditing = (e) => {
+      if (document.activeElement === nameEl) {
+        if (e.key === "Escape" || e.key === "Enter") {
+          e.preventDefault();
+          if (e.type === "keydown") nameEl.blur();
+        }
+        e.stopImmediatePropagation();
+      }
+    };
+    const sig = this._abortController?.signal;
+    window.addEventListener("keydown", blockKeysWhileEditing, { capture: true, signal: sig });
+    window.addEventListener("keyup", blockKeysWhileEditing, { capture: true, signal: sig });
+    window.addEventListener("keypress", blockKeysWhileEditing, { capture: true, signal: sig });
+
     nameEl.addEventListener("blur", () => {
       if (!this.target) return;
-      const v = (nameEl.textContent || "").trim();
+      // Remove espaços invisíveis (&nbsp; U+00A0, zero-width) e colapsa whitespace
+      // antes do trim — o contenteditable pode deixar resíduos mesmo após o fix acima.
+      const raw = nameEl.textContent || "";
+      const v = raw.replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, " ").replace(/\s+/g, " ").trim();
+      nameEl.textContent = v;
+
       const key = auiGetAnimalKey(this.target);
+      // Valor atual antes da edição. Focar/desfocar o campo sem digitar NÃO
+      // pode disparar animalNamed (tutorialQuests ouve e completa o objetivo)
+      // nem sobrescrever customName com a label default pré-preenchida.
+      const prev = this.target.customName || auiLoadNameMap()[key] || "";
+      if (v === prev) return;
+
       this.target.customName = v || "";
       const map = auiLoadNameMap();
       if (v) map[key] = v; else delete map[key];
       auiSaveNameMap(map);
+
+      // Dispatch event for quest system
+      if (v) {
+        document.dispatchEvent(new CustomEvent('animalNamed', {
+          detail: { animal: this.target, name: v }
+        }));
+      }
     });
 
     this.layer.appendChild(this.infoMenu);
+
+    // Feedback bubble
+    this._feedbackEl = document.createElement('div');
+    this._feedbackEl.className = 'aui-feedback';
+    this.layer.appendChild(this._feedbackEl);
   }
 
   setCamera(cam) { this.camera = cam; }
@@ -261,7 +306,6 @@ class UiPanel {
     this.layer.classList.add("aui-visible");
     this.oval.classList.add("aui-active");
 
-    // abre menus por padrao
     this.showActions = true;
     this.showInfo = true;
     this.actionsMenu.classList.toggle("aui-visible", this.showActions);
@@ -269,7 +313,7 @@ class UiPanel {
 
     this.updateContent();
     this.updatePositions(true);
-    this.target.__uiPaused = true;
+    if (this.target) this.target.__uiPaused = true;
     this._startLoop();
   }
 
@@ -286,6 +330,11 @@ class UiPanel {
 
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
+
+    if (this._feedbackTimer) {
+      clearTimeout(this._feedbackTimer);
+      this._feedbackTimer = null;
+    }
   }
 
   destroy() {
@@ -295,14 +344,17 @@ class UiPanel {
       this._abortController = null;
     }
     this._loopRunning = false;
+    if (this._feedbackTimer) {
+      clearTimeout(this._feedbackTimer);
+      this._feedbackTimer = null;
+    }
     if (this.layer && this.layer.parentNode) {
       this.layer.parentNode.removeChild(this.layer);
     }
-    // Null out DOM refs so the detached subtree (and its listener closures) can be GC'd
     this.layer = this.svg = this.leftPath = this.rightPath = null;
     this.oval = this.leftBtn = this.rightBtn = null;
     this.actionsMenu = this.infoMenu = null;
-    // Release non-DOM references that also prevent GC
+    this._feedbackEl = null;
     this.canvas = this.camera = null;
   }
 
@@ -323,7 +375,6 @@ class UiPanel {
     const name = this.target.customName || this.target.name || this.target.assetName || "Animal";
     const type = this.target.assetName ? t(`animals.${this.target.assetName.toLowerCase()}`) : this.target.type || t('animal.type.unknown');
 
-    // Fallback se a tradução retornar a chave ou for indefinida
     const typeStr = (typeof type === "string") ? type : "";
     const displayType = typeStr.includes('animals.') ? (this.target.assetName || typeStr) : typeStr;
 
@@ -338,14 +389,84 @@ class UiPanel {
     const genderEl = this.infoMenu.querySelector('[data-role="gender"]');
     const nameEl = this.infoMenu.querySelector('[data-role="name"]');
     const typeEl = this.infoMenu.querySelector('[data-role="type"]');
+    const moodEl = this.infoMenu.querySelector('[data-role="mood"]');
 
     if (genderEl) genderEl.textContent = genderChar;
     if (nameEl && !nameEl.matches(":focus")) nameEl.textContent = name;
     if (typeEl) typeEl.textContent = displayType;
 
+    // Mood display
+    if (moodEl) {
+      const mood = this.target.mood || this.target._mood || 'calm';
+      const moodKey = `animal.mood.${mood}`;
+      const moodText = t(moodKey);
+      const emoji = this.target.moodEmoji || '';
+      moodEl.textContent = (moodText !== moodKey ? moodText : mood) + (emoji ? ` ${emoji}` : '');
+    }
+
     this._setBar("hunger", hunger);
     this._setBar("thirst", thirst);
     this._setBar("moral", moral);
+
+    // Disable action buttons based on mood
+    this._updateActionStates();
+  }
+
+  _updateActionStates() {
+    if (!this.target || !this.actionsMenu) return;
+    const mood = this.target.mood || this.target._mood || 'calm';
+    const isSleeping = mood === 'sleeping';
+    const isFollowing = this.target.following || false;
+
+    const btns = this.actionsMenu.querySelectorAll('.aui-action-btn');
+    btns.forEach(btn => {
+      const action = btn.dataset.action;
+      if (action === 'close') return;
+
+      // Toggle guide/unguide label
+      if (action === 'guide') {
+        const iconSpan = btn.querySelector('.icon');
+        const labelSpan = btn.querySelector('.aui-action-label');
+        if (isFollowing) {
+          if (iconSpan) iconSpan.textContent = '✋';
+          if (labelSpan) labelSpan.textContent = t('animal.actions.unguide');
+        } else {
+          if (iconSpan) iconSpan.textContent = '➤';
+          if (labelSpan) labelSpan.textContent = t('animal.actions.guide');
+        }
+      }
+
+      if (isSleeping) {
+        btn.style.opacity = '0.4';
+        btn.style.pointerEvents = 'none';
+      } else {
+        btn.style.opacity = '1';
+        btn.style.pointerEvents = 'auto';
+      }
+    });
+  }
+
+  _showFeedback(action, success, message) {
+    if (!this._feedbackEl) return;
+
+    const msgKey = `animal.feedback.${message}`;
+    let text = t(msgKey);
+    if (text === msgKey) {
+      // Fallback display
+      text = success ? '✓' : '✗';
+    }
+
+    this._feedbackEl.textContent = text;
+    this._feedbackEl.classList.remove('aui-feedback-show');
+    // Force reflow
+    void this._feedbackEl.offsetWidth;
+    this._feedbackEl.classList.add('aui-feedback-show');
+
+    clearTimeout(this._feedbackTimer);
+    this._feedbackTimer = setTimeout(() => {
+      this._feedbackTimer = null;
+      if (this._feedbackEl) this._feedbackEl.classList.remove('aui-feedback-show');
+    }, 2000);
   }
 
   _toPercent(v) {
@@ -445,6 +566,12 @@ class UiPanel {
     const infoConnectY = infoY + infoRect.height / 2;
     this._drawConnector(this.leftPath, cx, cy, btnLx, btnLy, actConnectX, actConnectY, this.showActions);
     this._drawConnector(this.rightPath, cx, cy, btnRx, btnRy, infoConnectX, infoConnectY, this.showInfo);
+
+    // Position feedback near oval
+    if (this._feedbackEl) {
+      this._feedbackEl.style.left = `${cx}px`;
+      this._feedbackEl.style.top = `${cy - diameter / 2 - 30}px`;
+    }
   }
 
   _drawConnector(pathEl, x1, y1, x2, y2, x3, y3, extended) {
