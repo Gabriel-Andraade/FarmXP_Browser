@@ -780,8 +780,12 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar achievement system", "main:startFullGameLoad:achievements", e);
     }
 
+    // Fonte única de verdade para "há save pendente?" — evita que o bloco de
+    // auto-slot e o de restore leiam lugares diferentes e divergirem.
+    const pendingSave = getObject('pendingSaveData') ?? window._pendingSaveData ?? null;
+
     // Auto-select a save slot for new games so auto-save and beforeunload work
-    if (saveRef && saveRef.activeSlot === null && !window._pendingSaveData) {
+    if (saveRef && saveRef.activeSlot === null && !pendingSave) {
       // Find first empty slot; if none, skip auto-creation so we don't silently
       // overwrite an existing save. The player will pick a slot via the menu.
       let targetSlot = -1;
@@ -799,7 +803,6 @@ async function startFullGameLoad() {
 
     // Aplicar save pendente do startup (usuário clicou "Carregar Jogo" na tela inicial)
     // Feito ANTES de esconder o loading, para que o jogador não veja o mundo default piscar
-    const pendingSave = getObject('pendingSaveData');
     if (pendingSave && saveRef) {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
@@ -1151,9 +1154,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 let debugCoordinates = { screenX: 0, screenY: 0, worldX: 0, worldY: 0 };
 let showCoordinatePanel = false;
+let debugCoordinatesDisplayInitialized = false;
 
 function setupDebugCoordinatesDisplay() {
   if (!canvas) return;
+  // playerReady dispara em cada save-reload/character-swap — sem esse guard,
+  // mousemove/keydown ficariam acumulando e F2 alternaria múltiplas vezes.
+  if (debugCoordinatesDisplayInitialized) return;
+  debugCoordinatesDisplayInitialized = true;
 
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();

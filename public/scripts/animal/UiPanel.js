@@ -263,7 +263,14 @@ class UiPanel {
       const raw = nameEl.textContent || "";
       const v = raw.replace(/[\u00A0\u200B\u200C\u200D\uFEFF]/g, " ").replace(/\s+/g, " ").trim();
       nameEl.textContent = v;
+
       const key = auiGetAnimalKey(this.target);
+      // Valor atual antes da edição. Focar/desfocar o campo sem digitar NÃO
+      // pode disparar animalNamed (tutorialQuests ouve e completa o objetivo)
+      // nem sobrescrever customName com a label default pré-preenchida.
+      const prev = this.target.customName || auiLoadNameMap()[key] || "";
+      if (v === prev) return;
+
       this.target.customName = v || "";
       const map = auiLoadNameMap();
       if (v) map[key] = v; else delete map[key];

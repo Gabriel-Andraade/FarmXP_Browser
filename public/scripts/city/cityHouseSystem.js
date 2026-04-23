@@ -71,17 +71,18 @@ export class CityHouseSystem {
                 isPlayerNear: oldNearState[h.id] || false
             }));
 
-            // Load parkFurniture if present
-            if (data.parkFurniture && Array.isArray(data.parkFurniture)) {
-                this.parkFurniture = data.parkFurniture.map(f => ({
+            // Load parkFurniture — se hot-reload omitiu a seção precisamos zerar
+            // a lista, senão móveis antigos permanecem com colisão ativa.
+            this.parkFurniture = Array.isArray(data.parkFurniture)
+                ? data.parkFurniture.map(f => ({
                     id: f.id,
                     name: f.name,
                     x: f.x,
                     y: f.y,
                     width: f.width,
                     height: f.height
-                }));
-            }
+                }))
+                : [];
 
             // Re-register hitboxes if already initialized
             if (this.isInitialized) {

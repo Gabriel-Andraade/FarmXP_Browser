@@ -35,8 +35,13 @@ function getKeyForAction(action) {
  * @param {string} fallbackName - Nome padrão se tradução não existir
  * @returns {string} Nome traduzido
  */
-
-
+function getItemName(itemId, fallbackName = '') {
+    const translatedName = t(`itemNames.${itemId}`);
+    if (translatedName === `itemNames.${itemId}`) {
+        return fallbackName;
+    }
+    return translatedName || fallbackName;
+}
 
 export class PlayerHUD {
     constructor() {
@@ -75,14 +80,19 @@ export class PlayerHUD {
         };
         document.addEventListener('playerReady', this._onPlayerReady);
 
-        // XP / Level — reage aos eventos do xpSystem.
-        document.addEventListener('xpGained', (e) => this.updateXPDisplay(e.detail));
-        document.addEventListener('levelUp', (e) => this.updateXPDisplay({
+        // XP / Level — store handlers para remoção correta em destroy()
+        this._onXpGained = (e) => this.updateXPDisplay(e.detail);
+        document.addEventListener('xpGained', this._onXpGained);
+
+        this._onLevelUp = (e) => this.updateXPDisplay({
             level: e.detail.level,
             xp: e.detail.carryXp,
             xpToNext: e.detail.xpToNext,
-        }));
-        document.addEventListener('xpRestored', (e) => this.updateXPDisplay(e.detail));
+        });
+        document.addEventListener('levelUp', this._onLevelUp);
+
+        this._onXpRestored = (e) => this.updateXPDisplay(e.detail);
+        document.addEventListener('xpRestored', this._onXpRestored);
 
         // OUVINTE CRÍTICO: Recria o HUD quando o idioma muda
         this._onLanguageChanged = () => {
@@ -407,6 +417,9 @@ export class PlayerHUD {
         document.removeEventListener("playerNeedsChanged", this._onPlayerNeedsChanged);
         document.removeEventListener('characterSelected', this._onCharacterSelected);
         document.removeEventListener('playerReady', this._onPlayerReady);
+        document.removeEventListener('xpGained', this._onXpGained);
+        document.removeEventListener('levelUp', this._onLevelUp);
+        document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);

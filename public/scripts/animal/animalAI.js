@@ -219,8 +219,9 @@ export class AnimalEntity {
         
         // Reset daily pet counts BEFORE checking decay interval
         const daySys = getSystem('dayNight') || getSystem('weather');
-        if (daySys && daySys.dayCount != null) {
-            const currentDay = daySys.dayCount;
+        // weatherSystem expõe `day`; dayNightSystem expõe `dayCount` — aceitar ambos.
+        const currentDay = daySys?.dayCount ?? daySys?.day;
+        if (currentDay != null) {
             if (currentDay !== this.lastPetDay) {
                 this.lastPetDay = currentDay;
                 this.petsToday = 0;

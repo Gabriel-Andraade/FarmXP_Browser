@@ -141,7 +141,11 @@ export class HouseSystem {
         const houseWalls = this.findHouseWalls();
         if (!houseWalls) {
             // House walls themselves not yet restored — try again shortly.
-            setTimeout(() => this.reregisterDoorHitbox(), 500);
+            clearTimeout(this._setupRetryTimer);
+            this._setupRetryTimer = setTimeout(() => {
+                this._setupRetryTimer = null;
+                this.reregisterDoorHitbox();
+            }, 500);
             return;
         }
         this.createDoorHitbox(houseWalls);
@@ -181,8 +185,8 @@ export class HouseSystem {
             if (e.key === 'Escape' && (this.isMenuOpen || document.querySelector('.storage-modal'))) {
                 if (document.querySelector('.storage-modal')) this.closeStorageModal();
                 else this.closeHouseMenu();
-            } else if ((e.key === 'e' || e.key === 'E') && this.isPlayerNearDoor) {
-                // Toggle: open/close like inventory
+            } else if (!e.repeat && (e.key === 'e' || e.key === 'E') && this.isPlayerNearDoor) {
+                // Toggle: open/close like inventory (ignora key-repeat senão abre/fecha ao segurar)
                 if (this.isMenuOpen) {
                     this.closeHouseMenu();
                 } else {

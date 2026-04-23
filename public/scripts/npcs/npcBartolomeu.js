@@ -480,7 +480,6 @@ function buildQuest2DeclinedDialogue() {
     const explainIdx = lines.length;
     lines.push({ side: 'right', text: t(`${Q}.bartExplainShops`) });
 
-    const thanksLineIdx = lines.length + 1; // will be pushed 2 lines ahead
     lines.push({
         side: 'right',
         type: 'choice',
@@ -688,19 +687,20 @@ function onDayChanged(e) {
         logger.warn(`[Tax] Overdue! Lara and Thomas blocked since day ${taxDueDay}`);
     }
 
-    // Issue new tax every TAX_INTERVAL_DAYS, but don't overwrite if already pending
-    if (day % TAX_INTERVAL_DAYS === 0 && lastTaxDay < day) {
-        if (!taxPending) {
-            taxPending = true;
-            taxDueDay = day;
+    // Emite novo imposto se já se passaram TAX_INTERVAL_DAYS desde o último — usar
+    // diferença em vez de `day % TAX_INTERVAL_DAYS === 0` evita pular impostos
+    // quando dias saltam (sono múltiplo ou restauração de save).
+    if (!taxPending && day - lastTaxDay >= TAX_INTERVAL_DAYS) {
+        taxPending = true;
+        taxDueDay = day;
+        lastTaxDay = day;
 
-            const taxAmount = calculateTax();
-            document.dispatchEvent(new CustomEvent('showNotification', {
-                detail: { message: t('npc.bartolomeu.tax.reminder', { value: taxAmount }) }
-            }));
+        const taxAmount = calculateTax();
+        document.dispatchEvent(new CustomEvent('showNotification', {
+            detail: { message: t('npc.bartolomeu.tax.reminder', { value: taxAmount }) }
+        }));
 
-            logger.info(`[Tax] Tax of ${taxAmount} due on day ${day}`);
-        }
+        logger.info(`[Tax] Tax of ${taxAmount} due on day ${day}`);
     }
 }
 

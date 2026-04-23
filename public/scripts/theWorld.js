@@ -516,12 +516,6 @@ export function getSortedWorldObjects(player) {
     });
     lastPlayerY = player.y;
     lastPlayerHeight = player.height;
-
-    // Portal check (proximity detection)
-    const mgr = getMapManager();
-    if (mgr && !mgr.isMapTransitioning()) {
-      mgr.checkPortalInteraction(player.x, player.y, player.width, player.height);
-    }
   }
 
   // City objects (houses, cars, posts) when in city map
@@ -1396,6 +1390,12 @@ export function renderWorld(ctx, player) {
     BuildSystem._gridDrawnThisFrame = false;
   }
 
+  // Portal proximity check — run every frame, not tied to Y-sort cache rebuild
+  const mgr = getMapManager();
+  if (mgr && !mgr.isMapTransitioning()) {
+    mgr.checkPortalInteraction(player.x, player.y, player.width, player.height);
+  }
+
   drawBackground(ctx);
 
   const objects = getSortedWorldObjects(player);
@@ -1513,6 +1513,22 @@ export function importWorldState(data) {
           }
 
           animals.push(animal);
+
+          // Re-register collision hitbox so restored animals are interactive
+          try {
+            const hb = animal.getHitbox();
+            collisionSystem.addHitbox(
+              animal.id,
+              "ANIMAL",
+              hb.x,
+              hb.y,
+              hb.width,
+              hb.height,
+              animal
+            );
+          } catch (err) {
+            handleWarn("Failed to add hitbox for restored animal", "theWorld:importWorldState:animalHitbox", { animalId: animal.id, err });
+          }
         } else {
           handleWarn("Animal asset not found during import", "theWorld:importWorldState", { assetName: o.assetName });
         }

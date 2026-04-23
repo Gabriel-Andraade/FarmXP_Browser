@@ -252,6 +252,7 @@ export function handlePickupInteraction() {
     const removed = removeBatteryFromInventory();
     if (!removed) {
         // If removal failed, bail out and don't mark quest as completed
+        logger.warn('[QuestSystem] Battery present but removeItem failed — check inventorySystem.removeItem signature');
         showPlayerThoughtDialogue(t('quests.fixPickup.bubbleNoBattery'));
         return false;
     }

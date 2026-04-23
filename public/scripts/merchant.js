@@ -448,6 +448,14 @@ class MerchantSystem {
         if (!merchant.schedule) return t('trading.open');
         if (!WeatherSystem) return t('trading.statusUnknown');
 
+        // Tax block vem antes do horário: senão o card renderiza fechado
+        const bartolomeu = getSystem('npcBartolomeu');
+        if (bartolomeu?.isMerchantBlocked?.(merchant.id)) {
+            const taxBlockedKey = 'trading.taxBlocked';
+            const txt = t(taxBlockedKey);
+            return txt === taxBlockedKey ? t('trading.alreadyClosed', { time: '--:--' }) : txt;
+    }
+
         const currentDayIndex = this.getCurrentDayIndex();
         const currentDayName = WeatherSystem.getWeekday(); // nome traduzido para exibição
         const currentTime = WeatherSystem.currentTime;

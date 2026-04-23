@@ -537,73 +537,79 @@ class SaveSystem {
         const tracker = getSystem('achievements');
         if (tracker) tracker.mute();
 
-        // Restaurar conquistas — merge com global (conquistas persistem entre saves)
-        if (tracker) {
-            tracker.mergeWithGlobal(data.achievements || null);
-        }
-
-        // Restaurar mapa (farm/city) antes dos demais dados
-        if (data.currentMap && data.currentMap !== 'farm') {
-            const mapMgr = getSystem('mapManager');
-            if (mapMgr && mapMgr.restoreMap) {
-                await mapMgr.restoreMap(data.currentMap);
+        try {
+            // Restaurar conquistas — merge com global (conquistas persistem entre saves)
+            if (tracker) {
+                tracker.mergeWithGlobal(data.achievements || null);
             }
-        }
 
-        // Aplicar dados do jogador (async - pode trocar de personagem)
-        if (data.player) {
-            await this._applyPlayerData(data.player);
-        }
-
-        // Aplicar inventário
-        if (data.inventory) {
-            this._applyInventoryData(data.inventory);
-        }
-
-        // Aplicar dinheiro
-        if (data.currency) {
-            this._applyCurrencyData(data.currency);
-        }
-
-        // Aplicar mundo (buildings, wells)
-        if (data.world) {
-            this._applyWorldData(data.world);
-        }
-
-        // Aplicar baús
-        if (data.chests) {
-            this._applyChestsData(data.chests);
-        }
-
-        // Aplicar clima/tempo
-        if (data.weather) {
-            this._applyWeatherData(data.weather);
-        }
-
-        // Aplicar flags do jogo (pickup_repaired, etc.)
-        if (data.gameFlags) {
-            this._applyGameFlags(data.gameFlags);
-        }
-
-        // Aplicar XP/Level (emite `xpRestored` → HUD reage).
-        if (data.xp) {
-            const xp = getSystem('xp');
-            if (xp?.setState) xp.setState(data.xp);
-        } else {
-            // Save antigo sem XP: reseta pro padrão pra não herdar do slot anterior.
-            const xp = getSystem('xp');
-            if (xp?.reset) xp.reset();
-        }
-
-        // Reativar o tracker após toda a restauração
-        if (tracker) tracker.unmute();
-
-        // Aplicar exploração do minimap
-        if (data.minimap?.exploration) {
-            const minimap = getSystem('minimap');
-            if (minimap && minimap.importExploration) {
-                await minimap.importExploration(data.minimap.exploration);
+            // Aplicar dados do jogador (async - pode trocar de personagem)
+            if (data.player) {
+                await this._applyPlayerData(data.player);
             }
+
+            // Aplicar inventário
+            if (data.inventory) {
+                this._applyInventoryData(data.inventory);
+            }
+
+            // Aplicar dinheiro
+            if (data.currency) {
+                this._applyCurrencyData(data.currency);
+            }
+
+            // Aplicar mundo (buildings, wells) ANTES do restoreMap: o map manager
+            // snapshota o live-theWorld em savedFarmState ao entrar em city; se
+            // restoreMap rodasse antes, snapshot seria tirado do mundo ainda vazio
+            // e o save de city perderia a farm ao voltar.
+            if (data.world) {
+                this._applyWorldData(data.world);
+            }
+
+            // Agora sim restaura o mapa (city snapshota a farm correta acima).
+            if (data.currentMap && data.currentMap !== 'farm') {
+                const mapMgr = getSystem('mapManager');
+                if (mapMgr && mapMgr.restoreMap) {
+                    await mapMgr.restoreMap(data.currentMap);
+                }
+            }
+
+            // Aplicar baús
+            if (data.chests) {
+                this._applyChestsData(data.chests);
+            }
+
+            // Aplicar clima/tempo
+            if (data.weather) {
+                this._applyWeatherData(data.weather);
+            }
+
+            // Aplicar flags do jogo (pickup_repaired, etc.)
+            if (data.gameFlags) {
+                this._applyGameFlags(data.gameFlags);
+            }
+
+            // Aplicar XP/Level (emite `xpRestored` → HUD reage).
+            if (data.xp) {
+                const xp = getSystem('xp');
+                if (xp?.setState) xp.setState(data.xp);
+            } else {
+                // Save antigo sem XP: reseta pro padrão pra não herdar do slot anterior.
+                const xp = getSystem('xp');
+                if (xp?.reset) xp.reset();
+            }
+
+            // Aplicar exploração do minimap (agora vive no top-level do save)
+            const minimapData = data.minimap ?? data.gameFlags?.minimap ?? null;
+            if (minimapData?.exploration) {
+                const minimap = getSystem('minimap');
+                if (minimap && minimap.importExploration) {
+                    await minimap.importExploration(minimapData.exploration);
+                }
+            }
+        } finally {
+            // Tem que correr mesmo em erro — se não, conquistas ficam mudas até o fim da sessão.
+            if (tracker) tracker.unmute();
         }
 
         logger.info('✅ Save data applied');
@@ -750,16 +756,22 @@ class SaveSystem {
     _gatherGameData() {
         const mapMgr = getSystem('mapManager');
         const xp = getSystem('xp');
+        // Quando o jogador está na city, theWorld já foi limpo pelo mapManager;
+        // a farm vive só em `savedFarmState`. Sem esse fallback o save perde
+        // toda a farm (árvores/animais/construções).
+        const inCity = mapMgr?.getCurrentMapId?.() === 'city';
+        const savedFarm = inCity && mapMgr?.getSavedFarmState ? mapMgr.getSavedFarmState() : null;
         return {
             _dataVersion: SAVE_DATA_VERSION,
             player: this._getPlayerData(),
             inventory: this._getInventoryData(),
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
-            world: this._getWorldData(),
+            world: savedFarm ?? this._getWorldData(),
             chests: this._getChestsData(),
             achievements: this._getAchievementsData(),
             gameFlags: this._getGameFlags(),
+            minimap: this._getMinimapData(),
             xp: xp?.getState ? xp.getState() : null,
             currentMap: mapMgr ? mapMgr.getCurrentMapId() : 'farm'
         };
@@ -786,7 +798,6 @@ class SaveSystem {
             isabela_quest: isabela ? isabela.getQuestState() : { hasNoticed: false },
             molly_quest: molly ? molly.getQuestState() : { dialogue: 'idle' },
             tutorial_quests: tutorials ? tutorials.getQuestState() : null,
-            minimap: this._getMinimapData()
         };
     }
 

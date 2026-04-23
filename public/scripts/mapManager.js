@@ -501,6 +501,24 @@ async function restoreMap(mapId) {
     }
 }
 
+/**
+ * Getter público para o snapshot da farm mantido em memória enquanto
+ * o jogador está na cidade. saveSystem usa para persistir a farm mesmo
+ * quando o save é feito estando em city (senão o mundo vai vazio).
+ */
+function getSavedFarmState() {
+    return savedFarmState;
+}
+
+/**
+ * Setter usado na restauração de save: quando um save feito em city
+ * é carregado, a farm vive em `savedFarmState`, não no theWorld live.
+ * saveSystem empurra o snapshot antes de chamar restoreMap('city').
+ */
+function setSavedFarmState(state) {
+    savedFarmState = state;
+}
+
 registerSystem('mapManager', {
     getCurrentMap,
     getCurrentMapId,
@@ -510,6 +528,8 @@ registerSystem('mapManager', {
     drawPortal,
     isMapTransitioning,
     restoreMap,
+    getSavedFarmState,
+    setSavedFarmState,
     MAPS,
 });
 
@@ -522,5 +542,7 @@ export default {
     drawPortal,
     isMapTransitioning,
     restoreMap,
+    getSavedFarmState,
+    setSavedFarmState,
     MAPS,
 };

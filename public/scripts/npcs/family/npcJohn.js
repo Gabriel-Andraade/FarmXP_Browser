@@ -1102,7 +1102,13 @@ function buildMilkDeliverDialogue() {
     lines.push({
         side: 'left',
         text: t(handKey),
-        action: () => { consumeMilkAndReward(); },
+        action: () => { 
+            const success = consumeMilkAndReward();
+            if (!success) {
+                // Milk removal failed — end dialogue instead of advancing to success state
+                endDialogue();
+            }
+        },
     });
 
     lines.push({

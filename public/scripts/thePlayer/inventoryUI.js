@@ -941,6 +941,15 @@ function showContractPanel() {
   // Close inventory first
   closeInventoryModal();
 
+  // closeInventoryModal re-liga o input do jogador; como o contract é modal
+  // full-screen, precisamos bloquear de novo até o overlay fechar — senão
+  // o jogador continua se movendo por baixo da carta.
+  const playerSystem = getSystem('player');
+  if (playerSystem) playerSystem.inputDisabled = true;
+  const restoreInput = () => {
+    if (playerSystem) playerSystem.inputDisabled = false;
+  };
+
   // Remove existing panel if any
   const existing = document.getElementById('contract-panel-overlay');
   if (existing) existing.remove();
@@ -1024,6 +1033,9 @@ function showContractPanel() {
   closeBtn.onmouseleave = () => { closeBtn.style.background = '#3a2a1f'; };
   closeBtn.onclick = () => {
     overlay.style.opacity = '0';
+    // Restaura o input antes de remover o nó (evita janela em que o overlay
+    // já saiu mas o input continuaria bloqueado por mais 300ms).
+    restoreInput();
     setTimeout(() => overlay.remove(), 300);
   };
 
