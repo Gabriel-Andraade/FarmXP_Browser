@@ -154,6 +154,7 @@ class UiPanel {
       iconSpan.className = 'icon';
       iconSpan.textContent = item.icon;
       const labelSpan = document.createElement('span');
+      labelSpan.className = 'aui-action-label';
       labelSpan.textContent = item.label;
       btn.append(iconSpan, labelSpan);
       btn.addEventListener("click", (e) => {
@@ -322,6 +323,11 @@ class UiPanel {
 
     this.leftPath.setAttribute("d", "");
     this.rightPath.setAttribute("d", "");
+
+    if (this._feedbackTimer) {
+      clearTimeout(this._feedbackTimer);
+      this._feedbackTimer = null;
+    }
   }
 
   destroy() {
@@ -331,6 +337,10 @@ class UiPanel {
       this._abortController = null;
     }
     this._loopRunning = false;
+    if (this._feedbackTimer) {
+      clearTimeout(this._feedbackTimer);
+      this._feedbackTimer = null;
+    }
     if (this.layer && this.layer.parentNode) {
       this.layer.parentNode.removeChild(this.layer);
     }
@@ -409,7 +419,7 @@ class UiPanel {
       // Toggle guide/unguide label
       if (action === 'guide') {
         const iconSpan = btn.querySelector('.icon');
-        const labelSpan = btn.childNodes[1];
+        const labelSpan = btn.querySelector('.aui-action-label');
         if (isFollowing) {
           if (iconSpan) iconSpan.textContent = '✋';
           if (labelSpan) labelSpan.textContent = t('animal.actions.unguide');
@@ -445,8 +455,10 @@ class UiPanel {
     void this._feedbackEl.offsetWidth;
     this._feedbackEl.classList.add('aui-feedback-show');
 
-    setTimeout(() => {
-      this._feedbackEl.classList.remove('aui-feedback-show');
+    clearTimeout(this._feedbackTimer);
+    this._feedbackTimer = setTimeout(() => {
+      this._feedbackTimer = null;
+      if (this._feedbackEl) this._feedbackEl.classList.remove('aui-feedback-show');
     }, 2000);
   }
 

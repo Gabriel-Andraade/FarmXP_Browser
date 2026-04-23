@@ -200,6 +200,7 @@ export async function triggerPortalTransition() {
     blockInteractions();
 
     let targetMapId = currentMapId;
+    let transitionSucceeded = false;
     try {
         // Show transition overlay
         showTransitionScreen(portal.label);
@@ -277,6 +278,7 @@ export async function triggerPortalTransition() {
         }
 
         await wait(700);
+        transitionSucceeded = true;
     } catch (err) {
         logger.error('[MapManager] Transition failed', err);
     } finally {
@@ -285,8 +287,10 @@ export async function triggerPortalTransition() {
         isTransitioning = false;
     }
 
-    logger.info(`Map transitioned to: ${targetMapId}`);
-    document.dispatchEvent(new CustomEvent('mapChanged', { detail: { mapId: targetMapId } }));
+    if (transitionSucceeded) {
+        logger.info(`Map transitioned to: ${targetMapId}`);
+        document.dispatchEvent(new CustomEvent('mapChanged', { detail: { mapId: targetMapId } }));
+    }
 }
 
 // ─── Internal helpers ───────────────────────────────────────────────────────

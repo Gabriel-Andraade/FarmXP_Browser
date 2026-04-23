@@ -420,7 +420,7 @@ function onCatInteract() {
   const playerPortrait = getPlayerDialogPortrait();
 
   if (inventory?.addItem) {
-    const added = inventory.addItem('resources', MADALENA_ITEM_ID, 1);
+    const added = inventory.addItem(MADALENA_ITEM_ID, 1);
     if (!added) {
       logger.warn('[Milly] Não foi possível adicionar Madalena ao inventário temporário.');
     }
@@ -649,7 +649,7 @@ function buildDeliverDialogue() {
           // como "bônus" se o registry futuramente distribuir itens.
           const inventory = getSystem('inventory');
           if (inventory?.removeItem) {
-            inventory.removeItem('resources', MADALENA_ITEM_ID, 1);
+            inventory.removeItem(MADALENA_ITEM_ID, 1);
           }
           const registry = getSystem('questRegistry');
           if (registry?.complete) {

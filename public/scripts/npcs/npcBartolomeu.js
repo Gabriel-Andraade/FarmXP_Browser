@@ -486,7 +486,7 @@ function buildQuest2DeclinedDialogue() {
         type: 'choice',
         text: '',
         options: [
-            { text: t(`${Q}.choice2Sign`), value: 'sign', next: 0, onSelect: () => onSignContract() },
+            { text: t(`${Q}.choice2Sign`), value: 'sign', next: 0 },
             { text: t(`${Q}.choice2Refuse`), value: 'refuse', end: true, onSelect: () => { quest2State = 'declined'; } },
         ],
     });
@@ -528,6 +528,9 @@ function buildQuest2ActiveDialogue() {
 
     if (taxPending) {
         const taxAmount = calculateTax();
+        // Jogador sem saldo suficiente não pode aterrissar em thanksPaid —
+        // rotear para warnLater deixa o diálogo honesto e mantém a cobrança pendente.
+        const canPayTax = getPlayerBalance() >= taxAmount;
         lines.push({ side: 'right', text: t(`${T}.reminder`, { value: taxAmount }) });
 
         lines.push({
@@ -538,7 +541,7 @@ function buildQuest2ActiveDialogue() {
                 {
                     text: t(`${T}.payOption`, { value: taxAmount }),
                     value: 'pay',
-                    next: 2,
+                    next: canPayTax ? 2 : 3,
                     onSelect: () => payTax(),
                 },
                 {

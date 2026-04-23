@@ -37,6 +37,10 @@ const MORNING_MINUTE = 10;
 let isVisible = true;
 let pendingChange = null; // 'show' | 'hide' | null
 
+// Handles dos intervals para evitar vazamento em hot-reload / re-registro.
+let visibilityIntervalId = null;
+let pendingIntervalId = null;
+
 /** Estado do diálogo: 'idle' | 'rejected' (já foi ignorado uma vez) */
 let dialogueState = 'idle';
 
@@ -264,8 +268,10 @@ function register() {
         isVisible = false;
     }
 
-    setInterval(updateVisibility, 2000);
-    setInterval(checkPendingChange, 500);
+    if (visibilityIntervalId) clearInterval(visibilityIntervalId);
+    if (pendingIntervalId) clearInterval(pendingIntervalId);
+    visibilityIntervalId = setInterval(updateVisibility, 2000);
+    pendingIntervalId = setInterval(checkPendingChange, 500);
 
     logger.info('[Jeremy] NPC registered in city');
 }

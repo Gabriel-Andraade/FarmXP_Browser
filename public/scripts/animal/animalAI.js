@@ -227,7 +227,13 @@ export class AnimalEntity {
             }
         }
 
-        if (elapsed < STATS_DECAY_INTERVAL_MS) return;
+        if (elapsed < STATS_DECAY_INTERVAL_MS) {
+            // Ainda assim recalcula o mood: mudanças de hora/clima não podem
+            // esperar até o próximo tick de decay (pode atrasar 60s e deixar
+            // um animal dormindo "interactable" por engano).
+            this.recalcMood();
+            return;
+        }
 
         const minutes = elapsed / 60_000;
         this._lastDecayTime = now;

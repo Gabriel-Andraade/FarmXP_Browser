@@ -1206,7 +1206,7 @@ function seedMilkBottle() {
     }
 
     // Add milk to house storage (resources category)
-    const added = storage._addToCategory('resources', MILK_BOTTLE_ITEM_ID, 1);
+    const added = storage.addResource(MILK_BOTTLE_ITEM_ID, 1);
     if (added) {
         milkBottleSeededInStorage = true;
         logger.info('[John] Milk bottle seeded into house storage');
@@ -1265,8 +1265,8 @@ function setQuestState(data) {
         if (milkQuestState !== 'in_progress') {
             milkBottleSeededInStorage = false;
         } else {
-            // If quest is in_progress on load, seed the milk
-            setTimeout(seedMilkBottle, 1000);
+            // seedMilkBottle has its own storage-availability retry loop.
+            seedMilkBottle();
         }
     }
 }

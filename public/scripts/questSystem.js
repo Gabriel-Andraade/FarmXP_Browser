@@ -111,7 +111,7 @@ export function seedBatteryInStorage() {
     }
 
     // Add battery to house storage (resources category)
-    const added = storage._addToCategory('resources', BATTERY_ITEM_ID, 1);
+    const added = storage.addResource(BATTERY_ITEM_ID, 1);
     if (added) {
         batterySeededInStorage = true;
         logger.info('[QuestSystem] Battery seeded into house storage (armazém)');
@@ -153,7 +153,7 @@ export function seedMilkBottleInStorage() {
         }
     }
 
-    const added = storage._addToCategory('resources', MILK_BOTTLE_ITEM_ID, 1);
+    const added = storage.addResource(MILK_BOTTLE_ITEM_ID, 1);
     if (added) {
         milkBottleSeededInStorage = true;
         logger.info('[QuestSystem] Milk bottle seeded into house storage (armazém)');

@@ -166,6 +166,17 @@ export class StorageSystem {
   }
 
   /**
+   * Adiciona recursos diretamente ao armazenamento na categoria 'resources'.
+   * Wrapper público usado por quests para evitar acoplar-se ao _addToCategory.
+   * @param {number} itemId - ID do item a adicionar
+   * @param {number} [quantity=1] - Quantidade a adicionar
+   * @returns {boolean} True se pelo menos um item foi adicionado
+   */
+  addResource(itemId, quantity = 1) {
+    return this._addToCategory('resources', itemId, quantity);
+  }
+
+  /**
    * Adiciona itens a uma categoria específica do armazenamento
    * Gerencia stacking automático e criação de novos stacks quando necessário
    * @private

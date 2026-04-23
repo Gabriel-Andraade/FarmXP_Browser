@@ -249,6 +249,8 @@ export class CityHouseSystem {
         let foundNearby = null;
 
         for (const [houseId, hitbox] of this.houseHitboxes) {
+            // Park furniture shares this map but has no house entry — skip it.
+            if (hitbox.type !== 'CITY_HOUSE') continue;
             const house = this.getHouseById(houseId);
             if (!house) continue;
 
@@ -356,7 +358,7 @@ export class CityHouseSystem {
         if (this.houseHitboxes.has(houseId)) {
             const existing = this.houseHitboxes.get(houseId);
             collisionSystem.removeHitbox(houseId);
-            collisionSystem.addHitbox(houseId, 'CITY_HOUSE', x, y, width, height);
+            collisionSystem.addHitbox(houseId, existing.type, x, y, width, height);
             this.houseHitboxes.set(houseId, {
                 ...existing,
                 x,
