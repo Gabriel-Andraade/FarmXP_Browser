@@ -99,7 +99,7 @@ export class MainMenu {
 
       const flagImg = document.createElement('img');
       flagImg.className = 'mm-flag-img';
-      flagImg.src = `https://flagcdn.com/w40/${lang.flag}.png`;
+      flagImg.src = `assets/flags/${lang.flag}.svg`;
       flagImg.alt = lang.label;
       flagImg.width = 30;
       flagImg.height = 20;

@@ -770,6 +770,12 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar save system", "main:startFullGameLoad:saveSystem", e);
     }
 
+    try {
+      initMinimap();
+    } catch (e) {
+      handleWarn("falha ao inicializar minimap", "main:startFullGameLoad:minimap", e);
+    }
+
     // Achievement system (must load BEFORE applySaveData so progress can be restored)
     try {
       const { AchievementTracker } = await import('./achievements/achievementTracker.js');
@@ -1020,6 +1026,9 @@ document.addEventListener("mainMenu:newGame", () => {
   // Reseta XP/Level para não herdar progresso de uma sessão anterior.
   const xp = getSystem('xp');
   if (xp?.reset) xp.reset();
+  // Reseta exploração do minimap pelo mesmo motivo.
+  const minimap = getSystem('minimap');
+  if (minimap?.resetExploration) minimap.resetExploration();
   const selection = new CharacterSelection();
   selection.show();
 });

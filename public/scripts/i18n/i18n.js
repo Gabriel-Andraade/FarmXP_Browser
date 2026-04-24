@@ -8,6 +8,7 @@ import ptBR from './pt-BR.js';
 import en from './en.js';
 import es from './es.js';
 import { safeDispatch } from '../safeDispatch.js';
+import { logger } from '../logger.js';
 
 const STORAGE_KEY = 'farmxp_language';
 const DEFAULT_LANGUAGE = 'pt-BR';
