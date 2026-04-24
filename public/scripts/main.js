@@ -771,7 +771,7 @@ async function startFullGameLoad() {
     }
 
     try {
-      initMinimap();
+      await initMinimap();
     } catch (e) {
       handleWarn("falha ao inicializar minimap", "main:startFullGameLoad:minimap", e);
     }

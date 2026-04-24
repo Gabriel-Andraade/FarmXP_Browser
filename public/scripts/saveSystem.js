@@ -608,7 +608,7 @@ class SaveSystem {
                 }
             } else if (minimap && minimap.resetExploration) {
                 // Save sem exploração: reseta pro padrão pra não herdar do slot anterior.
-                minimap.resetExploration();
+                await minimap.resetExploration();
             }
         } finally {
             // Tem que correr mesmo em erro — se não, conquistas ficam mudas até o fim da sessão.
