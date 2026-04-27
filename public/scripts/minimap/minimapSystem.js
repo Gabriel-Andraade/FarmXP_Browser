@@ -203,6 +203,14 @@ export class MinimapSystem {
     };
   }
 
+  /** Reset exploration to an unexplored state (clears canvas + grid) */
+  resetExploration() {
+    this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
+    this.explorationCtx.fillStyle = '#000000';
+    this.explorationCtx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
+    this._explorationGrid = new Set();
+  }
+
   /**
    * Export exploration data as base64 for saving
    * @returns {{ image: string, grid: string[] }}
