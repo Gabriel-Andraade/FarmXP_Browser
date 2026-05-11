@@ -252,7 +252,7 @@ export function placeWell(a, b, c) {
  * @param {HTMLImageElement} img - Sprite image for the animal
  * @param {number} x - Initial X position in world coordinates
  * @param {number} y - Initial Y position in world coordinates
- * @param {Object} opts - Optional parameters (suspicious, hurt, stats, initialMood, etc.)
+ * @param {Object} opts - Optional parameters (suspicious, injury, stats, initialMood, etc.)
  * @returns {AnimalEntity} The created animal entity
  */
 export function addAnimal(assetName, img, x, y, opts = {}) {
@@ -280,6 +280,16 @@ export function addAnimal(assetName, img, x, y, opts = {}) {
         hb.height,
         animal
       );
+      if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
+        const m = 0.1;
+        collisionSystem.setInteractionHitboxBounds(
+          animal.id,
+          animal.x + animal.width * m,
+          animal.y + animal.height * m,
+          animal.width * (1 - 2 * m),
+          animal.height * (1 - 2 * m)
+        );
+      }
     }
   } catch (e) {
     handleWarn("Failed to add hitbox for animal", "theWorld:addAnimal", { animalId: animal.id, assetName, err: e });
@@ -310,6 +320,16 @@ export function updateAnimals() {
           const hb = animal.getHitbox();
           if (typeof collisionSystem.updateHitboxPosition === "function") {
             collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
+          }
+          if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
+            const m = 0.1;
+            collisionSystem.setInteractionHitboxBounds(
+              animal.id,
+              animal.x + animal.width * m,
+              animal.y + animal.height * m,
+              animal.width * (1 - 2 * m),
+              animal.height * (1 - 2 * m)
+            );
           }
         }
       } catch (err) {
@@ -1458,7 +1478,13 @@ export function exportWorldState() {
         id: a.id, x: a.x, y: a.y,
         assetName: a.assetName
       };
-    }) : []
+    }) : [],
+    // Hospital state — animais internados na veterinária. Lookup via
+    // getSystem para evitar dependência circular com hospitalSystem.js.
+    hospital: (() => {
+      const hosp = getSystem('hospital');
+      return hosp?.serializeState ? hosp.serializeState() : { entries: [] };
+    })()
   };
 }
 
@@ -1533,6 +1559,13 @@ export function importWorldState(data) {
           handleWarn("Animal asset not found during import", "theWorld:importWorldState", { assetName: o.assetName });
         }
       }
+    }
+
+    // Restaura estado do hospital (animais internados). Lookup tardio para
+    // evitar dependência circular com hospitalSystem.js.
+    const hosp = getSystem('hospital');
+    if (hosp?.restoreState) {
+      hosp.restoreState(payload.hospital ?? { entries: [] });
     }
 
     if (payload.seed && typeof worldGenerator.setSeed === "function") {

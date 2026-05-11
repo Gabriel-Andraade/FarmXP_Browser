@@ -787,9 +787,11 @@ class SaveSystem {
         const isabela = getSystem('npcIsabela');
         const molly = getSystem('npcMolly');
         const tutorials = getSystem('tutorialQuests');
+        const fuel = getSystem('fuel');
         return {
             pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
             battery: questSys ? questSys.getBatteryState() : null,
+            fuel_percent: fuel ? fuel.getFuel() : 100.00,
             bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
             milly_quest: milly ? milly.getQuestState() : 'idle',
             bru_quest: bru ? bru.getQuestState() : { dialogue: 'idle' },
@@ -1162,6 +1164,10 @@ class SaveSystem {
             if (flags.battery) {
                 questSys.setBatteryState(flags.battery);
             }
+        }
+        const fuel = getSystem('fuel');
+        if (fuel && typeof flags.fuel_percent === 'number') {
+            fuel.setFuel(flags.fuel_percent);
         }
         const bartolomeu = getSystem('npcBartolomeu');
         if (bartolomeu && flags.bartolomeu_quest) {

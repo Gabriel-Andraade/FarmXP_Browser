@@ -181,3 +181,34 @@ export function getBuyPrice(itemId) {
     if (!item) return 0;
     return item.price || 0;
 }
+
+/**
+ * Detecta se a string de ícone é um caminho de imagem (vs. emoji)
+ * @param {string} icon
+ * @returns {boolean}
+ */
+export function isImageIcon(icon) {
+    return typeof icon === 'string' && (icon.includes('/') || icon.startsWith('http') || /\.(png|jpe?g|gif|webp|svg)$/i.test(icon));
+}
+
+/**
+ * Renderiza o ícone do item dentro de um elemento.
+ * Se for caminho de imagem, cria <img>; caso contrário, define textContent.
+ * Limpa filhos pré-existentes do container antes de adicionar.
+ * @param {HTMLElement} el - Container que receberá o ícone
+ * @param {string} icon - Caminho da imagem ou emoji
+ * @param {string} [alt] - Texto alternativo para imagens
+ */
+export function setItemIcon(el, icon, alt = '') {
+    if (!el) return;
+    el.replaceChildren();
+    if (!icon) return;
+    if (isImageIcon(icon)) {
+        const img = document.createElement('img');
+        img.src = icon;
+        img.alt = alt;
+        el.appendChild(img);
+    } else {
+        el.textContent = icon;
+    }
+}

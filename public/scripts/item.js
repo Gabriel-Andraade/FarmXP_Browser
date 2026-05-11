@@ -330,6 +330,117 @@ export const items = [
   },
 
   // ==================================================================================
+  // 💊 REMÉDIOS (MEDICINES)
+  // Tratamentos veterinários para as doenças dos animais. Dois tipos por doença:
+  //   - cureMode "instant":  cura imediata, mais caro.
+  //   - cureMode "gradual":  precisa de `daysToCure` dias de doses, mais barato.
+  // `dosesPerDay` indica se o player precisa aplicar 1 ou 2 vezes ao dia.
+  // `palatability` afeta a aceitação pelo animal — 'bitter' tende a fazer
+  // animais relutarem, 'palatable' aceita fácil. A lógica de aplicação/dose
+  // será implementada no diseaseSystem; aqui é só o catálogo.
+  // ==================================================================================
+  {
+    id: 200,
+    name: "Vermífugo Rápido",
+    icon: "💊",
+    price: 80,
+    description: "Cura verminose imediatamente. Dose única.",
+    type: "medicine",
+    targetDisease: "parasitosis",
+    cureMode: "instant",
+    dosesPerDay: 1,
+    palatability: "palatable"
+  },
+  {
+    id: 201,
+    name: "Vermífugo Comum",
+    icon: "💊",
+    price: 25,
+    description: "Cura verminose em 3 dias. Sabor amargo, alguns animais relutam.",
+    type: "medicine",
+    targetDisease: "parasitosis",
+    cureMode: "gradual",
+    daysToCure: 3,
+    dosesPerDay: 1,
+    palatability: "bitter"
+  },
+  {
+    id: 202,
+    name: "Antibiótico Premium",
+    icon: "💉",
+    price: 120,
+    description: "Trata problemas respiratórios na hora. Dose única.",
+    type: "medicine",
+    targetDisease: "respiratory",
+    cureMode: "instant",
+    dosesPerDay: 1,
+    palatability: "neutral"
+  },
+  {
+    id: 203,
+    name: "Xarope Caseiro",
+    icon: "🧴",
+    price: 30,
+    description: "Alivia tosse em 4 dias. Sabor doce, animais aceitam fácil.",
+    type: "medicine",
+    targetDisease: "respiratory",
+    cureMode: "gradual",
+    daysToCure: 4,
+    dosesPerDay: 2,
+    palatability: "palatable"
+  },
+  {
+    id: 204,
+    name: "Antiácido Veterinário",
+    icon: "💊",
+    price: 90,
+    description: "Cura problemas digestivos imediatamente. Dose única.",
+    type: "medicine",
+    targetDisease: "digestive",
+    cureMode: "instant",
+    dosesPerDay: 1,
+    palatability: "palatable"
+  },
+  {
+    id: 205,
+    name: "Probiótico em Pó",
+    icon: "🥄",
+    price: 35,
+    description: "Restaura a flora intestinal em 2 dias. Misturado na ração.",
+    type: "medicine",
+    targetDisease: "digestive",
+    cureMode: "gradual",
+    daysToCure: 2,
+    dosesPerDay: 2,
+    palatability: "neutral"
+  },
+  {
+    id: 206,
+    name: "Antitérmico Forte",
+    icon: "💊",
+    price: 70,
+    description: "Cura febre imediatamente. Sabor amargo, vai dar trabalho aplicar.",
+    type: "medicine",
+    targetDisease: "fever",
+    cureMode: "instant",
+    dosesPerDay: 1,
+    palatability: "bitter"
+  },
+  {
+    id: 207,
+    name: "Chá Medicinal",
+    icon: "🍵",
+    price: 20,
+    description: "Reduz febre em 3 dias. Aroma agradável.",
+    type: "medicine",
+    targetDisease: "fever",
+    cureMode: "gradual",
+    daysToCure: 3,
+    dosesPerDay: 1,
+    palatability: "palatable"
+  },
+
+  // ==================================================================================
   // 🪨 RECURSOS NATURAIS
   // Materiais brutos coletados do ambiente
   // ==================================================================================
@@ -381,6 +492,58 @@ export const items = [
     description: "Restos de madeira, bom para combustível",
     type: "resource"
   },
+  // ==================================================================================
+  // alimentos para animais
+  // ==================================================================================
+  {
+    id: 98,
+    name: "Ração de Qualidade",
+    icon: "🌾",
+    price: 20,
+    description: "Alimento balanceado para animais domésticos",
+    type: "resource"
+  },
+  {
+    id: 97,
+    name: "milho moído e farelo de soja",
+    icon: "🌾",
+    price: 26,
+    description: "ração para os porcos filhotes.",
+    type: "resource"
+  },
+  {
+    id: 96,
+    name: "grãos para aves",
+    icon: "🌾",
+    price: 12,
+    description: "ração geral para as aves",
+    type: "resource"
+  },
+  {
+    id: 101,
+    name: "ração para felinos",
+    icon: "🌾",
+    price: 30,
+    description: "ração especializada para gatos domésticos",
+    type: "resource"
+  },
+  {
+    id: 102,
+    name: "ração para cachorros",
+    icon: "🌾",
+    price: 30,
+    description: "ração especializada para cães domésticos",
+    type: "resource"
+  },
+  {
+    id: 99,
+    name: "feno",
+    icon: "🌾",
+    price: 15,
+    description: "alimento básico para vacas, touro, cavalo, ovelhas",
+    type: "resource"
+  },
+  // ==================================================================================
 
   // ==================================================================================
   // 🔧 MATERIAIS PROCESSADOS

@@ -677,9 +677,10 @@ export class PlayerInteractionSystem {
 
         }
 
-        const animalUI = getSystem('animalUI');
-        animalUI?.closeAll?.();
-
+        // Antes este branch chamava `animalUI.closeAll()` — removido
+        // porque clicar fora não deve fechar o painel (só o ❌ fecha) e
+        // porque essa chamada combinada com o pointerdown capture do UiPanel
+        // criava close-then-open quando se clicava em outro animal.
         if (this.mobile) {
             this.touchMoveSystem.setDestination(worldX, worldY);
         }

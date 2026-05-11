@@ -4,6 +4,7 @@ import { t } from '../i18n/i18n.js';
 import { getSystem } from "../gameState.js";
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { toggleHelpPanel } from '../helpPanel.js';
+import { isImageIcon } from '../itemUtils.js';
 
 /**
  * Retorna a label da tecla atual para uma ação de keybind
@@ -393,7 +394,15 @@ export class PlayerHUD {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'equipped-item-wrapper';
                 const iconSpan = document.createElement('span');
-                iconSpan.textContent = item.icon || '';
+                iconSpan.className = 'equipped-item-icon';
+                if (item.icon && isImageIcon(item.icon)) {
+                    const img = document.createElement('img');
+                    img.src = item.icon;
+                    img.alt = itemName;
+                    iconSpan.appendChild(img);
+                } else {
+                    iconSpan.textContent = item.icon || '';
+                }
                 const nameSpan = document.createElement('span');
                 nameSpan.textContent = itemName;
                 wrapper.append(iconSpan, nameSpan);

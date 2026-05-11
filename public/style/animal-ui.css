@@ -108,7 +108,7 @@
   transform: scale(0.9);
   transition: opacity 0.18s, transform 0.18s;
   pointer-events: none;
-  font-size: 14px;
+  font-size: 21px;
   backdrop-filter: blur(4px);
   /* CSS custom properties for dynamic positioning */
   --menu-left: 0px;
@@ -120,13 +120,15 @@
 .aui-menu.aui-visible {
   opacity: 1;
   transform: scale(1);
-  pointer-events: auto;
 }
 
 .aui-menu h3 {
   font-family: var(--font-family-pixel-title), cursive;
   margin: 0 0 12px 0;
-  font-size: 9px;
+  /* Press Start 2P é bitmap em grid de 8px — só fica crisp em
+     múltiplos de 8 (8/16/24). 14px estava entre o grid e gerava o
+     serrilhado mais notável da UI. */
+  font-size: 16px;
   color: #ffd700;
   text-transform: uppercase;
   border-bottom: 1px solid rgba(184, 134, 11, 0.4);
@@ -158,7 +160,13 @@
   transform: translateX(4px);
   box-shadow: -2px 2px 5px rgba(0,0,0,0.3);
 }
-.aui-action-btn span.icon { font-size: 18px; }
+.aui-action-btn span.icon { font-size: 27px; }
+.aui-action-btn span.icon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  vertical-align: middle;
+}
 
 /* ================= LINHAS SVG (CONECTORES) ================= */
 .aui-lines {
@@ -207,7 +215,8 @@
 .aui-animal-name {
   font-family: var(--font-family-pixel-title), cursive;
   font-weight: 800;
-  font-size: 10px;
+  /* Press Start 2P em grid de 8px — 16px é o sweet-spot legível. */
+  font-size: 16px;
   color: #fff;
   outline: none;
   white-space: nowrap;
@@ -215,7 +224,7 @@
   text-overflow: ellipsis;
 }
 .aui-animal-type {
-  font-size: 12px;
+  font-size: 18px;
   color: #d6c7ab;
   opacity: 0.95;
   margin-top: 1px;
@@ -223,7 +232,7 @@
 
 .aui-bars { display: flex; flex-direction: column; gap: 10px; }
 .aui-bar-row { display: flex; align-items: center; gap: 10px; }
-.aui-bar-label { width: 56px; font-weight: 700; color: #deb887; font-size: 13px; }
+.aui-bar-label { width: 56px; font-weight: 700; color: #deb887; font-size: 20px; }
 .aui-bar {
   flex: 1;
   height: 9px;
@@ -259,13 +268,64 @@
 .aui-mood-label {
   font-weight: 700;
   color: #deb887;
-  font-size: 13px;
+  font-size: 20px;
 }
 .aui-mood-value {
   font-weight: 600;
-  font-size: 13px;
+  font-size: 20px;
   color: #fff;
   text-transform: capitalize;
+}
+
+/* ================= SINTOMA / FERIMENTO ================= */
+.aui-injury-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(184, 134, 11, 0.25);
+}
+.aui-injury-label {
+  font-weight: 700;
+  color: #deb887;
+  font-size: 20px;
+}
+.aui-injury-value {
+  font-weight: 600;
+  font-size: 20px;
+  text-transform: capitalize;
+  color: #fff;
+}
+/* Cores por gravidade — fácil de bater o olho na UI. */
+.aui-injury-value[data-severity="none"]    { color: #6dbf6d; }   /* verde — saudável */
+.aui-injury-value[data-severity="scratch"] { color: #e6c34d; }   /* amarelo — leve */
+.aui-injury-value[data-severity="wound"]   { color: #e89045; }   /* laranja — médio */
+.aui-injury-value[data-severity="severe"]  { color: #e25656; }   /* vermelho — grave */
+
+/* Linha de tratamento — espelha o estilo de ferimento mas em tom verde-água
+   pra sinalizar visualmente "cuidado em andamento". Some via inline
+   style.display quando não há tratamento ativo. */
+.aui-treatment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(184, 134, 11, 0.25);
+}
+.aui-treatment-label {
+  font-weight: 700;
+  color: #deb887;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.aui-treatment-value {
+  font-weight: 600;
+  font-size: 17px;
+  color: #8fd1b8;
+  text-align: right;
 }
 
 /* ================= FEEDBACK BUBBLE ================= */

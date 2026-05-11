@@ -591,10 +591,57 @@ export default {
       fed: 'Se alimentou!',
       no_food: 'Sem ração no inventário!',
       suspicious: 'Desconfiado demais para comer...',
-      no_inventory: 'Inventário indisponível.'
+      no_inventory: 'Inventário indisponível.',
+      severe_refused: 'Não quer te seguir agora...',
+      guide_start: 'Vai te seguir!',
+      guide_stop: 'Parou de te seguir.',
+      medicine_accept: 'Tomou o remédio sem reclamar.',
+      medicine_mild_reject: 'Fez careta, mas tomou.',
+      medicine_reject: 'Detestou o remédio!',
+      medicine_cured: 'Curado! ✨',
+      not_medicine: 'Esse item não é um remédio.'
+    },
+    feedSub: {
+      title: 'Alimentar',
+      medicinesTitle: 'Remédios',
+      feed: 'Ração',
+      medicine: 'Remédios',
+      back: 'Voltar',
+      empty: 'Nenhum remédio no inventário.'
     },
     type: {
       unknown: 'Desconhecido'
+    },
+    injury: {
+      label: 'Sintoma',
+      none: 'Saudável',
+      severity: {
+        scratch: 'Arranhão',
+        wound: 'Ferida',
+        severe: 'Ferimento grave'
+      },
+      // Já com preposição correta (concordância de gênero/número em PT).
+      region: {
+        head: 'na cabeça',
+        leg: 'na perna',
+        back: 'nas costas',
+        chest: 'no peito',
+        tail: 'na cauda'
+      },
+      format: '{severity} {region}'
+    },
+    disease: {
+      unknown: '?',
+      names: {
+        parasitosis: 'Verminose',
+        respiratory: 'Problema respiratório',
+        digestive:   'Problema digestivo',
+        fever:       'Febre'
+      }
+    },
+    treatment: {
+      label: 'Tratamento',
+      format: '{icon} {name} · {days}/{requiredDays} dias · {dosesToday}/{requiredDoses} doses hoje'
     }
   },
 
@@ -933,6 +980,61 @@ export default {
       batteryHint: 'Pressione E para pegar a bateria',
       batteryPickedUp: 'Peguei a bateria! Agora preciso levá-la até a picape.',
     },
+    travelMap: {
+      title: '🗺️ Mapa da Cidade',
+      currentBadge: '📍 Você está aqui',
+      close: 'Fechar',
+      closeHint: 'Pressione ESC para fechar',
+      legend: {
+        player: 'Você (jogador)',
+        current: 'Local atual',
+        destinations: 'Destinos',
+        gas: 'Posto de gasolina',
+        blocked: 'Área bloqueada',
+      },
+      locations: {
+        farm:           { name: 'Fazenda',          desc: 'Cultivo & Colheita' },
+        city:           { name: 'Bairro/Cidade',    desc: 'Centro urbano' },
+        slaughterhouse: { name: 'Abatedouro',       desc: 'Processamento' },
+        vet:            { name: 'Veterinário',      desc: 'Cuidados animais' },
+        blocked:        { name: 'Área Desconhecida', desc: 'Indisponível' },
+      },
+      ariaTravel: 'Clique para viajar',
+      ariaBlocked: 'Bloqueado',
+      fuel: {
+        label: 'Combustível',
+      },
+      popup: {
+        ok: 'OK',
+        yes: 'Sim',
+        no: 'Não',
+        arrived: 'Você viajou para {name}!',
+        alreadyHere: 'Você já está em {name}!',
+        locked: 'Esta área está bloqueada!\nVocê não pode viajar para lá ainda.',
+        moving: 'Aguarde... Você ainda está viajando!',
+        noPath: 'Não há caminho disponível para {name}.',
+        inDev: '{name} ainda está em desenvolvimento.',
+        insufficientFuel: 'Combustível insuficiente para chegar em {name}.\nTanque atual: {current} · Necessário: {needed}.',
+      },
+      refuel: {
+        title: '⛽ Posto de Gasolina',
+        ask: 'Gostaria de abastecer?\nTanque atual: {percent}',
+        tankFull: 'O tanque já está cheio ({percent}). Continuando viagem.',
+        sliderTitle: 'Quanto abastecer?',
+        sliderInstruction: 'Arraste para escolher a quantidade.',
+        currentTank: 'Tanque atual',
+        afterRefuel: 'Após abastecer',
+        amount: 'Quantidade',
+        liters: 'Litros',
+        cost: 'Total',
+        balance: 'Saldo',
+        pricePerLiter: '{price}/L',
+        confirm: '✓ Abastecer',
+        cancel: '✕ Cancelar',
+        notEnoughMoney: 'Saldo insuficiente para abastecer essa quantidade.',
+        success: 'Abasteceu {amount}. Tanque agora: {percent}.',
+      },
+    },
     hud: {
       tooltip: 'Missões',
     },
@@ -946,6 +1048,82 @@ export default {
     talkHint: 'Pressione E para falar com {name}',
   },
 
+  // Veterinária — painel da Alice
+  vet: {
+    title: 'Veterinário',
+    subtitle: 'Alice — Cuidados Animais',
+    close: 'Fechar',
+    closeHint: 'Pressione ESC para fechar',
+    alt: 'Alice, a veterinária',
+    actionsLabel: 'Ações da veterinária',
+    actions: {
+      one:   'Conversar',
+      two:   'Diagnosticar',
+      three: 'Internar',
+      four:  'Remédios',
+    },
+    diagnose: {
+      title: 'Diagnóstico',
+      back: '← Voltar',
+      empty: 'Nenhum animal com sintomas no momento.',
+      pendingHint: 'Animal com sintomas. Iniciar exame?',
+      inProgress: 'Em diagnóstico — ~{minutes} min restantes',
+      ready: 'Resultado pronto. Retirar?',
+      done: 'Diagnosticado: {disease}',
+      startBtn: 'Iniciar diagnóstico',
+      retrieveBtn: 'Retirar (R$ {value})',
+      feeLabel: 'Custo para retirar:',
+      feeFormat: 'R$ {value}',
+      noMoney: 'Saldo insuficiente para retirar (R$ {value}).',
+    },
+    medicine: {
+      title: 'Loja de Remédios',
+      back: '← Voltar',
+      empty: 'Nenhum remédio disponível. Diagnostique um animal primeiro.',
+      buyBtn: 'Comprar (R$ {value})',
+      priceFormat: 'R$ {value}',
+      cureInstant: 'Cura imediata',
+      cureGradual: 'Cura em {days} dias',
+      doses1: '1 dose/dia',
+      doses2: '2 doses/dia',
+      noMoney: 'Saldo insuficiente (R$ {value}).',
+      inventoryFull: 'Inventário cheio.',
+      boughtToast: 'Comprou: {name} (R$ {value})',
+    },
+  },
+
+  // Hospital / Internação — fluxos do botão Internar do vet
+  hospital: {
+    admit_title: 'Internar animal',
+    recovery_title: 'Animais internados',
+    no_severe_animals: 'Nenhum animal com ferimento grave para internar.',
+    no_recovery_animals: 'Nenhum animal internado no momento.',
+    admit_btn: 'Internar',
+    cancel_btn: 'Cancelar',
+    confirm_btn: 'Confirmar',
+    back_btn: 'Voltar',
+    confirm_message:
+      'Internar {animal} por {days} dia(s)? Custo total: {cost} (cobrado na retirada).',
+    admit_success: 'Animal internado por {days} dia(s). Custo previsto: {cost}.',
+    admit_failed: 'Não foi possível internar o animal.',
+    remaining_days: 'Em recuperação — {days} dia(s) restante(s)',
+    treatment_progress: '{days}d',
+    ready_for_pickup: 'Pronto para retirada!',
+    pickup_btn: 'Retirar ({cost})',
+    pickup_success: '{name} voltou para a fazenda! Pago: {cost}.',
+    pickup_failed: {
+      generic: 'Não foi possível retirar o animal.',
+      no_money: 'Dinheiro insuficiente.',
+      not_ready: 'O animal ainda está em recuperação.',
+      not_found: 'Registro não encontrado.',
+      respawn_failed: 'Falha ao trazer o animal de volta.',
+      no_currency_system: 'Sistema de moeda indisponível.',
+    },
+    pill: {
+      ready: '{count} pronto(s) / {total} internado(s)',
+      recovering: '{total} em recuperação',
+    },
+  },
   // NPC Bartolomeu dialogues
   npc: {
     bartolomeu: {

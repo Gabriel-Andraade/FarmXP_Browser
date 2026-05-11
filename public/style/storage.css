@@ -256,6 +256,13 @@
     transition: transform 0.3s ease;
 }
 
+.item-icon img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    display: block;
+}
+
 .storage-slot:hover .item-icon {
     transform: scale(1.1) rotate(5deg);
 }

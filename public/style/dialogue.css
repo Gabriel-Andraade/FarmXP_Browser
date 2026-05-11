@@ -73,7 +73,10 @@
     padding: 5px 14px;
     border-radius: 40px;
     color: #f5e7d9;
-    font-size: 0.55rem;
+    /* Press Start 2P é bitmap em grid de 8px — 0.55rem (~8.8px)
+       caía entre o grid e ficava fuzzy. 0.75rem (12px) é o menor
+       razoável; o look "pequeno" se mantém. */
+    font-size: 0.75rem;
     letter-spacing: 1px;
     backdrop-filter: blur(4px);
 }
@@ -111,7 +114,9 @@
 /* Speaker name */
 .dlg-speaker {
     font-family: var(--font-family-pixel-title), cursive;
-    font-size: 0.8rem;
+    /* Press Start 2P legível: 1rem (16px) é múltiplo do grid base
+       de 8px e o resultado fica nítido em qualquer DPI. */
+    font-size: 1rem;
     font-weight: 800;
     margin-bottom: 10px;
     padding-bottom: 5px;

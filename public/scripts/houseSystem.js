@@ -12,7 +12,7 @@ import { collisionSystem } from './collisionSystem.js';
 import { storageSystem } from './storageSystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { WeatherSystem } from './weather.js';
-import { getItem } from './itemUtils.js';
+import { getItem, setItemIcon } from './itemUtils.js';
 import { craftingSystem } from './craftingSystem.js';
 import { t } from './i18n/i18n.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
@@ -606,7 +606,7 @@ export class HouseSystem {
             slotHeader.className = 'slot-header';
             const iconDiv = document.createElement('div');
             iconDiv.className = 'item-icon';
-            iconDiv.textContent = icon;
+            setItemIcon(iconDiv, icon, name);
             const qtyDiv = document.createElement('div');
             qtyDiv.className = 'item-quantity';
             qtyDiv.textContent = `${qty}x`;

@@ -386,6 +386,18 @@ export class CollisionSystem {
         this._interGrid.insert(object.id, hitbox);
     }
 
+    setInteractionHitboxBounds(id, x, y, width, height) {
+        const ihb = this.interactionHitboxes.get(id);
+        if (!ihb) return false;
+        this._interGrid.remove(id, ihb);
+        ihb.x = x;
+        ihb.y = y;
+        ihb.width = width;
+        ihb.height = height;
+        this._interGrid.insert(id, ihb);
+        return true;
+    }
+
     removeHitbox(id) {
         const phys = this.hitboxes.get(id);
         if (phys) this._physGrid.remove(id, phys);
@@ -468,13 +480,30 @@ export class CollisionSystem {
         }
     }
 
-    areaCollides(x, y, w, h, ignoreId = null) {
+    /**
+     * Verifica colisão de uma área retangular contra hitboxes do mundo.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @param {string|null} ignoreId - id de hitbox para ignorar (ex.: o
+     *   próprio actor), ou null.
+     * @param {Object} [opts]
+     * @param {string[]} [opts.ignoreTypes] - lista de tipos a ignorar
+     *   (ex.: ['ANIMAL'] pra colisão "soft" entre animais — eles passam
+     *   uns pelos outros sem travar, mas ainda batem em árvores/cercas/
+     *   jogador).
+     */
+    areaCollides(x, y, w, h, ignoreId = null, opts = null) {
+        const ignoreTypes = opts && opts.ignoreTypes;
         const rect = { x, y, width: w, height: h };
         const candidates = this._physGrid.query(x, y, w, h);
         for (const id of candidates) {
             if (ignoreId && id === ignoreId) continue;
             const hitbox = this.hitboxes.get(id);
-            if (hitbox && checkAABBCollision(rect, hitbox)) return true;
+            if (!hitbox) continue;
+            if (ignoreTypes && ignoreTypes.includes(hitbox.type)) continue;
+            if (checkAABBCollision(rect, hitbox)) return true;
         }
         return false;
     }
@@ -539,6 +568,8 @@ export class CollisionSystem {
 
         // Ponto query: buscar na célula que contém o ponto
         const candidates = this._interGrid.query(worldX, worldY, 1, 1);
+        let best = null;
+        let bestDistSq = Infinity;
         for (const id of candidates) {
             const hitbox = this.interactionHitboxes.get(id);
             if (!hitbox) continue;
@@ -552,17 +583,25 @@ export class CollisionSystem {
                     continue;
                 }
 
-                return {
-                    objectId: hitbox.id,
-                    type: hitbox.originalType,
-                    originalType: hitbox.originalType,
-                    x: hitbox.x,
-                    y: hitbox.y,
-                    object: hitbox.object
-                };
+                const cx = hitbox.x + hitbox.width / 2;
+                const cy = hitbox.y + hitbox.height / 2;
+                const dx = worldX - cx;
+                const dy = worldY - cy;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    best = {
+                        objectId: hitbox.id,
+                        type: hitbox.originalType,
+                        originalType: hitbox.originalType,
+                        x: hitbox.x,
+                        y: hitbox.y,
+                        object: hitbox.object
+                    };
+                }
             }
         }
-        return null;
+        return best;
     }
 
     getAnyObjectById(objectId) {

@@ -266,6 +266,15 @@ async function initializeCriticalSystems() {
     await import("./animal/UiPanel.js");
     logger.debug("animal UiPanel carregado");
 
+    await import("./animal/injurySystem.js");
+    logger.debug("animal injurySystem carregado");
+
+    await import("./animal/diseaseSystem.js");
+    logger.debug("animal diseaseSystem carregado");
+
+    await import("./animal/hospitalSystem.js");
+    logger.debug("animal hospitalSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -387,9 +396,9 @@ function setupInteractionSystem() {
     }
   });
 
-  // ─── Animal interaction handler (pet / feed / guide) ───
+  // ─── Animal interaction handler (pet / feed / guide / applyMedicine) ───
   document.addEventListener("animalAction", (e) => {
-    const { action, animal } = e.detail || {};
+    const { action, animal, itemId } = e.detail || {};
     if (!animal || typeof animal.pet !== 'function') return;
 
     let result;
@@ -403,6 +412,26 @@ function setupInteractionSystem() {
       case 'guide':
         result = animal.guide();
         break;
+      case 'applyMedicine': {
+        // Decrementa o item do inventário ANTES de aplicar — se falhar a
+        // remoção, não aplica (animal não consome o que não foi pago).
+        const inv = getSystem('inventory');
+        if (!inv || typeof inv.removeItem !== 'function') {
+          result = { success: false, message: 'no_inventory' };
+          break;
+        }
+        const removed = inv.removeItem(itemId, 1);
+        if (!removed) {
+          result = { success: false, message: 'no_food' }; // reusa msg de "sem item no inventário"
+          break;
+        }
+        result = animal.applyMedicine(itemId);
+        // Se o animal não pôde receber (suspeito/dormindo), devolve o item.
+        if (!result.success && typeof inv.addItem === 'function') {
+          inv.addItem(itemId, 1);
+        }
+        break;
+      }
       default:
         return;
     }
@@ -425,21 +454,27 @@ function setupInteractionSystem() {
 function spawnGameAnimals() {
   if (animalsInitialized) return;
 
-  const animalType = "Bull";
+  const animalTypes = ["Bull", "Calf", "Chick", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
+  const baseX = 1800;
+  const baseY = 1850;
+  const spacing = 110;
+  const cols = 4;
 
-  if (assets.animals && assets.animals[animalType]) {
-    logger.debug(`Spawnando Animais (${animalType})...`);
-
-    for (let i = 0; i < 5; i++) {
-      const x = 1800 + Math.random() * 400;
-      const y = 1800 + Math.random() * 400;
+  for (let i = 0; i < animalTypes.length; i++) {
+    const animalType = animalTypes[i];
+    if (assets.animals && assets.animals[animalType]) {
+      logger.debug(`Spawnando Animal (${animalType})...`);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = baseX + col * spacing;
+      const y = baseY + row * spacing;
       addAnimal(animalType, assets.animals[animalType], x, y);
+    } else {
+      handleWarn(`não foi possível spawnar animal: tipo '${animalType}' não encontrado`, "main:spawnGameAnimals");
     }
-
-    animalsInitialized = true;
-  } else {
-    handleWarn(`não foi possível spawnar animais: tipo '${animalType}' não encontrado`, "main:spawnGameAnimals");
   }
+
+  animalsInitialized = true;
 }
 
 // =============================================================================
@@ -739,6 +774,30 @@ async function startFullGameLoad() {
       }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
+    }
+
+    // Sistema de combustível da picape (precisa estar registrado antes do
+    // travelMap, do save e da leitura/restauração de gameFlags).
+    try {
+      await import('./fuelSystem.js');
+    } catch (e) {
+      handleWarn("falha ao carregar fuelSystem", "main:startFullGameLoad:fuelSystem", e);
+    }
+
+    // Travel Map UI — carrega antes do mapManager para que getSystem('travelMap')
+    // já esteja registrado quando triggerPortalTransition for chamado.
+    try {
+      await import('./travelMap.js');
+    } catch (e) {
+      handleWarn("falha ao carregar travelMap", "main:startFullGameLoad:travelMap", e);
+    }
+
+    // Painel da Veterinária (Alice). É aberto pelo travelMap quando o
+    // jogador chega no destino "vet".
+    try {
+      await import('./vetSystem.js');
+    } catch (e) {
+      handleWarn("falha ao carregar vetSystem", "main:startFullGameLoad:vetSystem", e);
     }
 
     // Map Manager (farm ↔ city transitions)

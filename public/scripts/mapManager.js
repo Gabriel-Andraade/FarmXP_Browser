@@ -181,6 +181,10 @@ export function checkPortalInteraction(playerX, playerY, playerW, playerH) {
 /**
  * Trigger the map transition (call when player presses E near portal).
  * On the farm, the pickup is broken → show speech bubble instead.
+ *
+ * Após validar o estado, em vez de viajar direto, abre o mapa de viagem
+ * (travelMap) para o jogador escolher o destino. A transição real só
+ * acontece quando o callback do mapa é disparado.
  */
 export async function triggerPortalTransition() {
     const portal = getPortalForMap(currentMapId);
@@ -195,8 +199,31 @@ export async function triggerPortalTransition() {
         }
     }
 
-    isTransitioning = true;
     hidePortalHint();
+
+    // Abre o mapa de viagem antes da transição. O destino que dispara
+    // a transição é o targetMap do portal atual (city quando na fazenda,
+    // farm quando na cidade). Outros locais ficam apenas decorativos.
+    const travelMap = getSystem('travelMap');
+    if (travelMap && typeof travelMap.open === 'function') {
+        travelMap.open({
+            currentLocationId: currentMapId === 'farm' ? 'farm' : 'city',
+            onTravel: async (destinationId) => {
+                if (destinationId === portal.targetMap) {
+                    await _executePortalTransition(portal);
+                }
+            },
+        });
+        return;
+    }
+
+    // Fallback: sem UI do mapa, usa a transição direta antiga.
+    await _executePortalTransition(portal);
+}
+
+async function _executePortalTransition(portal) {
+    if (isTransitioning) return;
+    isTransitioning = true;
     blockInteractions();
 
     let targetMapId = currentMapId;
