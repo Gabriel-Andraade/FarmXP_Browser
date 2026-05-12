@@ -592,10 +592,56 @@ export default {
       fed: 'Ate happily!',
       no_food: 'No feed in inventory!',
       suspicious: 'Too suspicious to eat...',
-      no_inventory: 'Inventory unavailable.'
+      no_inventory: 'Inventory unavailable.',
+      severe_refused: "Doesn't want to follow you right now...",
+      guide_start: 'Will follow you!',
+      guide_stop: 'Stopped following you.',
+      medicine_accept: 'Took the medicine without complaining.',
+      medicine_mild_reject: 'Grimaced, but took it.',
+      medicine_reject: 'Hated the medicine!',
+      medicine_cured: 'Healed! ✨',
+      not_medicine: 'This item is not a medicine.'
+    },
+    feedSub: {
+      title: 'Feed',
+      medicinesTitle: 'Medicines',
+      feed: 'Feed',
+      medicine: 'Medicines',
+      back: 'Back',
+      empty: 'No medicines in inventory.'
     },
     type: {
       unknown: 'Unknown'
+    },
+    injury: {
+      label: 'Symptom',
+      none: 'Healthy',
+      severity: {
+        scratch: 'Scratch',
+        wound: 'Wound',
+        severe: 'Severe wound'
+      },
+      region: {
+        head: 'on the head',
+        leg: 'on the leg',
+        back: 'on the back',
+        chest: 'on the chest',
+        tail: 'on the tail'
+      },
+      format: '{severity} {region}'
+    },
+    disease: {
+      unknown: '?',
+      names: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Respiratory issue',
+        digestive:   'Digestive issue',
+        fever:       'Fever'
+      }
+    },
+    treatment: {
+      label: 'Treatment',
+      format: '{icon} {name} · {days}/{requiredDays} days · {dosesToday}/{requiredDoses} doses today'
     }
   },
 
@@ -1022,8 +1068,89 @@ export default {
       three: 'Hospitalize',
       four:  'Medicine',
     },
+    dialogue: {
+      hint: 'Click to continue',
+      aliceBack: 'Hello again! How can I help?',
+      intro: {
+        aliceFirstGreet: 'Hm? Hello, how can I help you?',
+        stellaFirst: "I'm new around here.",
+        benFirst: "I'm new... just moved here.",
+        grahamFirst: 'I just moved here.',
+        aliceIntro: "Welcome. My name is Alice, I'm the veterinarian who takes care of all the animals, from the little ones to the big ones on the farm. If you need anything, don't hesitate to call me.",
+        stellaName: "Pleasure! I'm Stella!",
+        benName: "I'm Ben, nice to meet you Alice.",
+        grahamName: 'My name is Graham, a pleasure.',
+        aliceOutro: "Nice to meet you all! If there's anything I can do for your animals, just bring them in!",
+      },
+      care: {
+        injuredMale:   "Poor {name}! They sometimes fight or hurt themselves playing, but leave it to me!",
+        injuredFemale: "Poor {name}! They sometimes fight or hurt themselves playing, but leave it to me!",
+        medicineMale:   "{name} is still under treatment — keep up with the medicine, alright?",
+        medicineFemale: "{name} is still under treatment — keep up with the medicine, alright?",
+      },
+    },
+    diagnose: {
+      title: 'Diagnosis',
+      back: '← Back',
+      empty: 'No animals showing symptoms right now.',
+      pendingHint: 'Animal showing symptoms. Start the exam?',
+      inProgress: 'Diagnosing — ~{minutes} min remaining',
+      ready: 'Result ready. Pick up?',
+      done: 'Diagnosed: {disease}',
+      startBtn: 'Start diagnosis',
+      retrieveBtn: 'Pick up (${value})',
+      feeLabel: 'Pick-up cost:',
+      feeFormat: '${value}',
+      noMoney: 'Insufficient balance to pick up (${value}).',
+    },
+    medicine: {
+      title: 'Medicine Shop',
+      back: '← Back',
+      empty: 'No medicines available. Diagnose an animal first.',
+      buyBtn: 'Buy (${value})',
+      priceFormat: '${value}',
+      cureInstant: 'Instant cure',
+      cureGradual: 'Cures in {days} days',
+      doses1: '1 dose/day',
+      doses2: '2 doses/day',
+      noMoney: 'Insufficient balance (${value}).',
+      inventoryFull: 'Inventory full.',
+      boughtToast: 'Bought: {name} (${value})',
+    },
   },
 
+  // Hospital / Admission — flows from the vet's Hospitalize button
+  hospital: {
+    admit_title: 'Hospitalize animal',
+    recovery_title: 'Hospitalized animals',
+    no_severe_animals: 'No severely injured animals to hospitalize.',
+    no_recovery_animals: 'No animals hospitalized right now.',
+    admit_btn: 'Hospitalize',
+    cancel_btn: 'Cancel',
+    confirm_btn: 'Confirm',
+    back_btn: 'Back',
+    confirm_message:
+      'Hospitalize {animal} for {days} day(s)? Total cost: {cost} (charged on pick-up).',
+    admit_success: 'Animal hospitalized for {days} day(s). Estimated cost: {cost}.',
+    admit_failed: 'Could not hospitalize the animal.',
+    remaining_days: 'In recovery — {days} day(s) remaining',
+    treatment_progress: '{days}d',
+    ready_for_pickup: 'Ready for pick-up!',
+    pickup_btn: 'Pick up ({cost})',
+    pickup_success: '{name} is back on the farm! Paid: {cost}.',
+    pickup_failed: {
+      generic: 'Could not pick up the animal.',
+      no_money: 'Not enough money.',
+      not_ready: 'The animal is still recovering.',
+      not_found: 'Record not found.',
+      respawn_failed: 'Failed to bring the animal back.',
+      no_currency_system: 'Currency system unavailable.',
+    },
+    pill: {
+      ready: '{count} ready / {total} hospitalized',
+      recovering: '{total} in recovery',
+    },
+  },
   // NPC Bartolomeu dialogues
   npc: {
     bartolomeu: {

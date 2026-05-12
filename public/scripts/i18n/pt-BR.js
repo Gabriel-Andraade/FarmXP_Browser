@@ -1062,6 +1062,27 @@ export default {
       three: 'Internar',
       four:  'Remédios',
     },
+    dialogue: {
+      hint: 'Clique para continuar',
+      aliceBack: 'Olá novamente! Como posso ajudar?',
+      intro: {
+        aliceFirstGreet: 'hm? olá, como posso ajudar?',
+        stellaFirst: 'sou nova por aqui.',
+        benFirst: 'sou novo... acabei de me mudar.',
+        grahamFirst: 'me mudei para cá.',
+        aliceIntro: 'seja bem-vindo. Me chamo Alice, sou a veterinária que cuida de todos os bichinhos, desde dos pequenos até os grandes da fazenda. se precisar de algo, não hesite em me chamar.',
+        stellaName: 'prazer! Sou Stella!',
+        benName: 'sou Ben, prazer em te conhecer Alice.',
+        grahamName: 'me chamo Graham, prazer.',
+        aliceOutro: 'Prazer conhecer vocês! Se tiver algo que posso fazer com seus bichinhos, só trazerem eles!',
+      },
+      care: {
+        injuredMale:   'coitado do {name}! Às vezes brigam com outro ou se machucam brincando, mas deixe que eu resolvo!',
+        injuredFemale: 'coitada da {name}! Às vezes brigam com outra ou se machucam brincando, mas deixe que eu resolvo!',
+        medicineMale:   'o {name} ainda está sob tratamento — mantenha os remédios em dia, viu?',
+        medicineFemale: 'a {name} ainda está sob tratamento — mantenha os remédios em dia, viu?',
+      },
+    },
     diagnose: {
       title: 'Diagnóstico',
       back: '← Voltar',

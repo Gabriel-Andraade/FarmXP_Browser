@@ -3,6 +3,11 @@
  * Contém todos os itens disponíveis incluindo ferramentas, sementes, alimentos,
  * recursos, construções e decorações
  * @constant {Array<Object>}
+ *
+ * Convenção de `icon`: caminho `assets/icons/*.png` quando há arte dedicada;
+ * emoji unicode como fallback quando ainda não há ícone. O renderer detecta
+ * o tipo via `isImageIcon` (itemUtils.js) — caminhos com `.`/`/` viram <img>,
+ * o resto é texto.
  */
 export const items = [
 
@@ -13,7 +18,7 @@ export const items = [
   {
     id: 0,
     name: "Tesoura de jardinagem",
-    icon: "✂️",
+    icon: "assets/icons/shearsIcon.png",
     price: 20,
     description: "Perfeita para podar plantas e arbustos",
     type: "tool",
@@ -23,7 +28,7 @@ export const items = [
     id: 1,
     name: "Enxada",
     damage: 1,
-    icon: "🪓",
+    icon: "assets/icons/hoeIcon.png",
     price: 50,
     description: "Ferramenta para arar a terra",
     type: "tool",
@@ -33,7 +38,7 @@ export const items = [
     id: 2,
     name: "Martelo",
     damage: 1,
-    icon: "🔨",
+    icon: "assets/icons/hammerIcon.png",
     price: 70,
     description: "Ferramenta para construção",
     type: "tool",
@@ -43,7 +48,7 @@ export const items = [
     id: 11,
     name: "Foice",
     damage: 1,
-    icon: "⚔️",
+    icon: "assets/icons/scytheIcon.png",
     price: 45,
     description: "Para colher plantações maduras",
     type: "tool",
@@ -52,7 +57,7 @@ export const items = [
   {
     id: 12,
     name: "Regador",
-    icon: "💧",
+    icon: "assets/icons/wateringCanIcon.png",
     price: 35,
     description: "Para regar as plantas",
     type: "tool",
@@ -62,7 +67,7 @@ export const items = [
     id: 13,
     name: "Picareta",
     damage: 1,
-    icon: "⛏️",
+    icon: "assets/icons/pickaxeIcon.png",
     price: 80,
     description: "Quebra pedras e minérios",
     type: "tool",
@@ -72,7 +77,7 @@ export const items = [
     id: 14,
     name: "Machado",
     damage: 1,
-    icon: "🪓",
+    icon: "assets/icons/axeIcon.png",
     price: 60,
     description: "Corta árvores e madeira",
     type: "tool",
@@ -91,7 +96,7 @@ export const items = [
   {
     id: 16,
     name: "Balde",
-    icon: "🪣",
+    icon: "assets/icons/bucketIcon.png",
     price: 25,
     description: "Coleta água e leite",
     type: "tool",
@@ -101,7 +106,7 @@ export const items = [
     id: 22,
     name: "Machete",
     damage: 1,
-    icon: "🔪",
+    icon: "assets/icons/macheteIcon.png",
     price: 55,
     description: "Corta vegetação densa",
     type: "tool",
@@ -115,7 +120,7 @@ export const items = [
   {
     id: 3,
     name: "Semente de Milho",
-    icon: "🌽",
+    icon: "assets/icons/cornSeedIcon.png",
     price: 20,
     description: "Pode ser plantada para crescer milho",
     type: "seed"
@@ -123,7 +128,7 @@ export const items = [
   {
     id: 4,
     name: "Semente de Trigo",
-    icon: "🌾",
+    icon: "assets/icons/wheatSeedIcon.png",
     price: 15,
     description: "Pode ser plantada para crescer trigo",
     type: "seed"
@@ -131,7 +136,7 @@ export const items = [
   {
     id: 17,
     name: "Semente de Cenoura",
-    icon: "🥕",
+    icon: "assets/icons/carrotSeedIcon.png",
     price: 12,
     description: "Pode ser plantada para crescer cenouras",
     type: "seed"
@@ -147,7 +152,7 @@ export const items = [
   {
     id: 19,
     name: "Semente de Batata",
-    icon: "🥔",
+    icon: "assets/icons/potatoSeedIcon.png",
     price: 10,
     description: "Pode ser plantada para crescer batatas",
     type: "seed"
@@ -163,7 +168,7 @@ export const items = [
   {
     id: 21,
     name: "Semente de Flores",
-    icon: "🌻",
+    icon: "assets/icons/flowerSeedIcon.png",
     price: 8,
     description: "Pode ser plantada para crescer flores",
     type: "seed"
@@ -171,7 +176,7 @@ export const items = [
   {
     id: 53,
     name: "Semente de Árvore",
-    icon: "🌳",
+    icon: "assets/icons/appleSeedIcon.png",
     price: 50,
     description: "Cresce uma árvore que dá frutos",
     type: "seed"
@@ -184,7 +189,7 @@ export const items = [
   {
     id: 5,
     name: "Maçã",
-    icon: "🍎",
+    icon: "assets/icons/appleIcon.png",
     price: 10,
     description: "Fruta para consumo",
     type: "food",
@@ -193,7 +198,7 @@ export const items = [
   {
     id: 6,
     name: "Pão",
-    icon: "🍞",
+    icon: "assets/icons/breadIcon.png",
     price: 25,
     description: "Comida para recuperar energia",
     type: "food",
@@ -202,7 +207,7 @@ export const items = [
   {
     id: 23,
     name: "Queijo",
-    icon: "🧀",
+    icon: "assets/icons/cheeseIcon.png",
     price: 35,
     description: "Feito com leite fresco",
     type: "food",
@@ -220,7 +225,7 @@ export const items = [
   {
     id: 25,
     name: "Torta de Maçã",
-    icon: "🥧",
+    icon: "assets/icons/applePieIcon.png",
     price: 60,
     description: "Doce caseiro delicioso",
     type: "food",
@@ -229,7 +234,7 @@ export const items = [
   {
     id: 26,
     name: "Sopa de Legumes",
-    icon: "🍲",
+    icon: "assets/icons/vegetableSoupIcon.png",
     price: 45,
     description: "Refeição nutritiva",
     type: "food",
@@ -238,7 +243,7 @@ export const items = [
   {
     id: 27,
     name: "Mel",
-    icon: "🍯",
+    icon: "assets/icons/honeyIcon.png",
     price: 40,
     description: "Doce natural das abelhas",
     type: "food",
@@ -247,7 +252,7 @@ export const items = [
   {
     id: 28,
     name: "Suco de Fruta",
-    icon: "🧃",
+    icon: "assets/icons/fruitJuiceIcon.png",
     price: 30,
     description: "Bebida refrescante",
     type: "food",
@@ -265,7 +270,7 @@ export const items = [
   {
     id: 72,
     name: "Salada de Frutas",
-    icon: "🥗",
+    icon: "assets/icons/fruitSaladIcon.png",
     price: 45,
     description: "Mistura refrescante de frutas",
     type: "food",
@@ -274,7 +279,7 @@ export const items = [
   {
     id: 41,
     name: "Garrafa com agua",
-    icon: "💧",
+    icon: "assets/icons/waterBottleIcon.png",
     price: 10,
     description: "Água fresca para beber",
     type: "food",
@@ -288,7 +293,7 @@ export const items = [
   {
     id: 7,
     name: "Ração para Galinha",
-    icon: "🥎",
+    icon: "assets/icons/chickenFeedIcon.png",
     price: 30,
     description: "Usada para alimentar galinhas",
     type: "animal_food",
@@ -299,7 +304,7 @@ export const items = [
   {
     id: 8,
     name: "Ração para Ovelha",
-    icon: "🥗",
+    icon: "assets/icons/sheepFeedIcon.png",
     price: 40,
     description: "Usada para alimentar ovelhas",
     type: "animal_food"
@@ -307,7 +312,7 @@ export const items = [
   {
     id: 29,
     name: "Feno",
-    icon: "🌾",
+    icon: "assets/icons/hayIcon.png",
     price: 20,
     description: "Alimento básico para animais",
     type: "animal_food"
@@ -315,7 +320,7 @@ export const items = [
   {
     id: 30,
     name: "Ração para Vaca",
-    icon: "🍃",
+    icon: "assets/icons/cowFeedIcon.png",
     price: 50,
     description: "Nutrientes especiais para vacas",
     type: "animal_food"
@@ -342,7 +347,7 @@ export const items = [
   {
     id: 200,
     name: "Vermífugo Rápido",
-    icon: "💊",
+    icon: "assets/icons/fastDewormerIcon.png",
     price: 80,
     description: "Cura verminose imediatamente. Dose única.",
     type: "medicine",
@@ -354,7 +359,7 @@ export const items = [
   {
     id: 201,
     name: "Vermífugo Comum",
-    icon: "💊",
+    icon: "assets/icons/commonDewormerIcon.png",
     price: 25,
     description: "Cura verminose em 3 dias. Sabor amargo, alguns animais relutam.",
     type: "medicine",
@@ -367,7 +372,7 @@ export const items = [
   {
     id: 202,
     name: "Antibiótico Premium",
-    icon: "💉",
+    icon: "assets/icons/premiumAntibioticIcon.png",
     price: 120,
     description: "Trata problemas respiratórios na hora. Dose única.",
     type: "medicine",
@@ -379,7 +384,7 @@ export const items = [
   {
     id: 203,
     name: "Xarope Caseiro",
-    icon: "🧴",
+    icon: "assets/icons/homemadeSyrupIcon.png",
     price: 30,
     description: "Alivia tosse em 4 dias. Sabor doce, animais aceitam fácil.",
     type: "medicine",
@@ -392,7 +397,7 @@ export const items = [
   {
     id: 204,
     name: "Antiácido Veterinário",
-    icon: "💊",
+    icon: "assets/icons/vetAntacidIcon.png",
     price: 90,
     description: "Cura problemas digestivos imediatamente. Dose única.",
     type: "medicine",
@@ -417,7 +422,7 @@ export const items = [
   {
     id: 206,
     name: "Antitérmico Forte",
-    icon: "💊",
+    icon: "assets/icons/strongAntipyreticIcon.png",
     price: 70,
     description: "Cura febre imediatamente. Sabor amargo, vai dar trabalho aplicar.",
     type: "medicine",
@@ -429,7 +434,7 @@ export const items = [
   {
     id: 207,
     name: "Chá Medicinal",
-    icon: "🍵",
+    icon: "assets/icons/medicinalTeaIcon.png",
     price: 20,
     description: "Reduz febre em 3 dias. Aroma agradável.",
     type: "medicine",
@@ -447,7 +452,7 @@ export const items = [
   {
     id: 9,
     name: "Madeira Bruta",
-    icon: "🪵",
+    icon: "assets/icons/rawWoodIcon.png",
     price: 15,
     description: "Tronco de árvore cortado",
     type: "resource"
@@ -455,7 +460,7 @@ export const items = [
   {
     id: 10,
     name: "Pedra",
-    icon: "🪨",
+    icon: "assets/icons/stoneIcon.png",
     price: 20,
     description: "material de construção básico",
     type: "resource"
@@ -463,7 +468,7 @@ export const items = [
   {
     id: 54,
     name: "Fibra Vegetal",
-    icon: "🌿",
+    icon: "assets/icons/plantFiberIcon.png",
     price: 2,
     description: "Obtida cortando grama, usada para cordas",
     type: "resource"
@@ -479,7 +484,7 @@ export const items = [
   {
     id: 56,
     name: "Carvão",
-    icon: "⚫",
+    icon: "assets/icons/coalIcon.png",
     price: 10,
     description: "Combustível essencial para fornalhas",
     type: "resource"
@@ -487,7 +492,7 @@ export const items = [
   {
     id: 57,
     name: "Lasca de Madeira",
-    icon: "🪵",
+    icon: "assets/icons/woodChipIcon.png",
     price: 2,
     description: "Restos de madeira, bom para combustível",
     type: "resource"
@@ -498,7 +503,7 @@ export const items = [
   {
     id: 98,
     name: "Ração de Qualidade",
-    icon: "🌾",
+    icon: "assets/icons/premiumFeedIcon.png",
     price: 20,
     description: "Alimento balanceado para animais domésticos",
     type: "resource"
@@ -506,7 +511,7 @@ export const items = [
   {
     id: 97,
     name: "milho moído e farelo de soja",
-    icon: "🌾",
+    icon: "assets/icons/groundCornSoyMealIcon.png",
     price: 26,
     description: "ração para os porcos filhotes.",
     type: "resource"
@@ -514,7 +519,7 @@ export const items = [
   {
     id: 96,
     name: "grãos para aves",
-    icon: "🌾",
+    icon: "assets/icons/poultryGrainIcon.png",
     price: 12,
     description: "ração geral para as aves",
     type: "resource"
@@ -522,7 +527,7 @@ export const items = [
   {
     id: 101,
     name: "ração para felinos",
-    icon: "🌾",
+    icon: "assets/icons/catFeedIcon.png",
     price: 30,
     description: "ração especializada para gatos domésticos",
     type: "resource"
@@ -530,7 +535,7 @@ export const items = [
   {
     id: 102,
     name: "ração para cachorros",
-    icon: "🌾",
+    icon: "assets/icons/dogFeedIcon.png",
     price: 30,
     description: "ração especializada para cães domésticos",
     type: "resource"
@@ -538,7 +543,7 @@ export const items = [
   {
     id: 99,
     name: "feno",
-    icon: "🌾",
+    icon: "assets/icons/hayIcon.png",
     price: 15,
     description: "alimento básico para vacas, touro, cavalo, ovelhas",
     type: "resource"
@@ -552,7 +557,7 @@ export const items = [
   {
     id: 32,
     name: "Tijolos",
-    icon: "🧱",
+    icon: "assets/icons/brickIcon.png",
     price: 30,
     description: "Para construções robustas",
     type: "resource"
@@ -576,7 +581,7 @@ export const items = [
   {
     id: 35,
     name: "Corda",
-    icon: "🪢",
+    icon: "assets/icons/ropeIcon.png",
     price: 12,
     description: "Para amarrações diversas",
     type: "resource"
@@ -584,7 +589,7 @@ export const items = [
   {
     id: 36,
     name: "Vidro",
-    icon: "🪟",
+    icon: "assets/icons/glassIcon.png",
     price: 35,
     description: "Para janelas e estufas",
     type: "resource"
@@ -600,7 +605,7 @@ export const items = [
   {
     id: 38,
     name: "Aço Temperado",
-    icon: "🔩",
+    icon: "assets/icons/temperedSteelIcon.png",
     price: 90,
     description: "material resistente para construção",
     type: "resource"
@@ -608,7 +613,7 @@ export const items = [
   {
     id: 48,
     name: "Linha",
-    icon: "🧵",
+    icon: "assets/icons/threadIcon.png",
     price: 8,
     description: "Para costurar e craftar",
     type: "resource"
@@ -616,7 +621,7 @@ export const items = [
   {
     id: 49,
     name: "Tecido",
-    icon: "📦",
+    icon: "assets/icons/fabricIcon.png",
     price: 18,
     description: "Feito da lã das ovelhas",
     type: "resource"
@@ -624,7 +629,7 @@ export const items = [
   {
     id: 50,
     name: "Tinta",
-    icon: "🎨",
+    icon: "assets/icons/paintBucketIcon.png",
     price: 25,
     description: "Para colorir construções",
     type: "resource"
@@ -632,7 +637,7 @@ export const items = [
   {
     id: 51,
     name: "Cola",
-    icon: "🫙",
+    icon: "assets/icons/glueIcon.png",
     price: 12,
     description: "Para colar materiais",
     type: "resource"
@@ -640,7 +645,7 @@ export const items = [
   {
     id: 52,
     name: "Kit de Reparos",
-    icon: "🛠️",
+    icon: "assets/icons/toolboxIcon.png",
     price: 55,
     description: "Conserta ferramentas danificadas",
     type: "resource"
@@ -648,7 +653,7 @@ export const items = [
   {
     id: 58,
     name: "Tábua de Madeira",
-    icon: "📏",
+    icon: "assets/icons/woodPlankIcon.png",
     price: 8,
     description: "Madeira refinada para construção",
     type: "resource"
@@ -664,7 +669,7 @@ export const items = [
   {
     id: 73,
     name: "Barra de Ferro",
-    icon: "▬",
+    icon: "assets/icons/ironBarIcon.png",
     price: 25,
     description: "Ferro refinado para construções avançadas",
     type: "resource"
@@ -680,7 +685,7 @@ export const items = [
   {
     id: 75,
     name: "Parafuso",
-    icon: "🔩",
+    icon: "assets/icons/screwIcon.png",
     price: 3,
     description: "Para fixações mais resistentes",
     type: "resource"
@@ -688,7 +693,7 @@ export const items = [
   {
     id: 76,
     name: "Haste de Madeira",
-    icon: "🎋",
+    icon: "assets/icons/woodStickIcon.png",
     price: 4,
     description: "Vara de madeira para diversas utilidades",
     type: "resource"
@@ -701,7 +706,7 @@ export const items = [
   {
     id: 60,
     name: "Ovo Cru",
-    icon: "🥚",
+    icon: "assets/icons/eggIcon.png",
     price: 10,
     description: "Produto fresco das galinhas",
     type: "resource"
@@ -709,7 +714,7 @@ export const items = [
   {
     id: 61,
     name: "Leite",
-    icon: "🥛",
+    icon: "assets/icons/milkBottleIcon.png",
     price: 15,
     description: "Leite fresco da vaca",
     type: "resource"
@@ -730,7 +735,7 @@ export const items = [
   {
     id: 63,
     name: "Milho",
-    icon: "🌽",
+    icon: "assets/icons/cornIcon.png",
     price: 25,
     description: "Espiga fresca colhida da fazenda",
     type: "crop"
@@ -738,7 +743,7 @@ export const items = [
   {
     id: 64,
     name: "Trigo",
-    icon: "🌾",
+    icon: "assets/icons/wheatIcon.png",
     price: 20,
     description: "Cereal essencial para farinha e feno",
     type: "crop"
@@ -746,7 +751,7 @@ export const items = [
   {
     id: 65,
     name: "Cenoura",
-    icon: "🥕",
+    icon: "assets/icons/carrotIcon.png",
     price: 18,
     description: "Legume crocante e saudável",
     type: "crop"
@@ -762,7 +767,7 @@ export const items = [
   {
     id: 67,
     name: "Batata",
-    icon: "🥔",
+    icon: "assets/icons/potatoIcon.png",
     price: 15,
     description: "Tubérculo versátil para culinária",
     type: "crop"
@@ -794,7 +799,7 @@ export const items = [
   {
     id: 93,
     name: "poço",
-    icon: "🕳️",
+    icon: "assets/icons/wellIcon.png",
     price: 150,
     description: "Fornece água para a fazenda",
     type: "construction",
@@ -806,7 +811,7 @@ export const items = [
   {
     id: 43,
     name: "Cerca de Madeira",
-    icon: "🌲",
+    icon: "assets/icons/woodFenceIcon.png",
     price: 8,
     description: "Para delimitar áreas",
     type: "construction",
@@ -867,7 +872,7 @@ export const items = [
   {
     id: 42,
     name: "balde com aguá",
-    icon: "🪣",
+    icon: "assets/icons/waterBucketIcon.png",
     price: 15,
     description: "Balde cheio de água",
     type: "resource"
@@ -889,7 +894,7 @@ export const items = [
   {
     id: 100,
     name: "Contrato Municipal",
-    icon: "📜",
+    icon: "assets/icons/mayorContractIcon.png",
     price: 0,
     description: "Termo de compromisso assinado com o prefeito Bartolomeu.",
     type: "resource",
@@ -898,17 +903,17 @@ export const items = [
   {
     id: 95,
     name: "Garrafa de Leite Fresco",
-    icon: "🥛",
+    icon: "assets/icons/milkBottleIcon.png",
     price: 0,
     description: "Leite fresco tirado da vaca. Entregue para John.",
     type: "resource",
     questItem: true
   },
-  
+
 {
   id: 9991,
   name: "Madalena",
-  icon: "🐈",
+  icon: "assets/icons/madalenaIcon.png",
   type: "resource",
   questItem: true,
   description: "Madalena está nos seus braços. Leve-a até Milly."

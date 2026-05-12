@@ -608,3 +608,191 @@
   .vet-animal-entry > .vet-animal-info  { grid-area: info; }
   .vet-animal-entry > .vet-action-btn   { grid-area: btn; justify-self: stretch; }
 }
+
+/* ============================================================================
+ * Crossfade Alice ↔ sub-view. A classe `vet-fading-in` é aplicada pelo JS
+ * em quem está entrando, removida no frame seguinte — opacity 0 → 1 anima
+ * com a transition. Evita o "snap" da troca de view.
+ * ============================================================================ */
+.vet-frame,
+.vet-subview-host {
+  transition: opacity 0.22s ease;
+}
+.vet-frame.vet-fading-in,
+.vet-subview-host.vet-fading-in {
+  opacity: 0;
+}
+
+/* ============================================================================
+ * Fallback da Alice — usado quando `Alice.png` não carrega. Silhueta médica
+ * + nome dentro da mesma moldura dourada, em vez de ícone quebrado.
+ * ============================================================================ */
+.vet-alice-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 220px;
+  min-height: 280px;
+  padding: 24px;
+  color: var(--vet-gold-pale);
+  text-align: center;
+}
+.vet-alice-fallback-icon {
+  font-size: clamp(72px, 9vw, 110px);
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+.vet-alice-fallback-name {
+  font-family: var(--vet-font-serif);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  letter-spacing: 0.6px;
+  color: var(--vet-gold-light);
+  font-style: italic;
+}
+
+/* ============================================================================
+ * Diálogo com Alice (modo balão de fala).
+ * Aparece quando o player clica em "Conversar". A Alice permanece visível à
+ * esquerda; o balão ocupa a metade direita do palco (mesma área que os
+ * sub-views de diagnose/medicine usariam). Cauda do balão aponta pra esquerda,
+ * na altura aproximada do rosto da Alice.
+ *
+ * Cores do nome são por personagem:
+ *   - alice:  warm orange (vet theme)
+ *   - stella: verde
+ *   - ben:    marrom
+ *   - graham: azul
+ * ============================================================================ */
+.vet-subview-host.alice-bubble-mode {
+  justify-content: center;        /* centro vertical do balão dentro do stage */
+  padding: 0 6px 0 12px;
+}
+
+.alice-bubble {
+  position: relative;
+  background: var(--vet-gold-pale);
+  border: 4px solid var(--vet-brown-wood);
+  border-radius: 12px;
+  padding: 18px 20px 12px;
+  max-width: 100%;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.alice-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Cauda do balão — triângulo apontando pra esquerda, na altura do nome
+   (que agora fica no topo do balão, então a cauda também sobe pra alinhar
+   com o rosto da Alice). Camada externa (borda) + camada interna (fundo)
+   criam o efeito de balão com contorno. */
+.alice-bubble-tail {
+  position: absolute;
+  left: -22px;
+  top: 22%;
+  width: 0;
+  height: 0;
+  border: 14px solid transparent;
+  border-right-color: var(--vet-brown-wood);
+  border-left: 0;
+  pointer-events: none;
+}
+.alice-bubble-tail::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-right-color: var(--vet-gold-pale);
+  border-left: 0;
+}
+
+/* Nome agora vem PRIMEIRO no DOM (cabeçalho do balão). Press Start 2P
+   é bitmap em grid de 8px — usamos 1rem (16px), múltiplo limpo, pra
+   eliminar o serrilhado que aparecia em 0.95rem (15.2px). */
+.alice-bubble-name {
+  font-family: var(--font-family-pixel-title), var(--font-family-pixel), monospace;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Texto da fala — VT323 lê bem em 1.25rem (20px). Antes em 1.05rem
+   (~16.8px) algumas palavras ficavam "esfumaçadas" pelo antialiasing
+   desencontrado com o grid bitmap. */
+.alice-bubble-text {
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--vet-brown-deep);
+  margin: 0;
+  word-break: break-word;
+}
+
+/* Cores do nome por personagem (definidas pelo data-char-id no balão). */
+.alice-bubble[data-char-id="stella"]  .alice-bubble-name { color: #3d8c40; }  /* verde */
+.alice-bubble[data-char-id="ben"]     .alice-bubble-name { color: #7a4a23; }  /* marrom */
+.alice-bubble[data-char-id="graham"]  .alice-bubble-name { color: #2a5fa3; }  /* azul */
+.alice-bubble[data-char-id="alice"]   .alice-bubble-name { color: #b85c00; }  /* warm vet */
+
+.alice-bubble-hint {
+  margin-top: 8px;
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 0.7rem;
+  color: var(--vet-brown-warm);
+  font-style: italic;
+  text-align: right;
+  opacity: 0.7;
+  letter-spacing: 0.4px;
+}
+
+/* Em telas estreitas a sidebar quebra pra cima (grid 1fr). A cauda continua
+   à esquerda do balão pra simplificar — não trocamos o lado dinamicamente.
+   Tamanhos de fonte NÃO são reduzidos no mobile: Press Start 2P fora dos
+   múltiplos de 8px volta a serrilhar. Mantemos 16/20px e deixamos o
+   `word-break: break-word` do .alice-bubble-text fazer a quebra. */
+@media (max-width: 720px) {
+  .alice-bubble-tail { left: -18px; }
+}
+
+/* ============================================================================
+ * prefers-reduced-motion — respeita a preferência do SO de animações
+ * reduzidas. Mantém o feedback (cor/borda) mas zera scale/rotate/pulse.
+ * ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  #vet-overlay,
+  .vet-wrapper,
+  .vet-frame,
+  .vet-subview-host,
+  .vet-action-btn,
+  .vet-back-btn,
+  .vet-close-btn,
+  .vet-recovery-pill,
+  .vet-inline-toast,
+  .alice-bubble {
+    transition: none !important;
+    animation: none !important;
+  }
+  .vet-close-btn:hover { transform: none; }
+  .vet-action-btn:hover,
+  .vet-recovery-pill:hover,
+  .alice-bubble:hover,
+  .vet-subview .vet-action-btn:hover:not(:disabled) {
+    transform: none;
+  }
+  .vet-back-btn:hover { transform: translateY(-50%); }
+}

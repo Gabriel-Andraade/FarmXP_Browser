@@ -583,19 +583,66 @@ export default {
       calm: 'Tranquilo'
     },
     feedback: {
-      pet_ok: 'Le encantaron las caricias!',
-      gained_trust: 'Ganaste su confianza!',
+      pet_ok: '¡Le encantaron las caricias!',
+      gained_trust: '¡Ganaste su confianza!',
       sleeping: 'Durmiendo... Zzz',
       suspicious_flee: 'Se alejó, desconfiado...',
-      angry: 'Muy enfadado para caricias!',
+      angry: '¡Muy enfadado para caricias!',
       max_pets: 'Ya tuvo suficientes caricias hoy.',
-      fed: 'Comió feliz!',
-      no_food: 'Sin alimento en el inventario!',
+      fed: '¡Comió feliz!',
+      no_food: '¡Sin alimento en el inventario!',
       suspicious: 'Demasiado desconfiado para comer...',
-      no_inventory: 'Inventario no disponible.'
+      no_inventory: 'Inventario no disponible.',
+      severe_refused: 'No quiere seguirte ahora...',
+      guide_start: '¡Te va a seguir!',
+      guide_stop: 'Dejó de seguirte.',
+      medicine_accept: 'Tomó la medicina sin quejarse.',
+      medicine_mild_reject: 'Hizo mueca, pero la tomó.',
+      medicine_reject: '¡Detestó la medicina!',
+      medicine_cured: '¡Curado! ✨',
+      not_medicine: 'Este objeto no es una medicina.'
+    },
+    feedSub: {
+      title: 'Alimentar',
+      medicinesTitle: 'Medicinas',
+      feed: 'Comida',
+      medicine: 'Medicinas',
+      back: 'Atrás',
+      empty: 'No hay medicinas en el inventario.'
     },
     type: {
       unknown: 'Desconocido'
+    },
+    injury: {
+      label: 'Síntoma',
+      none: 'Saludable',
+      severity: {
+        scratch: 'Rasguño',
+        wound: 'Herida',
+        severe: 'Herida grave'
+      },
+      // Ya con preposición correcta (concordancia de género/número en ES).
+      region: {
+        head: 'en la cabeza',
+        leg: 'en la pata',
+        back: 'en la espalda',
+        chest: 'en el pecho',
+        tail: 'en la cola'
+      },
+      format: '{severity} {region}'
+    },
+    disease: {
+      unknown: '?',
+      names: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Problema respiratorio',
+        digestive:   'Problema digestivo',
+        fever:       'Fiebre'
+      }
+    },
+    treatment: {
+      label: 'Tratamiento',
+      format: '{icon} {name} · {days}/{requiredDays} días · {dosesToday}/{requiredDoses} dosis hoy'
     }
   },
 
@@ -1022,8 +1069,89 @@ export default {
       three: 'Hospitalizar',
       four:  'Medicinas',
     },
+    dialogue: {
+      hint: 'Haz clic para continuar',
+      aliceBack: '¡Hola de nuevo! ¿Cómo puedo ayudar?',
+      intro: {
+        aliceFirstGreet: '¿Hm? Hola, ¿cómo puedo ayudarte?',
+        stellaFirst: 'Soy nueva por aquí.',
+        benFirst: 'Soy nuevo... acabo de mudarme.',
+        grahamFirst: 'Acabo de mudarme aquí.',
+        aliceIntro: 'Bienvenido. Me llamo Alice, soy la veterinaria que cuida de todos los animalitos, desde los pequeños hasta los grandes de la granja. Si necesitas algo, no dudes en llamarme.',
+        stellaName: '¡Un placer! ¡Soy Stella!',
+        benName: 'Soy Ben, encantado de conocerte Alice.',
+        grahamName: 'Me llamo Graham, un placer.',
+        aliceOutro: '¡Un placer conocerlos! Si hay algo que pueda hacer por sus animalitos, ¡solo tráiganlos!',
+      },
+      care: {
+        injuredMale:   '¡Pobrecito el {name}! A veces pelean o se lastiman jugando, ¡pero déjamelo a mí!',
+        injuredFemale: '¡Pobrecita la {name}! A veces pelean o se lastiman jugando, ¡pero déjamela a mí!',
+        medicineMale:   'El {name} aún está en tratamiento — ¡no olvides los remedios!',
+        medicineFemale: 'La {name} aún está en tratamiento — ¡no olvides los remedios!',
+      },
+    },
+    diagnose: {
+      title: 'Diagnóstico',
+      back: '← Atrás',
+      empty: 'Ningún animal con síntomas por ahora.',
+      pendingHint: 'Animal con síntomas. ¿Iniciar examen?',
+      inProgress: 'Diagnosticando — ~{minutes} min restantes',
+      ready: 'Resultado listo. ¿Retirar?',
+      done: 'Diagnosticado: {disease}',
+      startBtn: 'Iniciar diagnóstico',
+      retrieveBtn: 'Retirar (${value})',
+      feeLabel: 'Costo de retiro:',
+      feeFormat: '${value}',
+      noMoney: 'Saldo insuficiente para retirar (${value}).',
+    },
+    medicine: {
+      title: 'Tienda de Medicinas',
+      back: '← Atrás',
+      empty: 'No hay medicinas disponibles. Diagnostica un animal primero.',
+      buyBtn: 'Comprar (${value})',
+      priceFormat: '${value}',
+      cureInstant: 'Cura inmediata',
+      cureGradual: 'Cura en {days} días',
+      doses1: '1 dosis/día',
+      doses2: '2 dosis/día',
+      noMoney: 'Saldo insuficiente (${value}).',
+      inventoryFull: 'Inventario lleno.',
+      boughtToast: 'Comprado: {name} (${value})',
+    },
   },
 
+  // Hospital / Hospitalización — flujos del botón Hospitalizar del vet
+  hospital: {
+    admit_title: 'Hospitalizar animal',
+    recovery_title: 'Animales hospitalizados',
+    no_severe_animals: 'Ningún animal con herida grave para hospitalizar.',
+    no_recovery_animals: 'Ningún animal hospitalizado por ahora.',
+    admit_btn: 'Hospitalizar',
+    cancel_btn: 'Cancelar',
+    confirm_btn: 'Confirmar',
+    back_btn: 'Atrás',
+    confirm_message:
+      '¿Hospitalizar a {animal} por {days} día(s)? Costo total: {cost} (cobrado al retirar).',
+    admit_success: 'Animal hospitalizado por {days} día(s). Costo previsto: {cost}.',
+    admit_failed: 'No se pudo hospitalizar al animal.',
+    remaining_days: 'En recuperación — {days} día(s) restante(s)',
+    treatment_progress: '{days}d',
+    ready_for_pickup: '¡Listo para retirar!',
+    pickup_btn: 'Retirar ({cost})',
+    pickup_success: '¡{name} volvió a la granja! Pagado: {cost}.',
+    pickup_failed: {
+      generic: 'No se pudo retirar al animal.',
+      no_money: 'Dinero insuficiente.',
+      not_ready: 'El animal aún está en recuperación.',
+      not_found: 'Registro no encontrado.',
+      respawn_failed: 'Falló traer al animal de vuelta.',
+      no_currency_system: 'Sistema de moneda no disponible.',
+    },
+    pill: {
+      ready: '{count} listo(s) / {total} hospitalizado(s)',
+      recovering: '{total} en recuperación',
+    },
+  },
   // NPC Bartolomeu dialogues
   npc: {
     bartolomeu: {

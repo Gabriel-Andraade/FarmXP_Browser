@@ -173,6 +173,26 @@ class HospitalSystem {
       logger.warn?.('[hospitalSystem] falha ao remover animal do mundo', e);
     }
 
+    // Rede de segurança: se objectDestroyed não removeu por algum motivo
+    // (id divergente, animal não-instância, etc.), faz o splice direto
+    // por referência ou id. Sem isso, animal continuava sendo desenhado
+    // no mundo mesmo após internado. O warn é diagnóstico — em estado
+    // normal este bloco não dispara.
+    let leftoverIdx = animals.indexOf(animal);
+    if (leftoverIdx < 0 && animal.id) {
+      leftoverIdx = animals.findIndex(a => a && a.id === animal.id);
+    }
+    if (leftoverIdx >= 0) {
+      animals.splice(leftoverIdx, 1);
+      logger.warn?.('[hospitalSystem] objectDestroyed não removeu o animal; fallback splice direto. id=' + (animal.id ?? '<sem id>'));
+      // Tenta tirar do collisionSystem também — sem isso, hitbox fantasma
+      // bloqueia interação naquela posição.
+      try {
+        const cs = getSystem('collision');
+        if (cs && animal.id && typeof cs.removeHitbox === 'function') cs.removeHitbox(animal.id);
+      } catch {}
+    }
+
     document.dispatchEvent(new CustomEvent('animalAdmitted', { detail: { entry } }));
     return entry;
   }

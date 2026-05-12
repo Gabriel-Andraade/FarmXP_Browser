@@ -454,7 +454,7 @@ function setupInteractionSystem() {
 function spawnGameAnimals() {
   if (animalsInitialized) return;
 
-  const animalTypes = ["Bull", "Calf", "Chick", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
+  const animalTypes = ["Bull", "Calf", "Chick", "Cow", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
   const baseX = 1800;
   const baseY = 1850;
   const spacing = 110;

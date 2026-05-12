@@ -160,6 +160,28 @@ const DISEASE_MORAL_DECAY_EXTRA_PER_MIN = {
     fever:       0.040,
 };
 
+// Travamento de gênero por espécie. 'male'/'female' = sempre esse sexo;
+// 'random' = sorteia 50/50 na criação. Saves antigos sem `gender` caem
+// aqui no construtor antes do deserialize, então mesmo animais legados
+// passam a exibir ♂/♀ no painel.
+const SPECIES_GENDER = {
+    Bull:    'male',
+    Rooster: 'male',
+    Cow:     'female',
+    Calf:    'random',
+    Chick:   'random',
+    Lamb:    'random',
+    Piglet:  'random',
+    Sheep:   'random',
+    Turkey:  'random',
+};
+
+function pickGenderFor(assetName) {
+    const rule = SPECIES_GENDER[assetName];
+    if (rule === 'male' || rule === 'female') return rule;
+    return Math.random() < 0.5 ? 'male' : 'female';
+}
+
 export class AnimalEntity {
     constructor(assetName, assetData, x, y, opts = {}) {
         // Id estável desde a construção. theWorld atribui o id real do
@@ -194,6 +216,11 @@ export class AnimalEntity {
         this.targetY = y;
 
         this.directionRows = assetData.directionRows || { down: 0, up: 3, left: 1, right: 2 };
+        // Sprites como a Cow (sheet 8×3) só desenham 'left' — 'right' é
+        // 'left' espelhado em runtime. Quando `mirrorRight` é true e o
+        // animal está virado pra direita, `flipX` ativa `ctx.scale(-1,1)` no draw.
+        this._mirrorRight = !!assetData.mirrorRight;
+        this.flipX = false;
 
         this.stateTimer = performance.now();
         this.stateDuration = 1000;
@@ -222,6 +249,7 @@ export class AnimalEntity {
         };
 
         this._isSuspicious = opts.suspicious || false;
+        this.gender = opts.gender ?? pickGenderFor(assetName);
         // Ferimento atual: null = saudável, ou { severity, region, daysSince }.
         // Arranhão é leve e NÃO dispara mood HURT (ver getter `_isHurt`).
         this.injury = opts.injury ?? null;
@@ -801,11 +829,7 @@ export class AnimalEntity {
 
             this.state = AnimalState.FOLLOW;
             this.frameIndex = 0;
-            if (Math.abs(dx) > Math.abs(dy)) {
-                this.direction = dx > 0 ? this.directionRows.right : this.directionRows.left;
-            } else {
-                this.direction = dy > 0 ? this.directionRows.down : this.directionRows.up;
-            }
+            this._setFacing(dx, dy);
             return;
         }
 
@@ -833,11 +857,7 @@ export class AnimalEntity {
         // Direção visual segue a INTENÇÃO (rumo ao jogador), não o
         // deslocamento real — assim o sprite continua olhando pra ele
         // mesmo se o frame atual escorregou só no eixo perpendicular.
-        if (Math.abs(dx) > Math.abs(dy)) {
-            this.direction = dx > 0 ? this.directionRows.right : this.directionRows.left;
-        } else {
-            this.direction = dy > 0 ? this.directionRows.down : this.directionRows.up;
-        }
+        this._setFacing(dx, dy);
 
         this.updateAnimation(performance.now());
     }
@@ -905,15 +925,27 @@ export class AnimalEntity {
         }
     }
 
-    updateDirection() {
-        const dx = this.targetX - this.x;
-        const dy = this.targetY - this.y;
-
+    // Define `this.direction` (índice de linha do sprite) e `this.flipX`
+    // (espelhamento horizontal pra espécies com `mirrorRight`) a partir
+    // do vetor de movimento. Centralizado pra não duplicar a lógica nos
+    // 3 sites que decidem direção (updateDirection, follow, pickNewState).
+    _setFacing(dx, dy) {
         if (Math.abs(dx) > Math.abs(dy)) {
-            this.direction = dx > 0 ? this.directionRows.right : this.directionRows.left;
+            if (dx > 0) {
+                this.direction = this.directionRows.right;
+                this.flipX = this._mirrorRight;
+            } else {
+                this.direction = this.directionRows.left;
+                this.flipX = false;
+            }
         } else {
             this.direction = dy > 0 ? this.directionRows.down : this.directionRows.up;
+            this.flipX = false;
         }
+    }
+
+    updateDirection() {
+        this._setFacing(this.targetX - this.x, this.targetY - this.y);
     }
 
     move(speedMult = 1) {
@@ -1162,12 +1194,28 @@ export class AnimalEntity {
 
         const sx = this.frameIndex * this.frameWidth;
         const sy = this.direction * this.frameHeight;
+        const drawX = Math.floor(screenPos.x);
+        const drawY = Math.floor(screenPos.y);
 
-        ctx.drawImage(
-            this.img,
-            sx, sy, this.frameWidth, this.frameHeight,
-            Math.floor(screenPos.x), Math.floor(screenPos.y), zoomedWidth, zoomedHeight
-        );
+        if (this.flipX) {
+            ctx.save();
+            // Translada pro canto direito e inverte X — o sprite desenhado
+            // em (0,0) cai exatamente no lugar de antes, só espelhado.
+            ctx.translate(drawX + zoomedWidth, drawY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+                this.img,
+                sx, sy, this.frameWidth, this.frameHeight,
+                0, 0, zoomedWidth, zoomedHeight
+            );
+            ctx.restore();
+        } else {
+            ctx.drawImage(
+                this.img,
+                sx, sy, this.frameWidth, this.frameHeight,
+                drawX, drawY, zoomedWidth, zoomedHeight
+            );
+        }
 
         if (this._mood !== AnimalMood.CALM) {
             const emoji = this.moodEmoji;
@@ -1189,6 +1237,8 @@ export class AnimalEntity {
             y: Math.round(this.y),
             stats: { ...this.stats },
             isSuspicious: this._isSuspicious,
+            gender: this.gender,
+            customName: this.customName || null,
             injury: this.injury ? { ...this.injury } : null,
             disease: this.disease ? { ...this.disease } : null,
             statRateMultipliers: this._statRateMultipliers
@@ -1210,6 +1260,13 @@ export class AnimalEntity {
             this.stats.moral  = data.stats.moral  ?? this.stats.moral;
         }
         this._isSuspicious = data.isSuspicious ?? false;
+        // Saves anteriores ao gênero: mantém o que o construtor sorteou via SPECIES_GENDER.
+        if (data.gender) this.gender = data.gender;
+        // customName persiste no save desde esta versão. Para saves antigos
+        // (sem o campo), o UiPanel continua carregando do localStorage map
+        // quando abre — mas painéis que não abrem o UiPanel (vet, hospital)
+        // agora veem o nome direto do animal sem precisar daquela ida prévia.
+        if (data.customName !== undefined) this.customName = data.customName || '';
         // Migração: saves antigos guardavam apenas `isHurt: true/false`.
         // Sem severidade/região concretas, traduzimos para uma ferida na perna —
         // o jogador resolve no vet, e o estado não fica "sem ferida" por engano.

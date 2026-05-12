@@ -369,7 +369,10 @@ class UiPanel {
         nameEl.blur();
         nameEl.textContent = '';
       }
-      if (genderEl) genderEl.textContent = '?';
+      if (genderEl) {
+        genderEl.textContent = '?';
+        genderEl.dataset.gender = 'unknown';
+      }
       if (typeEl) typeEl.textContent = '';
       if (moodEl) moodEl.textContent = '';
 
@@ -501,7 +504,10 @@ class UiPanel {
     const typeEl = this.infoMenu.querySelector('[data-role="type"]');
     const moodEl = this.infoMenu.querySelector('[data-role="mood"]');
 
-    if (genderEl) genderEl.textContent = genderChar;
+    if (genderEl) {
+      genderEl.textContent = genderChar;
+      genderEl.dataset.gender = genderChar === '♂' ? 'male' : genderChar === '♀' ? 'female' : 'unknown';
+    }
     if (nameEl && !nameEl.matches(":focus")) nameEl.textContent = name;
     if (typeEl) typeEl.textContent = displayType;
 
