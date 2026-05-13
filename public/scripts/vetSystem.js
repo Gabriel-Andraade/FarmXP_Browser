@@ -183,6 +183,10 @@ class VetPanel {
 
   open() {
     if (this.visible) return;
+    // Guarda o foco anterior pra restaurar no close — caso contrário
+    // teclado/AT ficam órfãos no body depois que o painel some.
+    this._previousActiveElement =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     this._buildDOM();
     requestAnimationFrame(() => {
       this.overlay.classList.add('vet-visible');
@@ -207,10 +211,22 @@ class VetPanel {
     }
     this._currentView = 'alice';
 
+    // Snapshot das refs antes de limpar — se um open() rodar dentro
+    // dos 320ms da animação, _buildDOM sobrescreve estes campos e
+    // o timer pendente acabaria abortando o NOVO painel.
+    const overlayToRemove = this.overlay;
+    const controllerToAbort = this._abortController;
+    const previousFocus = this._previousActiveElement;
+    this.overlay = null;
+    this._abortController = null;
+    this._previousActiveElement = null;
+
     setTimeout(() => {
-      if (this._abortController) { this._abortController.abort(); this._abortController = null; }
-      if (this.overlay && this.overlay.parentNode) this.overlay.parentNode.removeChild(this.overlay);
-      this.overlay = null;
+      controllerToAbort?.abort();
+      if (overlayToRemove && overlayToRemove.parentNode) {
+        overlayToRemove.parentNode.removeChild(overlayToRemove);
+      }
+      previousFocus?.focus?.();
     }, 320);
 
     this.visible = false;

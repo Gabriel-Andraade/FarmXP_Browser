@@ -217,6 +217,12 @@ function handleBuy(med, viewRoot) {
     return;
   }
 
+  // Sem API de cobrança disponível: aborta para não dar remédio de graça.
+  if (typeof currency.spend !== 'function') {
+    showInlineToast(viewRoot, 'Falha ao processar pagamento.', true);
+    return;
+  }
+
   // Adiciona ao inventário ANTES de cobrar — se cheio, não cobra.
   const added = inventory.addItem(med.id, 1);
   if (!added) {
@@ -228,9 +234,7 @@ function handleBuy(med, viewRoot) {
     return;
   }
 
-  if (typeof currency.spend === 'function') {
-    currency.spend(price, 'vet:medicine');
-  }
+  currency.spend(price, 'vet:medicine');
 
   const okTpl = t('vet.medicine.boughtToast');
   const msg = (typeof okTpl === 'string' && okTpl !== 'vet.medicine.boughtToast')

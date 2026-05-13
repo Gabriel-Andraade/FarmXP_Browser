@@ -164,12 +164,14 @@ export function mountRecoveryView(container, options = {}) {
           e.stopPropagation();
           const result = hospitalSystem.retrieve(entry.id);
           if (result.ok) {
-            // Mensagem inline: pequeno toast no topo da view (~2s).
-            showInlineToast(view, t('hospital.pickup_success', {
+            // Render PRIMEIRO (substitui o `view`) e só depois mostra o
+            // toast no nó recém-renderizado, senão ele some na hora.
+            const message = t('hospital.pickup_success', {
               name: getEntryDisplayName(entry),
               cost: result.cost,
-            }));
+            });
             render();
+            showInlineToast(container.querySelector('.vet-subview') || container, message);
           } else {
             showInlineToast(view, pickupFailedMessage(result.reason), true);
           }

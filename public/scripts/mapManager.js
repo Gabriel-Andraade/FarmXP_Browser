@@ -204,6 +204,12 @@ export async function triggerPortalTransition() {
     // Abre o mapa de viagem antes da transição. O destino que dispara
     // a transição é o targetMap do portal atual (city quando na fazenda,
     // farm quando na cidade). Outros locais ficam apenas decorativos.
+    //
+    // Hoje só farm/city são `traversable: true` no travelMap, e o portal
+    // de cada mapa aponta pro outro — então `destinationId === targetMap`
+    // cobre 100% dos casos que disparam onTravel. Se um futuro mapa
+    // traversable for adicionado, este callback precisa ser estendido
+    // (por enquanto, log de warn pra evitar no-op silencioso).
     const travelMap = getSystem('travelMap');
     if (travelMap && typeof travelMap.open === 'function') {
         travelMap.open({
@@ -211,6 +217,8 @@ export async function triggerPortalTransition() {
             onTravel: async (destinationId) => {
                 if (destinationId === portal.targetMap) {
                     await _executePortalTransition(portal);
+                } else {
+                    logger.warn?.(`[mapManager] onTravel disparado pra destino sem portal de transição: ${destinationId} (portal atual aponta pra ${portal.targetMap})`);
                 }
             },
         });

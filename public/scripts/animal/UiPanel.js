@@ -763,8 +763,13 @@ class UiPanel {
   }
 
   _buildSubBtn(icon, label, onClick) {
+    // `<div>` preserva o layout flex do menu (botão nativo importa o
+    // user-agent stylesheet e quebra o alinhamento). Para acessibilidade
+    // recriamos a semântica de botão com role/tabindex + Enter/Space.
     const btn = document.createElement('div');
     btn.className = 'aui-action-btn aui-interactive';
+    btn.setAttribute('role', 'button');
+    btn.setAttribute('tabindex', '0');
     const iconSpan = document.createElement('span');
     iconSpan.className = 'icon';
     setItemIcon(iconSpan, icon, label);
@@ -775,6 +780,13 @@ class UiPanel {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       onClick();
+    });
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick();
+      }
     });
     return btn;
   }

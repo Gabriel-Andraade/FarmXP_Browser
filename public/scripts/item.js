@@ -409,7 +409,7 @@ export const items = [
   {
     id: 205,
     name: "Probiótico em Pó",
-    icon: "🥄",
+    icon: "assets/icons/premiumAntibioticIcon.png",
     price: 35,
     description: "Restaura a flora intestinal em 2 dias. Misturado na ração.",
     type: "medicine",
@@ -506,7 +506,7 @@ export const items = [
     icon: "assets/icons/premiumFeedIcon.png",
     price: 20,
     description: "Alimento balanceado para animais domésticos",
-    type: "resource"
+    type: "animal_food"
   },
   {
     id: 97,
@@ -514,7 +514,7 @@ export const items = [
     icon: "assets/icons/groundCornSoyMealIcon.png",
     price: 26,
     description: "ração para os porcos filhotes.",
-    type: "resource"
+    type: "animal_food"
   },
   {
     id: 96,
@@ -522,7 +522,7 @@ export const items = [
     icon: "assets/icons/poultryGrainIcon.png",
     price: 12,
     description: "ração geral para as aves",
-    type: "resource"
+    type: "animal_food"
   },
   {
     id: 101,
@@ -530,7 +530,7 @@ export const items = [
     icon: "assets/icons/catFeedIcon.png",
     price: 30,
     description: "ração especializada para gatos domésticos",
-    type: "resource"
+    type: "animal_food"
   },
   {
     id: 102,
@@ -538,15 +538,7 @@ export const items = [
     icon: "assets/icons/dogFeedIcon.png",
     price: 30,
     description: "ração especializada para cães domésticos",
-    type: "resource"
-  },
-  {
-    id: 99,
-    name: "feno",
-    icon: "assets/icons/hayIcon.png",
-    price: 15,
-    description: "alimento básico para vacas, touro, cavalo, ovelhas",
-    type: "resource"
+    type: "animal_food"
   },
   // ==================================================================================
 

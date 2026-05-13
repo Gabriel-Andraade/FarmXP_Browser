@@ -163,15 +163,16 @@ class HospitalSystem {
       animalSnapshot: snapshot,
     };
 
-    this.entries.push(entry);
-
     // Despawn do mundo (objectDestroyed remove do array `animals` E do
     // collisionSystem). Usar o id do animal evita ambiguidade.
     try {
       objectDestroyed(animal.id ?? animal);
     } catch (e) {
       logger.warn?.('[hospitalSystem] falha ao remover animal do mundo', e);
+      return null;
     }
+
+    this.entries.push(entry);
 
     // Rede de segurança: se objectDestroyed não removeu por algum motivo
     // (id divergente, animal não-instância, etc.), faz o splice direto

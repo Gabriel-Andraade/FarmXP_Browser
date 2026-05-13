@@ -761,13 +761,22 @@ class SaveSystem {
         // toda a farm (árvores/animais/construções).
         const inCity = mapMgr?.getCurrentMapId?.() === 'city';
         const savedFarm = inCity && mapMgr?.getSavedFarmState ? mapMgr.getSavedFarmState() : null;
+        // Hospital vive fora do snapshotFarmState — se salvar na city sem
+        // mergear aqui, animais internados somem ao carregar o save.
+        const hospitalSys = getSystem('hospital');
+        const hospitalState = hospitalSys?.serializeState
+            ? hospitalSys.serializeState()
+            : { entries: [] };
+        const worldState = savedFarm
+            ? { ...savedFarm, hospital: hospitalState }
+            : this._getWorldData();
         return {
             _dataVersion: SAVE_DATA_VERSION,
             player: this._getPlayerData(),
             inventory: this._getInventoryData(),
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
-            world: savedFarm ?? this._getWorldData(),
+            world: worldState,
             chests: this._getChestsData(),
             achievements: this._getAchievementsData(),
             gameFlags: this._getGameFlags(),
@@ -791,7 +800,7 @@ class SaveSystem {
         return {
             pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
             battery: questSys ? questSys.getBatteryState() : null,
-            fuel_percent: fuel ? fuel.getFuel() : 100.00,
+            fuel_percent: typeof fuel?.getFuel === 'function' ? fuel.getFuel() : null,
             bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
             milly_quest: milly ? milly.getQuestState() : 'idle',
             bru_quest: bru ? bru.getQuestState() : { dialogue: 'idle' },
@@ -1166,8 +1175,10 @@ class SaveSystem {
             }
         }
         const fuel = getSystem('fuel');
-        if (fuel && typeof flags.fuel_percent === 'number') {
-            fuel.setFuel(flags.fuel_percent);
+        if (typeof fuel?.setFuel === 'function') {
+            // Saves pré-fuel não têm `fuel_percent` — sem reset, o tanque
+            // do slot anterior vaza pro slot atual. Aplica default 100.
+            fuel.setFuel(typeof flags.fuel_percent === 'number' ? flags.fuel_percent : 100);
         }
         const bartolomeu = getSystem('npcBartolomeu');
         if (bartolomeu && flags.bartolomeu_quest) {

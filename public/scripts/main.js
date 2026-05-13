@@ -425,10 +425,20 @@ function setupInteractionSystem() {
           result = { success: false, message: 'no_food' }; // reusa msg de "sem item no inventário"
           break;
         }
-        result = animal.applyMedicine(itemId);
+        if (typeof animal.applyMedicine !== 'function') {
+          inv.addItem?.(itemId, 1);
+          result = { success: false, message: 'invalid_medicine_target' };
+          break;
+        }
+        try {
+          result = animal.applyMedicine(itemId) ?? { success: false, message: 'medicine_failed' };
+        } catch (error) {
+          inv.addItem?.(itemId, 1);
+          throw error;
+        }
         // Se o animal não pôde receber (suspeito/dormindo), devolve o item.
-        if (!result.success && typeof inv.addItem === 'function') {
-          inv.addItem(itemId, 1);
+        if (!result.success) {
+          inv.addItem?.(itemId, 1);
         }
         break;
       }

@@ -631,15 +631,36 @@ export class PlayerInteractionSystem {
             { requirePlayerInRange: false }
         );
 
-        if (clickedAny && clickedAny.originalType === 'animal') {
-            const animal = clickedAny.object;
-            const animalUI = getSystem('animalUI');
+        // Helper: tenta encontrar um animal cujo sprite contém o clique.
+        // Fallback usado quando o pick principal escolhe outro objeto cuja
+        // hitbox de interação está sobrepondo o animal (ex.: árvore tem 2x
+        // altura, casa tem offsetY -0.8 — frequentemente cobre o animal
+        // passando por baixo) e essa colisão "rouba" o clique.
+        const tryAnimalAt = () => {
+            if (!Array.isArray(animals)) return null;
+            return animals.find(a => {
+                if (!a) return false;
+                const ax = a.x || 0;
+                const ay = a.y || 0;
+                const aw = a.width || a.frameWidth || 32;
+                const ah = a.height || a.frameHeight || 32;
+                return worldX >= ax && worldX <= ax + aw && worldY >= ay && worldY <= ay + ah;
+            }) || null;
+        };
 
+        const selectAnimal = (animal) => {
+            const animalUI = getSystem('animalUI');
             if (animalUI?.selectAnimal) {
                 animalUI.selectAnimal(animal, camera);
             } else if (animalUI?.showStats) {
                 animalUI.showStats(animal);
+            } else if (animalUI?.showById) {
+                animalUI.showById(animal.id);
             }
+        };
+
+        if (clickedAny && clickedAny.originalType === 'animal') {
+            selectAnimal(clickedAny.object);
             return;
         }
 
@@ -649,32 +670,23 @@ export class PlayerInteractionSystem {
 
             if (isInRange) {
                 this.interactWithObject(clickedAny);
+                return;
+            }
+            // Pick não-animal fora de range: pode estar "roubando" o clique
+            // de um animal por sobreposição de hitbox. Tenta fallback antes
+            // de descartar o clique.
+            const animalUnder = tryAnimalAt();
+            if (animalUnder) {
+                selectAnimal(animalUnder);
+                return;
             }
             return;
         }
 
-        if (Array.isArray(animals)) {
-            const clickedAnimal = animals.find(a => {
-                if (!a) return false;
-                const ax = a.x || 0;
-                const ay = a.y || 0;
-                const aw = a.width || a.frameWidth || 32;
-                const ah = a.height || a.frameHeight || 32;
-                return worldX >= ax && worldX <= ax + aw && worldY >= ay && worldY <= ay + ah;
-            });
-
-            if (clickedAnimal) {
-                const animalUI = getSystem('animalUI');
-                if (animalUI?.selectAnimal) {
-                    animalUI.selectAnimal(clickedAnimal, camera);
-                } else if (animalUI?.showStats) {
-                    animalUI.showStats(clickedAnimal);
-                } else if (animalUI?.showById) {
-                    animalUI.showById(clickedAnimal.id);
-                }
-                return;
-            }
-
+        const clickedAnimal = tryAnimalAt();
+        if (clickedAnimal) {
+            selectAnimal(clickedAnimal);
+            return;
         }
 
         // Antes este branch chamava `animalUI.closeAll()` — removido

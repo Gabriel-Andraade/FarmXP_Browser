@@ -791,7 +791,9 @@ export function drawWeatherEffects(ctx, player, canvas) {
 
   if (WeatherSystem.sleepPhase === "holding" && WeatherSystem.sleepMessage) {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // ctx fica com setTransform(dpr,dpr) aplicado — overlay aqui usa
+    // coords lógicas, então preserva o dpr no reset (não usa 1).
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const boxW = 520;
     const boxH = 120;
@@ -815,7 +817,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
 
   if (WeatherSystem.sleepTransitionProgress > 0.8 && WeatherSystem.sleepPhase !== "holding") {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "white";
     ctx.font = "30px monospace";
     ctx.textAlign = "center";

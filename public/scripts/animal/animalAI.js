@@ -12,6 +12,13 @@ import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX
 import { items } from '../item.js';
 import { animals } from '../theWorld.js';
 
+// weatherSystem expõe `day`; dayNightSystem expõe `dayCount` — aceitar ambos
+// e padronizar o lookup pra updateStats e applyMedicine não divergirem.
+function getCurrentDay() {
+    const daySys = getSystem('dayNight') || getSystem('weather');
+    return daySys?.dayCount ?? daySys?.day ?? 0;
+}
+
 // Mood system
 
 export const AnimalMood = {
@@ -102,11 +109,30 @@ const DECAY_MAGNITUDE_JITTER_MIN = 0.5;
 const DECAY_MAGNITUDE_JITTER_MAX = 1.5;
 
 // Cada animal recebe na construção um multiplicador permanente por stat
-// (0.7-1.3). É o "metabolismo" individual: alguns ficam com fome muito
-// mais rápido, outros sentem sede menos, etc. Isso quebra o lockstep
-// entre animais da mesma espécie sem precisar de constantes diferentes.
-const PER_ANIMAL_RATE_MULT_MIN = 0.7;
-const PER_ANIMAL_RATE_MULT_MAX = 1.3;
+// (0.5-1.5). É o "metabolismo" individual: alguns ficam com fome muito
+// mais rápido, outros sentem sede menos, etc. Combinado com SPECIES_RATE_MULT,
+// a variância total fica ~6x entre o "mais rápido" e o "mais lento".
+const PER_ANIMAL_RATE_MULT_MIN = 0.5;
+const PER_ANIMAL_RATE_MULT_MAX = 1.5;
+
+// Taxa base por espécie. Multiplica os DECAY_PER_MIN globais — então uma
+// vaca/touro come mais que uma galinha, porco filhote tem mais fome que
+// ovelha, etc. Espécies não listadas caem no fallback 1.0 em cada stat.
+const SPECIES_RATE_MULT = {
+    Bull:    { hunger: 1.3, thirst: 1.1, moral: 0.9 },
+    Cow:     { hunger: 1.2, thirst: 1.2, moral: 1.0 },
+    Calf:    { hunger: 1.1, thirst: 1.1, moral: 1.1 },
+    Sheep:   { hunger: 0.9, thirst: 0.8, moral: 1.0 },
+    Lamb:    { hunger: 1.0, thirst: 0.9, moral: 1.2 },
+    Piglet:  { hunger: 1.4, thirst: 1.0, moral: 1.0 },
+    Chick:   { hunger: 0.7, thirst: 1.0, moral: 1.1 },
+    Rooster: { hunger: 0.8, thirst: 1.0, moral: 0.9 },
+    Turkey:  { hunger: 1.0, thirst: 1.0, moral: 1.0 },
+};
+
+function speciesMult(assetName, key) {
+    return SPECIES_RATE_MULT[assetName]?.[key] ?? 1;
+}
 
 function randRange(lo, hi) {
     return lo + Math.random() * (hi - lo);
@@ -406,9 +432,7 @@ export class AnimalEntity {
         const now = performance.now();
 
         // Reset diário de carinhos
-        const daySys = getSystem('dayNight') || getSystem('weather');
-        // weatherSystem expõe `day`; dayNightSystem expõe `dayCount` — aceitar ambos.
-        const currentDay = daySys?.dayCount ?? daySys?.day;
+        const currentDay = getCurrentDay();
         if (currentDay != null && currentDay !== this.lastPetDay) {
             this.lastPetDay = currentDay;
             this.petsToday = 0;
@@ -444,11 +468,12 @@ export class AnimalEntity {
         const elapsedMs = now - s.lastAt;
         const minutes = elapsedMs / 60_000;
         const magnitudeJitter = randRange(DECAY_MAGNITUDE_JITTER_MIN, DECAY_MAGNITUDE_JITTER_MAX);
-        // Multiplicador permanente do animal pra esse stat (metabolismo
-        // individual). Sem ele, animais da mesma espécie decaem em
-        // lockstep porque o jitter por tick converge na média.
+        // Duas camadas de variância pra evitar lockstep:
+        //   speciesMult — taxa base por espécie (vaca come mais que galinha)
+        //   animalMult  — metabolismo individual sorteado na construção
         const animalMult = this._statRateMultipliers?.[key] ?? 1;
-        const drop = ratePerMin * animalMult * minutes * magnitudeJitter;
+        const specMult = speciesMult(this.assetName, key);
+        const drop = ratePerMin * specMult * animalMult * minutes * magnitudeJitter;
 
         this.stats[key] = Math.max(0, this.stats[key] - drop);
 
@@ -586,8 +611,7 @@ export class AnimalEntity {
 
         // Registra a aplicação. Se há doença ativa, fica nela; senão, no
         // próprio animal (apenas pra debug — não tem efeito mecânico).
-        const daySys = getSystem('weather');
-        const day = daySys?.day ?? 0;
+        const day = getCurrentDay();
         if (this.disease) {
             this.disease.lastMedicine = { itemId, day };
         } else {
@@ -1240,7 +1264,13 @@ export class AnimalEntity {
             gender: this.gender,
             customName: this.customName || null,
             injury: this.injury ? { ...this.injury } : null,
-            disease: this.disease ? { ...this.disease } : null,
+            disease: this.disease
+                ? {
+                    ...this.disease,
+                    treatment: this.disease.treatment ? { ...this.disease.treatment } : undefined,
+                    lastMedicine: this.disease.lastMedicine ? { ...this.disease.lastMedicine } : undefined,
+                }
+                : null,
             statRateMultipliers: this._statRateMultipliers
                 ? { ...this._statRateMultipliers } : null,
             petsToday: this.petsToday,

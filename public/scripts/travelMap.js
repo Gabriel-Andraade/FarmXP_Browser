@@ -790,8 +790,13 @@ this._moveThroughPoints(points, () => {
   }
 }
 
-  // Locais ainda em desenvolvimento: feedback "em breve".
-  this._updateCurrentHighlight(targetLocId);
+  // Locais ainda em desenvolvimento: feedback "em breve". NÃO atualiza
+  // o current location — viagem não aconteceu; só devolve o marker.
+  const current = LOCATIONS[this.currentLocationId];
+  if (this.playerMarker && current) {
+    this.playerMarker.style.left = `${current.x}%`;
+    this.playerMarker.style.top = `${current.y}%`;
+  }
   this._showInfoPopup(target.icon || '🚧',
     t('quests.travelMap.popup.inDev').replace('{name}', targetName));
 });
