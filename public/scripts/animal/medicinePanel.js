@@ -234,7 +234,15 @@ function handleBuy(med, viewRoot) {
     return;
   }
 
-  currency.spend(price, 'vet:medicine');
+  // spend() retorna false se saldo insuficiente ou validação falha — sem
+  // rollback, o jogador levava o remédio de graça e ainda recebia o toast
+  // de sucesso. Reverte o addItem se a cobrança não passou.
+  const charged = currency.spend(price, 'vet:medicine');
+  if (!charged) {
+    inventory.removeItem?.(med.id, 1);
+    showInlineToast(viewRoot, 'Falha ao processar pagamento.', true);
+    return;
+  }
 
   const okTpl = t('vet.medicine.boughtToast');
   const msg = (typeof okTpl === 'string' && okTpl !== 'vet.medicine.boughtToast')

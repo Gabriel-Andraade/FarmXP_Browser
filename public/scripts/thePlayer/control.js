@@ -624,30 +624,6 @@ export class PlayerInteractionSystem {
     handleCanvasClick(worldX, worldY, screenX, screenY) {
         if (isSleeping || BuildSystem.active) return;
 
-        const clickedAny = collisionSystem.getObjectAtMouse(
-            screenX,
-            screenY,
-            camera,
-            { requirePlayerInRange: false }
-        );
-
-        // Helper: tenta encontrar um animal cujo sprite contém o clique.
-        // Fallback usado quando o pick principal escolhe outro objeto cuja
-        // hitbox de interação está sobrepondo o animal (ex.: árvore tem 2x
-        // altura, casa tem offsetY -0.8 — frequentemente cobre o animal
-        // passando por baixo) e essa colisão "rouba" o clique.
-        const tryAnimalAt = () => {
-            if (!Array.isArray(animals)) return null;
-            return animals.find(a => {
-                if (!a) return false;
-                const ax = a.x || 0;
-                const ay = a.y || 0;
-                const aw = a.width || a.frameWidth || 32;
-                const ah = a.height || a.frameHeight || 32;
-                return worldX >= ax && worldX <= ax + aw && worldY >= ay && worldY <= ay + ah;
-            }) || null;
-        };
-
         const selectAnimal = (animal) => {
             const animalUI = getSystem('animalUI');
             if (animalUI?.selectAnimal) {
@@ -659,10 +635,68 @@ export class PlayerInteractionSystem {
             }
         };
 
-        if (clickedAny && clickedAny.originalType === 'animal') {
-            selectAnimal(clickedAny.object);
+        // Pick em duas fases (varre `animals[]` direto, não usa _interGrid
+        // porque ele pode ficar dessincronizado e hitboxes grandes — TREE,
+        // CASA — roubavam o tie-break).
+        //
+        // Fase 1 (precisa): clique DENTRO do sprite do animal → seleciona
+        //   o de centro mais próximo. Bate com o sprite que o jogador VÊ.
+        // Fase 2 (snap): se nenhum animal contém o clique, escolhe o mais
+        //   próximo dentro de SNAP_RADIUS_SCREEN pixels DE TELA — corrige
+        //   cliques que erraram a borda por pouco (animais pequenos tipo
+        //   Chick 29×29 são difíceis de acertar em zoom baixo). Conversão
+        //   por zoom mantém o "feel" consistente em qualquer zoom.
+        const SNAP_RADIUS_SCREEN = 30;
+        const snapRadiusWorld = SNAP_RADIUS_SCREEN / (camera?.zoom || 1);
+        const snapRadiusSqWorld = snapRadiusWorld * snapRadiusWorld;
+        const animalUnderClick = () => {
+            if (!Array.isArray(animals)) return null;
+            let exactBest = null;
+            let exactBestDistSq = Infinity;
+            let snapBest = null;
+            let snapBestDistSq = Infinity;
+            for (const a of animals) {
+                if (!a) continue;
+                const w = a.width || a.frameWidth || 32;
+                const h = a.height || a.frameHeight || 32;
+                const ax = a.x || 0;
+                const ay = a.y || 0;
+                const inside = worldX >= ax && worldX <= ax + w && worldY >= ay && worldY <= ay + h;
+
+                if (inside) {
+                    const dx = worldX - (ax + w / 2);
+                    const dy = worldY - (ay + h / 2);
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < exactBestDistSq) {
+                        exactBestDistSq = distSq;
+                        exactBest = a;
+                    }
+                } else {
+                    // Distância do clique à BORDA do sprite (0 se dentro).
+                    const dxEdge = Math.max(ax - worldX, 0, worldX - (ax + w));
+                    const dyEdge = Math.max(ay - worldY, 0, worldY - (ay + h));
+                    const edgeDistSq = dxEdge * dxEdge + dyEdge * dyEdge;
+                    if (edgeDistSq <= snapRadiusSqWorld && edgeDistSq < snapBestDistSq) {
+                        snapBestDistSq = edgeDistSq;
+                        snapBest = a;
+                    }
+                }
+            }
+            return exactBest || snapBest;
+        };
+
+        const animalHit = animalUnderClick();
+        if (animalHit) {
+            selectAnimal(animalHit);
             return;
         }
+
+        const clickedAny = collisionSystem.getObjectAtMouse(
+            screenX,
+            screenY,
+            camera,
+            { requirePlayerInRange: false }
+        );
 
         if (clickedAny) {
             const objectHitbox = collisionSystem.getInteractionObject(clickedAny.objectId);
@@ -672,20 +706,6 @@ export class PlayerInteractionSystem {
                 this.interactWithObject(clickedAny);
                 return;
             }
-            // Pick não-animal fora de range: pode estar "roubando" o clique
-            // de um animal por sobreposição de hitbox. Tenta fallback antes
-            // de descartar o clique.
-            const animalUnder = tryAnimalAt();
-            if (animalUnder) {
-                selectAnimal(animalUnder);
-                return;
-            }
-            return;
-        }
-
-        const clickedAnimal = tryAnimalAt();
-        if (clickedAnimal) {
-            selectAnimal(clickedAnimal);
             return;
         }
 
@@ -718,6 +738,12 @@ export class PlayerInteractionSystem {
         this.nearbyObjects.forEach(objectId => {
             const object = collisionSystem.getAnyObjectById(objectId);
             if (!object) return;
+            // Animais não são alvo de E. A interação com eles é exclusivamente
+            // pelo clique → UiPanel (pet/feed/guide/etc). Sem este filtro, E
+            // perto de um animal disparava `playerInteract` e o itemSystem
+            // aplicava 1 de dano por tick — o animal "sumia" depois de poucos
+            // toques porque o fluxo de objetos quebráveis o estava matando.
+            if (object.originalType === 'animal' || object.type === 'ANIMAL') return;
             const objectCenterX = object.x + object.width / 2;
             const objectCenterY = object.y + object.height / 2;
             const playerCenterX = this.interactionRange.x + this.interactionRange.width / 2;

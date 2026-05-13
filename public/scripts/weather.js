@@ -394,6 +394,11 @@ export const WeatherSystem = {
     while (this.currentTime >= 24 * 60) {
       this.currentTime -= 24 * 60;
       this.advanceDate();
+      // Dispara dayChanged por dia cruzado (mesmo padrão do sleep
+      // transition em :312). Sem isso, sistemas que escutam dayChanged
+      // (UI, animais, lojas) não eram notificados quando uma viagem
+      // longa atravessava a meia-noite.
+      document.dispatchEvent(new CustomEvent("dayChanged", { detail: { day: this.day } }));
     }
 
     this.updateAmbientLight();

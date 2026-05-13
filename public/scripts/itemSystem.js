@@ -440,6 +440,10 @@ export class ItemSystem {
             if (!id || this.interactiveObjects.has(id)) return;
 
             const type = (obj.type || obj.originalType || '').toLowerCase();
+            // Animais nunca entram no registro de "objetos quebráveis". Eles
+            // têm seu próprio fluxo (animalUI / animalAction) e qualquer
+            // chamada de applyDamage neles os mataria silenciosamente.
+            if (type === 'animal') return;
             const hp = obj.hp || obj.health || this.getHpFromAssetManager(type);
 
             this.interactiveObjects.set(id, {

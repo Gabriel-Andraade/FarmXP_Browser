@@ -570,6 +570,12 @@ export class CollisionSystem {
         const candidates = this._interGrid.query(worldX, worldY, 1, 1);
         let best = null;
         let bestDistSq = Infinity;
+        // Animais SEMPRE vencem o pick contra outros tipos quando o clique
+        // cai dentro da hitbox de interação deles. Sem essa prioridade, o
+        // tie-breaker por "centro mais próximo" deixava árvores (hitbox
+        // 2x altura) e casas roubarem o clique de animais passando perto —
+        // o UiPanel não abria pra alguns animais conforme eles andavam.
+        let bestIsAnimal = false;
         for (const id of candidates) {
             const hitbox = this.interactionHitboxes.get(id);
             if (!hitbox) continue;
@@ -583,13 +589,23 @@ export class CollisionSystem {
                     continue;
                 }
 
+                const isAnimal = hitbox.originalType === 'animal';
+                // Pula candidatos não-animal se já temos um animal escolhido.
+                if (bestIsAnimal && !isAnimal) continue;
+
                 const cx = hitbox.x + hitbox.width / 2;
                 const cy = hitbox.y + hitbox.height / 2;
                 const dx = worldX - cx;
                 const dy = worldY - cy;
                 const distSq = dx * dx + dy * dy;
-                if (distSq < bestDistSq) {
+
+                // Animal vence qualquer não-animal anterior; entre pares do
+                // mesmo "tier" (animal vs animal, ou objeto vs objeto), o
+                // tie-break por centro continua valendo.
+                const promote = isAnimal && !bestIsAnimal;
+                if (promote || distSq < bestDistSq) {
                     bestDistSq = distSq;
+                    bestIsAnimal = isAnimal;
                     best = {
                         objectId: hitbox.id,
                         type: hitbox.originalType,

@@ -763,12 +763,19 @@ class SaveSystem {
         const savedFarm = inCity && mapMgr?.getSavedFarmState ? mapMgr.getSavedFarmState() : null;
         // Hospital vive fora do snapshotFarmState — se salvar na city sem
         // mergear aqui, animais internados somem ao carregar o save.
+        // Quando o sistema NÃO está disponível, preservamos o snapshot
+        // anterior (de savedFarm) em vez de sobrescrever com { entries: [] }
+        // — caso contrário, salvar na city sem o sistema carregado zerava
+        // animais internados que estavam no save anterior.
         const hospitalSys = getSystem('hospital');
-        const hospitalState = hospitalSys?.serializeState
+        const hospitalState = typeof hospitalSys?.serializeState === 'function'
             ? hospitalSys.serializeState()
-            : { entries: [] };
+            : (savedFarm?.hospital ?? null);
         const worldState = savedFarm
-            ? { ...savedFarm, hospital: hospitalState }
+            ? {
+                ...savedFarm,
+                ...(hospitalState !== null ? { hospital: hospitalState } : {})
+              }
             : this._getWorldData();
         return {
             _dataVersion: SAVE_DATA_VERSION,
@@ -1176,9 +1183,18 @@ class SaveSystem {
         }
         const fuel = getSystem('fuel');
         if (typeof fuel?.setFuel === 'function') {
-            // Saves pré-fuel não têm `fuel_percent` — sem reset, o tanque
-            // do slot anterior vaza pro slot atual. Aplica default 100.
-            fuel.setFuel(typeof flags.fuel_percent === 'number' ? flags.fuel_percent : 100);
+            // Distingue 3 casos pra não recriar o bug de "tanque cheio
+            // fabricado" quando o save explicitamente serializou null:
+            //   - campo ausente  → save legado, aplica default 100
+            //   - número         → usa o valor serializado
+            //   - presente=null  → reset do próprio sistema (DEFAULT_FUEL)
+            if (typeof flags.fuel_percent === 'number') {
+                fuel.setFuel(flags.fuel_percent);
+            } else if (!Object.prototype.hasOwnProperty.call(flags, 'fuel_percent')) {
+                fuel.setFuel(100);
+            } else {
+                fuel.reset?.();
+            }
         }
         const bartolomeu = getSystem('npcBartolomeu');
         if (bartolomeu && flags.bartolomeu_quest) {
