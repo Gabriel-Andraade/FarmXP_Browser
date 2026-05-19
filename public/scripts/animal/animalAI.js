@@ -186,6 +186,14 @@ const DISEASE_MORAL_DECAY_EXTRA_PER_MIN = {
     fever:       0.040,
 };
 
+// Touro ferindo vizinho ao berrar. Gatilho situacional (não diário):
+// dispara só quando o `bull_bellow` toca, candidato é o vizinho mais
+// próximo dentro do raio. Cooldown do bellow já é 20-40s, então mesmo
+// com chance baixa por berro, ficar perto de um Bull por muito tempo
+// aumenta linearmente o risco — coerente com "o touro é perigoso".
+const BULL_BELLOW_INJURY_RADIUS = 80;
+const BULL_BELLOW_INJURY_CHANCE = 0.015;
+
 // Travamento de gênero por espécie. 'male'/'female' = sempre esse sexo;
 // 'random' = sorteia 50/50 na criação. Saves antigos sem `gender` caem
 // aqui no construtor antes do deserialize, então mesmo animais legados
@@ -943,6 +951,7 @@ export class AnimalEntity {
                     if (played) {
                         this._lastSfxTime = now;
                         this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                        this._maybeBullBellowInjury();
                     }
                 }
             }
@@ -1169,6 +1178,52 @@ export class AnimalEntity {
             }
         }
         return out;
+    }
+
+    /**
+     * Touro ferindo um vizinho ao berrar. Só dispara via `pickNewState`
+     * quando o `bull_bellow` realmente tocou (`played === true`). Pega
+     * o vizinho mais próximo dentro do raio — o touro "investe num alvo",
+     * não em todos os animais próximos. Pula quem já está ferido, doente
+     * ou hospitalizado (consistente com `rollDailyForAll`).
+     *
+     * Severidade só pode ser `wound` ou `severe` (sem `scratch`): touro
+     * é sério. Região é frontal (head/chest/back) com peso na cabeça —
+     * chifrada é o cenário visual mais coerente.
+     */
+    _maybeBullBellowInjury() {
+        if (!Array.isArray(animals)) return;
+        if (Math.random() >= BULL_BELLOW_INJURY_CHANCE) return;
+
+        let nearest = null;
+        let nearestDistSq = BULL_BELLOW_INJURY_RADIUS * BULL_BELLOW_INJURY_RADIUS;
+        const myCx = this.x + this.width / 2;
+        const myCy = this.y + this.height / 2;
+        for (const other of animals) {
+            if (!other || other === this) continue;
+            if (other.injury) continue;
+            if (other.disease) continue;
+            if (other.hospitalized) continue;
+            const ocx = other.x + other.width / 2;
+            const ocy = other.y + other.height / 2;
+            const ddx = myCx - ocx;
+            const ddy = myCy - ocy;
+            const dsq = ddx * ddx + ddy * ddy;
+            if (dsq < nearestDistSq) {
+                nearest = other;
+                nearestDistSq = dsq;
+            }
+        }
+        if (!nearest) return;
+
+        const severity = Math.random() < 0.6 ? 'wound' : 'severe';
+        const r = Math.random();
+        const region = r < 0.5 ? 'head' : r < 0.83 ? 'chest' : 'back';
+
+        // Lazy via getSystem pra evitar ciclo de imports
+        // (animalAI ← injurySystem ← theWorld ← animalAI).
+        const injurySys = getSystem('animalInjury');
+        injurySys?.inflict?.(nearest, severity, region, 'bull_bellow');
     }
 
     /**

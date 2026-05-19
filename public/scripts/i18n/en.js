@@ -377,7 +377,26 @@ export default {
     49: 'Wool Fabric',
     93: 'Water Well',
     94: 'Battery',
-    100: 'Municipal Contract'
+    100: 'Municipal Contract',
+    // Veterinary medicines (ids 200-207)
+    200: 'Fast Dewormer',
+    201: 'Common Dewormer',
+    202: 'Premium Antibiotic',
+    203: 'Homemade Syrup',
+    204: 'Vet Antacid',
+    205: 'Powdered Probiotic',
+    206: 'Strong Antipyretic',
+    207: 'Medicinal Tea',
+    // Animals sold by Rico / enclosure panel (ids 300-308)
+    300: 'Chick',
+    301: 'Lamb',
+    302: 'Piglet',
+    303: 'Calf',
+    304: 'Cow',
+    305: 'Sheep',
+    306: 'Turkey',
+    307: 'Rooster',
+    308: 'Bull'
   },
 
   // Recipe names by ID - for dynamic translation
@@ -920,7 +939,48 @@ export default {
     variant: 'variant: {name}',
     notAvailable: 'Build function not available.',
     notAvailableAfter: 'Build function not available after loading.',
-    buildError: 'Error entering build mode. Check the console.'
+    buildError: 'Error entering build mode. Check the console.',
+    // Q-cycle + pickup additions (enclosure system)
+    emptyHint: 'Build mode — Q switches item, click picks up fence',
+    pickedUp: 'Picked up fence (×{qty}) — click to place',
+    pickupEmpty: 'No fences left to place',
+    itemLabel: 'Item: {name}',
+    emptyItem: '(empty)',
+    fenceName: 'Fence',
+    fenceNamePickup: 'Fence (picked up)',
+    fenceNameFree: 'Fence (free mode)',
+    // Help panel labels (subpos is now no-op)
+    cycle: 'switch item',
+    placeClick: 'place piece',
+    pickClick: 'pick up fence',
+    tipTitle: '💡 Tip',
+    tipText: 'Align fences by the connectors (dots at the corners). When all turn green and the enclosure closes, a brown "+" appears at the center — click it to choose your animals.',
+  },
+
+  // Enclosure panel (click the "+" at the center of a closed enclosure)
+  enclosure: {
+    panel: {
+      title: 'Enclosure — choose animal',
+      close: 'Close',
+      speciesCount: 'Species: {count} / {max}',
+      balance: 'Balance: {value}',
+      empty: 'No animals available in catalog.',
+      addBtn: 'Add',
+      priceFormat: '$ {value}',
+      cardMeta: '{price} · {count} in enclosure',
+      speciesLimitTitle: 'Reached limit of {max} species',
+      noMoneyTitle: 'Not enough money',
+      toast: {
+        added: '{name} added!',
+        speciesLimit: 'Limit of {max} different species in this enclosure.',
+        noMoney: 'Not enough money ({price}).',
+        noEnclosure: 'Enclosure not found.',
+        noAsset: 'Animal asset not loaded.',
+        noWorld: 'World unavailable.',
+        noCurrencySystem: 'Currency system unavailable.',
+        generic: 'Failed ({reason}).',
+      },
+    },
   },
 
   // Quests

@@ -377,7 +377,26 @@ export default {
     49: 'Tecido de Lã',
     93: 'Poço de Água',
     94: 'Bateria',
-    100: 'Contrato Municipal'
+    100: 'Contrato Municipal',
+    // Remédios veterinários (ids 200-207)
+    200: 'Vermífugo Rápido',
+    201: 'Vermífugo Comum',
+    202: 'Antibiótico Premium',
+    203: 'Xarope Caseiro',
+    204: 'Antiácido Veterinário',
+    205: 'Probiótico em Pó',
+    206: 'Antitérmico Forte',
+    207: 'Chá Medicinal',
+    // Animais vendidos pelo Rico / painel do cercado (ids 300-308)
+    300: 'Pintinho',
+    301: 'Cordeiro',
+    302: 'Leitão',
+    303: 'Bezerro',
+    304: 'Vaca',
+    305: 'Ovelha',
+    306: 'Peru',
+    307: 'Galo',
+    308: 'Touro'
   },
 
   // Recipe names by ID - para tradução dinâmica
@@ -915,6 +934,47 @@ export default {
     wellError: 'erro ao colocar poço',
     wellLoading: 'sistema de poços carregando...',
     placed: 'colocado! ({remaining} restante)',
+    // Novas adições do sistema Q + pickup (cercado)
+    emptyHint: 'Modo construção — Q troca item, clique pega cerca',
+    pickedUp: 'Pegou cerca (×{qty}) — clique pra colocar',
+    pickupEmpty: 'Sem cercas pra colocar',
+    itemLabel: 'Item: {name}',
+    emptyItem: '(vazio)',
+    fenceName: 'Cerca',
+    fenceNamePickup: 'Cerca (pega)',
+    fenceNameFree: 'Cerca (modo livre)',
+    // Labels do help panel reformulado (subpos virou no-op)
+    cycle: 'trocar item',
+    placeClick: 'colocar peça',
+    pickClick: 'pegar cerca',
+    tipTitle: '💡 Dica',
+    tipText: 'Alinhe as cercas pelos conectores (pontos nos cantos). Quando todas ficam verdes e o cercado fecha, aparece um "+" marrom no centro — clique nele pra escolher os animais.',
+  },
+
+  // Painel de cercado (clique no "+" no centro de um cercado fechado)
+  enclosure: {
+    panel: {
+      title: 'Cercado — escolher animal',
+      close: 'Fechar',
+      speciesCount: 'Espécies: {count} / {max}',
+      balance: 'Saldo: {value}',
+      empty: 'Nenhum animal disponível no catálogo.',
+      addBtn: 'Adicionar',
+      priceFormat: 'R$ {value}',
+      cardMeta: '{price} · {count} no cercado',
+      speciesLimitTitle: 'Limite de {max} espécies atingido',
+      noMoneyTitle: 'Saldo insuficiente',
+      toast: {
+        added: '{name} adicionado!',
+        speciesLimit: 'Limite de {max} espécies diferentes neste cercado.',
+        noMoney: 'Saldo insuficiente ({price}).',
+        noEnclosure: 'Cercado não encontrado.',
+        noAsset: 'Asset do animal não carregado.',
+        noWorld: 'Mundo indisponível.',
+        noCurrencySystem: 'Sistema de moeda indisponível.',
+        generic: 'Falha ({reason}).',
+      },
+    },
   },
 
   // Quests

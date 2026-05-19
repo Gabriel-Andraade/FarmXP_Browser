@@ -275,6 +275,9 @@ async function initializeCriticalSystems() {
     await import("./animal/hospitalSystem.js");
     logger.debug("animal hospitalSystem carregado");
 
+    await import("./animal/enclosureSystem.js");
+    logger.debug("animal enclosureSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -1410,6 +1413,16 @@ function gameLoop(timestamp) {
 
   try {
     if (BuildSystem && drawBuildPreview) drawBuildPreview(ctx);
+
+    // Endpoints das cercas (vermelho/azul/verde) + "+" no centro dos
+    // cercados detectados. Feedback visual de conexão e ação durante o
+    // modo construção. Fora dele, invisíveis pra não poluir o jogo
+    // normal. Não depende de DEBUG_HITBOXES.
+    if (BuildSystem?.active && camera) {
+      const encSys = getSystem('enclosure');
+      encSys?.drawEndpoints?.(ctx, camera);
+      encSys?.drawCenterMarkers?.(ctx, camera);
+    }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);
   }

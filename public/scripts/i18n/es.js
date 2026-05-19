@@ -377,7 +377,26 @@ export default {
     49: 'Tela de Lana',
     93: 'Pozo de Agua',
     94: 'Batería',
-    100: 'Contrato Municipal'
+    100: 'Contrato Municipal',
+    // Medicinas veterinarias (ids 200-207)
+    200: 'Desparasitante Rápido',
+    201: 'Desparasitante Común',
+    202: 'Antibiótico Premium',
+    203: 'Jarabe Casero',
+    204: 'Antiácido Veterinario',
+    205: 'Probiótico en Polvo',
+    206: 'Antipirético Fuerte',
+    207: 'Té Medicinal',
+    // Animales vendidos por Rico / panel del cercado (ids 300-308)
+    300: 'Pollito',
+    301: 'Cordero',
+    302: 'Lechón',
+    303: 'Ternero',
+    304: 'Vaca',
+    305: 'Oveja',
+    306: 'Pavo',
+    307: 'Gallo',
+    308: 'Toro'
   },
 
   // Recipe names by ID - para traducción dinámica
@@ -921,7 +940,48 @@ export default {
     variant: 'variante: {name}',
     notAvailable: 'Función de construcción no disponible.',
     notAvailableAfter: 'Función de construcción no disponible después de cargar.',
-    buildError: 'Error al entrar en modo de construcción. Consulta la consola.'
+    buildError: 'Error al entrar en modo de construcción. Consulta la consola.',
+    // Adiciones del Q-cycle + pickup (sistema de cercado)
+    emptyHint: 'Modo construcción — Q cambia ítem, clic recoge cerca',
+    pickedUp: 'Recogió cerca (×{qty}) — clic para colocar',
+    pickupEmpty: 'Sin cercas para colocar',
+    itemLabel: 'Ítem: {name}',
+    emptyItem: '(vacío)',
+    fenceName: 'Cerca',
+    fenceNamePickup: 'Cerca (recogida)',
+    fenceNameFree: 'Cerca (modo libre)',
+    // Etiquetas del panel de ayuda (subpos ahora es no-op)
+    cycle: 'cambiar ítem',
+    placeClick: 'colocar pieza',
+    pickClick: 'recoger cerca',
+    tipTitle: '💡 Consejo',
+    tipText: 'Alinea las cercas por los conectores (puntos en las esquinas). Cuando todos se vuelven verdes y el cercado se cierra, aparece un "+" marrón en el centro — haz clic para elegir los animales.',
+  },
+
+  // Panel del cercado (clic en "+" en el centro de un cercado cerrado)
+  enclosure: {
+    panel: {
+      title: 'Cercado — elegir animal',
+      close: 'Cerrar',
+      speciesCount: 'Especies: {count} / {max}',
+      balance: 'Saldo: {value}',
+      empty: 'No hay animales disponibles en el catálogo.',
+      addBtn: 'Agregar',
+      priceFormat: '$ {value}',
+      cardMeta: '{price} · {count} en el cercado',
+      speciesLimitTitle: 'Límite de {max} especies alcanzado',
+      noMoneyTitle: 'Saldo insuficiente',
+      toast: {
+        added: '¡{name} agregado!',
+        speciesLimit: 'Límite de {max} especies diferentes en este cercado.',
+        noMoney: 'Saldo insuficiente ({price}).',
+        noEnclosure: 'Cercado no encontrado.',
+        noAsset: 'Asset del animal no cargado.',
+        noWorld: 'Mundo no disponible.',
+        noCurrencySystem: 'Sistema de moneda no disponible.',
+        generic: 'Falla ({reason}).',
+      },
+    },
   },
 
   // Misiones

@@ -446,6 +446,97 @@ export const items = [
   },
 
   // ==================================================================================
+  // 🐄 ANIMAIS (LIVESTOCK)
+  // Catálogo de animais vendidos pelo Rico. Não vão para o inventário — o
+  // merchant detecta `type === 'animal'` e despacha pra entrega na fazenda
+  // (spawn próximo à picape). `assetName` casa com a chave em `assets.animals`
+  // usada pelo `addAnimal()`. Preços escalonam: filhote barato → adulto comum
+  // → raro/perigoso. Bull aparece por último porque já tem mecânica de
+  // bellow ferindo vizinhos (animalAI._maybeBullBellowInjury).
+  // ==================================================================================
+  {
+    id: 300,
+    name: "Pintinho",
+    icon: "🐤",
+    price: 50,
+    description: "Filhote de galinha. Cresce rápido e come pouco.",
+    type: "animal",
+    assetName: "Chick"
+  },
+  {
+    id: 301,
+    name: "Cordeiro",
+    icon: "🐑",
+    price: 120,
+    description: "Filhote de ovelha. Boa entrada na pecuária.",
+    type: "animal",
+    assetName: "Lamb"
+  },
+  {
+    id: 302,
+    name: "Leitão",
+    icon: "🐖",
+    price: 150,
+    description: "Filhote de porco. Cuidado: come MUITO.",
+    type: "animal",
+    assetName: "Piglet"
+  },
+  {
+    id: 303,
+    name: "Bezerro",
+    icon: "🐮",
+    price: 200,
+    description: "Filhote bovino. Investimento de longo prazo.",
+    type: "animal",
+    assetName: "Calf"
+  },
+  {
+    id: 304,
+    name: "Vaca",
+    icon: "🐄",
+    price: 450,
+    description: "Bovino adulto. Atalho pra começar a produção.",
+    type: "animal",
+    assetName: "Cow"
+  },
+  {
+    id: 305,
+    name: "Ovelha",
+    icon: "🐏",
+    price: 350,
+    description: "Ovelha adulta. Resistente ao frio.",
+    type: "animal",
+    assetName: "Sheep"
+  },
+  {
+    id: 306,
+    name: "Peru",
+    icon: "🦃",
+    price: 280,
+    description: "Ave grande, ótima diversificação do plantel.",
+    type: "animal",
+    assetName: "Turkey"
+  },
+  {
+    id: 307,
+    name: "Galo",
+    icon: "🐓",
+    price: 200,
+    description: "Macho da galinha. Útil para casais (futuro).",
+    type: "animal",
+    assetName: "Rooster"
+  },
+  {
+    id: 308,
+    name: "Touro",
+    icon: "🐃",
+    price: 800,
+    description: "Bovino macho. Cuidado: pode ferir outros animais ao redor.",
+    type: "animal",
+    assetName: "Bull"
+  },
+
+  // ==================================================================================
   // 🪨 RECURSOS NATURAIS
   // Materiais brutos coletados do ambiente
   // ==================================================================================

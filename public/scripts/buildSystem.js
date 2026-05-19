@@ -112,12 +112,15 @@ export const BuildSystem = {
 
         const body = document.createElement('div');
         body.className = 'bhp-body';
+        // Help reformulado: Q (ciclo), R (rotacionar), T/click (colocar),
+        // clique direito (pegar), esc (sair). Subpos antigo (1-6) virou
+        // no-op com o snap livre, então removido pra não confundir.
         const rows = [
-          { keys: ['1', '2', '3'], label: t('build.gridX') },
-          { keys: ['4', '5', '6'], label: t('build.gridY') },
-          { keys: ['r'], label: t('build.rotate') },
-          { keys: ['t'], label: t('build.place') },
-          { keys: ['esc'], label: t('build.exit') },
+          { keys: ['q'],          label: t('build.cycle') },
+          { keys: ['r'],          label: t('build.rotate') },
+          { keys: ['t', 'clique'], label: t('build.placeClick') },
+          { keys: ['clique dir'],  label: t('build.pickClick') },
+          { keys: ['esc'],        label: t('build.exit') },
         ];
         for (const row of rows) {
           const rowDiv = document.createElement('div');
@@ -133,7 +136,31 @@ export const BuildSystem = {
           rowDiv.append(strong, span);
           body.appendChild(rowDiv);
         }
-        panel.append(header, body);
+
+        // Cartinha de dica abaixo do body. Inline-styled pra não exigir
+        // edits no build.css (que é externo). Cor da nota mostarda pra
+        // chamar atenção sem competir com o resto da UI.
+        const tip = document.createElement('div');
+        tip.className = 'bhp-tip';
+        Object.assign(tip.style, {
+          margin: '8px 10px 10px',
+          padding: '8px 10px',
+          background: '#fff4d2',
+          border: '1px solid #c5a14a',
+          borderLeft: '4px solid #b8860b',
+          borderRadius: '6px',
+          fontSize: '12px',
+          lineHeight: '1.35',
+          color: '#5a3f0a',
+        });
+        const tipTitle = document.createElement('strong');
+        tipTitle.textContent = t('build.tipTitle');
+        Object.assign(tipTitle.style, { display: 'block', marginBottom: '4px' });
+        const tipBody = document.createElement('span');
+        tipBody.textContent = t('build.tipText');
+        tip.append(tipTitle, tipBody);
+
+        panel.append(header, body, tip);
         document.body.appendChild(panel);
         this._helpPanelEl = panel;
       }
@@ -152,11 +179,11 @@ export const BuildSystem = {
     },
 
     getMouseTileForRender() {
+        // Modo livre: `mouseTile.x/y` agora guarda coord de MUNDO bruta
+        // (não mais tile index dividido por gridSize). Player coloca o
+        // objeto exatamente onde o cursor está, sem snap a grid.
         if (this.mouseUpdatePending && (this.pendingMouseX !== 0 || this.pendingMouseY !== 0)) {
-            return {
-                x: Math.floor(this.pendingMouseX / this.gridSize),
-                y: Math.floor(this.pendingMouseY / this.gridSize)
-            };
+            return { x: this.pendingMouseX, y: this.pendingMouseY };
         }
         return { x: this.mouseTile.x, y: this.mouseTile.y };
     },
@@ -168,12 +195,13 @@ export const BuildSystem = {
 
     updateMousePositionThrottled(wx, wy) {
         const now = performance.now();
-        
+
         if (now - this.lastMouseUpdate >= this.mouseUpdateInterval) {
-            this.mouseTile.x = Math.floor(wx / this.gridSize);
-            this.mouseTile.y = Math.floor(wy / this.gridSize);
+            // Coord de mundo bruta, sem floor/grid — modo livre.
+            this.mouseTile.x = wx;
+            this.mouseTile.y = wy;
             this.lastMouseUpdate = now;
-            
+
             if (this.debugMode && now - this.lastDebugUpdate >= this.debugUpdateInterval) {
                 this.updateDebugInfo();
                 this.lastDebugUpdate = now;
@@ -181,7 +209,7 @@ export const BuildSystem = {
         } else {
             this.pendingMouseX = wx;
             this.pendingMouseY = wy;
-            
+
             if (!this.mouseUpdatePending) {
                 this.mouseUpdatePending = true;
                 this._mouseUpdateTimer = setTimeout(() => {
@@ -191,13 +219,13 @@ export const BuildSystem = {
             }
         }
     },
-    
+
     processPendingMouseUpdate() {
-        this.mouseTile.x = Math.floor(this.pendingMouseX / this.gridSize);
-        this.mouseTile.y = Math.floor(this.pendingMouseY / this.gridSize);
+        this.mouseTile.x = this.pendingMouseX;
+        this.mouseTile.y = this.pendingMouseY;
         this.lastMouseUpdate = performance.now();
         this.mouseUpdatePending = false;
-        
+
         if (this.debugMode) {
             this.updateDebugInfo();
         }
@@ -215,22 +243,27 @@ export const BuildSystem = {
         this.showDebugMessage(`${t('build.alignment')}: [${labelX} | ${labelY}]`, 1000);
     },
 
-    startBuilding(itemData) {
-        if (!itemData || !itemData.placeable) {
-            this.showDebugMessage(t('build.notBuildable'));
+    /**
+     * Aplica `itemData` ao state (selectedItem + preview). Extraído pra
+     * ser reutilizado por `startBuilding` e `cycleNextItem`. Item null
+     * = estado vazio (sem nada equipado).
+     */
+    _applyItemToBuildState(itemData) {
+        this.selectedItem = itemData;
+        this.currentSubPosX = 0;
+        this.currentSubPosY = 0;
+
+        if (!itemData) {
+            this.currentVariant = null;
+            this.previewImg = null;
             return;
         }
 
-        this.selectedItem = itemData;
-        this.currentSubPosX = 0; 
-        this.currentSubPosY = 0;
-        
         const type = this.getConstructionType();
-        
-        if (type === 'chest') { 
+        if (type === 'chest') {
             this.currentVariant = 'chest';
             this.previewImg = assets.furniture?.chest?.img;
-        } else if (type === 'well') { 
+        } else if (type === 'well') {
             this.currentVariant = 'well';
             this.previewImg = assets.furniture?.well?.img;
         } else if (itemData.variants && itemData.variants.length > 0) {
@@ -238,19 +271,85 @@ export const BuildSystem = {
             this.previewImg = assets.furniture?.fences?.[this.currentVariant]?.img;
         } else {
             this.currentVariant = 'universal';
-            this.previewImg = null; 
+            this.previewImg = null;
         }
+    },
+
+    startBuilding(itemData) {
+        // itemData null = abre em estado vazio. Player cicla com Q.
+        // itemData não-placeable = recusa (mantém comportamento antigo).
+        if (itemData && !itemData.placeable) {
+            this.showDebugMessage(t('build.notBuildable'));
+            return;
+        }
+
+        this._applyItemToBuildState(itemData || null);
 
         this.active = true;
         document.body.classList.add("building-mode");
         this._showBuildHelpPanel();
-        
+
         if (this.debugMode) {
             this.createDebugOverlay();
             this.updateDebugInfo();
         }
-        
-        this.showDebugMessage(t('build.building', { name: getItemName(itemData.id, itemData.name) }));
+
+        if (itemData) {
+            this.showDebugMessage(t('build.building', { name: getItemName(itemData.id, itemData.name) }));
+        } else {
+            this.showDebugMessage(t('build.emptyHint'), 1500);
+        }
+    },
+
+    /**
+     * Lista de itens disponíveis pro cycle do Q. Por enquanto retorna
+     * uma única "cerca sintética" (modo livre, sem inventário) — quando
+     * o inventário tiver fences/poços de verdade, dá pra trocar esta
+     * função por uma enumeração do inventário (`inventorySystem.list()`
+     * filtrado por `placeable === true`).
+     */
+    _getCycleItems() {
+        return [
+            {
+                id: -1,
+                name: t('build.fenceName'),
+                placeable: true,
+                variants: ['fenceX', 'fenceY'],
+                type: 'fence',
+                _isSynthetic: true,
+            },
+        ];
+    },
+
+    /**
+     * Q no modo construção: cicla pelos itens. Sequência:
+     *   vazio → items[0] → items[1] → ... → items[N-1] → vazio → ...
+     *
+     * Estado vazio (selectedItem null) = clique pega cerca existente.
+     * Estado com item = clique esquerdo coloca, direito pega.
+     */
+    cycleNextItem() {
+        if (!this.active) return;
+
+        const items = this._getCycleItems();
+        if (items.length === 0) return;
+
+        const currentId = this.selectedItem?.id ?? null;
+        const currentIdx = items.findIndex(it => it.id === currentId);
+
+        // Avança: empty → 0 → 1 → ... → last → empty (loop completo)
+        let next;
+        if (currentIdx === -1) {
+            next = items[0];                   // empty → primeiro item
+        } else if (currentIdx >= items.length - 1) {
+            next = null;                       // último item → empty
+        } else {
+            next = items[currentIdx + 1];      // próximo item
+        }
+
+        this._applyItemToBuildState(next);
+        const label = next ? getItemName(next.id, next.name) : t('build.emptyItem');
+        this.showDebugMessage(t('build.itemLabel', { name: label }), 1200);
     },
 
     stopBuilding() {
@@ -285,8 +384,11 @@ export const BuildSystem = {
         switch (type) {
             case 'chest': return { width: 31, height: 31 };
             case 'fence':
-                return (this.currentVariant === 'fenceY') ? { width: 6, height: 62 } : { width: 32, height: 32 };
-            case 'well': return { width: 75, height: 95 }; 
+                // fenceY: 6×48 (entre o original 62 e o muito-baixo 32).
+                // Mantém a sensação de "poste alto" sem ficar tão desproporcional
+                // quanto 62. Encaixe vertical: 2 fenceY = 96px ≈ 3 fenceX (96px).
+                return (this.currentVariant === 'fenceY') ? { width: 6, height: 48 } : { width: 32, height: 32 };
+            case 'well': return { width: 75, height: 95 };
             default:
                 return {
                     width: this.selectedItem.buildWidth || 64,
@@ -296,24 +398,15 @@ export const BuildSystem = {
     },
 
     getSnapPosition() {
-        const tileX = this.mouseTile.x * this.gridSize;
-        const tileY = this.mouseTile.y * this.gridSize;
-        
+        // Modo livre: peça centralizada no cursor. `mouseTile.x/y` agora
+        // é coord de mundo bruta (não tile index). Sem snap a grid — onde
+        // o mouse passa, é onde o objeto fica. Subpos virou no-op.
         const dim = this.getConstructionDimensions();
-        const tileCenter = this.gridSize / 2;
+        const snapX = this.mouseTile.x - dim.width / 2;
+        const snapY = this.mouseTile.y - dim.height / 2;
 
-        let snapX, snapY;
-
-        if (this.currentSubPosX === -1) snapX = tileX;
-        else if (this.currentSubPosX === 0) snapX = tileX + tileCenter - (dim.width / 2);
-        else snapX = tileX + this.gridSize - dim.width;
-
-        if (this.currentSubPosY === -1) snapY = tileY;
-        else if (this.currentSubPosY === 0) snapY = tileY + tileCenter - (dim.height / 2);
-        else snapY = tileY + this.gridSize - dim.height;
-
-        return { 
-            x: snapX, 
+        return {
+            x: snapX,
             y: snapY,
             tileX: this.mouseTile.x,
             tileY: this.mouseTile.y,
@@ -322,7 +415,81 @@ export const BuildSystem = {
         };
     },
 
+    /**
+     * Acha cerca colocada em (worldX, worldY). Usado pelo click handler do
+     * build mode pra implementar "pegar e realocar" — se o player clica em
+     * cima de uma cerca existente, a peça some do mundo e o cursor de
+     * construção passa a ter aquela variant.
+     *
+     * Itera `placedBuildings` filtrando por originalType fenceX/fenceY.
+     * O array é curto em prática (centenas no máximo), AABB é trivial.
+     */
+    findPlacedFenceAt(wx, wy) {
+        const world = window.theWorld;
+        if (!world || !Array.isArray(world.placedBuildings)) return null;
+        for (const b of world.placedBuildings) {
+            if (!b) continue;
+            const orig = (b.originalType || '').toLowerCase();
+            if (orig !== 'fencex' && orig !== 'fencey') continue;
+            if (wx >= b.x && wx < b.x + b.width && wy >= b.y && wy < b.y + b.height) {
+                return b;
+            }
+        }
+        return null;
+    },
+
+    /**
+     * Pega cerca existente: remove do mundo e ajusta o cursor de construção
+     * pra corresponder à variant. Player pode posicionar o mouse em outro
+     * lugar e apertar T (ou click) pra realocar. Em modo sintético (livre),
+     * não devolve nada ao inventário; em modo normal, faz `addItem`.
+     */
+    pickUpFence(fence) {
+        if (!fence || !window.theWorld) return false;
+        const variant = (fence.variant === 'fenceY' || (fence.originalType || '').toLowerCase() === 'fencey')
+            ? 'fenceY' : 'fenceX';
+
+        try {
+            // objectDestroyed remove de placedBuildings E do collisionSystem.
+            // O enclosureSystem (listener de objectDestroyed) recomputa
+            // automaticamente endpoints e cercados.
+            window.theWorld.objectDestroyed(fence.id ?? fence);
+        } catch (err) {
+            logger.warn?.('[BuildSystem] pickUpFence: falha ao destruir', err);
+            return false;
+        }
+
+        // Equipa cerca de pickup (FINITA, diferente do Q-synthetic infinito).
+        // Stack: pegar mais cercas da MESMA variant soma ao contador. Pegar
+        // variant diferente cria novo (perde a quantidade anterior, decisão
+        // de design pra evitar UI complexa de 2 contadores).
+        const cur = this.selectedItem;
+        const stacking = cur?._fromPickup && this.currentVariant === variant;
+
+        if (stacking) {
+            cur._pickupQty = (cur._pickupQty || 0) + 1;
+        } else {
+            this._applyItemToBuildState({
+                id: -1,
+                name: t('build.fenceNamePickup'),
+                placeable: true,
+                variants: ['fenceX', 'fenceY'],
+                type: 'fence',
+                _isSynthetic: true,
+                _fromPickup: true,   // ← chave: marca como quantidade finita
+                _pickupQty: 1,
+            });
+            this.currentVariant = variant;
+            this.previewImg = assets.furniture?.fences?.[variant]?.img || null;
+        }
+
+        const qty = this.selectedItem._pickupQty;
+        this.showDebugMessage(t('build.pickedUp', { qty }), 1200);
+        return true;
+    },
+
     placeObject() {
+        // Sem item equipado = no-op silencioso. Player usa Q pra escolher.
         if (!this.selectedItem) return;
 
         if (!window.theWorld) {
@@ -334,9 +501,35 @@ export const BuildSystem = {
         const pos = this.getSnapPosition();
         const dim = this.getConstructionDimensions();
         const constructionType = this.getConstructionType();
-        const itemQuantity = inventorySystem.getItemQuantity ? inventorySystem.getItemQuantity(this.selectedItem.id) : (this.selectedItem.quantity || 1);
 
-        if (!itemQuantity || itemQuantity <= 0) {
+        // 3 modos de quantidade:
+        //   _fromPickup → quantidade FINITA (contador `_pickupQty`),
+        //     vem de pegar cercas existentes. Esgota → volta pro vazio.
+        //   _isSynthetic puro → quantidade INFINITA, modo livre via Q
+        //     (testing/dev sem precisar craftar peças).
+        //   default → inventário real (item craftado/comprado).
+        const isFromPickup = this.selectedItem?._fromPickup === true;
+        const isSynthetic  = this.selectedItem?._isSynthetic === true;
+
+        let itemQuantity;
+        if (isFromPickup) {
+            itemQuantity = this.selectedItem._pickupQty || 0;
+        } else if (isSynthetic) {
+            itemQuantity = Infinity;
+        } else {
+            itemQuantity = inventorySystem.getItemQuantity
+                ? inventorySystem.getItemQuantity(this.selectedItem.id)
+                : (this.selectedItem.quantity || 1);
+        }
+
+        if (itemQuantity <= 0) {
+            if (isFromPickup) {
+                // Esgotou as cercas pegas — volta pro estado vazio,
+                // sem fechar o build mode (player pode pegar mais).
+                this._applyItemToBuildState(null);
+                this.showDebugMessage(t('build.pickupEmpty'), 800);
+                return;
+            }
             this.showDebugMessage(t('build.itemEmpty'));
             this.stopBuilding();
             return;
@@ -446,12 +639,27 @@ export const BuildSystem = {
                 };
 
                 window.theWorld.addWorldObject(worldObj);
-                inventorySystem.removeItem(this.selectedItem.id, 1);
 
-                const restante = itemQuantity - 1;
+                // Decremento por modo:
+                if (isFromPickup) {
+                    this.selectedItem._pickupQty -= 1;
+                } else if (!isSynthetic) {
+                    inventorySystem.removeItem(this.selectedItem.id, 1);
+                }
+                // isSynthetic puro = não decrementa nada (infinito).
+
+                const restante = isFromPickup
+                    ? this.selectedItem._pickupQty
+                    : (isSynthetic ? Infinity : (itemQuantity - 1));
                 this.showDebugMessage(t('build.placed', { remaining: restante }), 1000);
 
-                if (restante <= 0) this.stopBuilding();
+                // Pickup esgotou → volta pro vazio (mantém build mode aberto).
+                // Inventário esgotou → fecha build mode (comportamento antigo).
+                if (isFromPickup && this.selectedItem._pickupQty <= 0) {
+                    this._applyItemToBuildState(null);
+                } else if (!isSynthetic && !isFromPickup && restante <= 0) {
+                    this.stopBuilding();
+                }
             } catch (err) {
                 logger.error(t('build.placeError'), err);
                 this.showDebugMessage(t('build.placeError'), 2000);
@@ -526,18 +734,38 @@ export const BuildSystem = {
             ctx.lineWidth = 2;
             ctx.strokeRect(sx, sy, zW, zH);
         }
-        
+
         ctx.globalAlpha = 1;
         ctx.restore();
+
+        // Endpoints do rascunho (cerca-fantasma). Só pra fence — chest/
+        // well não têm conceito de conexão. Gate de DEBUG_HITBOXES é
+        // tratado dentro de drawPreviewEndpoints.
+        if (this.getConstructionType() === 'fence') {
+            const encSys = getSystem('enclosure');
+            encSys?.drawPreviewEndpoints?.(
+                ctx, camera,
+                { x: worldPos.x, y: worldPos.y, width: dim.width, height: dim.height },
+                this.currentVariant
+            );
+        }
     },
 
     renderAdvancedGrid(ctx) {
+        // Modo livre: grid removido. Player posiciona livremente onde
+        // o cursor estiver. Função mantida pra não quebrar quem chama
+        // (drawPreview chama no início), mas retorna logo.
+        return;
+
+        // ─── código antigo do grid (mantido como referência, inativo) ───
+        // Pra reativar: remover o `return` acima.
+        // eslint-disable-next-line no-unreachable
         if (!this.active || !this.showAdvancedGrid) return;
         if (this._gridDrawnThisFrame) return;
         this._gridDrawnThisFrame = true;
 
         const gs = this.gridSize;
-        const zSize = this.zoomedGridSize; 
+        const zSize = this.zoomedGridSize;
 
         const startCol = Math.floor(camera.x / gs);
         const endCol = Math.ceil((camera.x + camera.width) / gs);

@@ -465,11 +465,56 @@ export class PlayerInteractionSystem {
             const worldPos = camera.screenToWorld(canvasX, canvasY);
 
             if (BuildSystem.active) {
-                BuildSystem.placeObject();
+                // Prioridade 1: clique no "+" do cercado → abre painel de
+                // animais. Tem que vir ANTES de place/pickup pra não ser
+                // intercepetado por uma cerca próxima.
+                const encSys = getSystem('enclosure');
+                const enc = encSys?.getEnclosureMarkerAt?.(worldPos.x, worldPos.y);
+                if (enc) {
+                    import('../animal/enclosureAnimalPanel.js').then(m => {
+                        m.openEnclosureAnimalPanel(enc);
+                    }).catch(err => console.warn('Falha ao abrir painel de animais:', err));
+                    return;
+                }
+
+                // Prioridade 2: comportamento padrão de build mode.
+                // Estado vazio (sem item equipado): clique esquerdo OU direito
+                // pega cerca existente. Útil pra deletar/realocar peças sem
+                // ter que selecionar um item antes.
+                // Com item equipado: left click = coloca peça.
+                if (!BuildSystem.selectedItem) {
+                    const existingFence = BuildSystem.findPlacedFenceAt?.(worldPos.x, worldPos.y);
+                    if (existingFence) BuildSystem.pickUpFence(existingFence);
+                } else {
+                    BuildSystem.placeObject();
+                }
                 return;
             }
 
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
+        }, { signal: controlsAbortController.signal });
+
+        // Clique direito no modo construção = recupera/pega cerca existente
+        // sob o cursor. Fora do modo construção, preserva o menu de contexto
+        // do navegador (não interfere em devtools/inspect).
+        canvas.addEventListener("contextmenu", (ev) => {
+            if (isSleeping) return;
+            if (!BuildSystem.active) return;
+
+            ev.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (ev.clientX - rect.left) * scaleX;
+            const canvasY = (ev.clientY - rect.top) * scaleY;
+            const worldPos = camera.screenToWorld(canvasX, canvasY);
+
+            const existingFence = BuildSystem.findPlacedFenceAt?.(worldPos.x, worldPos.y);
+            if (existingFence) {
+                BuildSystem.pickUpFence(existingFence);
+            }
+            // Clique direito em vazio = no-op (sem feedback ruidoso).
         }, { signal: controlsAbortController.signal });
 
         canvas.addEventListener("mousemove", (ev) => {
@@ -646,7 +691,7 @@ export class PlayerInteractionSystem {
         //   cliques que erraram a borda por pouco (animais pequenos tipo
         //   Chick 29×29 são difíceis de acertar em zoom baixo). Conversão
         //   por zoom mantém o "feel" consistente em qualquer zoom.
-        const SNAP_RADIUS_SCREEN = 30;
+        const SNAP_RADIUS_SCREEN = RANGES.ANIMAL_SNAP_RADIUS_SCREEN || 30;
         const snapRadiusWorld = SNAP_RADIUS_SCREEN / (camera?.zoom || 1);
         const snapRadiusSqWorld = snapRadiusWorld * snapRadiusWorld;
         const animalUnderClick = () => {
@@ -999,11 +1044,15 @@ function setupBuildControls() {
         if (e.key === "Escape" && BuildSystem.active) { BuildSystem.stopBuilding(); return; }
 
         if ((e.key === 'b' || e.key === 'B') && !BuildSystem.active) {
-            const selectedItem = getSystem('inventory')?.getSelectedItem?.();
-            if (selectedItem && selectedItem.placeable) BuildSystem.startBuilding(selectedItem);
+            // Abre modo construção em estado VAZIO. Player aperta Q pra
+            // ciclar pelos itens disponíveis (inventário ou fallback
+            // sintético). No estado vazio, qualquer clique pega cerca
+            // existente — útil pra deletar/realocar sem item equipado.
+            BuildSystem.startBuilding(null);
         }
 
         if (BuildSystem.active) {
+            if (e.key === "q" || e.key === "Q") BuildSystem.cycleNextItem?.();
             if (e.key === "r" || e.key === "R") BuildSystem.rotate();
             if (e.key === "t" || e.key === "T") BuildSystem.placeObject();
             if (typeof BuildSystem.setSubPosition === 'function') {
