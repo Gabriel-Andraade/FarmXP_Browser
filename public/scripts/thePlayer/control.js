@@ -1039,6 +1039,16 @@ function setupBuildControls() {
     const { signal } = controlsAbortController;
 
     document.addEventListener("keydown", (e) => {
+        // Ignora hotkeys (b, q, r, t, esc) quando o foco está em campo
+        // editável — senão player digita "b" no chat e abre build mode,
+        // ou "t" em input numérico tenta colocar peça. Mesmo padrão dos
+        // outros handlers neste arquivo.
+        const tgt = e.target;
+        if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
+                 || tgt.tagName === 'SELECT' || tgt.isContentEditable)) {
+            return;
+        }
+
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
         if (e.key === "Escape" && BuildSystem.active) { BuildSystem.stopBuilding(); return; }

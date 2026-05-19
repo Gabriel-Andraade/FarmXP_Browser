@@ -45,15 +45,19 @@ function _animalName(animal) {
 
 const MAX_SPECIES = 3;
 
-/** Mensagem de erro do `addAnimalToEnclosure.reason`. */
+/** Mensagem de erro do `addAnimalToEnclosure.reason`. Cobre todos os
+ *  códigos retornados por `enclosureSystem.addAnimalToEnclosure`. */
 function _reasonMessage(reason, price) {
   switch (reason) {
     case 'species_limit':       return t('enclosure.panel.toast.speciesLimit', { max: MAX_SPECIES });
     case 'no_money':            return t('enclosure.panel.toast.noMoney', { price: _fmtPrice(price ?? 0) });
     case 'no_enclosure':        return t('enclosure.panel.toast.noEnclosure');
+    case 'no_asset_name':       return t('enclosure.panel.toast.noAssetName');
     case 'no_asset':            return t('enclosure.panel.toast.noAsset');
+    case 'no_cells':            return t('enclosure.panel.toast.noCells');
     case 'no_world':            return t('enclosure.panel.toast.noWorld');
     case 'no_currency_system':  return t('enclosure.panel.toast.noCurrencySystem');
+    case 'respawn_failed':      return t('enclosure.panel.toast.respawnFailed');
     default:                    return t('enclosure.panel.toast.generic', { reason: String(reason) });
   }
 }

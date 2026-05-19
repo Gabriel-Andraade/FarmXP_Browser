@@ -718,15 +718,18 @@ export class AnimalEntity {
     }
 
     guide() {
+        // Todos os retornos incluem `following` pra contrato estável
+        // (caller pode ler result.following em qualquer branch sem precisar
+        // de fallback). No path de falha, mantém o valor atual.
         if (this._mood === AnimalMood.SLEEPING) {
-            return { success: false, message: 'sleeping' };
+            return { success: false, following: this.following, message: 'sleeping' };
         }
         if (this._isSuspicious) {
             this._startFlee();
-            return { success: false, message: 'suspicious_flee' };
+            return { success: false, following: this.following, message: 'suspicious_flee' };
         }
         if (this._mood === AnimalMood.ANGRY) {
-            return { success: false, message: 'angry' };
+            return { success: false, following: this.following, message: 'angry' };
         }
 
         // Animais gravemente feridos podem recusar seguir.
@@ -734,7 +737,7 @@ export class AnimalEntity {
         if (!this.following) {
             const chance = this._injuryAcceptChance();
             if (chance < 1 && Math.random() > chance) {
-                return { success: false, message: 'severe_refused' };
+                return { success: false, following: this.following, message: 'severe_refused' };
             }
         }
 

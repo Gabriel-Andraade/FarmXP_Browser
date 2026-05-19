@@ -609,6 +609,7 @@ export default {
       max_pets: 'Já recebeu carinho suficiente hoje.',
       fed: 'Se alimentou!',
       no_food: 'Sem ração no inventário!',
+      failed_remove_food: 'Não foi possível retirar a ração do inventário.',
       suspicious: 'Desconfiado demais para comer...',
       no_inventory: 'Inventário indisponível.',
       severe_refused: 'Não quer te seguir agora...',
@@ -700,7 +701,9 @@ export default {
     storageTab: 'Armazém',
     inventoryNotAvailable: '🎒 Sistema de inventário não disponível',
     done: 'Concluir',
-    minimapToggle: 'Alternar minimapa (M)'
+    minimapToggle: 'Alternar minimapa (M)',
+    click: 'clique',
+    rightClick: 'clique dir',
   },
 
   // HUD Action Buttons - MODIFICADO: usando marcadores dinâmicos {key}
@@ -969,9 +972,12 @@ export default {
         speciesLimit: 'Limite de {max} espécies diferentes neste cercado.',
         noMoney: 'Saldo insuficiente ({price}).',
         noEnclosure: 'Cercado não encontrado.',
+        noAssetName: 'Animal sem nome de asset.',
         noAsset: 'Asset do animal não carregado.',
+        noCells: 'Cercado sem células interiores.',
         noWorld: 'Mundo indisponível.',
         noCurrencySystem: 'Sistema de moeda indisponível.',
+        respawnFailed: 'Falha ao spawnar o animal.',
         generic: 'Falha ({reason}).',
       },
     },

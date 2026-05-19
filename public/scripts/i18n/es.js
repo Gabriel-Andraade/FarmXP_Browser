@@ -610,6 +610,7 @@ export default {
       max_pets: 'Ya tuvo suficientes caricias hoy.',
       fed: '¡Comió feliz!',
       no_food: '¡Sin alimento en el inventario!',
+      failed_remove_food: 'No se pudo retirar el alimento del inventario.',
       suspicious: 'Demasiado desconfiado para comer...',
       no_inventory: 'Inventario no disponible.',
       severe_refused: 'No quiere seguirte ahora...',
@@ -701,7 +702,9 @@ export default {
     storageTab: 'Almacén',
     inventoryNotAvailable: '🎒 Sistema de inventario no disponible',
     done: 'Hecho',
-    minimapToggle: 'Alternar minimapa (M)'
+    minimapToggle: 'Alternar minimapa (M)',
+    click: 'clic',
+    rightClick: 'clic der',
   },
 
   // HUD Action Buttons
@@ -976,9 +979,12 @@ export default {
         speciesLimit: 'Límite de {max} especies diferentes en este cercado.',
         noMoney: 'Saldo insuficiente ({price}).',
         noEnclosure: 'Cercado no encontrado.',
+        noAssetName: 'Animal sin nombre de asset.',
         noAsset: 'Asset del animal no cargado.',
+        noCells: 'Cercado sin celdas interiores.',
         noWorld: 'Mundo no disponible.',
         noCurrencySystem: 'Sistema de moneda no disponible.',
+        respawnFailed: 'Falla al generar el animal.',
         generic: 'Falla ({reason}).',
       },
     },

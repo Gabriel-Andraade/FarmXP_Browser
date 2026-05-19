@@ -397,6 +397,14 @@ class EnclosureSystem {
       return { ok: false, reason: 'no_world' };
     }
     const animal = world.addAnimal(animalItem.assetName, assetData, spawn.x, spawn.y);
+    // Valida antes de cometer o estado: se addAnimal falhou (asset
+    // não pronto, erro de hitbox, etc.), faz rollback da cobrança e
+    // NÃO incrementa o contador de espécies — senão player paga sem
+    // animal E o limite de 3 espécies fica corrompido pra sempre.
+    if (!animal) {
+      if (price > 0) currency.earn?.(price, 'enclosure:animal_refund');
+      return { ok: false, reason: 'respawn_failed', price };
+    }
 
     // Atualiza species persistido + objeto enclosure ativo.
     species[animalItem.assetName] = (species[animalItem.assetName] || 0) + 1;

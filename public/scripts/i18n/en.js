@@ -610,6 +610,7 @@ export default {
       max_pets: 'Had enough petting for today.',
       fed: 'Ate happily!',
       no_food: 'No feed in inventory!',
+      failed_remove_food: 'Could not remove feed from inventory.',
       suspicious: 'Too suspicious to eat...',
       no_inventory: 'Inventory unavailable.',
       severe_refused: "Doesn't want to follow you right now...",
@@ -700,7 +701,9 @@ export default {
     storageTab: 'Storage',
     inventoryNotAvailable: '🎒 Inventory system not available',
     done: 'Done',
-    minimapToggle: 'Toggle minimap (M)'
+    minimapToggle: 'Toggle minimap (M)',
+    click: 'click',
+    rightClick: 'right click',
   },
 
   // HUD Action Buttons
@@ -975,9 +978,12 @@ export default {
         speciesLimit: 'Limit of {max} different species in this enclosure.',
         noMoney: 'Not enough money ({price}).',
         noEnclosure: 'Enclosure not found.',
+        noAssetName: 'Animal has no asset name.',
         noAsset: 'Animal asset not loaded.',
+        noCells: 'Enclosure has no interior cells.',
         noWorld: 'World unavailable.',
         noCurrencySystem: 'Currency system unavailable.',
+        respawnFailed: 'Failed to spawn the animal.',
         generic: 'Failed ({reason}).',
       },
     },

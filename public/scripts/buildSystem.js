@@ -115,12 +115,13 @@ export const BuildSystem = {
         // Help reformulado: Q (ciclo), R (rotacionar), T/click (colocar),
         // clique direito (pegar), esc (sair). Subpos antigo (1-6) virou
         // no-op com o snap livre, então removido pra não confundir.
+        // Labels de keycaps "click"/"right click" via i18n.
         const rows = [
-          { keys: ['q'],          label: t('build.cycle') },
-          { keys: ['r'],          label: t('build.rotate') },
-          { keys: ['t', 'clique'], label: t('build.placeClick') },
-          { keys: ['clique dir'],  label: t('build.pickClick') },
-          { keys: ['esc'],        label: t('build.exit') },
+          { keys: ['q'],                  label: t('build.cycle') },
+          { keys: ['r'],                  label: t('build.rotate') },
+          { keys: ['t', t('ui.click')],   label: t('build.placeClick') },
+          { keys: [t('ui.rightClick')],   label: t('build.pickClick') },
+          { keys: ['esc'],                label: t('build.exit') },
         ];
         for (const row of rows) {
           const rowDiv = document.createElement('div');
@@ -182,7 +183,9 @@ export const BuildSystem = {
         // Modo livre: `mouseTile.x/y` agora guarda coord de MUNDO bruta
         // (não mais tile index dividido por gridSize). Player coloca o
         // objeto exatamente onde o cursor está, sem snap a grid.
-        if (this.mouseUpdatePending && (this.pendingMouseX !== 0 || this.pendingMouseY !== 0)) {
+        // O check antigo `(pendingX !== 0 || pendingY !== 0)` foi removido
+        // porque ignorava cliques legítimos na origem do mundo (0,0).
+        if (this.mouseUpdatePending) {
             return { x: this.pendingMouseX, y: this.pendingMouseY };
         }
         return { x: this.mouseTile.x, y: this.mouseTile.y };
