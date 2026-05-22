@@ -162,6 +162,11 @@ class UiPanel {
       { action: 'pet', icon: '❤', label: t('animal.actions.pet') },
       { action: 'guide', icon: '➤', label: t('animal.actions.guide') },
       { action: 'feed', icon: '🍎', label: t('animal.actions.feed') },
+      // Coletar só aparece quando o animal tem produto pendente.
+      // Visibility controlada em `_updateActionStates`. Click sempre
+      // chama o productionSystem que valida tool/sleeping internamente
+      // e mostra FX explicativo se falhar — accessibility-first.
+      { action: 'collect', icon: '🪣', label: t('animal.actions.collect') },
       { action: 'close', icon: '❌', label: t('animal.actions.close') },
     ];
     for (const item of actionItems) {
@@ -218,7 +223,11 @@ class UiPanel {
     const animalType = document.createElement('div');
     animalType.className = 'aui-animal-type';
     animalType.dataset.role = 'type';
-    nameWrap.append(animalName, animalType);
+    // Estágio de vida (Filhote/Adulto/Maturo/Idoso · Nd) logo abaixo da raça.
+    const animalStage = document.createElement('div');
+    animalStage.className = 'aui-animal-stage';
+    animalStage.dataset.role = 'lifeStage';
+    nameWrap.append(animalName, animalType, animalStage);
     infoHeader.append(genderCircle, nameWrap);
 
     // Mood indicator
@@ -502,6 +511,7 @@ class UiPanel {
     const genderEl = this.infoMenu.querySelector('[data-role="gender"]');
     const nameEl = this.infoMenu.querySelector('[data-role="name"]');
     const typeEl = this.infoMenu.querySelector('[data-role="type"]');
+    const stageEl = this.infoMenu.querySelector('[data-role="lifeStage"]');
     const moodEl = this.infoMenu.querySelector('[data-role="mood"]');
 
     if (genderEl) {
@@ -510,6 +520,18 @@ class UiPanel {
     }
     if (nameEl && !nameEl.matches(":focus")) nameEl.textContent = name;
     if (typeEl) typeEl.textContent = displayType;
+
+    // Estágio de vida + idade em dias. Mostra "Filhote · 12d" / "Adulto · 25d"
+    // etc. Útil pro player saber quanto falta pra próxima transição.
+    if (stageEl) {
+      const stage = this.target._lifeStage || 'adult';
+      const stageKey = `animal.aging.stage.${stage}`;
+      const stageText = t(stageKey);
+      const stageLabel = (stageText && stageText !== stageKey) ? stageText : stage;
+      const daysOld = this.target._daysOld || 0;
+      stageEl.textContent = `${stageLabel} · ${daysOld}d`;
+      stageEl.dataset.stage = stage;
+    }
 
     // Mood display
     if (moodEl) {
@@ -612,6 +634,7 @@ class UiPanel {
     const isFollowing = this.target.following || false;
 
     const btns = this.actionsMenu.querySelectorAll('.aui-action-btn');
+    const hasProduct = !!this.target._pendingProduct;
     btns.forEach(btn => {
       const action = btn.dataset.action;
       if (action === 'close') return;
@@ -627,6 +650,19 @@ class UiPanel {
           if (iconSpan) iconSpan.textContent = '➤';
           if (labelSpan) labelSpan.textContent = t('animal.actions.guide');
         }
+      }
+
+      // Botão Coletar só aparece quando o animal tem produto pendente.
+      // Display none/'' (inline-flex via CSS) controla a presença real.
+      if (action === 'collect') {
+        btn.style.display = hasProduct ? '' : 'none';
+        // Quando visível, sempre clicável — productionSystem decide tudo
+        // (sleeping, ferramenta, inventário) e mostra FX explicativo.
+        if (hasProduct) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }
+        return;
       }
 
       if (isSleeping) {

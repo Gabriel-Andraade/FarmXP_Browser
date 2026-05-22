@@ -2,8 +2,9 @@
  * @file enclosureAnimalPanel.js - Painel modal pra adicionar animais a um cercado
  *
  * Aberto ao clicar no "+" do centro do cercado (no modo construção). Lista
- * os 9 animais de `items.js` (type === 'animal') como cards com ícone, nome,
- * preço e botão "Adicionar".
+ * os animais de `items.js` (type === 'animal') como cards com ícone, nome,
+ * preço e botão "Adicionar". O catálogo é dinâmico — qualquer item novo
+ * com `type: 'animal'` aparece sem mexer neste arquivo.
  *
  * Regras (espelho de `enclosureSystem.addAnimalToEnclosure`):
  *   - Máximo 3 espécies distintas por cercado

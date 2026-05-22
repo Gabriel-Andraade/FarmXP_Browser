@@ -11,6 +11,7 @@ import { getSystem, getObject } from '../gameState.js';
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 import { items } from '../item.js';
 import { animals } from '../theWorld.js';
+import { assets } from '../assetManager.js';
 
 // weatherSystem expõe `day`; dayNightSystem expõe `dayCount` — aceitar ambos
 // e padronizar o lookup pra updateStats e applyMedicine não divergirem.
@@ -41,6 +42,15 @@ const MOOD_EMOJIS = {
     hungry:     '🍽️',
     needy:      '💔',
     calm:       '😊',
+};
+
+// Mapa item.id → emoji do produto pronto pra coleta. Referência simples
+// pelos ids canônicos: 60=Ovo, 61=Leite, 62=Lã. Renderizado pelo draw()
+// quando `_pendingProduct` está setado.
+const PRODUCT_EMOJI = {
+    60: '🥚',  // ovo
+    61: '🥛',  // leite
+    62: '🧶',  // lã
 };
 
 function getMaxPetsPerDay(moral) {
@@ -125,7 +135,9 @@ const SPECIES_RATE_MULT = {
     Sheep:   { hunger: 0.9, thirst: 0.8, moral: 1.0 },
     Lamb:    { hunger: 1.0, thirst: 0.9, moral: 1.2 },
     Piglet:  { hunger: 1.4, thirst: 1.0, moral: 1.0 },
+    Pig:     { hunger: 1.5, thirst: 1.1, moral: 0.95 },
     Chick:   { hunger: 0.7, thirst: 1.0, moral: 1.1 },
+    Chicken: { hunger: 0.8, thirst: 1.0, moral: 1.0 },
     Rooster: { hunger: 0.8, thirst: 1.0, moral: 0.9 },
     Turkey:  { hunger: 1.0, thirst: 1.0, moral: 1.0 },
 };
@@ -186,6 +198,25 @@ const DISEASE_MORAL_DECAY_EXTRA_PER_MIN = {
     fever:       0.040,
 };
 
+// Modificadores por estágio de vida (lifecycle). Adulto e maturo são o
+// baseline (1.0). Filhote tem "energia infantil" — moral cai mais devagar.
+// Idoso tem fragilidade — moral cai mais rápido E anda mais devagar.
+//
+// Multiplicam o decay total de moral (depois das outras camadas: doença,
+// ferimento, clima) e a velocidade base de movimento.
+const STAGE_MORAL_DECAY_MULT = {
+    young:   0.65,  // -35%  filhote resistente, energia infantil
+    adult:   1.0,
+    mature:  1.0,
+    elderly: 1.45,  // +45%  idoso fragiliza, perde moral rápido
+};
+const STAGE_SPEED_MULT = {
+    young:   1.0,
+    adult:   1.0,
+    mature:  1.0,
+    elderly: 0.7,   // idoso anda 30% mais devagar — visualmente claro
+};
+
 // Touro ferindo vizinho ao berrar. Gatilho situacional (não diário):
 // dispara só quando o `bull_bellow` toca, candidato é o vizinho mais
 // próximo dentro do raio. Cooldown do bellow já é 20-40s, então mesmo
@@ -202,10 +233,12 @@ const SPECIES_GENDER = {
     Bull:    'male',
     Rooster: 'male',
     Cow:     'female',
+    Chicken: 'female',  // galinha adulta — produtora de ovos
     Calf:    'random',
     Chick:   'random',
     Lamb:    'random',
     Piglet:  'random',
+    Pig:     'random',  // porco adulto (vem do crescimento de Piglet)
     Sheep:   'random',
     Turkey:  'random',
 };
@@ -290,6 +323,40 @@ export class AnimalEntity {
         // Doença atual: null = saudável, ou { id, daysSince, diagnosed }.
         // Enquanto não diagnosticada, o UiPanel exibe apenas "?".
         this.disease = opts.disease ?? null;
+
+        // Produção (milk/wool/egg). `_pendingProduct` é setado pelo
+        // productionSystem no `dayChanged` quando o animal está elegível.
+        // Player coleta com a ferramenta certa (ou nenhuma, se o produto
+        // não exigir). Cleared on collection. `_lastProducedDay` evita
+        // spawn duplo no mesmo dia.
+        this._pendingProduct = opts.pendingProduct ?? null;
+        this._pendingTool    = opts.pendingTool    ?? null;
+        this._lastProducedDay = opts.lastProducedDay ?? -1;
+
+        // Feedback visual flutuante (sucesso/falha de coleta).
+        // `{ text, success, startedAt, duration }`. Cleared no draw quando
+        // expira. Não persiste no save (efeito transitório).
+        this._collectFx = null;
+
+        // ─── Lifecycle / aging ─────────────────────────────────────────
+        // `_daysOld`: idade real do animal em dias in-game (sempre
+        // incrementa em `dayChanged`). `_lifeStage`: 'young' | 'adult' |
+        // 'mature' | 'elderly'. Avanço de estágio exige `_avgMoral >= 50`
+        // — animal mal cuidado fica preso no estágio anterior pra sempre.
+        // `_avgMoral`: EMA (exponential moving average) atualizado por dia,
+        // serve como proxy de "qualidade do cuidado" sem precisar guardar
+        // histórico completo.
+        this._daysOld   = opts.daysOld   ?? 0;
+        this._lifeStage = opts.lifeStage ?? this._defaultLifeStageFromAsset(assetName);
+        this._avgMoral  = opts.avgMoral  ?? this.stats.moral;
+        // Tempo de vida total (em dias) sorteado ao nascer. Variância 85-110
+        // dias = idoso vive 20-45 dias após chegar ao último estágio (65d).
+        // Player não vê o valor — gera incerteza de "quando ela vai partir".
+        this._lifespan = opts.lifespan ?? (85 + Math.floor(Math.random() * 26));
+
+        // FX flutuante de aging (sparkle + toast quando cresce). Não persiste.
+        this._ageUpFx = null;
+
         this._mood = opts.initialMood || (this._isSuspicious ? AnimalMood.SUSPICIOUS : AnimalMood.CALM);
 
         this.petsToday = 0;
@@ -309,6 +376,93 @@ export class AnimalEntity {
         };
 
         this.__uiPaused = false;
+    }
+
+    /**
+     * Estágio de vida default baseado no assetName quando o animal é
+     * construído (sem dado persistido). Filhotes começam 'young', adultos
+     * já começam 'adult'. Idoso/maturo nunca surgem ao construir — só via
+     * aging system.
+     */
+    _defaultLifeStageFromAsset(assetName) {
+        const youngAssets = ['Chick', 'Calf', 'Lamb', 'Piglet'];
+        return youngAssets.includes(assetName) ? 'young' : 'adult';
+    }
+
+    /**
+     * Troca o asset (sprite + dimensões + hitbox) do animal mantendo
+     * tudo o resto (id, posição, stats, gender, doença, etc.). Usado
+     * pelo agingSystem quando filhote vira adulto (Chick→Chicken etc.).
+     *
+     * Re-registra a hitbox no collisionSystem com as novas dimensões —
+     * fundamental porque a hitbox antiga (do filhote pequeno) ficaria
+     * desalinhada do sprite novo (adulto maior).
+     *
+     * @param {string} newAssetName
+     * @returns {boolean} true se a transformação rolou
+     */
+    transformInto(newAssetName) {
+        if (!newAssetName || newAssetName === this.assetName) return false;
+        const newAsset = assets?.animals?.[newAssetName];
+        if (!newAsset?.img) {
+            logger.warn?.(`[AnimalEntity] transformInto: asset '${newAssetName}' não disponível`);
+            return false;
+        }
+
+        const fromAsset = this.assetName;
+
+        // Atualiza referências do asset
+        this.assetName = newAssetName;
+        this.img = newAsset.img;
+        this.cols = newAsset.cols || 4;
+        this.rows = newAsset.rows || 4;
+        this.frameCounts = newAsset.frameCounts || null;
+        this.frameWidth  = newAsset.frameWidth  || (this.img ? this.img.width  / this.cols : 32);
+        this.frameHeight = newAsset.frameHeight || (this.img ? this.img.height / this.rows : 32);
+        this.renderScale = newAsset.renderScale || 1;
+        this.width  = this.frameWidth  * this.renderScale;
+        this.height = this.frameHeight * this.renderScale;
+        this.directionRows = newAsset.directionRows || { down: 0, up: 3, left: 1, right: 2 };
+        this._mirrorRight = !!newAsset.mirrorRight;
+        this.flipX = false;
+
+        // Recalcula collisionBox com as novas dimensões
+        this.collisionBox = this.getInitialCollisionConfig();
+
+        // Re-registra hitbox no collisionSystem (remove a antiga, add nova).
+        // Sem isso, o player conseguiria "atravessar" o adulto maior na
+        // região que ainda usa o tamanho do filhote.
+        try {
+            if (this.id && typeof collisionSystem.removeHitbox === 'function') {
+                collisionSystem.removeHitbox(this.id);
+            }
+            const hb = this.getHitbox();
+            if (typeof collisionSystem.addHitbox === 'function') {
+                collisionSystem.addHitbox(this.id, 'ANIMAL', hb.x, hb.y, hb.width, hb.height, this);
+                if (typeof collisionSystem.setInteractionHitboxBounds === 'function') {
+                    const m = 0.1;
+                    collisionSystem.setInteractionHitboxBounds(
+                        this.id,
+                        this.x + this.width * m,
+                        this.y + this.height * m,
+                        this.width * (1 - 2 * m),
+                        this.height * (1 - 2 * m)
+                    );
+                }
+            }
+        } catch (e) {
+            logger.warn?.('[AnimalEntity] transformInto: falha ao re-registrar hitbox', e);
+        }
+
+        // Reset animation
+        this.frameIndex = 0;
+        this.direction = 0;
+        this.lastFrameTime = 0;
+
+        document.dispatchEvent(new CustomEvent('animalTransformed', {
+            detail: { animal: this, from: fromAsset, to: newAssetName },
+        }));
+        return true;
     }
 
     getInitialCollisionConfig() {
@@ -428,6 +582,25 @@ export class AnimalEntity {
         return base * intensity;
     }
 
+    /**
+     * Multiplicador de decay de moral pelo estágio de vida.
+     * Filhote = 0.65 (mais resiliente). Idoso = 1.45 (mais frágil).
+     * Aplicado sobre o total (base + ferimento + doença + clima).
+     */
+    _stageMoralMult() {
+        return STAGE_MORAL_DECAY_MULT[this._lifeStage] ?? 1;
+    }
+
+    /**
+     * Multiplicador de velocidade pelo estágio de vida.
+     * Filhote/Adulto/Maturo = 1.0. Idoso = 0.7 (visivelmente mais lento).
+     * Combina multiplicativamente com `_injurySpeedMult` — animal velho
+     * E ferido fica ainda mais lento.
+     */
+    _stageSpeedMult() {
+        return STAGE_SPEED_MULT[this._lifeStage] ?? 1;
+    }
+
     get mood() {
         return this._mood;
     }
@@ -447,11 +620,14 @@ export class AnimalEntity {
         }
 
         // Cada stat tem sua própria taxa efetiva. Moral inclui penalidades de
-        // ferimento e de clima ruim (storm/blizzard/rain).
-        const moralRate = MORAL_DECAY_PER_MIN
+        // ferimento e de clima ruim (storm/blizzard/rain). Depois de somar
+        // todas as camadas, multiplica pelo modifier do estágio de vida —
+        // filhote resiste mais, idoso fragiliza.
+        const moralRate = (MORAL_DECAY_PER_MIN
             + this._injuryMoralDecayExtra()
             + this._diseaseMoralDecayExtra()
-            + this._weatherMoralPenaltyPerMin();
+            + this._weatherMoralPenaltyPerMin())
+            * this._stageMoralMult();
 
         this._tickStat('hunger', HUNGER_DECAY_PER_MIN, now);
         this._tickStat('thirst', THIRST_DECAY_PER_MIN, now);
@@ -868,7 +1044,7 @@ export class AnimalEntity {
             return;
         }
 
-        const speed = MOVEMENT.ANIMAL_SPEED * 1.2 * this._injurySpeedMult();
+        const speed = MOVEMENT.ANIMAL_SPEED * 1.2 * this._injurySpeedMult() * this._stageSpeedMult();
         // Combina vetor rumo ao player com força de separação CAPADA.
         // Sem cap, vários vizinhos somavam força maior que a velocidade
         // base e o animal andava pra LONGE do player — entrava em loop
@@ -995,7 +1171,7 @@ export class AnimalEntity {
             return;
         }
 
-        const speed = MOVEMENT.ANIMAL_SPEED * speedMult * this._injurySpeedMult();
+        const speed = MOVEMENT.ANIMAL_SPEED * speedMult * this._injurySpeedMult() * this._stageSpeedMult();
         const baseVx = (dx / dist) * speed;
         const baseVy = (dy / dist) * speed;
         // Separação leve durante wander também — antes só era aplicada
@@ -1309,6 +1485,94 @@ export class AnimalEntity {
                 ctx.restore();
             }
         }
+
+        // Indicador de produto pronto pra coleta (🥛 leite, 🧶 lã, 🥚 ovo).
+        // Desenhado um pouco acima do mood emoji, com leve bounce vertical
+        // pra chamar atenção sem ser piscante demais. Visível em qualquer
+        // mood (até SLEEPING — animal pode ter ovo pronto e estar dormindo,
+        // coleta de manhã).
+        if (this._pendingProduct) {
+            const productEmoji = PRODUCT_EMOJI[this._pendingProduct] || '✨';
+            const bounce = Math.sin(performance.now() / 250) * 2 * camera.zoom;
+            ctx.save();
+            ctx.font = `${Math.round(16 * camera.zoom)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(
+                productEmoji,
+                Math.floor(screenPos.x + zoomedWidth / 2),
+                Math.floor(screenPos.y - 20 * camera.zoom + bounce)
+            );
+            ctx.restore();
+        }
+
+        // FX de aging: sparkles ao redor + texto "Cresceu!" pulsando.
+        // Dura ~2.5s (mais que coleta porque é evento memorável).
+        if (this._ageUpFx) {
+            const fx = this._ageUpFx;
+            const elapsed = performance.now() - fx.startedAt;
+            const duration = fx.duration || 2500;
+            if (elapsed >= duration) {
+                this._ageUpFx = null;
+            } else {
+                const t = elapsed / duration;
+                const alpha = 1 - Math.pow(t, 2);  // fade out quadrático
+                const pulse = 1 + 0.15 * Math.sin(elapsed / 100);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+
+                // Texto "Cresceu!" pulsando acima
+                ctx.font = `bold ${Math.round(13 * camera.zoom * pulse)}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.strokeStyle = '#fff';
+                ctx.fillStyle = '#d4a017';
+                const tx = Math.floor(screenPos.x + zoomedWidth / 2);
+                const ty = Math.floor(screenPos.y - 32 * camera.zoom - t * 12 * camera.zoom);
+                ctx.strokeText(fx.text || '✨', tx, ty);
+                ctx.fillText(fx.text || '✨', tx, ty);
+
+                // 4 sparkles orbitando o sprite (rotação simples)
+                ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
+                const cx = screenPos.x + zoomedWidth / 2;
+                const cy = screenPos.y + zoomedHeight / 2;
+                const radius = (zoomedWidth + zoomedHeight) / 2 * (0.6 + t * 0.3);
+                const angleBase = elapsed / 200;
+                for (let i = 0; i < 4; i++) {
+                    const ang = angleBase + i * Math.PI / 2;
+                    const sx2 = cx + Math.cos(ang) * radius;
+                    const sy2 = cy + Math.sin(ang) * radius;
+                    ctx.fillText('✨', Math.floor(sx2), Math.floor(sy2));
+                }
+                ctx.restore();
+            }
+        }
+
+        // FX flutuante de coleta (sucesso/falha). Texto sobe e desaparece
+        // em ~1.5s. Stroke branco pra legibilidade sobre qualquer fundo.
+        if (this._collectFx) {
+            const fx = this._collectFx;
+            const elapsed = performance.now() - fx.startedAt;
+            const duration = fx.duration || 1500;
+            if (elapsed >= duration) {
+                this._collectFx = null;
+            } else {
+                const t = elapsed / duration;
+                const alpha = 1 - t;
+                const yOffset = -34 - (t * 18);  // sobe 18px no fim
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.font = `bold ${Math.round(12 * camera.zoom)}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.lineWidth = 3 * camera.zoom;
+                ctx.strokeStyle = '#fff';
+                ctx.fillStyle = fx.success ? '#1f8b3a' : '#b73030';
+                const tx = Math.floor(screenPos.x + zoomedWidth / 2);
+                const ty = Math.floor(screenPos.y + yOffset * camera.zoom);
+                ctx.strokeText(fx.text, tx, ty);
+                ctx.fillText(fx.text, tx, ty);
+                ctx.restore();
+            }
+        }
     }
 
     serialize() {
@@ -1335,6 +1599,15 @@ export class AnimalEntity {
             petAttempts: this.petAttempts,
             lastPetDay: this.lastPetDay,
             following: this.following,
+            // Produção persistida
+            pendingProduct:  this._pendingProduct ?? null,
+            pendingTool:     this._pendingTool    ?? null,
+            lastProducedDay: this._lastProducedDay ?? -1,
+            // Aging / lifecycle
+            daysOld:   this._daysOld   ?? 0,
+            lifeStage: this._lifeStage ?? 'adult',
+            avgMoral:  this._avgMoral  ?? this.stats.moral,
+            lifespan:  this._lifespan  ?? 90,
         };
     }
 
@@ -1377,6 +1650,16 @@ export class AnimalEntity {
         this.lastPetDay = data.lastPetDay ?? -1;
         this.following = data.following ?? false;
         if (this.following) this.state = AnimalState.FOLLOW;
+        // Produção
+        this._pendingProduct  = data.pendingProduct  ?? null;
+        this._pendingTool     = data.pendingTool     ?? null;
+        this._lastProducedDay = data.lastProducedDay ?? -1;
+        // Aging / lifecycle. Saves antigos sem campo: filhote começa 'young',
+        // adulto começa 'adult' (fallback via assetName).
+        this._daysOld   = data.daysOld   ?? 0;
+        this._lifeStage = data.lifeStage ?? this._defaultLifeStageFromAsset(this.assetName);
+        this._avgMoral  = data.avgMoral  ?? this.stats.moral;
+        this._lifespan  = data.lifespan  ?? (85 + Math.floor(Math.random() * 26));
         this.recalcMood();
     }
 }

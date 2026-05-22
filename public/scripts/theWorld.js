@@ -585,6 +585,30 @@ export function getSortedWorldObjects(player) {
     }
   }
 
+  // Tumbas de animais — entram no Y-sort pra ficarem corretas atrás de
+  // árvores/casas (sprite layering). Sem isso, ficavam sempre por cima.
+  {
+    const tombSys = getSystem('animalTomb');
+    if (tombSys && typeof tombSys.getTombs === 'function') {
+      for (const tomb of tombSys.getTombs()) {
+        allObjects.push({
+          id: tomb.id,
+          type: 'TOMB',
+          originalType: 'tomb',
+          x: tomb.x || 0,
+          y: tomb.y || 0,
+          width: tomb.width || 48,
+          height: tomb.height || 48,
+          draw: (ctx) => {
+            if (isInViewportWithBuffer(tomb.x, tomb.y, tomb.width, tomb.height)) {
+              if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, tomb);
+            }
+          }
+        });
+      }
+    }
+  }
+
   sortedWorldObjectsCache = allObjects.sort((a, b) => {
     const ay = (a.y || 0) + (a.height || 0);
     const by = (b.y || 0) + (b.height || 0);
@@ -1484,6 +1508,19 @@ export function exportWorldState() {
     hospital: (() => {
       const hosp = getSystem('hospital');
       return hosp?.serializeState ? hosp.serializeState() : { entries: [] };
+    })(),
+    // Espécies por cercado — só o contador, cercados em si são
+    // recalculados a partir das cercas no load. Sem isso, reload zera
+    // "5 vacas no cercado X" e quebra o limite de 3 espécies.
+    enclosureSpecies: (() => {
+      const enc = getSystem('enclosure');
+      return enc?.serializeState ? enc.serializeState() : {};
+    })(),
+    // Tumbas de animais. Persistem entre saves — memorial não some por
+    // recarregar. Cada tomb tem nome, idade, últimas palavras, posição.
+    animalTombs: (() => {
+      const tomb = getSystem('animalTomb');
+      return tomb?.serializeState ? tomb.serializeState() : [];
     })()
   };
 }
@@ -1574,6 +1611,21 @@ export function importWorldState(data) {
 
     registerWorldObjects();
     markWorldChanged();
+
+    // Restaura espécies por cercado APÓS registerWorldObjects (que recolora
+    // as hitboxes das cercas). O `restoreState` chama `detect()` internamente
+    // — então o enclosureSystem já encontra todas as cercas registradas e
+    // reidrata o `species` dos enclosures recém-computados.
+    const enc = getSystem('enclosure');
+    if (enc?.restoreState) {
+      enc.restoreState(payload.enclosureSpecies ?? {});
+    }
+
+    // Restaura tumbas (memorial persiste entre saves).
+    const tomb = getSystem('animalTomb');
+    if (tomb?.restoreState) {
+      tomb.restoreState(payload.animalTombs ?? []);
+    }
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
   }

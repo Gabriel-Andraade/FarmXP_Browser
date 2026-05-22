@@ -278,6 +278,15 @@ async function initializeCriticalSystems() {
     await import("./animal/enclosureSystem.js");
     logger.debug("animal enclosureSystem carregado");
 
+    await import("./animal/productionSystem.js");
+    logger.debug("animal productionSystem carregado");
+
+    await import("./animal/agingSystem.js");
+    logger.debug("animal agingSystem carregado");
+
+    await import("./animal/tombSystem.js");
+    logger.debug("animal tombSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -415,6 +424,33 @@ function setupInteractionSystem() {
       case 'guide':
         result = animal.guide();
         break;
+      case 'collect': {
+        // Coleta de produção (milk/wool/egg) via botão "Coletar" do UiPanel.
+        // Delega TODO check pro productionSystem.collect — ele valida
+        // sleeping/ferramenta/inventário e seta o FX flutuante no animal.
+        // Aqui só converto o reason em message i18n pro feedback bubble.
+        const prodSys = getSystem('animalProduction');
+        if (!prodSys?.collect) {
+          result = { success: false, message: 'no_production_system' };
+          break;
+        }
+        const playerSys = getSystem('player');
+        const r = prodSys.collect(animal, { equippedItem: playerSys?.equippedItem });
+        if (r?.ok) {
+          result = { success: true, message: 'collected' };
+        } else {
+          // Mapeia reason → mensagem do feedback bubble
+          const reasonMap = {
+            sleeping:        'sleeping',
+            needs_tool:      'needs_tool',
+            inventory_full:  'inventory_full',
+            not_ready:       'not_ready',
+            no_inventory:    'no_inventory',
+          };
+          result = { success: false, message: reasonMap[r?.reason] || 'not_ready' };
+        }
+        break;
+      }
       case 'applyMedicine': {
         // Decrementa o item do inventário ANTES de aplicar — se falhar a
         // remoção, não aplica (animal não consome o que não foi pago).
@@ -467,7 +503,7 @@ function setupInteractionSystem() {
 function spawnGameAnimals() {
   if (animalsInitialized) return;
 
-  const animalTypes = ["Bull", "Calf", "Chick", "Cow", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
+  const animalTypes = ["Bull", "Calf", "Chick", "Chicken", "Cow", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
   const baseX = 1800;
   const baseY = 1850;
   const spacing = 110;
@@ -1407,6 +1443,10 @@ function gameLoop(timestamp) {
         handleWarn("falha ao desenhar objeto individual", "main:gameLoop:drawObject", { id: o?.id, err });
       }
     }
+
+    // Tumbas agora são renderizadas via getSortedWorldObjects (Y-sort)
+    // junto com árvores/animais/casas — sprite layering correto.
+    // Sem chamada standalone aqui.
   } catch (err) {
     handleWarn("falha ao desenhar objetos do mundo", "main:gameLoop:drawObjects", err);
   }

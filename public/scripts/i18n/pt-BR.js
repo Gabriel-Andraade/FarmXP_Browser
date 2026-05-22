@@ -396,7 +396,8 @@ export default {
     305: 'Ovelha',
     306: 'Peru',
     307: 'Galo',
-    308: 'Touro'
+    308: 'Touro',
+    309: 'Galinha'
   },
 
   // Recipe names by ID - para tradução dinâmica
@@ -563,6 +564,7 @@ export default {
     calf: 'Bezerro',
     chick: 'Pintinho',
     chicken: 'Galinha',
+    pig: 'Porco',
     cow: 'Vaca',
     pig: 'Porco',
     sheep: 'Ovelha',
@@ -582,6 +584,7 @@ export default {
       guide: 'Guiar',
       unguide: 'Parar de Guiar',
       feed: 'Alimentar',
+      collect: 'Coletar',
       close: 'Fechar'
     },
     stats: {
@@ -619,7 +622,13 @@ export default {
       medicine_mild_reject: 'Fez careta, mas tomou.',
       medicine_reject: 'Detestou o remédio!',
       medicine_cured: 'Curado! ✨',
-      not_medicine: 'Esse item não é um remédio.'
+      not_medicine: 'Esse item não é um remédio.',
+      // Mensagens do botão Coletar (mirror das chaves animal.production.*)
+      collected: 'Coletou!',
+      not_ready: 'Nada pra coletar.',
+      needs_tool: 'Precisa de ferramenta.',
+      inventory_full: 'Inventário cheio.',
+      no_production_system: 'Sistema indisponível.'
     },
     feedSub: {
       title: 'Alimentar',
@@ -662,6 +671,39 @@ export default {
     treatment: {
       label: 'Tratamento',
       format: '{icon} {name} · {days}/{requiredDays} dias · {dosesToday}/{requiredDoses} doses hoje'
+    },
+    // Produção (milk/wool/egg) — feedback de coleta no UiPanel/toasts
+    production: {
+      collected: '{name} coletado!',
+      notReady: 'Nada pra coletar',
+      needsTool: 'Precisa de ferramenta',
+      inventoryFull: 'Inventário cheio',
+      noInventory: 'Sem inventário',
+      sleeping: 'Dormindo 💤',
+    },
+    // Aging / ciclo de vida — toast flutuante quando avança de estágio
+    aging: {
+      stage: {
+        young:   'Filhote',
+        adult:   'Adulto',
+        mature:  'Maduro',
+        elderly: 'Idoso',
+      },
+      toast: {
+        adult:   '✨ Cresceu!',
+        mature:  '✨ Maturou!',
+        elderly: '✨ Envelheceu',
+      }
+    },
+    // Tumba / memorial — quando animal morre de velhice, tumba aparece
+    // no lugar e clique abre card com os dados.
+    tomb: {
+      title: 'In Memoriam',
+      lived: 'Viveu {days} dia(s)',
+      farewell: 'Despedir-se',
+      close: 'Fechar',
+      species: 'Espécie',
+      lastWords: 'Últimas palavras',
     }
   },
 

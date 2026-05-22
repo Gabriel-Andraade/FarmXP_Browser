@@ -68,7 +68,8 @@ async function loadWorldAssets() {
         ...assets.nature.thickets,
         ...assets.buildings.house,
         assets.furniture.chest,
-        assets.furniture.well
+        assets.furniture.well,
+        assets.furniture.animalTomb
     ];
 
     await loadAssetList(worldAssets, "WORLD");
@@ -254,6 +255,16 @@ export const assets = {
             width: 75,
             height: 95,
             img: null
+        },
+        // Tumba de animal — aparece quando animal morre de velhice no
+        // último lugar onde ele estava. Sprite source é 980×980 (alta
+        // res), renderizado escalado pra 48×48 no mundo. Player clica
+        // pra abrir memorial → some.
+        animalTomb: {
+            src: "assets/furnitureInGeneral/animalTomb.png",
+            width: 48,
+            height: 48,
+            img: null
         }
     },
 
@@ -295,6 +306,23 @@ export const assets = {
             directionRows: { left: 0, down: 1, up: 2, right: 0 },
             mirrorRight: true
         },
+        // Galinha adulta. Sprite Chicken.png é 80×21 com 4 frames numa
+        // linha. O STRIDE entre frames é 20px (80/4), mesmo que a arte
+        // visível seja ~18px — os 2px restantes são padding/transparência
+        // ao redor de cada galinha. Usar frameWidth=18 corta na metade
+        // de um frame e mostra parte do próximo (visual quebrado).
+        // Sem direções separadas — todas mapeadas pra row 0.
+        Chicken: {
+            src: "assets/animals/Chicken.png",
+            displayName: "Chicken",
+            frameWidth: 20,
+            frameHeight: 21,
+            renderScale: 1.4,
+            cols: 4,
+            rows: 1,
+            framesPerRow: [4],
+            directionRows: { down: 0, up: 0, left: 0, right: 0 }
+        },
         Chick: {
             src: "assets/animals/Chick.png",
             displayName: "Chick",
@@ -323,6 +351,21 @@ export const assets = {
             frameWidth: 32,
             frameHeight: 32,
             renderScale: 1.4,
+            cols: 6,
+            rows: 6,
+            framesPerRow: [6, 6, 6, 4, 4, 4],
+            directionRows: { down: 0, up: 1, right: 3, left: 2 }
+        },
+        // Porco adulto. Reutiliza o sprite do Piglet mas com renderScale
+        // maior (1.7) — visualmente fica do tamanho de uma Cow (32×1.7=54.4).
+        // Player adquire um Pig apenas crescendo um Piglet (não está no
+        // catálogo de compra do "+" — é progressão por cuidado).
+        Pig: {
+            src: "assets/animals/Piglet.png",
+            displayName: "Pig",
+            frameWidth: 32,
+            frameHeight: 32,
+            renderScale: 1.7,
             cols: 6,
             rows: 6,
             framesPerRow: [6, 6, 6, 4, 4, 4],

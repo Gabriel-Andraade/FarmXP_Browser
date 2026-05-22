@@ -236,6 +236,20 @@
   opacity: 0.95;
   margin-top: 1px;
 }
+/* Estágio de vida (Filhote/Adulto/Maturo/Idoso · Nd) abaixo da raça.
+   Menor e mais sutil pra não competir com o nome — informação contextual.
+   Cor por estágio via data-stage atributo (mostarda → dourado → bronze). */
+.aui-animal-stage {
+  font-size: 13px;
+  color: #b8a47d;
+  opacity: 0.85;
+  margin-top: 1px;
+  font-style: italic;
+}
+.aui-animal-stage[data-stage="young"]   { color: #8bc34a; }  /* verde — crescendo */
+.aui-animal-stage[data-stage="adult"]   { color: #d4a017; }  /* dourado — produtivo */
+.aui-animal-stage[data-stage="mature"]  { color: #c87a3e; }  /* bronze — pico */
+.aui-animal-stage[data-stage="elderly"] { color: #9e7a5a; }  /* sépia — fim do ciclo */
 
 .aui-bars { display: flex; flex-direction: column; gap: 10px; }
 .aui-bar-row { display: flex; align-items: center; gap: 10px; }

@@ -58,6 +58,16 @@ const HUNGER_THRESHOLD = 30;
 const MORAL_THRESHOLD  = 30;
 const MAX_DAILY_RISK   = 0.07;
 
+// ─── Contágio (cercado-only) ────────────────────────────────────────────────
+// Animal saudável num cercado COM animais doentes tem risco extra somado.
+// Apenas anima dentro de cercado fechado contagia/é contagiado — animais
+// soltos seguem só com risco base (incentiva player a usar cercados, mas
+// também permite estratégia de "soltar o doente" pra evitar surto).
+const CONTAGION_RISK_PER_SICK     = 0.04;  // +4% por vizinho doente
+const CONTAGION_RISK_CAP          = 0.20;  // limite do bônus de contágio
+const CONTAGION_MAX_TOTAL_RISK    = 0.25;  // risco final cap (com contágio)
+const CONTAGION_SAME_DISEASE_PROB = 0.70;  // 70% pega A MESMA doença do vizinho
+
 // ─── Pesos para sorteio condicional da doença ───────────────────────────────
 // A cada condição ativa, soma-se o bônus correspondente sobre os pesos
 // default. Inverno e blizzard puxam para `respiratory`; fome puxa para
@@ -375,19 +385,83 @@ class DiseaseSystem {
   }
 
   /**
+   * Mapa enclosureId → Set<diseaseId> com a lista de doenças ativas em
+   * cada cercado. Usado pelo roll diário pra calcular contágio.
+   * Animais fora de cercado fechado são ignorados (não contagiam).
+   */
+  _buildInfectionMap() {
+    const result = new Map();
+    const enclosureSys = getSystem('enclosure');
+    if (!enclosureSys || typeof enclosureSys.getEnclosureAtPoint !== 'function') {
+      return result;
+    }
+    for (const a of animals) {
+      if (!a?.disease) continue;
+      // Use o centro do sprite, não a top-left, pra cair certinho dentro
+      // do cercado (animal grande no canto ainda conta).
+      const cx = a.x + (a.width || 0) / 2;
+      const cy = a.y + (a.height || 0) / 2;
+      const enc = enclosureSys.getEnclosureAtPoint(cx, cy);
+      if (!enc) continue;
+      let set = result.get(enc.id);
+      if (!set) { set = new Set(); result.set(enc.id, set); }
+      set.add(a.disease.id);
+    }
+    return result;
+  }
+
+  /**
    * Roda a chance diária de adoecer em todos os animais saudáveis.
    * Pula animais já doentes ou hospitalizados.
+   *
+   * Contágio: animais saudáveis dentro de cercado COM animais doentes
+   * ganham bônus de risco (+4% por vizinho doente, cap +20%). Quando
+   * adoecem, 70% das vezes pegam A MESMA doença de um vizinho (epidemia),
+   * 30% das vezes pega via pesos normais (outras causas atuando).
+   *
    * @returns {number} quantidade de animais que adoeceram nesse tick.
    */
   rollDailyForAll() {
     if (!Array.isArray(animals)) return 0;
+
+    // Snapshot do mapa de infecção ANTES do roll. Sem isso, um animal que
+    // adoecesse cedo no loop afetaria os tardios — viraria avalanche num
+    // único dia. Tirar foto no início garante "1 dia, 1 round de contágio".
+    const infectionMap = this._buildInfectionMap();
+    const enclosureSys = getSystem('enclosure');
+
     let infected = 0;
     for (const a of animals) {
       if (this.has(a)) continue;
       if (a?.hospitalized) continue;
+
       const { risk, weights } = this._computeDailyRisk(a);
-      if (Math.random() < risk) {
-        const pick = this._pickDisease(weights);
+
+      // Calcula bônus de contágio se o animal está num cercado infectado.
+      let contagionBump = 0;
+      let neighborDiseases = null;
+      if (enclosureSys && infectionMap.size > 0) {
+        const cx = a.x + (a.width || 0) / 2;
+        const cy = a.y + (a.height || 0) / 2;
+        const enc = enclosureSys.getEnclosureAtPoint?.(cx, cy);
+        const sicks = enc && infectionMap.get(enc.id);
+        if (sicks && sicks.size > 0) {
+          contagionBump = Math.min(sicks.size * CONTAGION_RISK_PER_SICK, CONTAGION_RISK_CAP);
+          neighborDiseases = Array.from(sicks);
+        }
+      }
+
+      const finalRisk = Math.min(risk + contagionBump, CONTAGION_MAX_TOTAL_RISK);
+
+      if (Math.random() < finalRisk) {
+        // Epidemia: 70% pega a mesma doença que o vizinho. 30% roll normal.
+        // Se não tem vizinho doente, sempre roll normal.
+        let pick;
+        if (neighborDiseases && Math.random() < CONTAGION_SAME_DISEASE_PROB) {
+          pick = neighborDiseases[Math.floor(Math.random() * neighborDiseases.length)];
+        } else {
+          pick = this._pickDisease(weights);
+        }
         this.set(a, pick);
         infected++;
       }

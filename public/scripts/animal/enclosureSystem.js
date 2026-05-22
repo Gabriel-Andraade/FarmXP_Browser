@@ -252,6 +252,40 @@ class EnclosureSystem {
     return { ...(this._speciesById.get(enclosureId) || {}) };
   }
 
+  /**
+   * Serializa o mapa de espécies por cercado pra o save. Os cercados em
+   * si NÃO são persistidos (são recalculados a partir das cercas do save),
+   * mas o contador de espécies precisa sobreviver — senão reload zera
+   * "5 vacas" e o limite de 3 espécies vira incoerente.
+   *
+   * Formato: `{ "<encId>": { Cow: 2, Bull: 1, ... }, ... }`
+   */
+  serializeState() {
+    const out = {};
+    for (const [id, species] of this._speciesById) {
+      out[id] = { ...species };
+    }
+    return out;
+  }
+
+  /**
+   * Restaura o mapa de espécies a partir do save. Força um `detect()`
+   * em seguida pra que os enclosures recém-computados peguem o species
+   * persistido via `_makeEnclosure`.
+   */
+  restoreState(data) {
+    this._speciesById.clear();
+    if (!data || typeof data !== 'object') return;
+    for (const id of Object.keys(data)) {
+      const species = data[id];
+      if (species && typeof species === 'object') {
+        this._speciesById.set(id, { ...species });
+      }
+    }
+    // Re-detect síncrono pra refletir nos enclosures já calculados.
+    this.detect();
+  }
+
   /** Quantas espécies DIFERENTES estão registradas no cercado. */
   getSpeciesCount(enclosureId) {
     const species = this._speciesById.get(enclosureId);

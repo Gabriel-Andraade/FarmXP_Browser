@@ -535,6 +535,15 @@ export const items = [
     type: "animal",
     assetName: "Bull"
   },
+  {
+    id: 309,
+    name: "Galinha",
+    icon: "🐔",
+    price: 180,
+    description: "Galinha adulta. Produz ovos diariamente se bem cuidada.",
+    type: "animal",
+    assetName: "Chicken"
+  },
 
   // ==================================================================================
   // 🪨 RECURSOS NATURAIS

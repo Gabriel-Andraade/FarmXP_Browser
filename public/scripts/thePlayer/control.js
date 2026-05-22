@@ -732,6 +732,30 @@ export class PlayerInteractionSystem {
 
         const animalHit = animalUnderClick();
         if (animalHit) {
+            // Tentativa de COLETA antes de abrir UiPanel: se animal tem
+            // produto pronto E player está em range, delega pro
+            // productionSystem que faz TODAS as validações (sleeping,
+            // ferramenta certa, inventário) e mostra FX flutuante no animal
+            // tanto pra sucesso quanto pra falha. Falhas que não são
+            // "sem ferramenta" também encerram o click — player vê o motivo
+            // visualmente. Sem produto pendente → fluxo padrão (UiPanel).
+            if (animalHit._pendingProduct) {
+                const animalHitbox = collisionSystem.getInteractionObject(animalHit.id);
+                const inRange = animalHitbox && collisionSystem.checkPlayerInteraction(animalHitbox);
+                if (inRange) {
+                    const playerSys = getSystem('player');
+                    const prodSys = getSystem('animalProduction');
+                    const result = prodSys?.collect?.(animalHit, {
+                        equippedItem: playerSys?.equippedItem,
+                    });
+                    // Sucesso: coleta feita, sai. Falha por ferramenta:
+                    // ainda mostra UiPanel pra player ver stats + lembrar
+                    // de equipar item. Outros motivos (sleeping, inventory
+                    // full): sai — FX já comunica.
+                    if (result?.ok) return;
+                    if (result?.reason !== 'needs_tool') return;
+                }
+            }
             selectAnimal(animalHit);
             return;
         }
@@ -742,6 +766,12 @@ export class PlayerInteractionSystem {
             camera,
             { requirePlayerInRange: false }
         );
+
+        // Verifica se clicou em uma tumba de animal
+        const tombSys = getSystem('animalTomb');
+        if (tombSys?.handleClick?.(worldX, worldY)) {
+            return;
+        }
 
         if (clickedAny) {
             const objectHitbox = collisionSystem.getInteractionObject(clickedAny.objectId);

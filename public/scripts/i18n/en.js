@@ -396,7 +396,8 @@ export default {
     305: 'Sheep',
     306: 'Turkey',
     307: 'Rooster',
-    308: 'Bull'
+    308: 'Bull',
+    309: 'Hen'
   },
 
   // Recipe names by ID - for dynamic translation
@@ -564,6 +565,7 @@ export default {
     calf: 'Calf',
     chick: 'Chick',
     chicken: 'Chicken',
+    pig: 'Pig',
     cow: 'Cow',
     pig: 'Pig',
     sheep: 'Sheep',
@@ -583,6 +585,7 @@ export default {
       guide: 'Guide',
       unguide: 'Stop Guiding',
       feed: 'Feed',
+      collect: 'Collect',
       close: 'Close'
     },
     stats: {
@@ -620,7 +623,13 @@ export default {
       medicine_mild_reject: 'Grimaced, but took it.',
       medicine_reject: 'Hated the medicine!',
       medicine_cured: 'Healed! ✨',
-      not_medicine: 'This item is not a medicine.'
+      not_medicine: 'This item is not a medicine.',
+      // Collect button feedback (mirror of animal.production.*)
+      collected: 'Collected!',
+      not_ready: 'Nothing to collect.',
+      needs_tool: 'Need a tool.',
+      inventory_full: 'Inventory full.',
+      no_production_system: 'System unavailable.'
     },
     feedSub: {
       title: 'Feed',
@@ -662,6 +671,39 @@ export default {
     treatment: {
       label: 'Treatment',
       format: '{icon} {name} · {days}/{requiredDays} days · {dosesToday}/{requiredDoses} doses today'
+    },
+    // Production (milk/wool/egg) — collection feedback
+    production: {
+      collected: '{name} collected!',
+      notReady: 'Nothing to collect',
+      needsTool: 'Need a tool',
+      inventoryFull: 'Inventory full',
+      noInventory: 'No inventory',
+      sleeping: 'Sleeping 💤',
+    },
+    // Aging / lifecycle — floating toast when stage advances
+    aging: {
+      stage: {
+        young:   'Young',
+        adult:   'Adult',
+        mature:  'Mature',
+        elderly: 'Elderly',
+      },
+      toast: {
+        adult:   '✨ Grew up!',
+        mature:  '✨ Matured!',
+        elderly: '✨ Aged',
+      }
+    },
+    // Tomb / memorial — when an animal dies of old age, a tomb appears
+    // and clicking opens a card with their data.
+    tomb: {
+      title: 'In Memoriam',
+      lived: 'Lived {days} day(s)',
+      farewell: 'Say goodbye',
+      close: 'Close',
+      species: 'Species',
+      lastWords: 'Last words',
     }
   },
 
