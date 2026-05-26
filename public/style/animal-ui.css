@@ -199,8 +199,8 @@
   border-bottom: 1px solid rgba(184, 134, 11, 0.35);
 }
 .aui-gender-circle {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #6aa84f 0%, #274e13 100%);
   border: 2px solid rgba(255, 215, 0, 0.7);
@@ -209,15 +209,50 @@
   justify-content: center;
   color: #fff;
   font-weight: 800;
-  font-size: 18px;
+  font-size: 20px;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 .aui-gender-circle[data-gender="male"] {
   background: linear-gradient(135deg, #6cb6ff 0%, #1f4e91 100%);
+  border-color: rgba(108, 182, 255, 0.8);
 }
 .aui-gender-circle[data-gender="female"] {
   background: linear-gradient(135deg, #ff9ec7 0%, #b03a78 100%);
+  border-color: rgba(255, 158, 199, 0.8);
 }
+
+/* Status badges no canto direito do header — só mostra se há estado ativo */
+.aui-status-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.aui-status-badge {
+  font-size: 16px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: help;
+  transition: transform 0.15s ease;
+}
+.aui-status-badge:hover {
+  transform: scale(1.15);
+}
+/* Cores por tipo de badge */
+.aui-status-badge[data-kind="injury"]      { background: rgba(180, 50, 50, 0.55); border-color: #ff6b6b; }
+.aui-status-badge[data-kind="sick"]        { background: rgba(180, 120, 30, 0.55); border-color: #f5a623; }
+.aui-status-badge[data-kind="undiagnosed"] { background: rgba(120, 120, 30, 0.55); border-color: #ffd54f; animation: aui-bar-pulse 1.5s ease-in-out infinite; }
+.aui-status-badge[data-kind="treatment"]   { background: rgba(80, 140, 80, 0.55); border-color: #6bbf3e; }
+.aui-status-badge[data-kind="product"]     { background: rgba(40, 110, 160, 0.55); border-color: #4dabf7; animation: aui-bar-pulse 1.5s ease-in-out infinite; }
 .aui-name-wrap { flex: 1; min-width: 0; }
 .aui-animal-name {
   font-family: var(--font-family-pixel-title), cursive;
@@ -251,31 +286,94 @@
 .aui-animal-stage[data-stage="mature"]  { color: #c87a3e; }  /* bronze — pico */
 .aui-animal-stage[data-stage="elderly"] { color: #9e7a5a; }  /* sépia — fim do ciclo */
 
+/* Barra de progresso pro próximo estágio. Muito fina, abaixo do texto
+   do estágio — informativa sem competir com as stats principais. */
+.aui-stage-progress {
+  margin-top: 4px;
+  height: 3px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: help;
+}
+.aui-stage-progress-fill {
+  height: 100%;
+  --stage-progress: 0%;
+  width: var(--stage-progress);
+  background: linear-gradient(90deg, #8bc34a, #d4a017);  /* verde→dourado */
+  border-radius: 2px;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .aui-bars { display: flex; flex-direction: column; gap: 10px; }
-.aui-bar-row { display: flex; align-items: center; gap: 10px; }
-.aui-bar-label { width: 56px; font-weight: 700; color: #deb887; font-size: 20px; }
+.aui-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Cursor help no row inteiro pra indicar tooltip disponível */
+  cursor: help;
+}
+.aui-bar-label {
+  width: 84px;            /* alargado pra caber ícone + texto */
+  font-weight: 700;
+  color: #deb887;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.aui-bar-icon {
+  font-size: 16px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+}
 .aui-bar {
   flex: 1;
-  height: 9px;
+  height: 11px;
   border-radius: 6px;
   overflow: hidden;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(0,0,0,0.25);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  position: relative;
 }
 .aui-bar-fill {
   height: 100%;
   border-radius: 6px;
-  background: linear-gradient(90deg, #ffd700, #2e8b57);
-  /* CSS custom property for dynamic width */
   --bar-fill-width: 50%;
   width: var(--bar-fill-width);
+  /* Smooth fill animation — width muda gradativamente, não snap */
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+              background 0.3s ease;
+  /* Gradient default (caso data-tier não esteja setado) */
+  background: linear-gradient(90deg, #ffd700, #2e8b57);
+  /* Highlight sutil no topo pra dar profundidade */
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
+/* Tiers de cor: visualmente comunica urgência sem o player ler o número */
+.aui-bar[data-tier="high"] .aui-bar-fill { background: linear-gradient(90deg, #6bbf3e, #2e8b57); }
+.aui-bar[data-tier="mid"]  .aui-bar-fill { background: linear-gradient(90deg, #ffd54f, #f5a623); }
+.aui-bar[data-tier="low"]  .aui-bar-fill { background: linear-gradient(90deg, #ff8a65, #c62828); animation: aui-bar-pulse 1.2s ease-in-out infinite; }
+
+/* Pulse sutil quando stat está crítico — chama atenção sem ser irritante */
+@keyframes aui-bar-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.75; }
+}
+
 .aui-bar-val {
   width: 46px;
   text-align: right;
   color: #fff;
   font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+  font-weight: 600;
 }
+/* Número também ganha cor pelo tier — reforço redundante */
+.aui-bar-val[data-tier="high"] { color: #b8e986; }
+.aui-bar-val[data-tier="mid"]  { color: #ffd54f; }
+.aui-bar-val[data-tier="low"]  { color: #ff8a65; }
 
 /* ================= MOOD ROW ================= */
 .aui-mood-row {

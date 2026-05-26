@@ -592,7 +592,10 @@ export default {
       hunger: 'Hunger',
       thirst: 'Thirst',
       morale: 'Morale',
-      mood: 'Mood'
+      mood: 'Mood',
+      hungerTip:  'Hunger — feed with grain to restore. Below 30 becomes hungry.',
+      thirstTip:  'Thirst — drinks from fountain/well. Falls faster on hot days.',
+      moraleTip:  'Morale — affects production and behavior. Rises with care and petting.',
     },
     mood: {
       sleeping: 'Sleeping',

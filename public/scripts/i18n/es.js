@@ -592,7 +592,10 @@ export default {
       hunger: 'Hambre',
       thirst: 'Sed',
       morale: 'Moral',
-      mood: 'Humor'
+      mood: 'Humor',
+      hungerTip:  'Hambre — alimenta con grano para restaurar. Bajo 30 queda hambriento.',
+      thirstTip:  'Sed — bebe de fuente/pozo. Cae más rápido en días calurosos.',
+      moraleTip:  'Moral — afecta producción y conducta. Sube con cariño y cuidado.',
     },
     mood: {
       sleeping: 'Durmiendo',

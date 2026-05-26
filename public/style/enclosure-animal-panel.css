@@ -1,0 +1,304 @@
+/**
+ * @file enclosure-animal-panel.css - Painel "+" do cercado pra adicionar animais
+ *
+ * Mesma linguagem visual dos outros modais do jogo (vet, memorial, character-
+ * select): gradiente marrom escuro, borda dourada, animação slideIn, fonte
+ * Georgia. Reusa as design tokens de variables.css quando possível.
+ */
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Overlay + card central                                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+#enclosure-animal-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  font-family: 'Georgia', serif;
+  /* Backdrop do mesmo padrão de vet.css / commerce.css */
+  background: linear-gradient(135deg, #1a0f07 0%, #2c1e12 50%, #1a0f07 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#enclosure-animal-panel.eap-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Card principal — gradiente marrom + double border dourada (mesma
+   ideia de outline-offset do vet-wrapper) */
+.eap-card {
+  position: relative;
+  width: clamp(420px, 90vw, 560px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #3b2612 0%, #2e1c0f 100%);
+  border: 4px solid #c9a463;
+  border-radius: 18px;
+  outline: 2px solid #6b4513;
+  outline-offset: 6px;
+  box-shadow:
+    0 0 0 8px rgba(46, 28, 15, 0.7),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(201, 164, 99, 0.2);
+  overflow: hidden;
+  transform: translateY(20px) scale(0.96);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#enclosure-animal-panel.eap-visible .eap-card {
+  transform: translateY(0) scale(1);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Header — título dourado + botão close                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+.eap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 2px solid #6b4513;
+  background: rgba(20, 12, 6, 0.4);
+}
+.eap-title {
+  margin: 0;
+  font-family: 'Playfair Display', 'Georgia', serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: #e0bc87;
+  letter-spacing: 1px;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+}
+.eap-close {
+  background: transparent;
+  border: none;
+  color: #c9a463;
+  font-size: 28px;
+  line-height: 1;
+  padding: 0 6px;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+.eap-close:hover {
+  color: #ffd166;
+  transform: scale(1.1);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Status row (espécies + saldo)                                  */
+/* ─────────────────────────────────────────────────────────────── */
+
+.eap-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(107, 69, 19, 0.4);
+  font-size: 13px;
+  color: #d4af87;
+  letter-spacing: 0.5px;
+}
+.eap-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.eap-status-item strong {
+  color: #f5e9d3;
+  font-weight: bold;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Lista de animais                                                */
+/* ─────────────────────────────────────────────────────────────── */
+
+.eap-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* Scrollbar custom — dourado discreto */
+  scrollbar-width: thin;
+  scrollbar-color: #6b4513 transparent;
+}
+.eap-list::-webkit-scrollbar {
+  width: 8px;
+}
+.eap-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+.eap-list::-webkit-scrollbar-thumb {
+  background: #6b4513;
+  border-radius: 4px;
+}
+.eap-list::-webkit-scrollbar-thumb:hover {
+  background: #8b5a1f;
+}
+
+/* Card de cada animal */
+.eap-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, rgba(243, 220, 192, 0.08) 0%, rgba(243, 220, 192, 0.04) 100%);
+  border: 1px solid rgba(201, 164, 99, 0.3);
+  border-left: 3px solid #c9a463;
+  border-radius: 8px;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.eap-item:hover {
+  background: linear-gradient(180deg, rgba(243, 220, 192, 0.14) 0%, rgba(243, 220, 192, 0.06) 100%);
+  border-color: rgba(201, 164, 99, 0.55);
+  transform: translateX(2px);
+}
+
+/* Estado "já tem no cercado" — borda esquerda verde */
+.eap-item[data-owned="1"] {
+  border-left-color: #6bbf3e;
+}
+
+.eap-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(201, 164, 99, 0.25);
+}
+
+.eap-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.eap-name {
+  font-family: 'Georgia', serif;
+  font-size: 16px;
+  font-weight: bold;
+  color: #f5e9d3;
+  letter-spacing: 0.3px;
+}
+.eap-meta {
+  font-size: 12px;
+  color: #d4af87;
+  font-style: italic;
+}
+.eap-desc {
+  font-size: 11px;
+  color: #b8a47d;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* Botão "Adicionar" — dourado, similar ao vet-action-btn */
+.eap-add-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  background: linear-gradient(180deg, #c9a463 0%, #8b5a1f 100%);
+  color: #2e1c0f;
+  font-family: 'Georgia', serif;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 2px solid #8b5a1f;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+.eap-add-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffd166 0%, #c9a463 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.eap-add-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.eap-add-btn:disabled {
+  background: linear-gradient(180deg, #6b5a45 0%, #4a3b28 100%);
+  color: #8a7860;
+  border-color: #4a3b28;
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Lista vazia */
+.eap-empty {
+  text-align: center;
+  padding: 32px 16px;
+  color: #a89070;
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Toast inline (feedback de sucesso/erro)                        */
+/* ─────────────────────────────────────────────────────────────── */
+
+.eap-toast {
+  padding: 10px 20px;
+  font-size: 13px;
+  min-height: 20px;
+  background: rgba(0, 0, 0, 0.35);
+  border-top: 1px solid rgba(107, 69, 19, 0.4);
+  color: #f5e9d3;
+  text-align: center;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.eap-toast[data-state="error"] {
+  background: rgba(192, 57, 43, 0.25);
+  color: #ff8a65;
+}
+.eap-toast[data-state="success"] {
+  background: rgba(107, 191, 62, 0.18);
+  color: #a8e6a3;
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Mobile                                                          */
+/* ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .eap-card {
+    width: 95%;
+    max-height: 90vh;
+  }
+  .eap-title {
+    font-size: 17px;
+  }
+  .eap-item {
+    padding: 10px;
+    gap: 10px;
+  }
+  .eap-thumb {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+  .eap-add-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}

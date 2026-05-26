@@ -591,7 +591,10 @@ export default {
       hunger: 'Fome',
       thirst: 'Sede',
       morale: 'Moral',
-      mood: 'Humor'
+      mood: 'Humor',
+      hungerTip:  'Fome — alimentar com ração restaura. Abaixo de 30 fica faminto.',
+      thirstTip:  'Sede — bebe na fonte/poço. Cai mais rápido em dias quentes.',
+      moraleTip:  'Moral — afeta produção e disposição. Sobe com carinho e cuidado.',
     },
     mood: {
       sleeping: 'Dormindo',

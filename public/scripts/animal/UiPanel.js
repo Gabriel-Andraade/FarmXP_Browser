@@ -227,8 +227,26 @@ class UiPanel {
     const animalStage = document.createElement('div');
     animalStage.className = 'aui-animal-stage';
     animalStage.dataset.role = 'lifeStage';
-    nameWrap.append(animalName, animalType, animalStage);
-    infoHeader.append(genderCircle, nameWrap);
+    // Mini barra de progresso pra próximo estágio (escondida pra elderly,
+    // que não tem próximo). Renderizada como linha fina abaixo do texto
+    // do estágio — sem competir com as bars principais de stats.
+    const stageProgress = document.createElement('div');
+    stageProgress.className = 'aui-stage-progress';
+    stageProgress.dataset.role = 'stageProgress';
+    stageProgress.style.display = 'none';  // só aparece quando há próximo estágio
+    const stageProgressFill = document.createElement('div');
+    stageProgressFill.className = 'aui-stage-progress-fill';
+    stageProgressFill.dataset.role = 'stageProgressFill';
+    stageProgress.appendChild(stageProgressFill);
+    nameWrap.append(animalName, animalType, animalStage, stageProgress);
+
+    // Badges de status: indicadores rápidos (canto direito do header) que
+    // só aparecem quando relevantes — ferimento (🤕), doença não diagnosticada
+    // (❓), em tratamento (💊), produto pronto (🥛/🧶/🥚). Tooltip mostra detalhes.
+    const statusBadges = document.createElement('div');
+    statusBadges.className = 'aui-status-badges';
+    statusBadges.dataset.role = 'statusBadges';
+    infoHeader.append(genderCircle, nameWrap, statusBadges);
 
     // Mood indicator
     const moodRow = document.createElement('div');
@@ -265,20 +283,31 @@ class UiPanel {
     treatmentValue.dataset.role = 'treatment';
     treatmentRow.append(treatmentLabel, treatmentValue);
 
-    // Stats bars
+    // Stats bars com ícones + tooltip + cor por tier (alto/médio/baixo)
     const barsContainer = document.createElement('div');
     barsContainer.className = 'aui-bars';
     const barStats = [
-      { label: t('animal.stats.hunger'), role: 'hunger' },
-      { label: t('animal.stats.thirst'), role: 'thirst' },
-      { label: t('animal.stats.morale'), role: 'moral' },
+      { label: t('animal.stats.hunger'), role: 'hunger', icon: '🍞', tip: 'animal.stats.hungerTip' },
+      { label: t('animal.stats.thirst'), role: 'thirst', icon: '💧', tip: 'animal.stats.thirstTip' },
+      { label: t('animal.stats.morale'), role: 'moral',  icon: '💛', tip: 'animal.stats.moraleTip' },
     ];
     for (const stat of barStats) {
       const row = document.createElement('div');
       row.className = 'aui-bar-row';
+      // Tooltip ao hover (i18n com fallback pra label simples)
+      const tipText = t(stat.tip);
+      const tipTitle = (tipText && !tipText.startsWith('animal.stats.')) ? tipText : stat.label;
+      row.title = tipTitle;
+
       const label = document.createElement('div');
       label.className = 'aui-bar-label';
-      label.textContent = stat.label;
+      // Ícone + texto. Span do ícone separa pra CSS poder estilar diferente
+      // (tamanho do emoji vs texto da label).
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'aui-bar-icon';
+      iconSpan.textContent = stat.icon;
+      label.append(iconSpan, document.createTextNode(stat.label));
+
       const bar = document.createElement('div');
       bar.className = 'aui-bar';
       const fill = document.createElement('div');
@@ -533,6 +562,82 @@ class UiPanel {
       stageEl.dataset.stage = stage;
     }
 
+    // Status badges (canto direito do header) — só renderiza ícones de
+    // estados ATIVOS, esconde resto. Cada badge tem tooltip com texto
+    // detalhado. Atualizado a cada updateContent (~uma vez por frame).
+    const badgesEl = this.infoMenu.querySelector('[data-role="statusBadges"]');
+    if (badgesEl) {
+      const badges = [];
+      const inj = this.target.injury;
+      if (inj && inj.severity !== 'scratch') {
+        const sev = t(`animal.injury.severity.${inj.severity}`);
+        const reg = t(`animal.injury.region.${inj.region}`);
+        badges.push({ icon: '🤕', tip: `${sev} ${reg}`, kind: 'injury' });
+      }
+      const diseaseSys = getSystem('animalDisease');
+      const disease = this.target.disease;
+      const isUndiagnosed = diseaseSys?.isUndiagnosedSick?.(this.target);
+      if (isUndiagnosed) {
+        badges.push({ icon: '❓', tip: 'Sintomas — diagnosticar no vet', kind: 'undiagnosed' });
+      } else if (disease?.diagnosed) {
+        const dn = t(`animal.disease.names.${disease.id}`);
+        badges.push({ icon: '🤧', tip: dn, kind: 'sick' });
+      }
+      const inTreatment = !!disease?.treatment;
+      if (inTreatment) {
+        badges.push({ icon: '💊', tip: 'Em tratamento', kind: 'treatment' });
+      }
+      if (this.target._pendingProduct) {
+        const productEmoji = { 60: '🥚', 61: '🥛', 62: '🧶' }[this.target._pendingProduct] || '✨';
+        badges.push({ icon: productEmoji, tip: 'Produto pronto pra coletar', kind: 'product' });
+      }
+      // Re-render só se mudou (evita reflow contínuo)
+      const signature = badges.map(b => `${b.kind}:${b.icon}`).join('|');
+      if (badgesEl.dataset.signature !== signature) {
+        badgesEl.dataset.signature = signature;
+        badgesEl.replaceChildren();
+        for (const b of badges) {
+          const span = document.createElement('span');
+          span.className = 'aui-status-badge';
+          span.dataset.kind = b.kind;
+          span.textContent = b.icon;
+          span.title = b.tip;
+          badgesEl.appendChild(span);
+        }
+      }
+    }
+
+    // Barra de progresso pra próximo estágio. Espelha as constantes do
+    // agingSystem (STAGE_MIN_DAYS) — duplicação calculada porque importar
+    // agingSystem aqui criaria dep cycle desnecessário pra ler 4 números.
+    const stageProgressEl = this.infoMenu.querySelector('[data-role="stageProgress"]');
+    const stageProgressFillEl = this.infoMenu.querySelector('[data-role="stageProgressFill"]');
+    if (stageProgressEl && stageProgressFillEl) {
+      const STAGE_THRESHOLDS = { young: 0, adult: 20, mature: 40, elderly: 65 };
+      const STAGES_ORDER = ['young', 'adult', 'mature', 'elderly'];
+      const stage = this.target._lifeStage || 'adult';
+      const idx = STAGES_ORDER.indexOf(stage);
+      const daysOld = this.target._daysOld || 0;
+
+      if (idx < 0 || idx >= STAGES_ORDER.length - 1) {
+        // Elderly não tem próximo — esconde a barra
+        stageProgressEl.style.display = 'none';
+      } else {
+        const nextStage = STAGES_ORDER[idx + 1];
+        const currentThreshold = STAGE_THRESHOLDS[stage];
+        const nextThreshold = STAGE_THRESHOLDS[nextStage];
+        const progress = Math.max(0, Math.min(1,
+          (daysOld - currentThreshold) / (nextThreshold - currentThreshold)
+        ));
+        const pct = Math.round(progress * 100);
+        stageProgressEl.style.display = '';
+        stageProgressFillEl.style.setProperty('--stage-progress', `${pct}%`);
+        const nextLabel = t(`animal.aging.stage.${nextStage}`);
+        const daysLeft = Math.max(0, nextThreshold - daysOld);
+        stageProgressEl.title = `${pct}% → ${nextLabel} (faltam ${daysLeft}d)`;
+      }
+    }
+
     // Mood display
     if (moodEl) {
       const mood = this.target.mood || this.target._mood || 'calm';
@@ -707,8 +812,17 @@ class UiPanel {
   _setBar(key, value) {
     const bar = this.infoMenu.querySelector(`[data-role="bar-${key}"]`);
     const val = this.infoMenu.querySelector(`[data-role="val-${key}"]`);
-    if (bar) bar.style.setProperty('--bar-fill-width', `${value}%`);
-    if (val) val.textContent = `${value}%`;
+    if (bar) {
+      bar.style.setProperty('--bar-fill-width', `${value}%`);
+      // Tier de cor pra fill: high (≥60) verde, mid (30-59) amarelo, low (<30) vermelho.
+      // CSS dá o gradient — aqui só seta o atributo que o CSS lê.
+      const tier = value >= 60 ? 'high' : value >= 30 ? 'mid' : 'low';
+      bar.dataset.tier = tier;
+    }
+    if (val) {
+      val.textContent = `${value}%`;
+      val.dataset.tier = value >= 60 ? 'high' : value >= 30 ? 'mid' : 'low';
+    }
   }
 
   _emitAction(actionId, extra = {}) {
