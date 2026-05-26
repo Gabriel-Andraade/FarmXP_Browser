@@ -601,11 +601,14 @@ class SaveSystem {
 
             // Aplicar exploração do minimap (agora vive no top-level do save)
             const minimapData = data.minimap ?? data.gameFlags?.minimap ?? null;
+            const minimap = getSystem('minimap');
             if (minimapData?.exploration) {
-                const minimap = getSystem('minimap');
                 if (minimap && minimap.importExploration) {
                     await minimap.importExploration(minimapData.exploration);
                 }
+            } else if (minimap && minimap.resetExploration) {
+                // Save sem exploração: reseta pro padrão pra não herdar do slot anterior.
+                await minimap.resetExploration();
             }
         } finally {
             // Tem que correr mesmo em erro — se não, conquistas ficam mudas até o fim da sessão.

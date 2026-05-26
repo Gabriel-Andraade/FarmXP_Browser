@@ -145,6 +145,7 @@ export default {
     resources: 'Recursos',
     animals: 'Animales',
     resource: 'Recurso',
+    material: 'Materiales',
   },
 
   // Inventory System
