@@ -379,6 +379,7 @@ export default {
     93: 'Water Well',
     94: 'Battery',
     100: 'Municipal Contract',
+    103: 'Water Trough',
     // Veterinary medicines (ids 200-207)
     200: 'Fast Dewormer',
     201: 'Common Dewormer',
@@ -618,6 +619,7 @@ export default {
       fed: 'Ate happily!',
       no_food: 'No feed in inventory!',
       failed_remove_food: 'Could not remove feed from inventory.',
+      wrong_food: "This food doesn't suit this species!",
       suspicious: 'Too suspicious to eat...',
       no_inventory: 'Inventory unavailable.',
       severe_refused: "Doesn't want to follow you right now...",
@@ -641,7 +643,9 @@ export default {
       feed: 'Feed',
       medicine: 'Medicines',
       back: 'Back',
-      empty: 'No medicines in inventory.'
+      empty: 'No medicines in inventory.',
+      emptyFood: 'No animal food in inventory.',
+      wrongFoodHint: "This food doesn't suit this species",
     },
     type: {
       unknown: 'Unknown'
@@ -869,6 +873,19 @@ export default {
     insufficientWater: 'Insufficient water in the well',
     playerNotAvailable: 'Player system not available',
     noEmptyBottle: 'No empty bottle in inventory',
+  },
+
+  // Water Trough
+  waterTrough: {
+    needBucket: 'You need a water bucket',
+    filled: 'Trough filled',
+    alreadyFull: 'Trough already full',
+    panel: {
+      title: 'Water Trough',
+      close: 'Close',
+      addBtn: 'Add water',
+      levelName: 'Water level',
+    },
   },
 
   // Crafting System

@@ -203,6 +203,21 @@ export const recipes = [
         craftTime: 30,
         icon: ""
     },
+    {
+        id: "water_trough",
+        name: "Cocho de Água",
+        requiredItems: [
+            { itemId: 10, qty: 25 },
+            { itemId: 32, qty: 15 },
+            { itemId: 73, qty: 6 },
+            { itemId: 75, qty: 12 },
+            { itemId: 42, qty: 2 }
+        ],
+        result: { itemId: 103, qty: 1 },
+        category: "construction",
+        craftTime: 25,
+        icon: ""
+    },
 
     /* culinária */
     {

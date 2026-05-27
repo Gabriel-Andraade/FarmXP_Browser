@@ -34,7 +34,7 @@ import { initMinimap, updateMinimap } from "./minimap/minimapIntegration.js";
 // =============================================================================
 
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
-let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
+let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem, waterTroughSystem;
 let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
@@ -287,6 +287,12 @@ async function initializeCriticalSystems() {
     await import("./animal/tombSystem.js");
     logger.debug("animal tombSystem carregado");
 
+    // Cocho de água — eager load pra que hover+marker funcione antes
+    // do player apertar E (lazy load só serve pro fluxo E).
+    const wtModule = await import("./waterTroughSystem.js");
+    waterTroughSystem = wtModule.waterTroughSystem;
+    logger.debug("waterTroughSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -383,6 +389,16 @@ function setupInteractionSystem() {
       }
     }
 
+    if (!waterTroughSystem && originalType === "watertrough") {
+      try {
+        const module = await import("./waterTroughSystem.js");
+        waterTroughSystem = module.waterTroughSystem;
+      } catch (error) {
+        handleWarn("erro ao carregar waterTroughSystem", "main:playerInteract:watertrough", error);
+        return;
+      }
+    }
+
     switch (originalType) {
       case "chest":
         chestSystem?.openChest?.(objectId);
@@ -392,6 +408,9 @@ function setupInteractionSystem() {
         break;
       case "well":
         wellSystem?.openWellMenu?.();
+        break;
+      case "watertrough":
+        waterTroughSystem?.openWaterTroughMenu?.(objectId);
         break;
       case "npc": {
         const npcSys = getSystem('npc');
@@ -419,7 +438,10 @@ function setupInteractionSystem() {
         result = animal.pet();
         break;
       case 'feed':
-        result = animal.feed();
+        // `itemId` opcional — se omitido, animal.feed() escolhe o primeiro
+        // animal_food do inventário (legacy). Se presente, usa esse item
+        // específico (do sub-menu "Ração") com check de compatibilidade.
+        result = animal.feed(itemId);
         break;
       case 'guide':
         result = animal.guide();
@@ -712,6 +734,22 @@ async function exposeGlobals() {
             },
           },
         });
+
+        // Debug global: window.addItem(id, qty=1) — adiciona item ao
+        // inventário direto do devtools. Categoria é resolvida pelo
+        // type do item (mapeamento centralizado).
+        if (typeof window !== 'undefined') {
+            window.addItem = async function (id, qty = 1) {
+                if (id == null) { logger.warn('addItem: id é obrigatório'); return false; }
+                if (!inventorySystem) await initializeInventorySystem();
+                const { getItem } = await import('./itemUtils.js');
+                const item = getItem(Number(id));
+                if (!item) { logger.error(`addItem: item ${id} não existe`); return false; }
+                const ok = inventorySystem.addItem(item.id, Number(qty) || 1);
+                logger.info(`[addItem] ${ok ? '✓' : '✗'} ${item.name} x${qty} (id=${item.id})`);
+                return ok;
+            };
+        }
 
         logger.debug("Sistemas registrados no gameState");
     } catch (error) {
@@ -1471,6 +1509,14 @@ function gameLoop(timestamp) {
       const encSys = getSystem('enclosure');
       encSys?.drawEndpoints?.(ctx, camera);
       encSys?.drawCenterMarkers?.(ctx, camera);
+    }
+
+    // Marker "+" do cocho no hover — independente do build mode.
+    // Drink slots: overlay debug ativado com `?drinkSlots=1` na URL.
+    if (camera) {
+      const wtSys = getSystem('waterTrough');
+      wtSys?.drawHoverMarker?.(ctx, camera);
+      wtSys?.drawDrinkSlots?.(ctx, camera);
     }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);

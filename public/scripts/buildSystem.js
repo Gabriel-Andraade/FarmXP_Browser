@@ -269,6 +269,9 @@ export const BuildSystem = {
         } else if (type === 'well') {
             this.currentVariant = 'well';
             this.previewImg = assets.furniture?.well?.img;
+        } else if (type === 'watertrough') {
+            this.currentVariant = itemData.variants?.[0] || 'waterTroughX';
+            this.previewImg = assets.furniture?.waterTroughs?.[this.currentVariant]?.img;
         } else if (itemData.variants && itemData.variants.length > 0) {
             this.currentVariant = itemData.variants[0];
             this.previewImg = assets.furniture?.fences?.[this.currentVariant]?.img;
@@ -320,6 +323,14 @@ export const BuildSystem = {
                 variants: ['fenceX', 'fenceY'],
                 type: 'fence',
                 _isSynthetic: true,
+            },
+            {
+                id: 103,
+                name: t('itemNames.103') || 'Cocho de Água',
+                placeable: true,
+                variants: ['waterTroughX', 'waterTroughY'],
+                type: 'watertrough',
+                _isSynthetic: false,
             },
         ];
     },
@@ -375,6 +386,7 @@ export const BuildSystem = {
         if (!this.selectedItem) return 'unknown';
         if (this.selectedItem.id === 69) return 'chest';
         if (this.selectedItem.id === 93) return 'well';
+        if (this.selectedItem.id === 103) return 'watertrough';
         if (this.selectedItem.variants && this.selectedItem.variants.length > 0) return 'fence';
         return 'construction';
     },
@@ -392,6 +404,13 @@ export const BuildSystem = {
                 // quanto 62. Encaixe vertical: 2 fenceY = 96px ≈ 3 fenceX (96px).
                 return (this.currentVariant === 'fenceY') ? { width: 6, height: 48 } : { width: 32, height: 32 };
             case 'well': return { width: 75, height: 95 };
+            case 'watertrough':
+                // Cocho renderizado em escala reduzida — sprite original
+                // é 511×122 (X) e 168×571 (Y), mas drawImage escala. Ajuste
+                // aqui muda preview + objeto colocado simultaneamente.
+                return (this.currentVariant === 'waterTroughY')
+                    ? { width: 30, height: 95 }
+                    : { width: 95, height: 30 };
             default:
                 return {
                     width: this.selectedItem.buildWidth || 64,
@@ -620,6 +639,44 @@ export const BuildSystem = {
             return;
         }
 
+        if (constructionType === 'watertrough') {
+            if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
+                try {
+                    const waterTroughId = `watertrough_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const collisionType = (this.currentVariant === 'waterTroughY') ? 'WATERTROUGHY' : 'WATERTROUGHX';
+                    
+                    const waterTroughObj = {
+                        id: waterTroughId,
+                        x: pos.x,
+                        y: pos.y,
+                        itemId: this.selectedItem.id,
+                        name: this.selectedItem.name,
+                        width: dim.width,
+                        height: dim.height,
+                        type: collisionType,
+                        originalType: 'watertrough',
+                        variant: this.currentVariant || 'waterTroughX',
+                        icon: this.selectedItem.icon,
+                        placeable: true,
+                        isInteractable: true,
+                        waterLevel: 0
+                    };
+
+                    window.theWorld.addWorldObject(waterTroughObj);
+                    inventorySystem.removeItem(this.selectedItem.id, 1);
+                    const restante = itemQuantity - 1;
+                    this.showDebugMessage(t('build.placed', { remaining: restante }), 1000);
+                    if (restante <= 0) this.stopBuilding();
+                } catch (err) {
+                    logger.error(t('build.placeError'), err);
+                    this.showDebugMessage(t('build.placeError'), 2000);
+                }
+            } else {
+                this.showDebugMessage(t('build.worldNotAvailable'), 2000);
+            }
+            return;
+        }
+
         if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
             try {
                 let constructionTypeForCollision = constructionType;
@@ -831,10 +888,18 @@ export const BuildSystem = {
     },
 
     rotate() {
-        if (!this.selectedItem || this.getConstructionType() !== 'fence') return;
+        if (!this.selectedItem) return;
+        const type = this.getConstructionType();
+        // Tipos com variantes (X/Y). Adicione aqui se vier novo item rotacionável.
+        const ROTATABLE = { fence: 'fences', watertrough: 'waterTroughs' };
+        const assetGroup = ROTATABLE[type];
+        if (!assetGroup) return;
+
         const v = this.selectedItem.variants;
+        if (!Array.isArray(v) || v.length === 0) return;
+
         this.currentVariant = v[(v.indexOf(this.currentVariant) + 1) % v.length];
-        this.previewImg = assets.furniture?.fences?.[this.currentVariant]?.img;
+        this.previewImg = assets.furniture?.[assetGroup]?.[this.currentVariant]?.img;
         this.showDebugMessage(t('build.variant', { name: this.currentVariant }));
     },
 

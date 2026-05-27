@@ -69,7 +69,8 @@ async function loadWorldAssets() {
         ...assets.buildings.house,
         assets.furniture.chest,
         assets.furniture.well,
-        assets.furniture.animalTomb
+        assets.furniture.animalTomb,
+        ...Object.values(assets.furniture.waterTroughs)
     ];
 
     await loadAssetList(worldAssets, "WORLD");
@@ -255,6 +256,32 @@ export const assets = {
             width: 75,
             height: 95,
             img: null
+        },
+        waterTroughs: {
+            waterTroughX: {
+                src: "assets/furnitureInGeneral/waterTroughX.png",
+                width: 511,
+                height: 122,
+                img: null
+            },
+            waterTroughXEmpty: {
+                src: "assets/furnitureInGeneral/waterTroughEmptyX.png",
+                width: 211,
+                height: 96,
+                img: null
+            },
+            waterTroughY: {
+                src: "assets/furnitureInGeneral/waterTroughY.png",
+                width: 87,
+                height: 271,
+                img: null
+            },
+            waterTroughYEmpty: {
+                src: "assets/furnitureInGeneral/waterTroughEmptyY.png",
+                width: 168,
+                height: 571,
+                img: null
+            }
         },
         // Tumba de animal — aparece quando animal morre de velhice no
         // último lugar onde ele estava. Sprite source é 980×980 (alta

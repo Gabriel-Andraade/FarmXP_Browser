@@ -882,6 +882,33 @@ function drawBuilding(ctx, building) {
     return;
   }
 
+  if (building.originalType === "watertrough") {
+    const isWaterY = building.variant === 'waterTroughY';
+    const waterAssetKey = building.waterLevel > 0 
+      ? (isWaterY ? 'waterTroughY' : 'waterTroughX')
+      : (isWaterY ? 'waterTroughYEmpty' : 'waterTroughXEmpty');
+    const waterTroughImg = assets.furniture?.waterTroughs?.[waterAssetKey]?.img;
+    
+    if (waterTroughImg && waterTroughImg.complete && waterTroughImg.naturalWidth > 0) {
+      try {
+        ctx.drawImage(waterTroughImg, drawX, drawY, drawW, drawH);
+      } catch (err) {
+        handleWarn("Failed to draw water trough image", "theWorld:drawBuilding:waterTroughImage", { buildingId: building.id, err });
+        ctx.fillStyle = "#8B7355";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+        ctx.strokeStyle = "#5D4E37";
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+      }
+    } else {
+      ctx.fillStyle = building.waterLevel > 0 ? "#87CEEB" : "#8B7355";
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+      ctx.strokeStyle = building.waterLevel > 0 ? "#4682B4" : "#5D4E37";
+      ctx.strokeRect(drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+    return;
+  }
+
   if (building.variant && assets.furniture?.fences?.[building.variant]?.img) {
     const fenceImg = assets.furniture.fences[building.variant].img;
     if (fenceImg && fenceImg.complete && fenceImg.naturalWidth > 0) {
@@ -1353,11 +1380,13 @@ window.addWorldObject = function(objectData) {
 
   if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
   else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
+  else if (collisionType === "WATERTROUGHX" || collisionType.toLowerCase() === "watertroughx") collisionType = "WATERTROUGHX";
+  else if (collisionType === "WATERTROUGHY" || collisionType.toLowerCase() === "watertroughy") collisionType = "WATERTROUGHY";
   else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
   else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
   else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
   else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
-  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
 
   const building = {
     id: objectId,

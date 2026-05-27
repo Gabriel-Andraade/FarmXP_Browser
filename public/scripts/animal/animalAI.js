@@ -7,7 +7,7 @@
 
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
-import { getSystem, getObject } from '../gameState.js';
+import { getSystem, getObject, getDebugFlag } from '../gameState.js';
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 import { items } from '../item.js';
 import { animals } from '../theWorld.js';
@@ -90,7 +90,58 @@ const AnimalState = {
     MOVE: "move",
     FLEE: "flee",
     FOLLOW: "follow",
+    // Estados de bebida: animal decide ir ao cocho quando thirst < threshold
+    // (sorteado individualmente). SEEKING = caminhando até o slot reservado.
+    // DRINKING = parado dentro do slot, recuperando thirst e drenando cocho.
+    SEEKING_WATER: "seeking_water",
+    DRINKING: "drinking",
 };
+
+// Cada animal sorteia um threshold próprio entre 5 e 25 — uns são mais
+// vigilantes (correm pro cocho cedo), outros aguentam até quase secar.
+const THIRST_THRESHOLD_MIN = 5;
+const THIRST_THRESHOLD_MAX = 25;
+
+// Sessão de bebida: animal fica `DRINK_SESSION_DURATION_MS` no cocho. A
+// quantidade TOTAL (água drenada do cocho + thirst recuperado no animal)
+// é species-specific. Per-tick = total / ticks-per-sessão — fica suave
+// na barra de sede em vez de pular instantâneo.
+const DRINK_TICK_INTERVAL_MS = 250;
+const DRINK_SESSION_DURATION_MS = 3000;
+const DRINK_TICKS_PER_SESSION = DRINK_SESSION_DURATION_MS / DRINK_TICK_INTERVAL_MS;  // 12
+
+// Unidades de água consumidas POR SESSÃO completa (drinking entry → exit).
+// Calibrado pra cocho cheio (100) durar:
+//   - ~1.5 dia com 3 vacas (3 × 18 = 54/dia se beberem 2x cada)
+//   - ~3-4 dias com 5 galinhas (5 × 3 = 15/dia mesmo bebendo 2x)
+const WATER_CONSUMPTION_BY_SPECIES = {
+    // Pequeno porte
+    Chick:    2,
+    Lamb:     3,
+    Piglet:   3,
+    Calf:     4,
+    Chicken:  3,
+    Rooster:  3,
+    Turkey:   4,
+    // Médio porte
+    Sheep:    7,
+    Pig:     10,
+    // Grande porte
+    Cow:     18,
+    Bull:    20,
+};
+
+// Thirst recuperado POR SESSÃO completa. Independente do consumo do cocho —
+// animal grande bebe mais (drena mais do cocho) E recupera mais sede.
+const THIRST_RESTORE_BY_SPECIES = {
+    Chick:   30, Lamb:    35, Piglet:  35, Calf:    40,
+    Chicken: 35, Rooster: 35, Turkey:  40,
+    Sheep:   55, Pig:     60,
+    Cow:     70, Bull:    70,
+};
+
+const DEFAULT_WATER_CONSUMPTION = 5;
+const DEFAULT_THIRST_RESTORE    = 40;
 
 // Stats decaem em granularidade de 1s real para serem visíveis enquanto o
 // painel do animal está aberto. Esse é apenas o intervalo BASE — cada stat
@@ -376,6 +427,23 @@ export class AnimalEntity {
         };
 
         this.__uiPaused = false;
+
+        // ─── Drinking ────────────────────────────────────────────────────
+        // Threshold individual: animal só procura cocho quando thirst cai
+        // abaixo disso. Variação faz uns sairem mais cedo que outros.
+        this._drinkThreshold = opts.drinkThreshold ?? randRange(THIRST_THRESHOLD_MIN, THIRST_THRESHOLD_MAX);
+        // Slot reservado atualmente, se houver. Setado em SEEKING_WATER,
+        // liberado ao sair de DRINKING (ou se cocho secar / animal morrer).
+        this._claimedTrough = null;   // troughId
+        this._claimedSlot   = -1;     // 0..2
+        this._lastDrinkTickAt = 0;
+        // Sessão de bebida atual (computada ao entrar em DRINKING). Guarda
+        // os totais species-specific e o quanto já foi gasto, pra parar
+        // exatamente na cota e não desperdiçar.
+        this._drinkSession = null;
+        // Estado de "intersecta slot" cacheado pelo update — usado pelo
+        // draw pra pintar a hitbox de interação em verde quando dentro.
+        this._interactionActive = false;
     }
 
     /**
@@ -499,6 +567,81 @@ export class AnimalEntity {
             width: cb.width || this.width,
             height: cb.height || this.height
         };
+    }
+
+    /**
+     * Hitbox de INTERAÇÃO — retângulo fino na frente do animal, alinhado
+     * à direção que ele está olhando. Diferente da hitbox física (corpo),
+     * esta serve pra "tatear" o que está logo à frente (cocho, comida,
+     * etc.). Pintada laranja por padrão, verde quando intersecta algo
+     * interagível.
+     *
+     * Direção mapeada via `this.directionRows`. `flipX` (mirrorRight)
+     * inverte left/right pra sprites espelhados.
+     *
+     * @returns {{ x:number, y:number, w:number, h:number, facing:string }}
+     */
+    getInteractionHitbox() {
+        const r = this.directionRows;
+        const w = this.width;
+        const h = this.height;
+        // Espessura fina (perpendicular à direção) + alcance (paralelo).
+        const THICK = 6;
+        const REACH = Math.max(8, Math.min(w, h) * 0.7);
+
+        // Resolve qual lado o animal está olhando, considerando mirrorRight.
+        let facing;
+        if (this.direction === r.down) facing = 'down';
+        else if (this.direction === r.up) facing = 'up';
+        else if (this.direction === r.left) facing = this.flipX ? 'right' : 'left';
+        else if (this.direction === r.right) facing = 'right';
+        else facing = 'down';
+
+        switch (facing) {
+            case 'down':
+                return {
+                    x: this.x + w / 2 - THICK,
+                    y: this.y + h,
+                    w: THICK * 2,
+                    h: REACH,
+                    facing,
+                };
+            case 'up':
+                return {
+                    x: this.x + w / 2 - THICK,
+                    y: this.y - REACH,
+                    w: THICK * 2,
+                    h: REACH,
+                    facing,
+                };
+            case 'left':
+                return {
+                    x: this.x - REACH,
+                    y: this.y + h / 2 - THICK,
+                    w: REACH,
+                    h: THICK * 2,
+                    facing,
+                };
+            case 'right':
+            default:
+                return {
+                    x: this.x + w,
+                    y: this.y + h / 2 - THICK,
+                    w: REACH,
+                    h: THICK * 2,
+                    facing,
+                };
+        }
+    }
+
+    /** True se a hitbox de interação intersecta o slot {x,y,w,h} dado. */
+    _interactionHitsSlot(slot) {
+        if (!slot) return false;
+        const ih = this.getInteractionHitbox();
+        return ih.x < slot.x + slot.w &&
+               ih.x + ih.w > slot.x &&
+               ih.y < slot.y + slot.h &&
+               ih.y + ih.h > slot.y;
     }
 
     recalcMood() {
@@ -714,7 +857,7 @@ export class AnimalEntity {
         return { success: true, message: 'pet_ok' };
     }
 
-    feed() {
+    feed(itemId = null) {
         if (this._mood === AnimalMood.SLEEPING) {
             return { success: false, message: 'sleeping' };
         }
@@ -725,9 +868,26 @@ export class AnimalEntity {
         const inv = getSystem('inventory');
         if (!inv) return { success: false, message: 'no_inventory' };
 
+        // Player pode passar `itemId` específico (via sub-menu de Alimentar).
+        // Se omitido, mantém legacy: pega o primeiro animal_food do inventário.
         let feedItem = null;
-
-        if (typeof inv.findFirstItemInCategory === 'function') {
+        if (itemId != null) {
+            // Resolve item específico — precisa estar no inventário com qty > 0
+            const catalog = items.find(it => it.id === itemId);
+            if (catalog) {
+                // Verifica posse via inventory
+                if (typeof inv.findItem === 'function') {
+                    feedItem = inv.findItem(it => it.id === itemId && it.quantity > 0);
+                } else if (inv.categories && inv.categories.animal_food?.items) {
+                    feedItem = inv.categories.animal_food.items.find(it => it.id === itemId && it.quantity > 0);
+                }
+                // Fallback — usa o catálogo direto se o lookup falhou mas
+                // o player tem (caso o inventory esteja em formato atípico)
+                if (!feedItem && typeof inv.getItemQuantity === 'function' && inv.getItemQuantity(itemId) > 0) {
+                    feedItem = { ...catalog, quantity: inv.getItemQuantity(itemId) };
+                }
+            }
+        } else if (typeof inv.findFirstItemInCategory === 'function') {
             feedItem = inv.findFirstItemInCategory('animal_food', item => item.quantity > 0);
         } else if (inv.categories && inv.categories.animal_food && inv.categories.animal_food.items) {
             feedItem = inv.categories.animal_food.items.find(item => item.quantity > 0);
@@ -737,6 +897,17 @@ export class AnimalEntity {
 
         if (!feedItem) {
             return { success: false, message: 'no_food' };
+        }
+
+        // Validação de compatibilidade — `targetAnimals` no item:
+        //   • undefined ou null: sem restrição (compat)
+        //   • 'all': qualquer espécie aceita
+        //   • Array<string>: lista exata de assetName aceitos
+        //   • Array vazio []: nada do farm aceita (ex: ração de gato)
+        // Player vê warning mas o item NÃO é consumido — sem perda.
+        const catalog = items.find(it => it.id === feedItem.id) || feedItem;
+        if (!this._isFoodCompatible(catalog)) {
+            return { success: false, message: 'wrong_food' };
         }
 
         const removed = (typeof inv.removeItem === 'function')
@@ -751,6 +922,24 @@ export class AnimalEntity {
         this.stats.moral  = Math.min(100, this.stats.moral  + FEED_MORAL_GAIN);
         this.recalcMood();
         return { success: true, message: 'fed' };
+    }
+
+    /**
+     * Verifica se o item de alimento é compatível com este animal.
+     * Lê `item.targetAnimals` do catálogo (items.js).
+     *   - undefined/null: compat por default (sem restrição)
+     *   - 'all': qualquer espécie aceita
+     *   - Array com assetName: aceito apenas se assetName está nele
+     *   - Array vazio: explicitamente incompatível (ex: ração de gato)
+     */
+    _isFoodCompatible(item) {
+        if (!item) return false;
+        const t = item.targetAnimals;
+        if (t == null) return true;            // sem restrição
+        if (t === 'all') return true;          // genérico (Petisco, Ração Premium)
+        if (!Array.isArray(t)) return true;    // formato desconhecido — permissivo
+        if (t.length === 0) return false;      // explicitamente vazio
+        return t.includes(this.assetName);
     }
 
     /**
@@ -1002,6 +1191,23 @@ export class AnimalEntity {
             return;
         }
 
+        // ─── Drinking states (prioridade média, abaixo de FLEE/FOLLOW) ────
+        if (this.state === AnimalState.SEEKING_WATER) {
+            this._updateSeekingWater(now);
+            return;
+        }
+        if (this.state === AnimalState.DRINKING) {
+            this._updateDrinking(now);
+            return;
+        }
+        // Transição: thirst caiu abaixo do threshold → tenta ir beber.
+        // Só dispara se NÃO está em FLEE/FOLLOW (já tratados acima) e o
+        // animal não está machucado/dormindo.
+        if (this._tryEnterSeekingWater()) {
+            this._updateSeekingWater(now);
+            return;
+        }
+
         if (now - this.stateTimer > this.stateDuration) {
             this.pickNewState();
             this.stateTimer = now;
@@ -1012,6 +1218,174 @@ export class AnimalEntity {
         }
 
         this.updateAnimation(now);
+    }
+
+    /**
+     * Tenta entrar em SEEKING_WATER. Falha (retorna false) se:
+     *   - thirst >= threshold (ainda não tem sede)
+     *   - dormindo (mood SLEEPING)
+     *   - já existe um claim ativo (paranoia, mas garante consistência)
+     *   - nenhum cocho com água + slot livre disponível
+     */
+    _tryEnterSeekingWater() {
+        if (this._mood === AnimalMood.SLEEPING) return false;
+        if ((this.stats.thirst || 0) >= this._drinkThreshold) return false;
+        if (this._claimedTrough) return false;  // já tem claim
+
+        const wtSys = getSystem('waterTrough');
+        const found = wtSys?.findFreeSlotFor?.(this);
+        if (!found) return false;
+
+        const claimed = wtSys.claimSlot(found.trough.id, found.slotIdx, this.id);
+        if (!claimed) return false;
+
+        this._claimedTrough = found.trough.id;
+        this._claimedSlot   = found.slotIdx;
+        // Alvo: centro do slot. O animal vai caminhar até lá e parar
+        // quando a hitbox de interação encaixar.
+        this.targetX = found.slotWorld.x + found.slotWorld.w / 2;
+        this.targetY = found.slotWorld.y + found.slotWorld.h / 2;
+        this.state = AnimalState.SEEKING_WATER;
+        this.stateTimer = performance.now();
+        this.stateDuration = 15000;  // timeout pra evitar caça eterna
+        return true;
+    }
+
+    _updateSeekingWater(now) {
+        const wtSys = getSystem('waterTrough');
+        const slots = wtSys?.getDrinkSlots?.(this._claimedTrough) || [];
+        const slot = slots[this._claimedSlot];
+
+        // Cocho sumiu ou slot inválido → aborta.
+        if (!slot) {
+            this._exitDrinkFlow();
+            return;
+        }
+
+        // Cocho secou no caminho → aborta sem desperdiçar viagem completa.
+        if (wtSys.getWaterLevel(this._claimedTrough) <= 0) {
+            this._exitDrinkFlow();
+            return;
+        }
+
+        // Encaixou: hitbox de interação intersectando o slot → DRINKING.
+        if (this._interactionHitsSlot(slot)) {
+            this._interactionActive = true;
+            this.state = AnimalState.DRINKING;
+            this.stateTimer = now;
+            this.stateDuration = 8000;  // máx 8s bebendo (segurança)
+            this._lastDrinkTickAt = now;
+            this.frameIndex = 0;
+            return;
+        }
+
+        // Re-mira sempre no centro do slot (slot pode escalar se cocho
+        // muda de tamanho, embora hoje não mude em runtime).
+        const tx = slot.x + slot.w / 2;
+        const ty = slot.y + slot.h / 2;
+        this.targetX = tx;
+        this.targetY = ty;
+
+        const dx = tx - this.x;
+        const dy = ty - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Se já chegou no centro mas hitbox de interação não encaixa
+        // (direção errada), só força o facing pro slot — sem chamar move()
+        // que setaria state pra IDLE.
+        if (dist < 3) {
+            this._setFacing(dx || 0.01, dy || 0.01);
+            this.frameIndex = 0;
+        } else {
+            this.move();
+            // move() pode ter setado IDLE em dist<2 corner case — restaura.
+            if (this.state !== AnimalState.SEEKING_WATER) {
+                this.state = AnimalState.SEEKING_WATER;
+            }
+        }
+        this._interactionActive = false;
+        this.updateAnimation(now);
+
+        // Timeout: se demorou demais (preso?), libera o slot e desiste.
+        if (now - this.stateTimer > this.stateDuration) {
+            this._exitDrinkFlow();
+        }
+    }
+
+    _updateDrinking(now) {
+        const wtSys = getSystem('waterTrough');
+        const slots = wtSys?.getDrinkSlots?.(this._claimedTrough) || [];
+        const slot = slots[this._claimedSlot];
+
+        // Cocho/slot sumiu ou animal saiu do slot (foi empurrado) → cleanup.
+        if (!slot || !this._interactionHitsSlot(slot)) {
+            this._exitDrinkFlow();
+            return;
+        }
+
+        this._interactionActive = true;
+
+        // Lazy init da sessão de bebida — uma vez por entrada no DRINKING.
+        // Total drenado/recuperado vem das tabelas species-specific;
+        // per-tick é o total dividido por DRINK_TICKS_PER_SESSION (12).
+        if (!this._drinkSession) {
+            const waterTotal  = WATER_CONSUMPTION_BY_SPECIES[this.assetName] ?? DEFAULT_WATER_CONSUMPTION;
+            const thirstTotal = THIRST_RESTORE_BY_SPECIES[this.assetName]   ?? DEFAULT_THIRST_RESTORE;
+            this._drinkSession = {
+                waterTotal,
+                thirstTotal,
+                waterPerTick:  waterTotal  / DRINK_TICKS_PER_SESSION,
+                thirstPerTick: thirstTotal / DRINK_TICKS_PER_SESSION,
+                thirstGained: 0,   // acumulador pra parar exatamente na cota
+            };
+        }
+
+        // Tick de bebida ~250ms: drena fração species-specific do cocho
+        // e restaura fração no thirst do animal. Suave na barra de sede.
+        if (now - this._lastDrinkTickAt >= DRINK_TICK_INTERVAL_MS) {
+            this._lastDrinkTickAt = now;
+            const s = this._drinkSession;
+
+            const drained = wtSys.drink(this._claimedTrough, s.waterPerTick);
+            if (!drained) {
+                // Cocho secou.
+                this._exitDrinkFlow();
+                return;
+            }
+            this.stats.thirst = Math.min(100, (this.stats.thirst || 0) + s.thirstPerTick);
+            s.thirstGained += s.thirstPerTick;
+
+            // Cota da sessão batida → sai satisfeito. Animal pequeno
+            // recupera só 30, animal grande recupera 70 — modela "tamanho
+            // do gole" + "necessidade hídrica".
+            if (s.thirstGained >= s.thirstTotal || this.stats.thirst >= 100) {
+                this._exitDrinkFlow();
+                return;
+            }
+        }
+
+        // Safety timeout: se algo travou e o tick não progride, sai.
+        if (now - this.stateTimer > 10000) {
+            this._exitDrinkFlow();
+        }
+
+        this.frameIndex = 0;
+    }
+
+    /** Libera slot reservado e volta pra IDLE. Idempotente. */
+    _exitDrinkFlow() {
+        const wtSys = getSystem('waterTrough');
+        if (wtSys && this._claimedTrough) {
+            wtSys.releaseSlot(this._claimedTrough, this._claimedSlot, this.id);
+        }
+        this._claimedTrough = null;
+        this._claimedSlot = -1;
+        this._drinkSession = null;
+        this._interactionActive = false;
+        this.state = AnimalState.IDLE;
+        this.stateTimer = performance.now();
+        this.stateDuration = IDLE_STATE_MIN_MS + Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS);
+        this.frameIndex = 0;
     }
 
     _updateFollow() {
@@ -1545,6 +1919,45 @@ export class AnimalEntity {
                 }
                 ctx.restore();
             }
+        }
+
+        // Hitbox de interação (laranja/verde). Visível com `?hitboxes=1` na URL.
+        // Verde = atualmente intersecta algo interagível (slot do cocho, etc.)
+        if (getDebugFlag('hitboxes')) {
+            const ih = this.getInteractionHitbox();
+            const sp = camera.worldToScreen(ih.x, ih.y);
+            const zoom = camera.zoom || 1;
+            ctx.save();
+            ctx.lineWidth = 2;
+            if (this._interactionActive) {
+                ctx.strokeStyle = 'rgba(80, 220, 100, 0.95)';
+                ctx.fillStyle   = 'rgba(80, 220, 100, 0.30)';
+            } else {
+                ctx.strokeStyle = 'rgba(255, 140, 0, 0.95)';
+                ctx.fillStyle   = 'rgba(255, 140, 0, 0.18)';
+            }
+            ctx.fillRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
+            ctx.strokeRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
+            ctx.restore();
+        }
+
+        // Barra de sede (visível só durante DRINKING). Mostra thirst atual
+        // enchendo aos poucos enquanto bebe.
+        if (this.state === AnimalState.DRINKING) {
+            const barW = Math.max(30, this.width * 0.7) * camera.zoom;
+            const barH = 4 * camera.zoom;
+            const bx = Math.floor(screenPos.x + (zoomedWidth - barW) / 2);
+            const by = Math.floor(screenPos.y - 10 * camera.zoom);
+            const pct = Math.max(0, Math.min(1, (this.stats.thirst || 0) / 100));
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+            ctx.fillRect(bx, by, barW, barH);
+            ctx.fillStyle = '#4aa6ff';
+            ctx.fillRect(bx, by, Math.round(barW * pct), barH);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(bx, by, barW, barH);
+            ctx.restore();
         }
 
         // FX flutuante de coleta (sucesso/falha). Texto sobe e desaparece

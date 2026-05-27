@@ -204,7 +204,7 @@ export class ItemSystem {
             const targetType = (obj.type || '').toLowerCase();
 
             // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
-            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
+            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence', 'watertroughx', 'watertroughy'];
             const isUtility = utilityTypes.includes(targetType);
 
             const isDamagingTool =

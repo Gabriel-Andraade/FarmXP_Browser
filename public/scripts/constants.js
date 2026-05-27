@@ -239,7 +239,12 @@ export const HITBOX_CONFIGS = {
     // FENCEY hitbox de colisão. Height 48 casa com o novo build dim
     // (6×48 em buildSystem). Antes era 63 — vestígio do tamanho antigo
     // 6×62 — fazia a hitbox transbordar abaixo do sprite visível.
-    FENCEY: { width: 4, height: 48, offsetX: 0, offsetY: 0 }
+    FENCEY: { width: 4, height: 48, offsetX: 0, offsetY: 0 },
+    // Water Trough collision configs — horizontal (X) e vertical (Y).
+    // Tem que bater com `getConstructionDimensions('watertrough')` em
+    // buildSystem.js (hoje 95×30 / 30×95). Se mudar lá, mude aqui.
+    WATERTROUGHX: { width: 95, height: 30, offsetX: 0, offsetY: 0 },
+    WATERTROUGHY: { width: 30, height: 95, offsetX: 0, offsetY: 0 }
   },
 
   ANIMALS: {

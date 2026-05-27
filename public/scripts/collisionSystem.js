@@ -217,6 +217,16 @@ export class CollisionSystem {
             offsetY: 0.25,
             originalType: "well"
         },
+        WATERTROUGHX: {
+            widthRatio: 1.0, heightRatio: 1.4,
+            offsetX: 0.0, offsetY: -0.2,
+            originalType: "watertrough"
+        },
+        WATERTROUGHY: {
+            widthRatio: 1.4, heightRatio: 1.0,
+            offsetX: -0.2, offsetY: 0.0,
+            originalType: "watertrough"
+        },
         QUEST_ANIMAL: {
             widthRatio: 1.5,
             heightRatio: 1.5,
@@ -256,6 +266,7 @@ export class CollisionSystem {
             "TREE", "ROCK", "THICKET", "CHEST",
             "HOUSE_WALLS", "CONSTRUCTION", "WELL",
             "FENCE", "FENCEX", "FENCEY", "ANIMAL",
+            "WATERTROUGHX", "WATERTROUGHY",
             "QUEST_ANIMAL"
         ];
         if (interactiveTypes.includes(objectType)) {

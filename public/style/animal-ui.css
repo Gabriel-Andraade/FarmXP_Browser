@@ -375,6 +375,37 @@
 .aui-bar-val[data-tier="mid"]  { color: #ffd54f; }
 .aui-bar-val[data-tier="low"]  { color: #ff8a65; }
 
+/* Botão de comida incompatível no sub-menu de Alimentar.
+   Visualmente vermelho/desbotado, mas ainda clicável — player
+   recebe warning ao tentar dar comida errada (validação em feed). */
+.aui-action-btn[data-incompatible="1"] {
+  opacity: 0.6;
+  filter: grayscale(0.3) hue-rotate(-25deg);
+  position: relative;
+}
+.aui-action-btn[data-incompatible="1"]::after {
+  content: '⚠';
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 11px;
+  color: #ff6b6b;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+}
+.aui-action-btn[data-incompatible="1"]:hover {
+  opacity: 0.8;
+  filter: grayscale(0.2);
+}
+
+/* Estado vazio no sub-menu (sem ração no inventário) */
+.aui-feedSub-empty {
+  padding: 16px;
+  text-align: center;
+  color: #b8a47d;
+  font-style: italic;
+  font-size: 13px;
+}
+
 /* ================= MOOD ROW ================= */
 .aui-mood-row {
   display: flex;

@@ -290,6 +290,9 @@ export const items = [
   // 🐮 COMIDA DE ANIMAIS (ANIMAL FOOD)
   // Rações e alimentos para nutrir os animais da fazenda
   // ==================================================================================
+  // `targetAnimals` lista espécies (assetName, case-sensitive) que podem
+  // consumir o item. `'all'` libera pra qualquer animal. Array vazio = item
+  // existe mas nenhuma espécie do farm aceita (ex: ração de gato/cachorro).
   {
     id: 7,
     name: "Ração para Galinha",
@@ -298,7 +301,7 @@ export const items = [
     description: "Usada para alimentar galinhas",
     type: "animal_food",
     foodValue: 15,
-    targetAnimals: ["chicken"],
+    targetAnimals: ["Chick", "Chicken", "Rooster", "Turkey"],
     nutrition: { energy: 8, happiness: 3 }
   },
   {
@@ -307,23 +310,26 @@ export const items = [
     icon: "assets/icons/sheepFeedIcon.png",
     price: 40,
     description: "Usada para alimentar ovelhas",
-    type: "animal_food"
+    type: "animal_food",
+    targetAnimals: ["Lamb", "Sheep"]
   },
   {
     id: 29,
     name: "Feno",
     icon: "assets/icons/hayIcon.png",
     price: 20,
-    description: "Alimento básico para animais",
-    type: "animal_food"
+    description: "Alimento básico para herbívoros (gado, ovelha, porco)",
+    type: "animal_food",
+    targetAnimals: ["Cow", "Bull", "Calf", "Sheep", "Lamb", "Piglet", "Pig"]
   },
   {
     id: 30,
     name: "Ração para Vaca",
     icon: "assets/icons/cowFeedIcon.png",
     price: 50,
-    description: "Nutrientes especiais para vacas",
-    type: "animal_food"
+    description: "Nutrientes especiais para bovinos",
+    type: "animal_food",
+    targetAnimals: ["Cow", "Bull", "Calf"]
   },
   {
     id: 31,
@@ -331,7 +337,8 @@ export const items = [
     icon: "🍪",
     price: 15,
     description: "Guloseima para todos os animais",
-    type: "animal_food"
+    type: "animal_food",
+    targetAnimals: "all"
   },
 
   // ==================================================================================
@@ -606,39 +613,44 @@ export const items = [
     icon: "assets/icons/premiumFeedIcon.png",
     price: 20,
     description: "Alimento balanceado para animais domésticos",
-    type: "animal_food"
+    type: "animal_food",
+    targetAnimals: "all"
   },
   {
     id: 97,
     name: "milho moído e farelo de soja",
     icon: "assets/icons/groundCornSoyMealIcon.png",
     price: 26,
-    description: "ração para os porcos filhotes.",
-    type: "animal_food"
+    description: "Ração para porcos",
+    type: "animal_food",
+    targetAnimals: ["Piglet", "Pig"]
   },
   {
     id: 96,
     name: "grãos para aves",
     icon: "assets/icons/poultryGrainIcon.png",
     price: 12,
-    description: "ração geral para as aves",
-    type: "animal_food"
+    description: "Ração geral para aves",
+    type: "animal_food",
+    targetAnimals: ["Chick", "Chicken", "Rooster", "Turkey"]
   },
   {
     id: 101,
     name: "ração para felinos",
     icon: "assets/icons/catFeedIcon.png",
     price: 30,
-    description: "ração especializada para gatos domésticos",
-    type: "animal_food"
+    description: "Ração especializada para gatos domésticos",
+    type: "animal_food",
+    targetAnimals: []  // nenhuma espécie atual do farm — pra gato futuro
   },
   {
     id: 102,
     name: "ração para cachorros",
     icon: "assets/icons/dogFeedIcon.png",
     price: 30,
-    description: "ração especializada para cães domésticos",
-    type: "animal_food"
+    description: "Ração especializada para cães domésticos",
+    type: "animal_food",
+    targetAnimals: []  // nenhuma espécie atual do farm — pra cachorro futuro
   },
   // ==================================================================================
 
@@ -911,6 +923,19 @@ export const items = [
     variants: ["fenceX", "fenceY"],
     placeable: true
   },
+  {
+    id: 103,
+    name: "Cocho de Água",
+    icon: "💧",
+    price: 350,
+    description: "Fornece água fresca para animais de grande porte",
+    type: "construction",
+    placeable: true,
+    buildWidth: 95,
+    buildHeight: 30,
+    variants: ["waterTroughX", "waterTroughY"],
+    originalType: "watertrough"
+  },
 
   // ==================================================================================
   // 🎨 DECORAÇÕES
@@ -963,7 +988,7 @@ export const items = [
   },
   {
     id: 42,
-    name: "balde com aguá",
+    name: "balde com água",
     icon: "assets/icons/waterBucketIcon.png",
     price: 15,
     description: "Balde cheio de água",

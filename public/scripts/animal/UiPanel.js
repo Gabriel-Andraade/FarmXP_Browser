@@ -41,7 +41,7 @@ class UiPanel {
     // em modo 'medicine', exibe a lista de remédios do inventário.
     this.subActionsMenu = null;
     this.showSubActions = false;
-    this.subActionsMode = null; // 'choice' | 'medicine'
+    this.subActionsMode = null; // 'choice' | 'food' | 'medicine'
 
     this.layer = null;
     this.svg = null;
@@ -875,15 +875,48 @@ class UiPanel {
     if (this.subActionsMode === 'choice') {
       const racaoLabel = t('animal.feedSub.feed');
       const remediosLabel = t('animal.feedSub.medicine');
+      // "Ração" agora abre sub-menu 'food' (listar itens do inventário com
+      // filtro de compatibilidade), não dispara feed imediato.
       list.appendChild(this._buildSubBtn('🌾',
         (racaoLabel !== 'animal.feedSub.feed') ? racaoLabel : 'Ração',
-        () => {
-          this._closeSubActions();
-          this._emitAction('feed');
-        }));
+        () => this._openSubActions('food')));
       list.appendChild(this._buildSubBtn('💊',
         (remediosLabel !== 'animal.feedSub.medicine') ? remediosLabel : 'Remédios',
         () => this._openSubActions('medicine')));
+    } else if (this.subActionsMode === 'food') {
+      const foods = this._collectFoodFromInventory();
+      if (foods.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'aui-feedSub-empty';
+        const tpl = t('animal.feedSub.emptyFood');
+        empty.textContent = (typeof tpl === 'string' && tpl !== 'animal.feedSub.emptyFood')
+          ? tpl : 'Nenhum alimento no inventário.';
+        list.appendChild(empty);
+      } else {
+        for (const food of foods) {
+          const compatible = this._isFoodCompatibleFor(food, this.target);
+          const label = `${food.name} ×${food.quantity}`;
+          const btn = this._buildSubBtn(food.icon || '🌾', label, () => {
+            this._closeSubActions();
+            this._emitAction('feed', { itemId: food.id });
+          });
+          // Marca visualmente incompatibilidade — player vê em vermelho
+          // mas pode clicar (recebe warning como feedback). Sem perda
+          // de item (validation em feed() retorna 'wrong_food').
+          if (!compatible) {
+            btn.dataset.incompatible = '1';
+            const tipl = t('animal.feedSub.wrongFoodHint');
+            btn.title = (typeof tipl === 'string' && tipl !== 'animal.feedSub.wrongFoodHint')
+              ? tipl : 'Esta comida não serve pra esta espécie';
+          }
+          list.appendChild(btn);
+        }
+      }
+      // Botão voltar pra choice
+      const backLabel = t('animal.feedSub.back');
+      list.appendChild(this._buildSubBtn('↩',
+        (backLabel !== 'animal.feedSub.back') ? backLabel : 'Voltar',
+        () => this._openSubActions('choice')));
     } else if (this.subActionsMode === 'medicine') {
       const meds = this._collectMedicinesFromInventory();
       if (meds.length === 0) {
@@ -959,6 +992,44 @@ class UiPanel {
       }
     }
     return meds;
+  }
+
+  /**
+   * Coleta todos os animal_food do inventário (qty > 0). Diferente de
+   * medicines, NÃO filtra por compatibilidade aqui — o painel mostra
+   * tudo e o player vê os incompatíveis em vermelho com warning ao
+   * clicar. Filtragem direta esconderia opções e seria confuso ("por
+   * que minha ração de gato sumiu?").
+   */
+  _collectFoodFromInventory() {
+    const inv = getSystem('inventory');
+    if (!inv) return [];
+    const cats = inv.categories || (typeof inv.getInventory === 'function' ? inv.getInventory() : null);
+    if (!cats) return [];
+    const foods = [];
+    for (const cat of Object.values(cats)) {
+      if (!cat?.items) continue;
+      for (const it of cat.items) {
+        if (it.type === 'animal_food' && it.quantity > 0) foods.push(it);
+      }
+    }
+    return foods;
+  }
+
+  /**
+   * Verifica compatibilidade de um alimento com um animal alvo. Espelha
+   * `AnimalEntity._isFoodCompatible` — mas vive aqui também porque o
+   * painel decide cor/aviso ANTES de chamar feed() (que valida de novo).
+   * Duplicação calculada, é só 4 linhas.
+   */
+  _isFoodCompatibleFor(item, animal) {
+    if (!item || !animal) return false;
+    const t = item.targetAnimals;
+    if (t == null) return true;
+    if (t === 'all') return true;
+    if (!Array.isArray(t)) return true;
+    if (t.length === 0) return false;
+    return t.includes(animal.assetName);
   }
 
   _getCanvasTransform() {

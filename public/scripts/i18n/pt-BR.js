@@ -379,6 +379,7 @@ export default {
     93: 'Poço de Água',
     94: 'Bateria',
     100: 'Contrato Municipal',
+    103: 'Cocho de Água',
     // Remédios veterinários (ids 200-207)
     200: 'Vermífugo Rápido',
     201: 'Vermífugo Comum',
@@ -617,6 +618,7 @@ export default {
       fed: 'Se alimentou!',
       no_food: 'Sem ração no inventário!',
       failed_remove_food: 'Não foi possível retirar a ração do inventário.',
+      wrong_food: 'Esse alimento não serve pra essa espécie!',
       suspicious: 'Desconfiado demais para comer...',
       no_inventory: 'Inventário indisponível.',
       severe_refused: 'Não quer te seguir agora...',
@@ -640,7 +642,9 @@ export default {
       feed: 'Ração',
       medicine: 'Remédios',
       back: 'Voltar',
-      empty: 'Nenhum remédio no inventário.'
+      empty: 'Nenhum remédio no inventário.',
+      emptyFood: 'Nenhum alimento no inventário.',
+      wrongFoodHint: 'Esta comida não serve pra esta espécie',
     },
     type: {
       unknown: 'Desconhecido'
@@ -869,6 +873,19 @@ export default {
     insufficientWater: 'Água insuficiente no poço',
     playerNotAvailable: 'Sistema do jogador não disponível',
     noEmptyBottle: 'Nenhuma garrafa vazia no inventário',
+  },
+
+  // Water Trough (Cocho)
+  waterTrough: {
+    needBucket: 'Precisa de um balde com água',
+    filled: 'Cocho abastecido',
+    alreadyFull: 'Cocho já está cheio',
+    panel: {
+      title: 'Cocho de Água',
+      close: 'Fechar',
+      addBtn: 'Adicionar água',
+      levelName: 'Nível de água',
+    },
   },
 
   // Crafting System

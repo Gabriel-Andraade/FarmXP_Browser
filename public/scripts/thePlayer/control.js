@@ -491,6 +491,18 @@ export class PlayerInteractionSystem {
                 return;
             }
 
+            // Fora do build mode: clique no "+" do cocho abre o painel
+            // de depósito de água. Tem que vir ANTES do handleCanvasClick
+            // pra não ser interpretado como interação genérica.
+            const wtSys = getSystem('waterTrough');
+            const troughHit = wtSys?.getMarkerAt?.(worldPos.x, worldPos.y);
+            if (troughHit) {
+                import('../waterTroughPanel.js').then(m => {
+                    m.openWaterTroughPanel(troughHit);
+                }).catch(err => console.warn('Falha ao abrir painel do cocho:', err));
+                return;
+            }
+
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
         }, { signal: controlsAbortController.signal });
 
@@ -533,6 +545,12 @@ export class PlayerInteractionSystem {
             if (BuildSystem.active) {
                 BuildSystem.updateMousePosition(worldPos.x, worldPos.y);
             }
+
+            // Marker "+" do cocho aparece no hover. Vale dentro e fora do
+            // modo construção — só não sobrepõe o "+" do cercado porque
+            // o build mode tem seu próprio sistema.
+            const wtSys = getSystem('waterTrough');
+            wtSys?.updateHover?.(worldPos.x, worldPos.y);
         }, { signal: controlsAbortController.signal });
     }
 

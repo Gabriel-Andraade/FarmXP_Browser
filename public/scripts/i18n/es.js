@@ -379,6 +379,7 @@ export default {
     93: 'Pozo de Agua',
     94: 'Batería',
     100: 'Contrato Municipal',
+    103: 'Abrevadero',
     // Medicinas veterinarias (ids 200-207)
     200: 'Desparasitante Rápido',
     201: 'Desparasitante Común',
@@ -618,6 +619,7 @@ export default {
       fed: '¡Comió feliz!',
       no_food: '¡Sin alimento en el inventario!',
       failed_remove_food: 'No se pudo retirar el alimento del inventario.',
+      wrong_food: '¡Este alimento no es apto para esta especie!',
       suspicious: 'Demasiado desconfiado para comer...',
       no_inventory: 'Inventario no disponible.',
       severe_refused: 'No quiere seguirte ahora...',
@@ -641,7 +643,9 @@ export default {
       feed: 'Comida',
       medicine: 'Medicinas',
       back: 'Atrás',
-      empty: 'No hay medicinas en el inventario.'
+      empty: 'No hay medicinas en el inventario.',
+      emptyFood: 'No hay comida de animal en el inventario.',
+      wrongFoodHint: 'Esta comida no es apta para esta especie',
     },
     type: {
       unknown: 'Desconocido'
@@ -870,6 +874,19 @@ export default {
     insufficientWater: 'Agua insuficiente en el pozo',
     playerNotAvailable: 'Sistema del jugador no disponible',
     noEmptyBottle: 'Ninguna botella vacía en el inventario',
+  },
+
+  // Water Trough (Abrevadero)
+  waterTrough: {
+    needBucket: 'Necesitas un balde con agua',
+    filled: 'Abrevadero llenado',
+    alreadyFull: 'Abrevadero ya está lleno',
+    panel: {
+      title: 'Abrevadero',
+      close: 'Cerrar',
+      addBtn: 'Añadir agua',
+      levelName: 'Nivel de agua',
+    },
   },
 
   // Crafting System
