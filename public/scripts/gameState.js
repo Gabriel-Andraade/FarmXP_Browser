@@ -247,6 +247,13 @@ export function installLegacyGlobals() {
     configurable: true,
   });
 
+  // Toggle do overlay azul dos drink slots — devtools: DEBUG_DRINK_SLOTS = true
+  Object.defineProperty(window, 'DEBUG_DRINK_SLOTS', {
+    get() { return getDebugFlag('drinkSlots'); },
+    set(value) { setDebugFlag('drinkSlots', value); },
+    configurable: true,
+  });
+
   // Game state flag mappings
   Object.defineProperty(window, 'interactionsBlocked', {
     get() { return gameState.flags.interactionsBlocked; },

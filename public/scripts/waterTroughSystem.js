@@ -364,15 +364,26 @@ export const waterTroughSystem = {
   /**
    * Procura um slot livre num cocho específico. Retorna o índice (0..2)
    * ou -1 se todos ocupados. "Livre" = entrada do _slotOccupancy é null,
-   * é o próprio animalId, ou aponta pra animal que não existe mais
-   * (cleanup oportunístico — animal morreu/foi removido sem chamar release).
+   * é o próprio animalId, ou cleanup oportunístico detectou um claim órfão
+   * (animal sumiu, ou animal abandonou o estado de bebida sem liberar).
    */
   findFreeSlotIn(troughId, animalId) {
     const occ = _occupancyFor(troughId);
     for (let i = 0; i < occ.length; i++) {
       if (occ[i] == null || occ[i] === animalId) return i;
-      // Stale: dono não existe mais no mundo → libera.
-      if (Array.isArray(animals) && !animals.some(a => a && a.id === occ[i])) {
+      // Stale check (1): dono não existe mais no mundo.
+      const owner = Array.isArray(animals)
+        ? animals.find(a => a && a.id === occ[i])
+        : null;
+      if (!owner) {
+        occ[i] = null;
+        return i;
+      }
+      // Stale check (2): dono está vivo mas saiu dos estados de bebida.
+      // Não chama _exitDrinkFlow nele (poderia estar em FLEE/FOLLOW), só
+      // libera o claim aqui. Comparação por string pra evitar import
+      // circular com animalAI.js.
+      if (owner.state !== 'seeking_water' && owner.state !== 'drinking') {
         occ[i] = null;
         return i;
       }
@@ -420,10 +431,65 @@ export const waterTroughSystem = {
       const slotIdx = this.findFreeSlotIn(wt.id, animal.id);
       if (slotIdx >= 0) {
         const slots = this.getDrinkSlots(wt);
-        return { trough: wt, slotIdx, slotWorld: slots[slotIdx] };
+        const slot = slots[slotIdx];
+        return {
+          trough: wt,
+          slotIdx,
+          slotWorld: slot,
+          drinkPos: this.getDrinkPosition(wt, slot, animal),
+        };
       }
     }
     return null;
+  },
+
+  /**
+   * Calcula onde o animal deve PARAR pra beber do slot. Ponto FORA da
+   * hitbox de colisão do cocho, alinhado com o slot na direção
+   * perpendicular ao cocho:
+   *   - waterTroughX (horizontal): acima ou abaixo (escolhe o lado mais perto)
+   *   - waterTroughY (vertical): esquerda ou direita
+   *
+   * Retorna { x, y } em coords de mundo = onde `animal.x`/`animal.y`
+   * (top-left do sprite) deve chegar. `facing` é a direção pro qual o
+   * animal deve olhar pra hitbox de interação encaixar no slot.
+   */
+  getDrinkPosition(trough, slot, animal) {
+    const isHorizontal = (trough.variant || 'waterTroughX') === 'waterTroughX';
+    const GAP = 2;
+    const slotCx = slot.x + slot.w / 2;
+    const slotCy = slot.y + slot.h / 2;
+
+    // Usa COLLISION BOX (corpo real) pra posicionar — não o sprite todo.
+    // Bull tem sprite 48 mas corpo ~14×14 com offsetY ~24. Se usássemos
+    // o sprite, o animal ficaria 12+px longe do cocho (sprite encosta,
+    // corpo fica longe). Com a collision box, o corpo encosta no cocho.
+    const cb = animal?.collisionBox || { offsetX: 0, offsetY: 0, width: animal?.width || 32, height: animal?.height || 32 };
+    const cbX = cb.offsetX || 0;
+    const cbY = cb.offsetY || 0;
+    const cbW = cb.width  || animal?.width  || 32;
+    const cbH = cb.height || animal?.height || 32;
+
+    if (isHorizontal) {
+      const fromAbove = (animal?.y ?? 0) < slotCy;
+      // Animal.x tal que centro da collision box bate no centro do slot.
+      // Animal.y tal que bottom (ou top) da collision box encosta no cocho.
+      return {
+        x: slotCx - cbX - cbW / 2,
+        y: fromAbove
+            ? (trough.y - GAP - cbY - cbH)
+            : (trough.y + trough.height + GAP - cbY),
+        facing: fromAbove ? 'down' : 'up',
+      };
+    }
+    const fromLeft = (animal?.x ?? 0) < slotCx;
+    return {
+      x: fromLeft
+          ? (trough.x - GAP - cbX - cbW)
+          : (trough.x + trough.width + GAP - cbX),
+      y: slotCy - cbY - cbH / 2,
+      facing: fromLeft ? 'right' : 'left',
+    };
   },
 
   /**

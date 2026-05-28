@@ -749,6 +749,57 @@ async function exposeGlobals() {
                 logger.info(`[addItem] ${ok ? '✓' : '✗'} ${item.name} x${qty} (id=${item.id})`);
                 return ok;
             };
+
+            // ─── Debug do sistema de bebida ─────────────────────────────
+            // diagnoseDrink(): mostra ESTADO + MOTIVO de cada animal e cada
+            // cocho. Útil quando "animais não estão bebendo e não sei por quê".
+            window.diagnoseDrink = function () {
+                const wtSys = getSystem('waterTrough');
+                const world = getObject('world');
+                if (!wtSys || !world) {
+                    console.warn('Sistema não pronto: waterTrough ou world ausente.');
+                    return;
+                }
+                const troughs = wtSys.getWaterTroughs();
+                const animals = world.animals || [];
+                console.group('🥤 Diagnóstico de Bebida');
+                console.log(`Cochos: ${troughs.length}  Animais: ${animals.length}`);
+                troughs.forEach((t, i) => {
+                    console.log(`  Cocho ${i}: id=${t.id} variant=${t.variant} water=${t.waterLevel ?? 0}/100 pos=(${Math.round(t.x)},${Math.round(t.y)})`);
+                });
+                animals.forEach(a => {
+                    let reason;
+                    if (a._mood === 'sleeping') reason = 'dormindo';
+                    else if ((a.stats.thirst || 0) >= a._drinkThreshold) reason = `sem sede (${Math.round(a.stats.thirst)} >= threshold ${a._drinkThreshold})`;
+                    else if (a._claimedTrough) reason = `já reservou slot ${a._claimedSlot} do cocho ${a._claimedTrough}`;
+                    else if (performance.now() < a._drinkCooldownUntil) reason = `cooldown ${Math.ceil((a._drinkCooldownUntil - performance.now())/1000)}s`;
+                    else {
+                        const found = wtSys.findFreeSlotFor(a);
+                        reason = found
+                          ? `PRONTO — iria pro slot ${found.slotIdx} do cocho ${found.trough.id}`
+                          : 'NENHUM cocho com água + slot livre no cercado';
+                    }
+                    console.log(`  ${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} → ${reason}`);
+                });
+                console.groupEnd();
+            };
+
+            // forceDrink(): seta thirst baixo + zera cooldown — anima testa
+            // o fluxo agora em vez de esperar 5min de decay natural.
+            window.forceDrink = function () {
+                const world = getObject('world');
+                const animals = world?.animals || [];
+                animals.forEach(a => { a.stats.thirst = 3; a._drinkCooldownUntil = 0; });
+                console.log(`✓ ${animals.length} animais com thirst=3, cooldown zerado`);
+            };
+
+            // fillAllTroughs(): enche todos os cochos sem precisar do balde.
+            window.fillAllTroughs = function () {
+                const wtSys = getSystem('waterTrough');
+                const troughs = wtSys?.getWaterTroughs?.() || [];
+                troughs.forEach(t => { t.waterLevel = 100; });
+                console.log(`✓ ${troughs.length} cochos enchidos até 100`);
+            };
         }
 
         logger.debug("Sistemas registrados no gameState");

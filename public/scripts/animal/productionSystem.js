@@ -6,10 +6,16 @@
  * em `control.js` — este arquivo só decide QUEM e QUANDO produz).
  *
  * Regras por espécie (PRODUCT_RULES):
- *   - product:       id do item produzido (referência em items.js)
- *   - toolId:        ferramenta exigida no inventário equipado (ou null pra "sem ferramenta")
- *   - cooldownDays:  intervalo mínimo entre produções
- *   - moralMin:      moral mínima exigida no dia da produção
+ *   - product:           id do item produzido (referência em items.js)
+ *   - toolId:            ferramenta exigida no inventário equipado (ou null)
+ *   - cooldownDays:      intervalo mínimo entre produções (normal)
+ *   - moralMin:          moral mínima exigida no dia da produção
+ *   - thirstMin:         sede mínima — abaixo disso, animal NÃO produz
+ *                        (vaca seca não dá leite, galinha desidratada não bota)
+ *   - thirstComfort:     limiar de conforto — abaixo, produz com cooldown estendido
+ *                        ("menos leite por semana" em vez de bloqueio total)
+ *   - thirstPenaltyDays: dias somados ao cooldown quando thirst < thirstComfort
+ *                        (vaca: comfort 60, penalty +1d → leite a cada 2 dias)
  *
  * Bloqueios universais (qualquer animal):
  *   - injury não-scratch → não produz
@@ -35,11 +41,29 @@ import { getItem } from '../itemUtils.js';
 // `requiresFemale: true` filtra machos da espécie (Turkey 'random' pode
 // ser macho; Cow/Chicken já são female-locked em SPECIES_GENDER, mas o
 // flag é defensivo). Lã não exige sexo (ambos têm lã).
+// Vaca precisa de muita água (leite é water-intensive). Ovelha e aves
+// menos. thirstMin = ponto de bloqueio absoluto; thirstComfort = ponto
+// onde produz com cooldown normal; entre eles, produz mas devagar.
 const PRODUCT_RULES = {
-  Cow:     { product: 61, toolId: 16,   cooldownDays: 1, moralMin: 30, requiresFemale: true },  // leite + balde
-  Sheep:   { product: 62, toolId: 0,    cooldownDays: 3, moralMin: 40 },                         // lã + tesoura (qualquer sexo)
-  Chicken: { product: 60, toolId: null, cooldownDays: 1, moralMin: 20, requiresFemale: true },  // ovo (galinha)
-  Turkey:  { product: 60, toolId: null, cooldownDays: 2, moralMin: 25, requiresFemale: true },  // ovo (perua) — macho não bota
+  Cow: {
+    product: 61, toolId: 16, cooldownDays: 1, moralMin: 30,
+    thirstMin: 20, thirstComfort: 60, thirstPenaltyDays: 1,
+    requiresFemale: true,
+  },
+  Sheep: {
+    product: 62, toolId: 0, cooldownDays: 3, moralMin: 40,
+    thirstMin: 15, thirstComfort: 45, thirstPenaltyDays: 2,
+  },
+  Chicken: {
+    product: 60, toolId: null, cooldownDays: 1, moralMin: 20,
+    thirstMin: 10, thirstComfort: 40, thirstPenaltyDays: 1,
+    requiresFemale: true,
+  },
+  Turkey: {
+    product: 60, toolId: null, cooldownDays: 2, moralMin: 25,
+    thirstMin: 10, thirstComfort: 40, thirstPenaltyDays: 1,
+    requiresFemale: true,
+  },
 };
 
 function _currentDay() {
@@ -96,10 +120,21 @@ class ProductionSystem {
     const moral = animal.stats?.moral ?? 0;
     if (moral < rule.moralMin) return false;
 
-    // Cooldown
+    // Hidratação: sede abaixo do `thirstMin` bloqueia produção total.
+    // Entre `thirstMin` e `thirstComfort` produz mas com cooldown estendido
+    // (animal desidratado, mas não seco, ainda produz — só menos vezes).
+    const thirst = animal.stats?.thirst ?? 0;
+    const thirstMin = rule.thirstMin ?? 0;
+    if (thirst < thirstMin) return false;
+
+    // Cooldown — estendido se thirst está entre min e comfort.
+    const thirstComfort = rule.thirstComfort ?? 0;
+    const lowThirst = thirst < thirstComfort;
+    const effectiveCooldown = rule.cooldownDays + (lowThirst ? (rule.thirstPenaltyDays ?? 0) : 0);
+
     const today = _currentDay();
     const last  = animal._lastProducedDay ?? -1;
-    if (last >= 0 && (today - last) < rule.cooldownDays) return false;
+    if (last >= 0 && (today - last) < effectiveCooldown) return false;
 
     return true;
   }

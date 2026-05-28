@@ -8,6 +8,7 @@
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
 import { getSystem, getObject, getDebugFlag } from '../gameState.js';
+import { resolveReach } from './animalHitboxConfig.js';
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 import { items } from '../item.js';
 import { animals } from '../theWorld.js';
@@ -437,10 +438,17 @@ export class AnimalEntity {
         this._claimedTrough = null;   // troughId
         this._claimedSlot   = -1;     // 0..2
         this._lastDrinkTickAt = 0;
+        // Ponto FORA do cocho onde o animal vai parar pra beber (lado
+        // perpendicular ao slot). Setado no claim, usado como target em
+        // SEEKING_WATER. Diferente do slot center (que é inalcançável).
+        this._drinkPos = null;        // { x, y, facing }
         // Sessão de bebida atual (computada ao entrar em DRINKING). Guarda
         // os totais species-specific e o quanto já foi gasto, pra parar
         // exatamente na cota e não desperdiçar.
         this._drinkSession = null;
+        // Cooldown após desistir/falhar — evita loop "seek → timeout → IDLE
+        // → seek imediato" quando o caminho tá bloqueado.
+        this._drinkCooldownUntil = 0;
         // Estado de "intersecta slot" cacheado pelo update — usado pelo
         // draw pra pintar a hitbox de interação em verde quando dentro.
         this._interactionActive = false;
@@ -583,13 +591,8 @@ export class AnimalEntity {
      */
     getInteractionHitbox() {
         const r = this.directionRows;
-        const w = this.width;
-        const h = this.height;
-        // Espessura fina (perpendicular à direção) + alcance (paralelo).
-        const THICK = 6;
-        const REACH = Math.max(8, Math.min(w, h) * 0.7);
 
-        // Resolve qual lado o animal está olhando, considerando mirrorRight.
+        // Resolve facing considerando mirrorRight.
         let facing;
         if (this.direction === r.down) facing = 'down';
         else if (this.direction === r.up) facing = 'up';
@@ -597,41 +600,43 @@ export class AnimalEntity {
         else if (this.direction === r.right) facing = 'right';
         else facing = 'down';
 
-        switch (facing) {
-            case 'down':
-                return {
-                    x: this.x + w / 2 - THICK,
-                    y: this.y + h,
-                    w: THICK * 2,
-                    h: REACH,
-                    facing,
-                };
-            case 'up':
-                return {
-                    x: this.x + w / 2 - THICK,
-                    y: this.y - REACH,
-                    w: THICK * 2,
-                    h: REACH,
-                    facing,
-                };
-            case 'left':
-                return {
-                    x: this.x - REACH,
-                    y: this.y + h / 2 - THICK,
-                    w: REACH,
-                    h: THICK * 2,
-                    facing,
-                };
-            case 'right':
-            default:
-                return {
-                    x: this.x + w,
-                    y: this.y + h / 2 - THICK,
-                    w: REACH,
-                    h: THICK * 2,
-                    facing,
-                };
+        // Valores ABSOLUTOS em `animal/animalHitboxConfig.js` — você edita
+        // x/y/width/height por espécie + direção, F5 reflete. SEM fórmula.
+        // Pra Bull os valores são feitos pro sprite 48×48 dele; pra Lamb,
+        // pro sprite 24×24 — cada um afinado individualmente.
+        const cfg = resolveReach(this.assetName, facing);
+        return {
+            x: this.x + cfg.x,
+            y: this.y + cfg.y,
+            w: cfg.width,
+            h: cfg.height,
+            facing,
+        };
+    }
+
+    /**
+     * Helper privado: desenha path de retângulo arredondado no contexto
+     * dado (sem fill/stroke — chama depois `ctx.fill()` ou `ctx.stroke()`).
+     * Usado pelo FX da barra de sede. Fallback simples pra runtimes sem
+     * `ctx.roundRect()` (Safari antigo).
+     */
+    _roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(x, y, w, h, rr);
+            return;
         }
+        ctx.moveTo(x + rr, y);
+        ctx.lineTo(x + w - rr, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + rr);
+        ctx.lineTo(x + w, y + h - rr);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
+        ctx.lineTo(x + rr, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - rr);
+        ctx.lineTo(x, y + rr);
+        ctx.quadraticCurveTo(x, y, x + rr, y);
+        ctx.closePath();
     }
 
     /** True se a hitbox de interação intersecta o slot {x,y,w,h} dado. */
@@ -1151,9 +1156,33 @@ export class AnimalEntity {
         // — o jogador via "guide_start" no painel e ZERO movimento, parecendo
         // que a ação não funcionou. O painel já tem loop próprio que
         // reposiciona a UI por frame, então acompanha o animal em movimento.
-        if (this.__uiPaused && !this.following && this.state !== AnimalState.FLEE) return;
+        // UI aberta pausa AI normal MAS deixa rodar: follow (guide), flee,
+        // e os estados de bebida (senão abrir painel pra ver thirst trava
+        // o restore — animal "bebia" sem o stat subir, só caía pelo decay).
+        if (this.__uiPaused &&
+            !this.following &&
+            this.state !== AnimalState.FLEE &&
+            this.state !== AnimalState.SEEKING_WATER &&
+            this.state !== AnimalState.DRINKING) return;
 
         const now = performance.now();
+
+        // Cleanup de slot orfão: se o animal tem cocho reservado mas saiu
+        // dos estados de bebida (mood SLEEPING, player clicou guiar, FLEE
+        // ativou, etc), libera a reserva pra outros poderem usar. Sem isso
+        // os 3 slots de cada cocho vão sendo "lockados" por animais que
+        // não estão mais lá, e ninguém consegue beber depois.
+        if (this._claimedTrough &&
+            this.state !== AnimalState.SEEKING_WATER &&
+            this.state !== AnimalState.DRINKING) {
+            const wtSys = getSystem('waterTrough');
+            wtSys?.releaseSlot?.(this._claimedTrough, this._claimedSlot, this.id);
+            this._claimedTrough = null;
+            this._claimedSlot = -1;
+            this._drinkPos = null;
+            this._drinkSession = null;
+            this._interactionActive = false;
+        }
 
         if (this._mood === AnimalMood.SLEEPING) {
             this.state = AnimalState.IDLE;
@@ -1231,6 +1260,7 @@ export class AnimalEntity {
         if (this._mood === AnimalMood.SLEEPING) return false;
         if ((this.stats.thirst || 0) >= this._drinkThreshold) return false;
         if (this._claimedTrough) return false;  // já tem claim
+        if (performance.now() < this._drinkCooldownUntil) return false;
 
         const wtSys = getSystem('waterTrough');
         const found = wtSys?.findFreeSlotFor?.(this);
@@ -1241,13 +1271,15 @@ export class AnimalEntity {
 
         this._claimedTrough = found.trough.id;
         this._claimedSlot   = found.slotIdx;
-        // Alvo: centro do slot. O animal vai caminhar até lá e parar
-        // quando a hitbox de interação encaixar.
-        this.targetX = found.slotWorld.x + found.slotWorld.w / 2;
-        this.targetY = found.slotWorld.y + found.slotWorld.h / 2;
+        this._drinkPos      = found.drinkPos;
+        // Alvo: drinkPos (ponto FORA do cocho, alinhado com o slot). Não
+        // o centro do slot — esse fica dentro da colisão do cocho e é
+        // inalcançável; animal ficava esbarrando na parede.
+        this.targetX = found.drinkPos.x;
+        this.targetY = found.drinkPos.y;
         this.state = AnimalState.SEEKING_WATER;
         this.stateTimer = performance.now();
-        this.stateDuration = 15000;  // timeout pra evitar caça eterna
+        this.stateDuration = 12000;  // timeout — se não chegou em 12s, desiste
         return true;
     }
 
@@ -1279,22 +1311,33 @@ export class AnimalEntity {
             return;
         }
 
-        // Re-mira sempre no centro do slot (slot pode escalar se cocho
-        // muda de tamanho, embora hoje não mude em runtime).
-        const tx = slot.x + slot.w / 2;
-        const ty = slot.y + slot.h / 2;
-        this.targetX = tx;
-        this.targetY = ty;
+        // Alvo: drinkPos fora do cocho. Se o drinkPos foi perdido (raro,
+        // mas se save/load não persistiu), recalcula.
+        let dp = this._drinkPos;
+        if (!dp) {
+            dp = wtSys.getDrinkPosition?.(
+                wtSys.getWaterTroughs().find(w => w.id === this._claimedTrough),
+                slot, this
+            );
+            this._drinkPos = dp;
+        }
+        this.targetX = dp.x;
+        this.targetY = dp.y;
 
-        const dx = tx - this.x;
-        const dy = ty - this.y;
+        const dx = dp.x - this.x;
+        const dy = dp.y - this.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Se já chegou no centro mas hitbox de interação não encaixa
-        // (direção errada), só força o facing pro slot — sem chamar move()
-        // que setaria state pra IDLE.
-        if (dist < 3) {
-            this._setFacing(dx || 0.01, dy || 0.01);
+        // Chegou no drinkPos: força facing pro centro do slot pra hitbox
+        // de interação encaixar. Não chama move() (que poderia setar IDLE).
+        // Próximo frame, _interactionHitsSlot vai detectar e transitar
+        // pra DRINKING (early return no topo).
+        if (dist < 6) {
+            const slotCx = slot.x + slot.w / 2;
+            const slotCy = slot.y + slot.h / 2;
+            const sdx = slotCx - (this.x + this.width / 2);
+            const sdy = slotCy - (this.y + this.height / 2);
+            this._setFacing(sdx, sdy);
             this.frameIndex = 0;
         } else {
             this.move();
@@ -1306,8 +1349,11 @@ export class AnimalEntity {
         this._interactionActive = false;
         this.updateAnimation(now);
 
-        // Timeout: se demorou demais (preso?), libera o slot e desiste.
+        // Timeout: se demorou demais (preso por outros animais? cercado
+        // de obstáculos?), libera o slot, desiste E coloca cooldown pra
+        // não retentar imediatamente.
         if (now - this.stateTimer > this.stateDuration) {
+            this._drinkCooldownUntil = now + 5000;
             this._exitDrinkFlow();
         }
     }
@@ -1380,6 +1426,7 @@ export class AnimalEntity {
         }
         this._claimedTrough = null;
         this._claimedSlot = -1;
+        this._drinkPos = null;
         this._drinkSession = null;
         this._interactionActive = false;
         this.state = AnimalState.IDLE;
@@ -1941,22 +1988,125 @@ export class AnimalEntity {
             ctx.restore();
         }
 
-        // Barra de sede (visível só durante DRINKING). Mostra thirst atual
-        // enchendo aos poucos enquanto bebe.
-        if (this.state === AnimalState.DRINKING) {
-            const barW = Math.max(30, this.width * 0.7) * camera.zoom;
-            const barH = 4 * camera.zoom;
-            const bx = Math.floor(screenPos.x + (zoomedWidth - barW) / 2);
-            const by = Math.floor(screenPos.y - 10 * camera.zoom);
-            const pct = Math.max(0, Math.min(1, (this.stats.thirst || 0) / 100));
+        // ─── Emote 💧 quando com sede (mas não bebendo ainda) ────────────
+        // Aparece acima do animal quando thirst está abaixo do threshold,
+        // dando feedback ao player sem abrir painel. Esconde durante
+        // DRINKING (a barra já comunica). Bobbing leve pra chamar atenção.
+        const isThirsty = (this.stats.thirst || 0) < this._drinkThreshold;
+        const showThirstEmote = isThirsty && this.state !== AnimalState.DRINKING;
+        if (showThirstEmote) {
+            const now = performance.now();
+            const bob = Math.sin(now / 280) * 2.5 * camera.zoom;
+            const isSeeking = this.state === AnimalState.SEEKING_WATER;
             ctx.save();
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
-            ctx.fillRect(bx, by, barW, barH);
-            ctx.fillStyle = '#4aa6ff';
-            ctx.fillRect(bx, by, Math.round(barW * pct), barH);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(bx, by, barW, barH);
+            ctx.font = `${Math.round(15 * camera.zoom)}px sans-serif`;
+            ctx.textAlign = 'center';
+            // Sombra discreta pro emote destacar de qualquer fundo.
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+            ctx.shadowBlur = 4 * camera.zoom;
+            // Pulsa quando seeking (animal já está atrás de água — feedback "indo!"),
+            // mais quieto quando só está com sede sem agir.
+            ctx.globalAlpha = isSeeking ? (0.65 + 0.35 * Math.abs(Math.sin(now / 220))) : 0.85;
+            ctx.fillText(
+                '💧',
+                Math.floor(screenPos.x + zoomedWidth / 2),
+                Math.floor(screenPos.y - 30 * camera.zoom + bob)
+            );
+            ctx.restore();
+        }
+
+        // ─── Barra de sede + FX visual durante DRINKING ────────────────
+        if (this.state === AnimalState.DRINKING) {
+            const now = performance.now();
+            const barW = Math.max(36, this.width * 0.75) * camera.zoom;
+            const barH = 6 * camera.zoom;
+            const radius = barH / 2;
+            const bx = Math.floor(screenPos.x + (zoomedWidth - barW) / 2);
+            const by = Math.floor(screenPos.y - 14 * camera.zoom);
+            const pct = Math.max(0, Math.min(1, (this.stats.thirst || 0) / 100));
+
+            ctx.save();
+
+            // Halo radial sob o animal — sutil "vibe de água" no chão.
+            const haloX = screenPos.x + zoomedWidth / 2;
+            const haloY = screenPos.y + zoomedHeight - 4 * camera.zoom;
+            const haloR = Math.max(zoomedWidth, zoomedHeight) * 0.45;
+            const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, haloR);
+            halo.addColorStop(0, 'rgba(120, 200, 255, 0.22)');
+            halo.addColorStop(1, 'rgba(120, 200, 255, 0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ícone 💧 antes da barra (com bounce leve).
+            const iconBounce = Math.sin(now / 200) * 1.5 * camera.zoom;
+            ctx.font = `${Math.round(11 * camera.zoom)}px sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+            ctx.shadowBlur = 3 * camera.zoom;
+            ctx.fillStyle = '#cde9ff';
+            ctx.fillText('💧', bx - 3 * camera.zoom, by + barH / 2 + iconBounce);
+            ctx.shadowBlur = 0;
+
+            // Fundo da barra — pílula escura com leve gradiente.
+            const bgGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+            bgGrad.addColorStop(0, 'rgba(8, 20, 38, 0.85)');
+            bgGrad.addColorStop(1, 'rgba(4, 12, 24, 0.85)');
+            ctx.fillStyle = bgGrad;
+            this._roundRect(ctx, bx, by, barW, barH, radius);
+            ctx.fill();
+
+            // Preenchimento gradient cyan→azul vivo, com pulso de brilho.
+            const pulse = 0.85 + 0.15 * Math.sin(now / 180);
+            const fillW = Math.max(0, Math.round(barW * pct));
+            if (fillW > 1) {
+                const fillGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+                fillGrad.addColorStop(0, '#9be3ff');
+                fillGrad.addColorStop(0.5, '#5bbcff');
+                fillGrad.addColorStop(1, '#2d7ec8');
+                ctx.fillStyle = fillGrad;
+                ctx.shadowColor = `rgba(123, 200, 255, ${0.55 * pulse})`;
+                ctx.shadowBlur = 8 * camera.zoom;
+                this._roundRect(ctx, bx, by, fillW, barH, radius);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Highlight rolando pra dar sensação de "água escorrendo".
+                const shineX = bx + ((now / 12) % (barW + 20)) - 10;
+                if (shineX > bx && shineX < bx + fillW - 4) {
+                    const shineGrad = ctx.createLinearGradient(shineX - 6, 0, shineX + 6, 0);
+                    shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                    shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+                    shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                    ctx.fillStyle = shineGrad;
+                    ctx.fillRect(shineX - 6, by + 1, 12, barH - 2);
+                }
+            }
+
+            // Contorno fino dourado pra destacar.
+            ctx.strokeStyle = 'rgba(255, 230, 180, 0.7)';
+            ctx.lineWidth = Math.max(1, camera.zoom);
+            this._roundRect(ctx, bx, by, barW, barH, radius);
+            ctx.stroke();
+
+            // Bolhas subindo dentro da barra (3 a 4, ciclando) — só
+            // quando há água a desenhar.
+            if (fillW > 6) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+                for (let i = 0; i < 3; i++) {
+                    const phase = (now / 600 + i * 0.33) % 1;
+                    const bbX = bx + 4 * camera.zoom + (i * (fillW - 10) / 3);
+                    const bbY = by + barH - phase * (barH - 2);
+                    if (bbX < bx + fillW - 2) {
+                        ctx.beginPath();
+                        ctx.arc(bbX, bbY, 1 * camera.zoom, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+
             ctx.restore();
         }
 

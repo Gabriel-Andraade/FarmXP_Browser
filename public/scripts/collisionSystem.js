@@ -166,6 +166,17 @@ export class CollisionSystem {
      * @type {Object}
      */
     static ANIMAL_CONFIGS = { ...HITBOX_CONFIGS.ANIMALS };
+
+    /**
+     * Inset (em pixels, por lado) aplicado à hitbox de clique de animais
+     * específicos. Útil quando o sprite é grande mas a área "tocável"
+     * deve ser menor. Valor 5 = quadrado encolhe 10 no total (5 por lado).
+     */
+    static ANIMAL_INTERACTION_INSET = {
+        Bull: 20,
+        Calf: 20,
+    };
+
     /**
      * Configurações das zonas de interação (hitboxes laranjas/verdes)
      * Define áreas onde o jogador pode interagir com objetos
@@ -368,10 +379,20 @@ export class CollisionSystem {
 
         if (!config) return;
 
-        const newWidth = object.width * config.widthRatio;
-        const newHeight = object.height * config.heightRatio;
-        const newX = object.x + (object.width * config.offsetX);
-        const newY = object.y + (object.height * config.offsetY);
+        // Inset opcional por espécie — reduz o quadrado laranja de clique
+        // (sem mexer na hitbox de alcance, que é outra coisa). Útil pra
+        // animais "gigantes" cuja área de clique fica gigante demais.
+        // Valor = pixels insetados em CADA lado (total = 2× isso).
+        let inset = 0;
+        if (typeKey === 'ANIMAL') {
+            const assetName = object.original?.assetName;
+            inset = CollisionSystem.ANIMAL_INTERACTION_INSET[assetName] || 0;
+        }
+
+        const newWidth = object.width * config.widthRatio - inset * 2;
+        const newHeight = object.height * config.heightRatio - inset * 2;
+        const newX = object.x + (object.width * config.offsetX) + inset;
+        const newY = object.y + (object.height * config.offsetY) + inset;
 
         const hitbox = {
             id: object.id,
