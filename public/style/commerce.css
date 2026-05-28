@@ -311,6 +311,13 @@
     filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
 }
 
+.mch-hexagon-icon img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    display: block;
+}
+
 .mch-hexagon-name {
     color: #f5e9d3;
     font-size: 11px;

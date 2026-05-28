@@ -176,6 +176,13 @@
 .crf-req-qty {}
 .crf-req-name {}
 
+.crf-req-icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 /* botão craft */
 .crf-btn {
   padding: 10px 20px;

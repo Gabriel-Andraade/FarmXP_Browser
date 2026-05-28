@@ -166,6 +166,17 @@ export class CollisionSystem {
      * @type {Object}
      */
     static ANIMAL_CONFIGS = { ...HITBOX_CONFIGS.ANIMALS };
+
+    /**
+     * Inset (em pixels, por lado) aplicado à hitbox de clique de animais
+     * específicos. Útil quando o sprite é grande mas a área "tocável"
+     * deve ser menor. Valor 5 = quadrado encolhe 10 no total (5 por lado).
+     */
+    static ANIMAL_INTERACTION_INSET = {
+        Bull: 20,
+        Calf: 20,
+    };
+
     /**
      * Configurações das zonas de interação (hitboxes laranjas/verdes)
      * Define áreas onde o jogador pode interagir com objetos
@@ -217,6 +228,16 @@ export class CollisionSystem {
             offsetY: 0.25,
             originalType: "well"
         },
+        WATERTROUGHX: {
+            widthRatio: 1.0, heightRatio: 1.4,
+            offsetX: 0.0, offsetY: -0.2,
+            originalType: "watertrough"
+        },
+        WATERTROUGHY: {
+            widthRatio: 1.4, heightRatio: 1.0,
+            offsetX: -0.2, offsetY: 0.0,
+            originalType: "watertrough"
+        },
         QUEST_ANIMAL: {
             widthRatio: 1.5,
             heightRatio: 1.5,
@@ -256,6 +277,7 @@ export class CollisionSystem {
             "TREE", "ROCK", "THICKET", "CHEST",
             "HOUSE_WALLS", "CONSTRUCTION", "WELL",
             "FENCE", "FENCEX", "FENCEY", "ANIMAL",
+            "WATERTROUGHX", "WATERTROUGHY",
             "QUEST_ANIMAL"
         ];
         if (interactiveTypes.includes(objectType)) {
@@ -357,10 +379,20 @@ export class CollisionSystem {
 
         if (!config) return;
 
-        const newWidth = object.width * config.widthRatio;
-        const newHeight = object.height * config.heightRatio;
-        const newX = object.x + (object.width * config.offsetX);
-        const newY = object.y + (object.height * config.offsetY);
+        // Inset opcional por espécie — reduz o quadrado laranja de clique
+        // (sem mexer na hitbox de alcance, que é outra coisa). Útil pra
+        // animais "gigantes" cuja área de clique fica gigante demais.
+        // Valor = pixels insetados em CADA lado (total = 2× isso).
+        let inset = 0;
+        if (typeKey === 'ANIMAL') {
+            const assetName = object.original?.assetName;
+            inset = CollisionSystem.ANIMAL_INTERACTION_INSET[assetName] || 0;
+        }
+
+        const newWidth = object.width * config.widthRatio - inset * 2;
+        const newHeight = object.height * config.heightRatio - inset * 2;
+        const newX = object.x + (object.width * config.offsetX) + inset;
+        const newY = object.y + (object.height * config.offsetY) + inset;
 
         const hitbox = {
             id: object.id,
@@ -384,6 +416,18 @@ export class CollisionSystem {
         if (oldInter) this._interGrid.remove(object.id, oldInter);
         this.interactionHitboxes.set(object.id, hitbox);
         this._interGrid.insert(object.id, hitbox);
+    }
+
+    setInteractionHitboxBounds(id, x, y, width, height) {
+        const ihb = this.interactionHitboxes.get(id);
+        if (!ihb) return false;
+        this._interGrid.remove(id, ihb);
+        ihb.x = x;
+        ihb.y = y;
+        ihb.width = width;
+        ihb.height = height;
+        this._interGrid.insert(id, ihb);
+        return true;
     }
 
     removeHitbox(id) {
@@ -468,13 +512,30 @@ export class CollisionSystem {
         }
     }
 
-    areaCollides(x, y, w, h, ignoreId = null) {
+    /**
+     * Verifica colisão de uma área retangular contra hitboxes do mundo.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @param {string|null} ignoreId - id de hitbox para ignorar (ex.: o
+     *   próprio actor), ou null.
+     * @param {Object} [opts]
+     * @param {string[]} [opts.ignoreTypes] - lista de tipos a ignorar
+     *   (ex.: ['ANIMAL'] pra colisão "soft" entre animais — eles passam
+     *   uns pelos outros sem travar, mas ainda batem em árvores/cercas/
+     *   jogador).
+     */
+    areaCollides(x, y, w, h, ignoreId = null, opts = null) {
+        const ignoreTypes = opts && opts.ignoreTypes;
         const rect = { x, y, width: w, height: h };
         const candidates = this._physGrid.query(x, y, w, h);
         for (const id of candidates) {
             if (ignoreId && id === ignoreId) continue;
             const hitbox = this.hitboxes.get(id);
-            if (hitbox && checkAABBCollision(rect, hitbox)) return true;
+            if (!hitbox) continue;
+            if (ignoreTypes && ignoreTypes.includes(hitbox.type)) continue;
+            if (checkAABBCollision(rect, hitbox)) return true;
         }
         return false;
     }
@@ -539,6 +600,14 @@ export class CollisionSystem {
 
         // Ponto query: buscar na célula que contém o ponto
         const candidates = this._interGrid.query(worldX, worldY, 1, 1);
+        let best = null;
+        let bestDistSq = Infinity;
+        // Animais SEMPRE vencem o pick contra outros tipos quando o clique
+        // cai dentro da hitbox de interação deles. Sem essa prioridade, o
+        // tie-breaker por "centro mais próximo" deixava árvores (hitbox
+        // 2x altura) e casas roubarem o clique de animais passando perto —
+        // o UiPanel não abria pra alguns animais conforme eles andavam.
+        let bestIsAnimal = false;
         for (const id of candidates) {
             const hitbox = this.interactionHitboxes.get(id);
             if (!hitbox) continue;
@@ -552,17 +621,35 @@ export class CollisionSystem {
                     continue;
                 }
 
-                return {
-                    objectId: hitbox.id,
-                    type: hitbox.originalType,
-                    originalType: hitbox.originalType,
-                    x: hitbox.x,
-                    y: hitbox.y,
-                    object: hitbox.object
-                };
+                const isAnimal = hitbox.originalType === 'animal';
+                // Pula candidatos não-animal se já temos um animal escolhido.
+                if (bestIsAnimal && !isAnimal) continue;
+
+                const cx = hitbox.x + hitbox.width / 2;
+                const cy = hitbox.y + hitbox.height / 2;
+                const dx = worldX - cx;
+                const dy = worldY - cy;
+                const distSq = dx * dx + dy * dy;
+
+                // Animal vence qualquer não-animal anterior; entre pares do
+                // mesmo "tier" (animal vs animal, ou objeto vs objeto), o
+                // tie-break por centro continua valendo.
+                const promote = isAnimal && !bestIsAnimal;
+                if (promote || distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    bestIsAnimal = isAnimal;
+                    best = {
+                        objectId: hitbox.id,
+                        type: hitbox.originalType,
+                        originalType: hitbox.originalType,
+                        x: hitbox.x,
+                        y: hitbox.y,
+                        object: hitbox.object
+                    };
+                }
             }
         }
-        return null;
+        return best;
     }
 
     getAnyObjectById(objectId) {

@@ -379,6 +379,35 @@ export const WeatherSystem = {
     }
   },
 
+  /**
+   * Avança o relógio do jogo em N minutos sem rodar a simulação.
+   * Usado por "pulos" de tempo (ex.: viagem rápida pelo mapa) para que o
+   * tempo continue progredindo durante o modal de viagem em vez de travar.
+   * Lida com transição de dia(s) e atualiza iluminação ambiente.
+   * @param {number} minutes - minutos do jogo a pular (>0).
+   */
+  skipMinutes(minutes) {
+    const m = Number(minutes);
+    if (!Number.isFinite(m) || m <= 0) return;
+
+    this.currentTime += m;
+    while (this.currentTime >= 24 * 60) {
+      this.currentTime -= 24 * 60;
+      this.advanceDate();
+      // Dispara dayChanged por dia cruzado (mesmo padrão do sleep
+      // transition em :312). Sem isso, sistemas que escutam dayChanged
+      // (UI, animais, lojas) não eram notificados quando uma viagem
+      // longa atravessava a meia-noite.
+      document.dispatchEvent(new CustomEvent("dayChanged", { detail: { day: this.day } }));
+    }
+
+    this.updateAmbientLight();
+
+    document.dispatchEvent(new CustomEvent("timeChanged", {
+      detail: { day: this.day, time: this.currentTime, weekday: this.getWeekday() }
+    }));
+  },
+
   advanceDate() {
     const oldDay = this.day;
     this.day++;
@@ -584,8 +613,13 @@ export const WeatherSystem = {
 export function drawWeatherEffects(ctx, player, canvas) {
   if (!player) return;
 
-  const width = canvas.width;
-  const height = canvas.height;
+  // Canvas backing buffer is INTERNAL_WIDTH/HEIGHT * dpr, but ctx has a
+  // setTransform(dpr, dpr) applied — so all drawing here must use logical
+  // (pre-DPR) units, otherwise overlays render at dpr² size and only the
+  // top-left quadrant of the canvas is covered.
+  const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+  const width = canvas.width / dpr;
+  const height = canvas.height / dpr;
 
   if (WeatherSystem.ambientDarkness > 0) {
     const d = WeatherSystem.ambientDarkness;
@@ -762,7 +796,9 @@ export function drawWeatherEffects(ctx, player, canvas) {
 
   if (WeatherSystem.sleepPhase === "holding" && WeatherSystem.sleepMessage) {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // ctx fica com setTransform(dpr,dpr) aplicado — overlay aqui usa
+    // coords lógicas, então preserva o dpr no reset (não usa 1).
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const boxW = 520;
     const boxH = 120;
@@ -786,7 +822,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
 
   if (WeatherSystem.sleepTransitionProgress > 0.8 && WeatherSystem.sleepPhase !== "holding") {
     ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.fillStyle = "white";
     ctx.font = "30px monospace";
     ctx.textAlign = "center";

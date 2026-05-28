@@ -465,11 +465,68 @@ export class PlayerInteractionSystem {
             const worldPos = camera.screenToWorld(canvasX, canvasY);
 
             if (BuildSystem.active) {
-                BuildSystem.placeObject();
+                // Prioridade 1: clique no "+" do cercado → abre painel de
+                // animais. Tem que vir ANTES de place/pickup pra não ser
+                // intercepetado por uma cerca próxima.
+                const encSys = getSystem('enclosure');
+                const enc = encSys?.getEnclosureMarkerAt?.(worldPos.x, worldPos.y);
+                if (enc) {
+                    import('../animal/enclosureAnimalPanel.js').then(m => {
+                        m.openEnclosureAnimalPanel(enc);
+                    }).catch(err => console.warn('Falha ao abrir painel de animais:', err));
+                    return;
+                }
+
+                // Prioridade 2: comportamento padrão de build mode.
+                // Estado vazio (sem item equipado): clique esquerdo OU direito
+                // pega cerca existente. Útil pra deletar/realocar peças sem
+                // ter que selecionar um item antes.
+                // Com item equipado: left click = coloca peça.
+                if (!BuildSystem.selectedItem) {
+                    const existingFence = BuildSystem.findPlacedFenceAt?.(worldPos.x, worldPos.y);
+                    if (existingFence) BuildSystem.pickUpFence(existingFence);
+                } else {
+                    BuildSystem.placeObject();
+                }
+                return;
+            }
+
+            // Fora do build mode: clique no "+" do cocho abre o painel
+            // de depósito de água. Tem que vir ANTES do handleCanvasClick
+            // pra não ser interpretado como interação genérica.
+            const wtSys = getSystem('waterTrough');
+            const troughHit = wtSys?.getMarkerAt?.(worldPos.x, worldPos.y);
+            if (troughHit) {
+                import('../waterTroughPanel.js').then(m => {
+                    m.openWaterTroughPanel(troughHit);
+                }).catch(err => console.warn('Falha ao abrir painel do cocho:', err));
                 return;
             }
 
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
+        }, { signal: controlsAbortController.signal });
+
+        // Clique direito no modo construção = recupera/pega cerca existente
+        // sob o cursor. Fora do modo construção, preserva o menu de contexto
+        // do navegador (não interfere em devtools/inspect).
+        canvas.addEventListener("contextmenu", (ev) => {
+            if (isSleeping) return;
+            if (!BuildSystem.active) return;
+
+            ev.preventDefault();
+
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (ev.clientX - rect.left) * scaleX;
+            const canvasY = (ev.clientY - rect.top) * scaleY;
+            const worldPos = camera.screenToWorld(canvasX, canvasY);
+
+            const existingFence = BuildSystem.findPlacedFenceAt?.(worldPos.x, worldPos.y);
+            if (existingFence) {
+                BuildSystem.pickUpFence(existingFence);
+            }
+            // Clique direito em vazio = no-op (sem feedback ruidoso).
         }, { signal: controlsAbortController.signal });
 
         canvas.addEventListener("mousemove", (ev) => {
@@ -488,6 +545,12 @@ export class PlayerInteractionSystem {
             if (BuildSystem.active) {
                 BuildSystem.updateMousePosition(worldPos.x, worldPos.y);
             }
+
+            // Marker "+" do cocho aparece no hover. Vale dentro e fora do
+            // modo construção — só não sobrepõe o "+" do cercado porque
+            // o build mode tem seu próprio sistema.
+            const wtSys = getSystem('waterTrough');
+            wtSys?.updateHover?.(worldPos.x, worldPos.y);
         }, { signal: controlsAbortController.signal });
     }
 
@@ -624,6 +687,97 @@ export class PlayerInteractionSystem {
     handleCanvasClick(worldX, worldY, screenX, screenY) {
         if (isSleeping || BuildSystem.active) return;
 
+        const selectAnimal = (animal) => {
+            const animalUI = getSystem('animalUI');
+            if (animalUI?.selectAnimal) {
+                animalUI.selectAnimal(animal, camera);
+            } else if (animalUI?.showStats) {
+                animalUI.showStats(animal);
+            } else if (animalUI?.showById) {
+                animalUI.showById(animal.id);
+            }
+        };
+
+        // Pick em duas fases (varre `animals[]` direto, não usa _interGrid
+        // porque ele pode ficar dessincronizado e hitboxes grandes — TREE,
+        // CASA — roubavam o tie-break).
+        //
+        // Fase 1 (precisa): clique DENTRO do sprite do animal → seleciona
+        //   o de centro mais próximo. Bate com o sprite que o jogador VÊ.
+        // Fase 2 (snap): se nenhum animal contém o clique, escolhe o mais
+        //   próximo dentro de SNAP_RADIUS_SCREEN pixels DE TELA — corrige
+        //   cliques que erraram a borda por pouco (animais pequenos tipo
+        //   Chick 29×29 são difíceis de acertar em zoom baixo). Conversão
+        //   por zoom mantém o "feel" consistente em qualquer zoom.
+        const SNAP_RADIUS_SCREEN = RANGES.ANIMAL_SNAP_RADIUS_SCREEN || 30;
+        const snapRadiusWorld = SNAP_RADIUS_SCREEN / (camera?.zoom || 1);
+        const snapRadiusSqWorld = snapRadiusWorld * snapRadiusWorld;
+        const animalUnderClick = () => {
+            if (!Array.isArray(animals)) return null;
+            let exactBest = null;
+            let exactBestDistSq = Infinity;
+            let snapBest = null;
+            let snapBestDistSq = Infinity;
+            for (const a of animals) {
+                if (!a) continue;
+                const w = a.width || a.frameWidth || 32;
+                const h = a.height || a.frameHeight || 32;
+                const ax = a.x || 0;
+                const ay = a.y || 0;
+                const inside = worldX >= ax && worldX <= ax + w && worldY >= ay && worldY <= ay + h;
+
+                if (inside) {
+                    const dx = worldX - (ax + w / 2);
+                    const dy = worldY - (ay + h / 2);
+                    const distSq = dx * dx + dy * dy;
+                    if (distSq < exactBestDistSq) {
+                        exactBestDistSq = distSq;
+                        exactBest = a;
+                    }
+                } else {
+                    // Distância do clique à BORDA do sprite (0 se dentro).
+                    const dxEdge = Math.max(ax - worldX, 0, worldX - (ax + w));
+                    const dyEdge = Math.max(ay - worldY, 0, worldY - (ay + h));
+                    const edgeDistSq = dxEdge * dxEdge + dyEdge * dyEdge;
+                    if (edgeDistSq <= snapRadiusSqWorld && edgeDistSq < snapBestDistSq) {
+                        snapBestDistSq = edgeDistSq;
+                        snapBest = a;
+                    }
+                }
+            }
+            return exactBest || snapBest;
+        };
+
+        const animalHit = animalUnderClick();
+        if (animalHit) {
+            // Tentativa de COLETA antes de abrir UiPanel: se animal tem
+            // produto pronto E player está em range, delega pro
+            // productionSystem que faz TODAS as validações (sleeping,
+            // ferramenta certa, inventário) e mostra FX flutuante no animal
+            // tanto pra sucesso quanto pra falha. Falhas que não são
+            // "sem ferramenta" também encerram o click — player vê o motivo
+            // visualmente. Sem produto pendente → fluxo padrão (UiPanel).
+            if (animalHit._pendingProduct) {
+                const animalHitbox = collisionSystem.getInteractionObject(animalHit.id);
+                const inRange = animalHitbox && collisionSystem.checkPlayerInteraction(animalHitbox);
+                if (inRange) {
+                    const playerSys = getSystem('player');
+                    const prodSys = getSystem('animalProduction');
+                    const result = prodSys?.collect?.(animalHit, {
+                        equippedItem: playerSys?.equippedItem,
+                    });
+                    // Sucesso: coleta feita, sai. Falha por ferramenta:
+                    // ainda mostra UiPanel pra player ver stats + lembrar
+                    // de equipar item. Outros motivos (sleeping, inventory
+                    // full): sai — FX já comunica.
+                    if (result?.ok) return;
+                    if (result?.reason !== 'needs_tool') return;
+                }
+            }
+            selectAnimal(animalHit);
+            return;
+        }
+
         const clickedAny = collisionSystem.getObjectAtMouse(
             screenX,
             screenY,
@@ -631,15 +785,9 @@ export class PlayerInteractionSystem {
             { requirePlayerInRange: false }
         );
 
-        if (clickedAny && clickedAny.originalType === 'animal') {
-            const animal = clickedAny.object;
-            const animalUI = getSystem('animalUI');
-
-            if (animalUI?.selectAnimal) {
-                animalUI.selectAnimal(animal, camera);
-            } else if (animalUI?.showStats) {
-                animalUI.showStats(animal);
-            }
+        // Verifica se clicou em uma tumba de animal
+        const tombSys = getSystem('animalTomb');
+        if (tombSys?.handleClick?.(worldX, worldY)) {
             return;
         }
 
@@ -649,37 +797,15 @@ export class PlayerInteractionSystem {
 
             if (isInRange) {
                 this.interactWithObject(clickedAny);
+                return;
             }
             return;
         }
 
-        if (Array.isArray(animals)) {
-            const clickedAnimal = animals.find(a => {
-                if (!a) return false;
-                const ax = a.x || 0;
-                const ay = a.y || 0;
-                const aw = a.width || a.frameWidth || 32;
-                const ah = a.height || a.frameHeight || 32;
-                return worldX >= ax && worldX <= ax + aw && worldY >= ay && worldY <= ay + ah;
-            });
-
-            if (clickedAnimal) {
-                const animalUI = getSystem('animalUI');
-                if (animalUI?.selectAnimal) {
-                    animalUI.selectAnimal(clickedAnimal, camera);
-                } else if (animalUI?.showStats) {
-                    animalUI.showStats(clickedAnimal);
-                } else if (animalUI?.showById) {
-                    animalUI.showById(clickedAnimal.id);
-                }
-                return;
-            }
-
-        }
-
-        const animalUI = getSystem('animalUI');
-        animalUI?.closeAll?.();
-
+        // Antes este branch chamava `animalUI.closeAll()` — removido
+        // porque clicar fora não deve fechar o painel (só o ❌ fecha) e
+        // porque essa chamada combinada com o pointerdown capture do UiPanel
+        // criava close-then-open quando se clicava em outro animal.
         if (this.mobile) {
             this.touchMoveSystem.setDestination(worldX, worldY);
         }
@@ -705,6 +831,12 @@ export class PlayerInteractionSystem {
         this.nearbyObjects.forEach(objectId => {
             const object = collisionSystem.getAnyObjectById(objectId);
             if (!object) return;
+            // Animais não são alvo de E. A interação com eles é exclusivamente
+            // pelo clique → UiPanel (pet/feed/guide/etc). Sem este filtro, E
+            // perto de um animal disparava `playerInteract` e o itemSystem
+            // aplicava 1 de dano por tick — o animal "sumia" depois de poucos
+            // toques porque o fluxo de objetos quebráveis o estava matando.
+            if (object.originalType === 'animal' || object.type === 'ANIMAL') return;
             const objectCenterX = object.x + object.width / 2;
             const objectCenterY = object.y + object.height / 2;
             const playerCenterX = this.interactionRange.x + this.interactionRange.width / 2;
@@ -955,16 +1087,30 @@ function setupBuildControls() {
     const { signal } = controlsAbortController;
 
     document.addEventListener("keydown", (e) => {
+        // Ignora hotkeys (b, q, r, t, esc) quando o foco está em campo
+        // editável — senão player digita "b" no chat e abre build mode,
+        // ou "t" em input numérico tenta colocar peça. Mesmo padrão dos
+        // outros handlers neste arquivo.
+        const tgt = e.target;
+        if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
+                 || tgt.tagName === 'SELECT' || tgt.isContentEditable)) {
+            return;
+        }
+
         if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
 
         if (e.key === "Escape" && BuildSystem.active) { BuildSystem.stopBuilding(); return; }
 
         if ((e.key === 'b' || e.key === 'B') && !BuildSystem.active) {
-            const selectedItem = getSystem('inventory')?.getSelectedItem?.();
-            if (selectedItem && selectedItem.placeable) BuildSystem.startBuilding(selectedItem);
+            // Abre modo construção em estado VAZIO. Player aperta Q pra
+            // ciclar pelos itens disponíveis (inventário ou fallback
+            // sintético). No estado vazio, qualquer clique pega cerca
+            // existente — útil pra deletar/realocar sem item equipado.
+            BuildSystem.startBuilding(null);
         }
 
         if (BuildSystem.active) {
+            if (e.key === "q" || e.key === "Q") BuildSystem.cycleNextItem?.();
             if (e.key === "r" || e.key === "R") BuildSystem.rotate();
             if (e.key === "t" || e.key === "T") BuildSystem.placeObject();
             if (typeof BuildSystem.setSubPosition === 'function') {

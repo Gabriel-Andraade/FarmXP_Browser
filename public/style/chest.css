@@ -171,6 +171,14 @@
   margin-bottom: 5px;
 }
 
+.cht-slot .cht-item-icon img,
+.cht-inventory-item .cht-item-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  display: block;
+}
+
 .cht-slot .cht-item-name {
   font-size: var(--font-size-xs, 10px);
   text-align: center;

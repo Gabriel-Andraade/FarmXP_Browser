@@ -378,7 +378,28 @@ export default {
     49: 'Wool Fabric',
     93: 'Water Well',
     94: 'Battery',
-    100: 'Municipal Contract'
+    100: 'Municipal Contract',
+    103: 'Water Trough',
+    // Veterinary medicines (ids 200-207)
+    200: 'Fast Dewormer',
+    201: 'Common Dewormer',
+    202: 'Premium Antibiotic',
+    203: 'Homemade Syrup',
+    204: 'Vet Antacid',
+    205: 'Powdered Probiotic',
+    206: 'Strong Antipyretic',
+    207: 'Medicinal Tea',
+    // Animals sold by Rico / enclosure panel (ids 300-308)
+    300: 'Chick',
+    301: 'Lamb',
+    302: 'Piglet',
+    303: 'Calf',
+    304: 'Cow',
+    305: 'Sheep',
+    306: 'Turkey',
+    307: 'Rooster',
+    308: 'Bull',
+    309: 'Hen'
   },
 
   // Recipe names by ID - for dynamic translation
@@ -546,6 +567,7 @@ export default {
     calf: 'Calf',
     chick: 'Chick',
     chicken: 'Chicken',
+    pig: 'Pig',
     cow: 'Cow',
     pig: 'Pig',
     sheep: 'Sheep',
@@ -565,13 +587,17 @@ export default {
       guide: 'Guide',
       unguide: 'Stop Guiding',
       feed: 'Feed',
+      collect: 'Collect',
       close: 'Close'
     },
     stats: {
       hunger: 'Hunger',
       thirst: 'Thirst',
       morale: 'Morale',
-      mood: 'Mood'
+      mood: 'Mood',
+      hungerTip:  'Hunger — feed with grain to restore. Below 30 becomes hungry.',
+      thirstTip:  'Thirst — drinks from fountain/well. Falls faster on hot days.',
+      moraleTip:  'Morale — affects production and behavior. Rises with care and petting.',
     },
     mood: {
       sleeping: 'Sleeping',
@@ -592,11 +618,100 @@ export default {
       max_pets: 'Had enough petting for today.',
       fed: 'Ate happily!',
       no_food: 'No feed in inventory!',
+      failed_remove_food: 'Could not remove feed from inventory.',
+      wrong_food: "This food doesn't suit this species!",
       suspicious: 'Too suspicious to eat...',
-      no_inventory: 'Inventory unavailable.'
+      no_inventory: 'Inventory unavailable.',
+      severe_refused: "Doesn't want to follow you right now...",
+      guide_start: 'Will follow you!',
+      guide_stop: 'Stopped following you.',
+      medicine_accept: 'Took the medicine without complaining.',
+      medicine_mild_reject: 'Grimaced, but took it.',
+      medicine_reject: 'Hated the medicine!',
+      medicine_cured: 'Healed! ✨',
+      not_medicine: 'This item is not a medicine.',
+      // Collect button feedback (mirror of animal.production.*)
+      collected: 'Collected!',
+      not_ready: 'Nothing to collect.',
+      needs_tool: 'Need a tool.',
+      inventory_full: 'Inventory full.',
+      no_production_system: 'System unavailable.'
+    },
+    feedSub: {
+      title: 'Feed',
+      medicinesTitle: 'Medicines',
+      feed: 'Feed',
+      medicine: 'Medicines',
+      back: 'Back',
+      empty: 'No medicines in inventory.',
+      emptyFood: 'No animal food in inventory.',
+      wrongFoodHint: "This food doesn't suit this species",
     },
     type: {
       unknown: 'Unknown'
+    },
+    injury: {
+      label: 'Symptom',
+      none: 'Healthy',
+      severity: {
+        scratch: 'Scratch',
+        wound: 'Wound',
+        severe: 'Severe wound'
+      },
+      region: {
+        head: 'on the head',
+        leg: 'on the leg',
+        back: 'on the back',
+        chest: 'on the chest',
+        tail: 'on the tail'
+      },
+      format: '{severity} {region}'
+    },
+    disease: {
+      unknown: '?',
+      names: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Respiratory issue',
+        digestive:   'Digestive issue',
+        fever:       'Fever'
+      }
+    },
+    treatment: {
+      label: 'Treatment',
+      format: '{icon} {name} · {days}/{requiredDays} days · {dosesToday}/{requiredDoses} doses today'
+    },
+    // Production (milk/wool/egg) — collection feedback
+    production: {
+      collected: '{name} collected!',
+      notReady: 'Nothing to collect',
+      needsTool: 'Need a tool',
+      inventoryFull: 'Inventory full',
+      noInventory: 'No inventory',
+      sleeping: 'Sleeping 💤',
+    },
+    // Aging / lifecycle — floating toast when stage advances
+    aging: {
+      stage: {
+        young:   'Young',
+        adult:   'Adult',
+        mature:  'Mature',
+        elderly: 'Elderly',
+      },
+      toast: {
+        adult:   '✨ Grew up!',
+        mature:  '✨ Matured!',
+        elderly: '✨ Aged',
+      }
+    },
+    // Tomb / memorial — when an animal dies of old age, a tomb appears
+    // and clicking opens a card with their data.
+    tomb: {
+      title: 'In Memoriam',
+      lived: 'Lived {days} day(s)',
+      farewell: 'Say goodbye',
+      close: 'Close',
+      species: 'Species',
+      lastWords: 'Last words',
     }
   },
 
@@ -636,7 +751,9 @@ export default {
     storageTab: 'Storage',
     inventoryNotAvailable: '🎒 Inventory system not available',
     done: 'Done',
-    minimapToggle: 'Toggle minimap (M)'
+    minimapToggle: 'Toggle minimap (M)',
+    click: 'click',
+    rightClick: 'right click',
   },
 
   // HUD Action Buttons
@@ -758,6 +875,19 @@ export default {
     noEmptyBottle: 'No empty bottle in inventory',
   },
 
+  // Water Trough
+  waterTrough: {
+    needBucket: 'You need a water bucket',
+    filled: 'Trough filled',
+    alreadyFull: 'Trough already full',
+    panel: {
+      title: 'Water Trough',
+      close: 'Close',
+      addBtn: 'Add water',
+      levelName: 'Water level',
+    },
+  },
+
   // Crafting System
   crafting: {
     title: 'Crafting',
@@ -875,7 +1005,51 @@ export default {
     variant: 'variant: {name}',
     notAvailable: 'Build function not available.',
     notAvailableAfter: 'Build function not available after loading.',
-    buildError: 'Error entering build mode. Check the console.'
+    buildError: 'Error entering build mode. Check the console.',
+    // Q-cycle + pickup additions (enclosure system)
+    emptyHint: 'Build mode — Q switches item, click picks up fence',
+    pickedUp: 'Picked up fence (×{qty}) — click to place',
+    pickupEmpty: 'No fences left to place',
+    itemLabel: 'Item: {name}',
+    emptyItem: '(empty)',
+    fenceName: 'Fence',
+    fenceNamePickup: 'Fence (picked up)',
+    fenceNameFree: 'Fence (free mode)',
+    // Help panel labels (subpos is now no-op)
+    cycle: 'switch item',
+    placeClick: 'place piece',
+    pickClick: 'pick up fence',
+    tipTitle: '💡 Tip',
+    tipText: 'Align fences by the connectors (dots at the corners). When all turn green and the enclosure closes, a brown "+" appears at the center — click it to choose your animals.',
+  },
+
+  // Enclosure panel (click the "+" at the center of a closed enclosure)
+  enclosure: {
+    panel: {
+      title: 'Enclosure — choose animal',
+      close: 'Close',
+      speciesCount: 'Species: {count} / {max}',
+      balance: 'Balance: {value}',
+      empty: 'No animals available in catalog.',
+      addBtn: 'Add',
+      priceFormat: '$ {value}',
+      cardMeta: '{price} · {count} in enclosure',
+      speciesLimitTitle: 'Reached limit of {max} species',
+      noMoneyTitle: 'Not enough money',
+      toast: {
+        added: '{name} added!',
+        speciesLimit: 'Limit of {max} different species in this enclosure.',
+        noMoney: 'Not enough money ({price}).',
+        noEnclosure: 'Enclosure not found.',
+        noAssetName: 'Animal has no asset name.',
+        noAsset: 'Animal asset not loaded.',
+        noCells: 'Enclosure has no interior cells.',
+        noWorld: 'World unavailable.',
+        noCurrencySystem: 'Currency system unavailable.',
+        respawnFailed: 'Failed to spawn the animal.',
+        generic: 'Failed ({reason}).',
+      },
+    },
   },
 
   // Quests
@@ -941,6 +1115,61 @@ export default {
       batteryHint: 'Press E to pick up the battery',
       batteryPickedUp: 'Got the battery! Now I need to bring it to the pickup truck.',
     },
+    travelMap: {
+      title: '🗺️ City Map',
+      currentBadge: '📍 You are here',
+      close: 'Close',
+      closeHint: 'Press ESC to close',
+      legend: {
+        player: 'You (player)',
+        current: 'Current location',
+        destinations: 'Destinations',
+        gas: 'Gas station',
+        blocked: 'Blocked area',
+      },
+      locations: {
+        farm:           { name: 'Farm',           desc: 'Crops & Harvest' },
+        city:           { name: 'City Center',    desc: 'Downtown' },
+        slaughterhouse: { name: 'Slaughterhouse', desc: 'Processing' },
+        vet:            { name: 'Veterinarian',   desc: 'Animal care' },
+        blocked:        { name: 'Unknown Area',   desc: 'Unavailable' },
+      },
+      ariaTravel: 'Click to travel',
+      ariaBlocked: 'Blocked',
+      fuel: {
+        label: 'Fuel',
+      },
+      popup: {
+        ok: 'OK',
+        yes: 'Yes',
+        no: 'No',
+        arrived: 'You traveled to {name}!',
+        alreadyHere: 'You are already in {name}!',
+        locked: 'This area is blocked!\nYou cannot travel there yet.',
+        moving: 'Wait... You are still traveling!',
+        noPath: 'No path available to {name}.',
+        inDev: '{name} is still in development.',
+        insufficientFuel: 'Not enough fuel to reach {name}.\nCurrent tank: {current} · Required: {needed}.',
+      },
+      refuel: {
+        title: '⛽ Gas Station',
+        ask: 'Would you like to refuel?\nCurrent tank: {percent}',
+        tankFull: 'The tank is already full ({percent}). Continuing trip.',
+        sliderTitle: 'How much to refuel?',
+        sliderInstruction: 'Drag to choose the amount.',
+        currentTank: 'Current tank',
+        afterRefuel: 'After refueling',
+        amount: 'Amount',
+        liters: 'Liters',
+        cost: 'Total',
+        balance: 'Balance',
+        pricePerLiter: '{price}/L',
+        confirm: '✓ Refuel',
+        cancel: '✕ Cancel',
+        notEnoughMoney: 'Not enough money to refuel that amount.',
+        success: 'Refueled {amount}. Tank now: {percent}.',
+      },
+    },
     hud: {
       tooltip: 'Quests',
     },
@@ -954,6 +1183,103 @@ export default {
     talkHint: 'Press E to talk to {name}',
   },
 
+  // Veterinarian panel (Alice)
+  vet: {
+    title: 'Veterinarian',
+    subtitle: 'Alice — Animal Care',
+    close: 'Close',
+    closeHint: 'Press ESC to close',
+    alt: 'Alice, the veterinarian',
+    actionsLabel: "Veterinarian's actions",
+    actions: {
+      one:   'Talk',
+      two:   'Diagnose',
+      three: 'Hospitalize',
+      four:  'Medicine',
+    },
+    dialogue: {
+      hint: 'Click to continue',
+      aliceBack: 'Hello again! How can I help?',
+      intro: {
+        aliceFirstGreet: 'Hm? Hello, how can I help you?',
+        stellaFirst: "I'm new around here.",
+        benFirst: "I'm new... just moved here.",
+        grahamFirst: 'I just moved here.',
+        aliceIntro: "Welcome. My name is Alice, I'm the veterinarian who takes care of all the animals, from the little ones to the big ones on the farm. If you need anything, don't hesitate to call me.",
+        stellaName: "Pleasure! I'm Stella!",
+        benName: "I'm Ben, nice to meet you Alice.",
+        grahamName: 'My name is Graham, a pleasure.',
+        aliceOutro: "Nice to meet you all! If there's anything I can do for your animals, just bring them in!",
+      },
+      care: {
+        injuredMale:   "Poor {name}! They sometimes fight or hurt themselves playing, but leave it to me!",
+        injuredFemale: "Poor {name}! They sometimes fight or hurt themselves playing, but leave it to me!",
+        medicineMale:   "{name} is still under treatment — keep up with the medicine, alright?",
+        medicineFemale: "{name} is still under treatment — keep up with the medicine, alright?",
+      },
+    },
+    diagnose: {
+      title: 'Diagnosis',
+      back: '← Back',
+      empty: 'No animals showing symptoms right now.',
+      pendingHint: 'Animal showing symptoms. Start the exam?',
+      inProgress: 'Diagnosing — ~{minutes} min remaining',
+      ready: 'Result ready. Pick up?',
+      done: 'Diagnosed: {disease}',
+      startBtn: 'Start diagnosis',
+      retrieveBtn: 'Pick up (${value})',
+      feeLabel: 'Pick-up cost:',
+      feeFormat: '${value}',
+      noMoney: 'Insufficient balance to pick up (${value}).',
+    },
+    medicine: {
+      title: 'Medicine Shop',
+      back: '← Back',
+      empty: 'No medicines available. Diagnose an animal first.',
+      buyBtn: 'Buy (${value})',
+      priceFormat: '${value}',
+      cureInstant: 'Instant cure',
+      cureGradual: 'Cures in {days} days',
+      doses1: '1 dose/day',
+      doses2: '2 doses/day',
+      noMoney: 'Insufficient balance (${value}).',
+      inventoryFull: 'Inventory full.',
+      boughtToast: 'Bought: {name} (${value})',
+    },
+  },
+
+  // Hospital / Admission — flows from the vet's Hospitalize button
+  hospital: {
+    admit_title: 'Hospitalize animal',
+    recovery_title: 'Hospitalized animals',
+    no_severe_animals: 'No severely injured animals to hospitalize.',
+    no_recovery_animals: 'No animals hospitalized right now.',
+    admit_btn: 'Hospitalize',
+    cancel_btn: 'Cancel',
+    confirm_btn: 'Confirm',
+    back_btn: 'Back',
+    confirm_message:
+      'Hospitalize {animal} for {days} day(s)? Total cost: {cost} (charged on pick-up).',
+    admit_success: 'Animal hospitalized for {days} day(s). Estimated cost: {cost}.',
+    admit_failed: 'Could not hospitalize the animal.',
+    remaining_days: 'In recovery — {days} day(s) remaining',
+    treatment_progress: '{days}d',
+    ready_for_pickup: 'Ready for pick-up!',
+    pickup_btn: 'Pick up ({cost})',
+    pickup_success: '{name} is back on the farm! Paid: {cost}.',
+    pickup_failed: {
+      generic: 'Could not pick up the animal.',
+      no_money: 'Not enough money.',
+      not_ready: 'The animal is still recovering.',
+      not_found: 'Record not found.',
+      respawn_failed: 'Failed to bring the animal back.',
+      no_currency_system: 'Currency system unavailable.',
+    },
+    pill: {
+      ready: '{count} ready / {total} hospitalized',
+      recovering: '{total} in recovery',
+    },
+  },
   // NPC Bartolomeu dialogues
   npc: {
     bartolomeu: {

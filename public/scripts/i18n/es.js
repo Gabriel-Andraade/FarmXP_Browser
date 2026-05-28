@@ -378,7 +378,28 @@ export default {
     49: 'Tela de Lana',
     93: 'Pozo de Agua',
     94: 'Batería',
-    100: 'Contrato Municipal'
+    100: 'Contrato Municipal',
+    103: 'Abrevadero',
+    // Medicinas veterinarias (ids 200-207)
+    200: 'Desparasitante Rápido',
+    201: 'Desparasitante Común',
+    202: 'Antibiótico Premium',
+    203: 'Jarabe Casero',
+    204: 'Antiácido Veterinario',
+    205: 'Probiótico en Polvo',
+    206: 'Antipirético Fuerte',
+    207: 'Té Medicinal',
+    // Animales vendidos por Rico / panel del cercado (ids 300-308)
+    300: 'Pollito',
+    301: 'Cordero',
+    302: 'Lechón',
+    303: 'Ternero',
+    304: 'Vaca',
+    305: 'Oveja',
+    306: 'Pavo',
+    307: 'Gallo',
+    308: 'Toro',
+    309: 'Gallina'
   },
 
   // Recipe names by ID - para traducción dinámica
@@ -546,6 +567,7 @@ export default {
     calf: 'Ternero',
     chick: 'Pollito',
     chicken: 'Gallina',
+    pig: 'Cerdo',
     cow: 'Vaca',
     pig: 'Cerdo',
     sheep: 'Oveja',
@@ -565,13 +587,17 @@ export default {
       guide: 'Guiar',
       unguide: 'Dejar de Guiar',
       feed: 'Alimentar',
+      collect: 'Recolectar',
       close: 'Cerrar'
     },
     stats: {
       hunger: 'Hambre',
       thirst: 'Sed',
       morale: 'Moral',
-      mood: 'Humor'
+      mood: 'Humor',
+      hungerTip:  'Hambre — alimenta con grano para restaurar. Bajo 30 queda hambriento.',
+      thirstTip:  'Sed — bebe de fuente/pozo. Cae más rápido en días calurosos.',
+      moraleTip:  'Moral — afecta producción y conducta. Sube con cariño y cuidado.',
     },
     mood: {
       sleeping: 'Durmiendo',
@@ -584,19 +610,109 @@ export default {
       calm: 'Tranquilo'
     },
     feedback: {
-      pet_ok: 'Le encantaron las caricias!',
-      gained_trust: 'Ganaste su confianza!',
+      pet_ok: '¡Le encantaron las caricias!',
+      gained_trust: '¡Ganaste su confianza!',
       sleeping: 'Durmiendo... Zzz',
       suspicious_flee: 'Se alejó, desconfiado...',
-      angry: 'Muy enfadado para caricias!',
+      angry: '¡Muy enfadado para caricias!',
       max_pets: 'Ya tuvo suficientes caricias hoy.',
-      fed: 'Comió feliz!',
-      no_food: 'Sin alimento en el inventario!',
+      fed: '¡Comió feliz!',
+      no_food: '¡Sin alimento en el inventario!',
+      failed_remove_food: 'No se pudo retirar el alimento del inventario.',
+      wrong_food: '¡Este alimento no es apto para esta especie!',
       suspicious: 'Demasiado desconfiado para comer...',
-      no_inventory: 'Inventario no disponible.'
+      no_inventory: 'Inventario no disponible.',
+      severe_refused: 'No quiere seguirte ahora...',
+      guide_start: '¡Te va a seguir!',
+      guide_stop: 'Dejó de seguirte.',
+      medicine_accept: 'Tomó la medicina sin quejarse.',
+      medicine_mild_reject: 'Hizo mueca, pero la tomó.',
+      medicine_reject: '¡Detestó la medicina!',
+      medicine_cured: '¡Curado! ✨',
+      not_medicine: 'Este objeto no es una medicina.',
+      // Feedback del botón Recolectar (mirror de animal.production.*)
+      collected: '¡Recolectado!',
+      not_ready: 'Nada que recolectar.',
+      needs_tool: 'Necesita herramienta.',
+      inventory_full: 'Inventario lleno.',
+      no_production_system: 'Sistema no disponible.'
+    },
+    feedSub: {
+      title: 'Alimentar',
+      medicinesTitle: 'Medicinas',
+      feed: 'Comida',
+      medicine: 'Medicinas',
+      back: 'Atrás',
+      empty: 'No hay medicinas en el inventario.',
+      emptyFood: 'No hay comida de animal en el inventario.',
+      wrongFoodHint: 'Esta comida no es apta para esta especie',
     },
     type: {
       unknown: 'Desconocido'
+    },
+    injury: {
+      label: 'Síntoma',
+      none: 'Saludable',
+      severity: {
+        scratch: 'Rasguño',
+        wound: 'Herida',
+        severe: 'Herida grave'
+      },
+      // Ya con preposición correcta (concordancia de género/número en ES).
+      region: {
+        head: 'en la cabeza',
+        leg: 'en la pata',
+        back: 'en la espalda',
+        chest: 'en el pecho',
+        tail: 'en la cola'
+      },
+      format: '{severity} {region}'
+    },
+    disease: {
+      unknown: '?',
+      names: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Problema respiratorio',
+        digestive:   'Problema digestivo',
+        fever:       'Fiebre'
+      }
+    },
+    treatment: {
+      label: 'Tratamiento',
+      format: '{icon} {name} · {days}/{requiredDays} días · {dosesToday}/{requiredDoses} dosis hoy'
+    },
+    // Producción (leche/lana/huevo) — feedback de recolección
+    production: {
+      collected: '¡{name} recolectado!',
+      notReady: 'Nada que recolectar',
+      needsTool: 'Necesita herramienta',
+      inventoryFull: 'Inventario lleno',
+      noInventory: 'Sin inventario',
+      sleeping: 'Durmiendo 💤',
+    },
+    // Aging / ciclo de vida — toast flotante al avanzar de etapa
+    aging: {
+      stage: {
+        young:   'Cría',
+        adult:   'Adulto',
+        mature:  'Maduro',
+        elderly: 'Anciano',
+      },
+      toast: {
+        adult:   '✨ ¡Creció!',
+        mature:  '✨ ¡Maduró!',
+        elderly: '✨ Envejeció',
+      }
+    },
+    // Tumba / memorial — cuando animal muere de viejo, aparece tumba
+    // y el clic abre un panel con sus datos.
+    tomb: {
+      title: 'In Memoriam',
+      lived: 'Vivió {days} día(s)',
+      farewell: 'Despedirse',
+      close: 'Cerrar',
+      species: 'Especie',
+      lastWords: 'Últimas palabras',
     }
   },
 
@@ -636,7 +752,9 @@ export default {
     storageTab: 'Almacén',
     inventoryNotAvailable: '🎒 Sistema de inventario no disponible',
     done: 'Hecho',
-    minimapToggle: 'Alternar minimapa (M)'
+    minimapToggle: 'Alternar minimapa (M)',
+    click: 'clic',
+    rightClick: 'clic der',
   },
 
   // HUD Action Buttons
@@ -758,6 +876,19 @@ export default {
     noEmptyBottle: 'Ninguna botella vacía en el inventario',
   },
 
+  // Water Trough (Abrevadero)
+  waterTrough: {
+    needBucket: 'Necesitas un balde con agua',
+    filled: 'Abrevadero llenado',
+    alreadyFull: 'Abrevadero ya está lleno',
+    panel: {
+      title: 'Abrevadero',
+      close: 'Cerrar',
+      addBtn: 'Añadir agua',
+      levelName: 'Nivel de agua',
+    },
+  },
+
   // Crafting System
   crafting: {
     title: 'Fabricación',
@@ -875,7 +1006,51 @@ export default {
     variant: 'variante: {name}',
     notAvailable: 'Función de construcción no disponible.',
     notAvailableAfter: 'Función de construcción no disponible después de cargar.',
-    buildError: 'Error al entrar en modo de construcción. Consulta la consola.'
+    buildError: 'Error al entrar en modo de construcción. Consulta la consola.',
+    // Adiciones del Q-cycle + pickup (sistema de cercado)
+    emptyHint: 'Modo construcción — Q cambia ítem, clic recoge cerca',
+    pickedUp: 'Recogió cerca (×{qty}) — clic para colocar',
+    pickupEmpty: 'Sin cercas para colocar',
+    itemLabel: 'Ítem: {name}',
+    emptyItem: '(vacío)',
+    fenceName: 'Cerca',
+    fenceNamePickup: 'Cerca (recogida)',
+    fenceNameFree: 'Cerca (modo libre)',
+    // Etiquetas del panel de ayuda (subpos ahora es no-op)
+    cycle: 'cambiar ítem',
+    placeClick: 'colocar pieza',
+    pickClick: 'recoger cerca',
+    tipTitle: '💡 Consejo',
+    tipText: 'Alinea las cercas por los conectores (puntos en las esquinas). Cuando todos se vuelven verdes y el cercado se cierra, aparece un "+" marrón en el centro — haz clic para elegir los animales.',
+  },
+
+  // Panel del cercado (clic en "+" en el centro de un cercado cerrado)
+  enclosure: {
+    panel: {
+      title: 'Cercado — elegir animal',
+      close: 'Cerrar',
+      speciesCount: 'Especies: {count} / {max}',
+      balance: 'Saldo: {value}',
+      empty: 'No hay animales disponibles en el catálogo.',
+      addBtn: 'Agregar',
+      priceFormat: '$ {value}',
+      cardMeta: '{price} · {count} en el cercado',
+      speciesLimitTitle: 'Límite de {max} especies alcanzado',
+      noMoneyTitle: 'Saldo insuficiente',
+      toast: {
+        added: '¡{name} agregado!',
+        speciesLimit: 'Límite de {max} especies diferentes en este cercado.',
+        noMoney: 'Saldo insuficiente ({price}).',
+        noEnclosure: 'Cercado no encontrado.',
+        noAssetName: 'Animal sin nombre de asset.',
+        noAsset: 'Asset del animal no cargado.',
+        noCells: 'Cercado sin celdas interiores.',
+        noWorld: 'Mundo no disponible.',
+        noCurrencySystem: 'Sistema de moneda no disponible.',
+        respawnFailed: 'Falla al generar el animal.',
+        generic: 'Falla ({reason}).',
+      },
+    },
   },
 
   // Misiones
@@ -941,6 +1116,61 @@ export default {
       batteryHint: 'Pulsa E para recoger la batería',
       batteryPickedUp: '¡Tengo la batería! Ahora necesito llevarla a la camioneta.',
     },
+    travelMap: {
+      title: '🗺️ Mapa de la Ciudad',
+      currentBadge: '📍 Estás aquí',
+      close: 'Cerrar',
+      closeHint: 'Pulsa ESC para cerrar',
+      legend: {
+        player: 'Tú (jugador)',
+        current: 'Ubicación actual',
+        destinations: 'Destinos',
+        gas: 'Gasolinera',
+        blocked: 'Área bloqueada',
+      },
+      locations: {
+        farm:           { name: 'Granja',           desc: 'Cultivo y Cosecha' },
+        city:           { name: 'Barrio/Ciudad',    desc: 'Centro urbano' },
+        slaughterhouse: { name: 'Matadero',         desc: 'Procesamiento' },
+        vet:            { name: 'Veterinario',      desc: 'Cuidado animal' },
+        blocked:        { name: 'Área Desconocida', desc: 'No disponible' },
+      },
+      ariaTravel: 'Haz clic para viajar',
+      ariaBlocked: 'Bloqueado',
+      fuel: {
+        label: 'Combustible',
+      },
+      popup: {
+        ok: 'OK',
+        yes: 'Sí',
+        no: 'No',
+        arrived: '¡Has viajado a {name}!',
+        alreadyHere: '¡Ya estás en {name}!',
+        locked: '¡Esta área está bloqueada!\nNo puedes viajar allí todavía.',
+        moving: 'Espera... ¡Aún estás viajando!',
+        noPath: 'No hay camino disponible hacia {name}.',
+        inDev: '{name} aún está en desarrollo.',
+        insufficientFuel: 'Combustible insuficiente para llegar a {name}.\nTanque actual: {current} · Necesario: {needed}.',
+      },
+      refuel: {
+        title: '⛽ Gasolinera',
+        ask: '¿Te gustaría repostar?\nTanque actual: {percent}',
+        tankFull: 'El tanque ya está lleno ({percent}). Continuando viaje.',
+        sliderTitle: '¿Cuánto repostar?',
+        sliderInstruction: 'Arrastra para elegir la cantidad.',
+        currentTank: 'Tanque actual',
+        afterRefuel: 'Después de repostar',
+        amount: 'Cantidad',
+        liters: 'Litros',
+        cost: 'Total',
+        balance: 'Saldo',
+        pricePerLiter: '{price}/L',
+        confirm: '✓ Repostar',
+        cancel: '✕ Cancelar',
+        notEnoughMoney: 'Saldo insuficiente para repostar esa cantidad.',
+        success: 'Repostado {amount}. Tanque ahora: {percent}.',
+      },
+    },
     hud: {
       tooltip: 'Misiones',
     },
@@ -954,6 +1184,103 @@ export default {
     talkHint: 'Pulsa E para hablar con {name}',
   },
 
+  // Panel de la veterinaria (Alice)
+  vet: {
+    title: 'Veterinario',
+    subtitle: 'Alice — Cuidado Animal',
+    close: 'Cerrar',
+    closeHint: 'Pulsa ESC para cerrar',
+    alt: 'Alice, la veterinaria',
+    actionsLabel: 'Acciones del veterinario',
+    actions: {
+      one:   'Conversar',
+      two:   'Diagnosticar',
+      three: 'Hospitalizar',
+      four:  'Medicinas',
+    },
+    dialogue: {
+      hint: 'Haz clic para continuar',
+      aliceBack: '¡Hola de nuevo! ¿Cómo puedo ayudar?',
+      intro: {
+        aliceFirstGreet: '¿Hm? Hola, ¿cómo puedo ayudarte?',
+        stellaFirst: 'Soy nueva por aquí.',
+        benFirst: 'Soy nuevo... acabo de mudarme.',
+        grahamFirst: 'Acabo de mudarme aquí.',
+        aliceIntro: 'Bienvenido. Me llamo Alice, soy la veterinaria que cuida de todos los animalitos, desde los pequeños hasta los grandes de la granja. Si necesitas algo, no dudes en llamarme.',
+        stellaName: '¡Un placer! ¡Soy Stella!',
+        benName: 'Soy Ben, encantado de conocerte Alice.',
+        grahamName: 'Me llamo Graham, un placer.',
+        aliceOutro: '¡Un placer conocerlos! Si hay algo que pueda hacer por sus animalitos, ¡solo tráiganlos!',
+      },
+      care: {
+        injuredMale:   '¡Pobrecito el {name}! A veces pelean o se lastiman jugando, ¡pero déjamelo a mí!',
+        injuredFemale: '¡Pobrecita la {name}! A veces pelean o se lastiman jugando, ¡pero déjamela a mí!',
+        medicineMale:   'El {name} aún está en tratamiento — ¡no olvides los remedios!',
+        medicineFemale: 'La {name} aún está en tratamiento — ¡no olvides los remedios!',
+      },
+    },
+    diagnose: {
+      title: 'Diagnóstico',
+      back: '← Atrás',
+      empty: 'Ningún animal con síntomas por ahora.',
+      pendingHint: 'Animal con síntomas. ¿Iniciar examen?',
+      inProgress: 'Diagnosticando — ~{minutes} min restantes',
+      ready: 'Resultado listo. ¿Retirar?',
+      done: 'Diagnosticado: {disease}',
+      startBtn: 'Iniciar diagnóstico',
+      retrieveBtn: 'Retirar (${value})',
+      feeLabel: 'Costo de retiro:',
+      feeFormat: '${value}',
+      noMoney: 'Saldo insuficiente para retirar (${value}).',
+    },
+    medicine: {
+      title: 'Tienda de Medicinas',
+      back: '← Atrás',
+      empty: 'No hay medicinas disponibles. Diagnostica un animal primero.',
+      buyBtn: 'Comprar (${value})',
+      priceFormat: '${value}',
+      cureInstant: 'Cura inmediata',
+      cureGradual: 'Cura en {days} días',
+      doses1: '1 dosis/día',
+      doses2: '2 dosis/día',
+      noMoney: 'Saldo insuficiente (${value}).',
+      inventoryFull: 'Inventario lleno.',
+      boughtToast: 'Comprado: {name} (${value})',
+    },
+  },
+
+  // Hospital / Hospitalización — flujos del botón Hospitalizar del vet
+  hospital: {
+    admit_title: 'Hospitalizar animal',
+    recovery_title: 'Animales hospitalizados',
+    no_severe_animals: 'Ningún animal con herida grave para hospitalizar.',
+    no_recovery_animals: 'Ningún animal hospitalizado por ahora.',
+    admit_btn: 'Hospitalizar',
+    cancel_btn: 'Cancelar',
+    confirm_btn: 'Confirmar',
+    back_btn: 'Atrás',
+    confirm_message:
+      '¿Hospitalizar a {animal} por {days} día(s)? Costo total: {cost} (cobrado al retirar).',
+    admit_success: 'Animal hospitalizado por {days} día(s). Costo previsto: {cost}.',
+    admit_failed: 'No se pudo hospitalizar al animal.',
+    remaining_days: 'En recuperación — {days} día(s) restante(s)',
+    treatment_progress: '{days}d',
+    ready_for_pickup: '¡Listo para retirar!',
+    pickup_btn: 'Retirar ({cost})',
+    pickup_success: '¡{name} volvió a la granja! Pagado: {cost}.',
+    pickup_failed: {
+      generic: 'No se pudo retirar al animal.',
+      no_money: 'Dinero insuficiente.',
+      not_ready: 'El animal aún está en recuperación.',
+      not_found: 'Registro no encontrado.',
+      respawn_failed: 'Falló traer al animal de vuelta.',
+      no_currency_system: 'Sistema de moneda no disponible.',
+    },
+    pill: {
+      ready: '{count} listo(s) / {total} hospitalizado(s)',
+      recovering: '{total} en recuperación',
+    },
+  },
   // NPC Bartolomeu dialogues
   npc: {
     bartolomeu: {

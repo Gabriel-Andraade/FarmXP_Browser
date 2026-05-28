@@ -204,7 +204,7 @@ export class ItemSystem {
             const targetType = (obj.type || '').toLowerCase();
 
             // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
-            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
+            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence', 'watertroughx', 'watertroughy'];
             const isUtility = utilityTypes.includes(targetType);
 
             const isDamagingTool =
@@ -440,6 +440,10 @@ export class ItemSystem {
             if (!id || this.interactiveObjects.has(id)) return;
 
             const type = (obj.type || obj.originalType || '').toLowerCase();
+            // Animais nunca entram no registro de "objetos quebráveis". Eles
+            // têm seu próprio fluxo (animalUI / animalAction) e qualquer
+            // chamada de applyDamage neles os mataria silenciosamente.
+            if (type === 'animal') return;
             const hp = obj.hp || obj.health || this.getHpFromAssetManager(type);
 
             this.interactiveObjects.set(id, {

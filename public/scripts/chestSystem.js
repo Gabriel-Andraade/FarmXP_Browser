@@ -5,6 +5,7 @@ import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { TILE_SIZE } from './worldConstants.js';
 import { registerSystem, getObject } from './gameState.js';
 import { t } from './i18n/i18n.js';
+import { setItemIcon } from './itemUtils.js';
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -356,7 +357,7 @@ export const chestSystem = {
                     slot.dataset.category = category;
                     const iconDiv = document.createElement('div');
                     iconDiv.className = 'cht-item-icon';
-                    iconDiv.textContent = item.icon || '📦';
+                    setItemIcon(iconDiv, item.icon || '📦', item.name);
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'cht-item-name';
                     nameDiv.textContent = item.name;
@@ -412,7 +413,7 @@ export const chestSystem = {
                 itemEl.dataset.category = category;
                 const iconDiv = document.createElement('div');
                 iconDiv.className = 'cht-item-icon';
-                iconDiv.textContent = item.icon || '🎒';
+                setItemIcon(iconDiv, item.icon || '🎒', item.name);
                 const nameDiv = document.createElement('div');
                 nameDiv.className = 'cht-item-name';
                 nameDiv.textContent = item.name;

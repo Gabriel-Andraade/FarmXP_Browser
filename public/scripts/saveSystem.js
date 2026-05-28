@@ -764,13 +764,29 @@ class SaveSystem {
         // toda a farm (árvores/animais/construções).
         const inCity = mapMgr?.getCurrentMapId?.() === 'city';
         const savedFarm = inCity && mapMgr?.getSavedFarmState ? mapMgr.getSavedFarmState() : null;
+        // Hospital vive fora do snapshotFarmState — se salvar na city sem
+        // mergear aqui, animais internados somem ao carregar o save.
+        // Quando o sistema NÃO está disponível, preservamos o snapshot
+        // anterior (de savedFarm) em vez de sobrescrever com { entries: [] }
+        // — caso contrário, salvar na city sem o sistema carregado zerava
+        // animais internados que estavam no save anterior.
+        const hospitalSys = getSystem('hospital');
+        const hospitalState = typeof hospitalSys?.serializeState === 'function'
+            ? hospitalSys.serializeState()
+            : (savedFarm?.hospital ?? null);
+        const worldState = savedFarm
+            ? {
+                ...savedFarm,
+                ...(hospitalState !== null ? { hospital: hospitalState } : {})
+              }
+            : this._getWorldData();
         return {
             _dataVersion: SAVE_DATA_VERSION,
             player: this._getPlayerData(),
             inventory: this._getInventoryData(),
             currency: this._getCurrencyData(),
             weather: this._getWeatherData(),
-            world: savedFarm ?? this._getWorldData(),
+            world: worldState,
             chests: this._getChestsData(),
             achievements: this._getAchievementsData(),
             gameFlags: this._getGameFlags(),
@@ -790,9 +806,11 @@ class SaveSystem {
         const isabela = getSystem('npcIsabela');
         const molly = getSystem('npcMolly');
         const tutorials = getSystem('tutorialQuests');
+        const fuel = getSystem('fuel');
         return {
             pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
             battery: questSys ? questSys.getBatteryState() : null,
+            fuel_percent: typeof fuel?.getFuel === 'function' ? fuel.getFuel() : null,
             bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
             milly_quest: milly ? milly.getQuestState() : 'idle',
             bru_quest: bru ? bru.getQuestState() : { dialogue: 'idle' },
@@ -1164,6 +1182,21 @@ class SaveSystem {
             }
             if (flags.battery) {
                 questSys.setBatteryState(flags.battery);
+            }
+        }
+        const fuel = getSystem('fuel');
+        if (typeof fuel?.setFuel === 'function') {
+            // Distingue 3 casos pra não recriar o bug de "tanque cheio
+            // fabricado" quando o save explicitamente serializou null:
+            //   - campo ausente  → save legado, aplica default 100
+            //   - número         → usa o valor serializado
+            //   - presente=null  → reset do próprio sistema (DEFAULT_FUEL)
+            if (typeof flags.fuel_percent === 'number') {
+                fuel.setFuel(flags.fuel_percent);
+            } else if (!Object.prototype.hasOwnProperty.call(flags, 'fuel_percent')) {
+                fuel.setFuel(100);
+            } else {
+                fuel.reset?.();
             }
         }
         const bartolomeu = getSystem('npcBartolomeu');

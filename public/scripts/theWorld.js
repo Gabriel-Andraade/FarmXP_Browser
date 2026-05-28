@@ -252,7 +252,7 @@ export function placeWell(a, b, c) {
  * @param {HTMLImageElement} img - Sprite image for the animal
  * @param {number} x - Initial X position in world coordinates
  * @param {number} y - Initial Y position in world coordinates
- * @param {Object} opts - Optional parameters (suspicious, hurt, stats, initialMood, etc.)
+ * @param {Object} opts - Optional parameters (suspicious, injury, stats, initialMood, etc.)
  * @returns {AnimalEntity} The created animal entity
  */
 export function addAnimal(assetName, img, x, y, opts = {}) {
@@ -280,6 +280,16 @@ export function addAnimal(assetName, img, x, y, opts = {}) {
         hb.height,
         animal
       );
+      if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
+        const m = 0.1;
+        collisionSystem.setInteractionHitboxBounds(
+          animal.id,
+          animal.x + animal.width * m,
+          animal.y + animal.height * m,
+          animal.width * (1 - 2 * m),
+          animal.height * (1 - 2 * m)
+        );
+      }
     }
   } catch (e) {
     handleWarn("Failed to add hitbox for animal", "theWorld:addAnimal", { animalId: animal.id, assetName, err: e });
@@ -310,6 +320,16 @@ export function updateAnimals() {
           const hb = animal.getHitbox();
           if (typeof collisionSystem.updateHitboxPosition === "function") {
             collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
+          }
+          if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
+            const m = 0.1;
+            collisionSystem.setInteractionHitboxBounds(
+              animal.id,
+              animal.x + animal.width * m,
+              animal.y + animal.height * m,
+              animal.width * (1 - 2 * m),
+              animal.height * (1 - 2 * m)
+            );
           }
         }
       } catch (err) {
@@ -562,6 +582,30 @@ export function getSortedWorldObjects(player) {
         width: 0, height: 0,
         draw: (ctx) => mgr.drawPortal(ctx)
       });
+    }
+  }
+
+  // Tumbas de animais — entram no Y-sort pra ficarem corretas atrás de
+  // árvores/casas (sprite layering). Sem isso, ficavam sempre por cima.
+  {
+    const tombSys = getSystem('animalTomb');
+    if (tombSys && typeof tombSys.getTombs === 'function') {
+      for (const tomb of tombSys.getTombs()) {
+        allObjects.push({
+          id: tomb.id,
+          type: 'TOMB',
+          originalType: 'tomb',
+          x: tomb.x || 0,
+          y: tomb.y || 0,
+          width: tomb.width || 48,
+          height: tomb.height || 48,
+          draw: (ctx) => {
+            if (isInViewportWithBuffer(tomb.x, tomb.y, tomb.width, tomb.height)) {
+              if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, tomb);
+            }
+          }
+        });
+      }
     }
   }
 
@@ -832,6 +876,33 @@ function drawBuilding(ctx, building) {
       ctx.fillStyle = "#4a6b8a";
       ctx.fillRect(drawX, drawY, drawW, drawH);
       ctx.strokeStyle = "#2d4052";
+      ctx.strokeRect(drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+    return;
+  }
+
+  if (building.originalType === "watertrough") {
+    const isWaterY = building.variant === 'waterTroughY';
+    const waterAssetKey = building.waterLevel > 0 
+      ? (isWaterY ? 'waterTroughY' : 'waterTroughX')
+      : (isWaterY ? 'waterTroughYEmpty' : 'waterTroughXEmpty');
+    const waterTroughImg = assets.furniture?.waterTroughs?.[waterAssetKey]?.img;
+    
+    if (waterTroughImg && waterTroughImg.complete && waterTroughImg.naturalWidth > 0) {
+      try {
+        ctx.drawImage(waterTroughImg, drawX, drawY, drawW, drawH);
+      } catch (err) {
+        handleWarn("Failed to draw water trough image", "theWorld:drawBuilding:waterTroughImage", { buildingId: building.id, err });
+        ctx.fillStyle = "#8B7355";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+        ctx.strokeStyle = "#5D4E37";
+        ctx.strokeRect(drawX, drawY, drawW, drawH);
+      }
+    } else {
+      ctx.fillStyle = building.waterLevel > 0 ? "#87CEEB" : "#8B7355";
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+      ctx.strokeStyle = building.waterLevel > 0 ? "#4682B4" : "#5D4E37";
       ctx.strokeRect(drawX, drawY, drawW, drawH);
     }
     ctx.restore();
@@ -1309,11 +1380,13 @@ window.addWorldObject = function(objectData) {
 
   if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
   else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
+  else if (collisionType === "WATERTROUGHX" || collisionType.toLowerCase() === "watertroughx") collisionType = "WATERTROUGHX";
+  else if (collisionType === "WATERTROUGHY" || collisionType.toLowerCase() === "watertroughy") collisionType = "WATERTROUGHY";
   else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
   else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
   else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
   else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
-  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
 
   const building = {
     id: objectId,
@@ -1458,7 +1531,26 @@ export function exportWorldState() {
         id: a.id, x: a.x, y: a.y,
         assetName: a.assetName
       };
-    }) : []
+    }) : [],
+    // Hospital state — animais internados na veterinária. Lookup via
+    // getSystem para evitar dependência circular com hospitalSystem.js.
+    hospital: (() => {
+      const hosp = getSystem('hospital');
+      return hosp?.serializeState ? hosp.serializeState() : { entries: [] };
+    })(),
+    // Espécies por cercado — só o contador, cercados em si são
+    // recalculados a partir das cercas no load. Sem isso, reload zera
+    // "5 vacas no cercado X" e quebra o limite de 3 espécies.
+    enclosureSpecies: (() => {
+      const enc = getSystem('enclosure');
+      return enc?.serializeState ? enc.serializeState() : {};
+    })(),
+    // Tumbas de animais. Persistem entre saves — memorial não some por
+    // recarregar. Cada tomb tem nome, idade, últimas palavras, posição.
+    animalTombs: (() => {
+      const tomb = getSystem('animalTomb');
+      return tomb?.serializeState ? tomb.serializeState() : [];
+    })()
   };
 }
 
@@ -1535,12 +1627,34 @@ export function importWorldState(data) {
       }
     }
 
+    // Restaura estado do hospital (animais internados). Lookup tardio para
+    // evitar dependência circular com hospitalSystem.js.
+    const hosp = getSystem('hospital');
+    if (hosp?.restoreState) {
+      hosp.restoreState(payload.hospital ?? { entries: [] });
+    }
+
     if (payload.seed && typeof worldGenerator.setSeed === "function") {
       worldGenerator.setSeed(payload.seed);
     }
 
     registerWorldObjects();
     markWorldChanged();
+
+    // Restaura espécies por cercado APÓS registerWorldObjects (que recolora
+    // as hitboxes das cercas). O `restoreState` chama `detect()` internamente
+    // — então o enclosureSystem já encontra todas as cercas registradas e
+    // reidrata o `species` dos enclosures recém-computados.
+    const enc = getSystem('enclosure');
+    if (enc?.restoreState) {
+      enc.restoreState(payload.enclosureSpecies ?? {});
+    }
+
+    // Restaura tumbas (memorial persiste entre saves).
+    const tomb = getSystem('animalTomb');
+    if (tomb?.restoreState) {
+      tomb.restoreState(payload.animalTombs ?? []);
+    }
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
   }

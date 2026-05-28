@@ -1,6 +1,6 @@
 import { logger } from "./logger.js";
 import { recipes } from "./recipes.js";
-import { getItem } from "./itemUtils.js";
+import { getItem, setItemIcon } from "./itemUtils.js";
 import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
 import { registerSystem, getSystem } from "./gameState.js";
@@ -420,7 +420,7 @@ export class CraftingSystem {
         reqEl.className = `crf-requirement ${hasEnough ? "crf-has-enough" : "crf-not-enough"}`;
         const iconSpan = document.createElement("span");
         iconSpan.className = "crf-req-icon";
-        iconSpan.textContent = data?.icon || "📦";
+        setItemIcon(iconSpan, data?.icon || "📦", data?.name || "");
         const qtySpan = document.createElement("span");
         qtySpan.className = "crf-req-qty";
         qtySpan.textContent = `${req.qty}x`;

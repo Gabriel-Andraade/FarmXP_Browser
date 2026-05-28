@@ -34,7 +34,7 @@ import { initMinimap, updateMinimap } from "./minimap/minimapIntegration.js";
 // =============================================================================
 
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
-let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem;
+let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem, waterTroughSystem;
 let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
@@ -266,6 +266,33 @@ async function initializeCriticalSystems() {
     await import("./animal/UiPanel.js");
     logger.debug("animal UiPanel carregado");
 
+    await import("./animal/injurySystem.js");
+    logger.debug("animal injurySystem carregado");
+
+    await import("./animal/diseaseSystem.js");
+    logger.debug("animal diseaseSystem carregado");
+
+    await import("./animal/hospitalSystem.js");
+    logger.debug("animal hospitalSystem carregado");
+
+    await import("./animal/enclosureSystem.js");
+    logger.debug("animal enclosureSystem carregado");
+
+    await import("./animal/productionSystem.js");
+    logger.debug("animal productionSystem carregado");
+
+    await import("./animal/agingSystem.js");
+    logger.debug("animal agingSystem carregado");
+
+    await import("./animal/tombSystem.js");
+    logger.debug("animal tombSystem carregado");
+
+    // Cocho de água — eager load pra que hover+marker funcione antes
+    // do player apertar E (lazy load só serve pro fluxo E).
+    const wtModule = await import("./waterTroughSystem.js");
+    waterTroughSystem = wtModule.waterTroughSystem;
+    logger.debug("waterTroughSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -362,6 +389,16 @@ function setupInteractionSystem() {
       }
     }
 
+    if (!waterTroughSystem && originalType === "watertrough") {
+      try {
+        const module = await import("./waterTroughSystem.js");
+        waterTroughSystem = module.waterTroughSystem;
+      } catch (error) {
+        handleWarn("erro ao carregar waterTroughSystem", "main:playerInteract:watertrough", error);
+        return;
+      }
+    }
+
     switch (originalType) {
       case "chest":
         chestSystem?.openChest?.(objectId);
@@ -371,6 +408,9 @@ function setupInteractionSystem() {
         break;
       case "well":
         wellSystem?.openWellMenu?.();
+        break;
+      case "watertrough":
+        waterTroughSystem?.openWaterTroughMenu?.(objectId);
         break;
       case "npc": {
         const npcSys = getSystem('npc');
@@ -387,9 +427,9 @@ function setupInteractionSystem() {
     }
   });
 
-  // ─── Animal interaction handler (pet / feed / guide) ───
+  // ─── Animal interaction handler (pet / feed / guide / applyMedicine) ───
   document.addEventListener("animalAction", (e) => {
-    const { action, animal } = e.detail || {};
+    const { action, animal, itemId } = e.detail || {};
     if (!animal || typeof animal.pet !== 'function') return;
 
     let result;
@@ -398,11 +438,71 @@ function setupInteractionSystem() {
         result = animal.pet();
         break;
       case 'feed':
-        result = animal.feed();
+        // `itemId` opcional — se omitido, animal.feed() escolhe o primeiro
+        // animal_food do inventário (legacy). Se presente, usa esse item
+        // específico (do sub-menu "Ração") com check de compatibilidade.
+        result = animal.feed(itemId);
         break;
       case 'guide':
         result = animal.guide();
         break;
+      case 'collect': {
+        // Coleta de produção (milk/wool/egg) via botão "Coletar" do UiPanel.
+        // Delega TODO check pro productionSystem.collect — ele valida
+        // sleeping/ferramenta/inventário e seta o FX flutuante no animal.
+        // Aqui só converto o reason em message i18n pro feedback bubble.
+        const prodSys = getSystem('animalProduction');
+        if (!prodSys?.collect) {
+          result = { success: false, message: 'no_production_system' };
+          break;
+        }
+        const playerSys = getSystem('player');
+        const r = prodSys.collect(animal, { equippedItem: playerSys?.equippedItem });
+        if (r?.ok) {
+          result = { success: true, message: 'collected' };
+        } else {
+          // Mapeia reason → mensagem do feedback bubble
+          const reasonMap = {
+            sleeping:        'sleeping',
+            needs_tool:      'needs_tool',
+            inventory_full:  'inventory_full',
+            not_ready:       'not_ready',
+            no_inventory:    'no_inventory',
+          };
+          result = { success: false, message: reasonMap[r?.reason] || 'not_ready' };
+        }
+        break;
+      }
+      case 'applyMedicine': {
+        // Decrementa o item do inventário ANTES de aplicar — se falhar a
+        // remoção, não aplica (animal não consome o que não foi pago).
+        const inv = getSystem('inventory');
+        if (!inv || typeof inv.removeItem !== 'function') {
+          result = { success: false, message: 'no_inventory' };
+          break;
+        }
+        const removed = inv.removeItem(itemId, 1);
+        if (!removed) {
+          result = { success: false, message: 'no_food' }; // reusa msg de "sem item no inventário"
+          break;
+        }
+        if (typeof animal.applyMedicine !== 'function') {
+          inv.addItem?.(itemId, 1);
+          result = { success: false, message: 'invalid_medicine_target' };
+          break;
+        }
+        try {
+          result = animal.applyMedicine(itemId) ?? { success: false, message: 'medicine_failed' };
+        } catch (error) {
+          inv.addItem?.(itemId, 1);
+          throw error;
+        }
+        // Se o animal não pôde receber (suspeito/dormindo), devolve o item.
+        if (!result.success) {
+          inv.addItem?.(itemId, 1);
+        }
+        break;
+      }
       default:
         return;
     }
@@ -425,21 +525,27 @@ function setupInteractionSystem() {
 function spawnGameAnimals() {
   if (animalsInitialized) return;
 
-  const animalType = "Bull";
+  const animalTypes = ["Bull", "Calf", "Chick", "Chicken", "Cow", "Lamb", "Piglet", "Rooster", "Sheep", "Turkey"];
+  const baseX = 1800;
+  const baseY = 1850;
+  const spacing = 110;
+  const cols = 4;
 
-  if (assets.animals && assets.animals[animalType]) {
-    logger.debug(`Spawnando Animais (${animalType})...`);
-
-    for (let i = 0; i < 5; i++) {
-      const x = 1800 + Math.random() * 400;
-      const y = 1800 + Math.random() * 400;
+  for (let i = 0; i < animalTypes.length; i++) {
+    const animalType = animalTypes[i];
+    if (assets.animals && assets.animals[animalType]) {
+      logger.debug(`Spawnando Animal (${animalType})...`);
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const x = baseX + col * spacing;
+      const y = baseY + row * spacing;
       addAnimal(animalType, assets.animals[animalType], x, y);
+    } else {
+      handleWarn(`não foi possível spawnar animal: tipo '${animalType}' não encontrado`, "main:spawnGameAnimals");
     }
-
-    animalsInitialized = true;
-  } else {
-    handleWarn(`não foi possível spawnar animais: tipo '${animalType}' não encontrado`, "main:spawnGameAnimals");
   }
+
+  animalsInitialized = true;
 }
 
 // =============================================================================
@@ -629,6 +735,73 @@ async function exposeGlobals() {
           },
         });
 
+        // Debug global: window.addItem(id, qty=1) — adiciona item ao
+        // inventário direto do devtools. Categoria é resolvida pelo
+        // type do item (mapeamento centralizado).
+        if (typeof window !== 'undefined') {
+            window.addItem = async function (id, qty = 1) {
+                if (id == null) { logger.warn('addItem: id é obrigatório'); return false; }
+                if (!inventorySystem) await initializeInventorySystem();
+                const { getItem } = await import('./itemUtils.js');
+                const item = getItem(Number(id));
+                if (!item) { logger.error(`addItem: item ${id} não existe`); return false; }
+                const ok = inventorySystem.addItem(item.id, Number(qty) || 1);
+                logger.info(`[addItem] ${ok ? '✓' : '✗'} ${item.name} x${qty} (id=${item.id})`);
+                return ok;
+            };
+
+            // ─── Debug do sistema de bebida ─────────────────────────────
+            // diagnoseDrink(): mostra ESTADO + MOTIVO de cada animal e cada
+            // cocho. Útil quando "animais não estão bebendo e não sei por quê".
+            window.diagnoseDrink = function () {
+                const wtSys = getSystem('waterTrough');
+                const world = getObject('world');
+                if (!wtSys || !world) {
+                    console.warn('Sistema não pronto: waterTrough ou world ausente.');
+                    return;
+                }
+                const troughs = wtSys.getWaterTroughs();
+                const animals = world.animals || [];
+                console.group('🥤 Diagnóstico de Bebida');
+                console.log(`Cochos: ${troughs.length}  Animais: ${animals.length}`);
+                troughs.forEach((t, i) => {
+                    console.log(`  Cocho ${i}: id=${t.id} variant=${t.variant} water=${t.waterLevel ?? 0}/100 pos=(${Math.round(t.x)},${Math.round(t.y)})`);
+                });
+                animals.forEach(a => {
+                    let reason;
+                    if (a._mood === 'sleeping') reason = 'dormindo';
+                    else if ((a.stats.thirst || 0) >= a._drinkThreshold) reason = `sem sede (${Math.round(a.stats.thirst)} >= threshold ${a._drinkThreshold})`;
+                    else if (a._claimedTrough) reason = `já reservou slot ${a._claimedSlot} do cocho ${a._claimedTrough}`;
+                    else if (performance.now() < a._drinkCooldownUntil) reason = `cooldown ${Math.ceil((a._drinkCooldownUntil - performance.now())/1000)}s`;
+                    else {
+                        const found = wtSys.findFreeSlotFor(a);
+                        reason = found
+                          ? `PRONTO — iria pro slot ${found.slotIdx} do cocho ${found.trough.id}`
+                          : 'NENHUM cocho com água + slot livre no cercado';
+                    }
+                    console.log(`  ${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} → ${reason}`);
+                });
+                console.groupEnd();
+            };
+
+            // forceDrink(): seta thirst baixo + zera cooldown — anima testa
+            // o fluxo agora em vez de esperar 5min de decay natural.
+            window.forceDrink = function () {
+                const world = getObject('world');
+                const animals = world?.animals || [];
+                animals.forEach(a => { a.stats.thirst = 3; a._drinkCooldownUntil = 0; });
+                console.log(`✓ ${animals.length} animais com thirst=3, cooldown zerado`);
+            };
+
+            // fillAllTroughs(): enche todos os cochos sem precisar do balde.
+            window.fillAllTroughs = function () {
+                const wtSys = getSystem('waterTrough');
+                const troughs = wtSys?.getWaterTroughs?.() || [];
+                troughs.forEach(t => { t.waterLevel = 100; });
+                console.log(`✓ ${troughs.length} cochos enchidos até 100`);
+            };
+        }
+
         logger.debug("Sistemas registrados no gameState");
     } catch (error) {
         logger.warn("Erro ao registrar sistemas:", error);
@@ -739,6 +912,30 @@ async function startFullGameLoad() {
       }
     } catch (e) {
       handleWarn("falha ao carregar sistemas opcionais (house/weather)", "main:startFullGameLoad:optionalSystems", e);
+    }
+
+    // Sistema de combustível da picape (precisa estar registrado antes do
+    // travelMap, do save e da leitura/restauração de gameFlags).
+    try {
+      await import('./fuelSystem.js');
+    } catch (e) {
+      handleWarn("falha ao carregar fuelSystem", "main:startFullGameLoad:fuelSystem", e);
+    }
+
+    // Travel Map UI — carrega antes do mapManager para que getSystem('travelMap')
+    // já esteja registrado quando triggerPortalTransition for chamado.
+    try {
+      await import('./travelMap.js');
+    } catch (e) {
+      handleWarn("falha ao carregar travelMap", "main:startFullGameLoad:travelMap", e);
+    }
+
+    // Painel da Veterinária (Alice). É aberto pelo travelMap quando o
+    // jogador chega no destino "vet".
+    try {
+      await import('./vetSystem.js');
+    } catch (e) {
+      handleWarn("falha ao carregar vetSystem", "main:startFullGameLoad:vetSystem", e);
     }
 
     // Map Manager (farm ↔ city transitions)
@@ -1344,12 +1541,34 @@ function gameLoop(timestamp) {
         handleWarn("falha ao desenhar objeto individual", "main:gameLoop:drawObject", { id: o?.id, err });
       }
     }
+
+    // Tumbas agora são renderizadas via getSortedWorldObjects (Y-sort)
+    // junto com árvores/animais/casas — sprite layering correto.
+    // Sem chamada standalone aqui.
   } catch (err) {
     handleWarn("falha ao desenhar objetos do mundo", "main:gameLoop:drawObjects", err);
   }
 
   try {
     if (BuildSystem && drawBuildPreview) drawBuildPreview(ctx);
+
+    // Endpoints das cercas (vermelho/azul/verde) + "+" no centro dos
+    // cercados detectados. Feedback visual de conexão e ação durante o
+    // modo construção. Fora dele, invisíveis pra não poluir o jogo
+    // normal. Não depende de DEBUG_HITBOXES.
+    if (BuildSystem?.active && camera) {
+      const encSys = getSystem('enclosure');
+      encSys?.drawEndpoints?.(ctx, camera);
+      encSys?.drawCenterMarkers?.(ctx, camera);
+    }
+
+    // Marker "+" do cocho no hover — independente do build mode.
+    // Drink slots: overlay debug ativado com `?drinkSlots=1` na URL.
+    if (camera) {
+      const wtSys = getSystem('waterTrough');
+      wtSys?.drawHoverMarker?.(ctx, camera);
+      wtSys?.drawDrinkSlots?.(ctx, camera);
+    }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);
   }

@@ -130,6 +130,7 @@ export function checkGameFlag(flag) {
  * Initialize debug flags from URL parameters
  * ?debug=1 - Enable debug mode
  * ?hitboxes=1 - Show hitboxes
+ * ?drinkSlots=1 - Show water trough drinking slots overlay
  */
 export function initDebugFlagsFromUrl() {
   if (typeof window === "undefined") return;
@@ -140,6 +141,11 @@ export function initDebugFlagsFromUrl() {
 
   // ?hitboxes=1 liga hitboxes
   if (q.has("hitboxes")) setDebugFlag("hitboxes", q.get("hitboxes") !== "0");
+
+  // ?drinkSlots=1 liga overlay das hitboxes de "posição pra beber" do cocho.
+  // Cor azul translúcida sobre os 3 compartimentos do cocho. Live-edit
+  // suportado via __debug.waterTroughDrinkSlots no devtools.
+  if (q.has("drinkSlots")) setDebugFlag("drinkSlots", q.get("drinkSlots") !== "0");
 }
 
 /**
@@ -238,6 +244,13 @@ export function installLegacyGlobals() {
   Object.defineProperty(window, 'DEBUG_HITBOXES', {
     get() { return getDebugFlag('hitboxes'); },
     set(value) { setDebugFlag('hitboxes', value); },
+    configurable: true,
+  });
+
+  // Toggle do overlay azul dos drink slots — devtools: DEBUG_DRINK_SLOTS = true
+  Object.defineProperty(window, 'DEBUG_DRINK_SLOTS', {
+    get() { return getDebugFlag('drinkSlots'); },
+    set(value) { setDebugFlag('drinkSlots', value); },
     configurable: true,
   });
 

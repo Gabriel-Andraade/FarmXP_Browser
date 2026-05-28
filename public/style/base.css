@@ -22,6 +22,31 @@ body {
     background: linear-gradient(135deg, #2f3e1e 0%, #1a1a0e 100%);
     color: #f5f0e1;
     overflow: hidden;
+    /* Antialiasing global pra fontes regulares (Courier no painel de
+       weather, Georgia em UI). Sem isso, o browser deixa o texto com
+       borda fuzzy/serrilhada em DPI normal. */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Pixel fonts (VT323, Press Start 2P) são bitmap-style. O antialiasing
+   herdado do body GERA o serrilhado fuzzy que o jogador reclama: o
+   browser tenta "suavizar" pixels que deveriam ficar duros. Aqui
+   forçamos rendering geométrico e desligamos o smoothing nesses
+   contextos pra elas voltarem a aparecer crisp. */
+.aui-menu, .aui-menu *,
+.aui-feedback,
+.dlg-portrait-name,
+.dlg-speaker,
+.dlg-text, .dlg-text *,
+.dlg-next-hint,
+.dlg-choice-btn,
+.player-feedback, .player-feedback * {
+    -webkit-font-smoothing: none;
+    -moz-osx-font-smoothing: auto;
+    font-smooth: never;
+    text-rendering: geometricPrecision;
 }
 
 .theGame {

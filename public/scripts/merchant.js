@@ -9,7 +9,7 @@ import { logger } from './logger.js';
 import { currencyManager } from "./currencyManager.js";
 import { WeatherSystem } from "./weather.js";
 import { mapTypeToCategory } from "./categoryMapper.js";
-import { getItem, getSellPrice } from "./itemUtils.js";
+import { getItem, getSellPrice, setItemIcon } from "./itemUtils.js";
 import { t } from './i18n/i18n.js';
 import { translateDOM } from './settingsUI.js';
 import { registerSystem, getSystem } from "./gameState.js";
@@ -745,13 +745,17 @@ class MerchantSystem {
             const slot = document.createElement('div');
             slot.className = `mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}`;
             slot.dataset.itemId = item.id;
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mch-hexagon-icon';
+            const iconSrc = item.icon || getItem(item.id)?.icon || '';
+            setItemIcon(iconDiv, iconSrc, item.name);
             const nameDiv = document.createElement('div');
             nameDiv.className = 'mch-hexagon-name';
             nameDiv.textContent = this.getItemName(item.id, item.name);
             const qtyDiv = document.createElement('div');
             qtyDiv.className = 'mch-hexagon-quantity';
             qtyDiv.textContent = item.quantity;
-            slot.append(nameDiv, qtyDiv);
+            slot.append(iconDiv, nameDiv, qtyDiv);
             grid.appendChild(slot);
         }
     }
@@ -768,13 +772,17 @@ class MerchantSystem {
             const hex = document.createElement('div');
             hex.className = `mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}`;
             hex.dataset.itemId = item.id;
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'mch-hexagon-icon';
+            const iconSrc = item.icon || getItem(item.id)?.icon || '';
+            setItemIcon(iconDiv, iconSrc, item.name);
             const nameDiv = document.createElement('div');
             nameDiv.className = 'mch-hexagon-name';
             nameDiv.textContent = this.getItemName(item.id, item.name);
             const priceDiv = document.createElement('div');
             priceDiv.className = 'mch-merchant-hexagon-price';
             priceDiv.textContent = `$${item.price}`;
-            hex.append(nameDiv, priceDiv);
+            hex.append(iconDiv, nameDiv, priceDiv);
             grid.appendChild(hex);
         }
     }

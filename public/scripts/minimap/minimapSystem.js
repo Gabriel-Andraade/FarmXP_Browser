@@ -79,7 +79,7 @@ export class MinimapSystem {
    */
   loadIcons(basePath = 'assets/icons/') {
     const iconMap = {
-      tree: 'TreeIcon.png',
+      tree: 'treeIcon.png',
       rock: 'rockIcon.png',
       house: 'houseIcon.png',
       thicket: 'thicketIcon.png',

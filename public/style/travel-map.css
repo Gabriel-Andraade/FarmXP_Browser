@@ -1,0 +1,696 @@
+/* ================= TRAVEL MAP — modal de viagem (picape) ================= */
+#travel-map-overlay {
+  --tmap-green-dark: #2c5530;
+  --tmap-gold: #c9a463;
+  --tmap-gold-light: #e0bc87;
+  --tmap-gold-pale: #f5e9d3;
+  --tmap-gold-bright: #ffd166;
+  --tmap-brown-deep: #2e1c0f;
+  --tmap-brown-mid: #3b2612;
+  --tmap-brown-warm: #5a3b1f;
+  --tmap-brown-wood: #6b4513;
+  --tmap-cyan: #3498db;
+  --tmap-cyan-bright: #5dade2;
+  --tmap-text-muted: #a89070;
+  --tmap-danger: #e74c3c;
+  --tmap-radius-sm: 8px;
+  --tmap-radius-md: 12px;
+  --tmap-radius-lg: 18px;
+  --tmap-shadow-card: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --tmap-shadow-gold: 0 0 18px rgba(201, 164, 99, 0.5);
+  --tmap-font-serif: 'Playfair Display', 'Georgia', serif;
+  --tmap-font-sans: 'Roboto', 'Segoe UI', sans-serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Mesmo padrão dos outros modais (commerce/character-select):
+     gradiente marrom escuro opaco + blur do que está atrás. */
+  background: linear-gradient(135deg, #1a0f07 0%, #2c1e12 50%, #1a0f07 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  font-family: var(--tmap-font-sans);
+}
+#travel-map-overlay.tmap-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tmap-wrapper {
+  width: 100%;
+  max-width: 850px;
+  background: linear-gradient(180deg, #3b2612 0%, #2e1c0f 100%);
+  border-radius: 20px;
+  border: 4px solid var(--tmap-gold);
+  box-shadow:
+    0 0 0 8px rgba(46, 28, 15, 0.7),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(201, 164, 99, 0.2);
+  padding: 18px;
+  position: relative;
+  outline: 2px solid var(--tmap-brown-wood);
+  outline-offset: 6px;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.3s ease;
+}
+#travel-map-overlay.tmap-visible .tmap-wrapper {
+  transform: translateY(0) scale(1);
+}
+
+.tmap-inner {
+  background:
+    radial-gradient(ellipse at 25% 50%, #6a9e4a 0%, transparent 50%),
+    radial-gradient(ellipse at 65% 50%, #5d8c3f 0%, transparent 45%),
+    radial-gradient(ellipse at 50% 60%, #7aa55c 0%, transparent 40%),
+    linear-gradient(180deg, #4a7a35 0%, #5a8a40 30%, #6b9a4e 60%, #4d7d38 100%);
+  border-radius: 12px;
+  border: 3px solid var(--tmap-brown-deep);
+  padding: 16px 12px 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tmap-top-bar {
+  position: relative;
+  z-index: 20;
+  margin-bottom: 8px;
+  min-height: 40px;
+}
+
+.tmap-title {
+  text-align: center;
+  font-family: var(--tmap-font-serif);
+  font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+  color: var(--tmap-gold-pale);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 1.5px;
+  pointer-events: none;
+}
+.tmap-title::after {
+  content: '';
+  display: block;
+  width: 60%;
+  max-width: 280px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--tmap-gold), transparent);
+  margin: 6px auto 0;
+  border-radius: 1px;
+}
+
+/* ================= PÍLULA DE COMBUSTÍVEL (canto sup. esq.) ================= */
+.tmap-fuel-pill {
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: linear-gradient(180deg, rgba(46, 28, 15, 0.9) 0%, rgba(28, 18, 8, 0.92) 100%);
+  border: 2px solid var(--tmap-gold);
+  border-radius: 20px;
+  color: var(--tmap-gold-pale);
+  font-family: var(--tmap-font-sans);
+  font-weight: 700;
+  font-size: clamp(11px, 1.2vw, 13px);
+  letter-spacing: 0.4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(201, 164, 99, 0.2);
+  user-select: none;
+}
+.tmap-fuel-pill-icon { font-size: 1.05em; line-height: 1; filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5)); }
+.tmap-fuel-pill-value { font-variant-numeric: tabular-nums; }
+.tmap-fuel-pill-low {
+  border-color: var(--tmap-danger);
+  color: #ffd9d3;
+  box-shadow: 0 0 12px rgba(231, 76, 60, 0.45), 0 2px 8px rgba(0, 0, 0, 0.4);
+  animation: tmap-fuel-pill-warn 1.6s ease-in-out infinite;
+}
+@keyframes tmap-fuel-pill-warn {
+  0%, 100% { box-shadow: 0 0 8px rgba(231, 76, 60, 0.35), 0 2px 8px rgba(0, 0, 0, 0.4); }
+  50%      { box-shadow: 0 0 18px rgba(231, 76, 60, 0.7),  0 2px 8px rgba(0, 0, 0, 0.4); }
+}
+
+.tmap-close-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 30;
+  background: rgba(46, 28, 15, 0.85);
+  color: var(--tmap-gold-pale);
+  border: 2px solid var(--tmap-gold);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: var(--tmap-font-sans);
+  line-height: 1;
+}
+.tmap-close-btn:hover {
+  background: var(--tmap-danger);
+  border-color: var(--tmap-gold-bright);
+  transform: rotate(90deg);
+}
+
+.tmap-area {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 8 / 5;
+  z-index: 1;
+}
+
+.tmap-roads {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35));
+}
+
+.tmap-road-base {
+  fill: none;
+  stroke: #5a3b1f;
+  stroke-width: 14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tmap-road-edge {
+  fill: none;
+  stroke: #8b5a2b;
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 6 3;
+}
+.tmap-road-detail {
+  fill: none;
+  stroke: var(--tmap-gold);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 14 20;
+  opacity: 0.7;
+}
+
+.tmap-card {
+  position: absolute;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  background: linear-gradient(160deg, #4a2e18 0%, #2e1c0f 100%);
+  border: 3px solid var(--tmap-gold);
+  border-radius: var(--tmap-radius-md);
+  padding: 10px 12px;
+  text-align: center;
+  min-width: clamp(70px, 10vw, 100px);
+  max-width: 110px;
+  box-shadow: var(--tmap-shadow-card);
+  transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.tmap-card:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  border-color: var(--tmap-gold-bright);
+  box-shadow: var(--tmap-shadow-gold), var(--tmap-shadow-card);
+  z-index: 25;
+  background: linear-gradient(160deg, #5a3b1f 0%, #3b2612 100%);
+}
+.tmap-card:active {
+  transform: translate(-50%, -50%) scale(0.96);
+  transition: all 0.1s ease;
+}
+
+.tmap-card .tmap-icon {
+  font-size: clamp(22px, 3vw, 30px);
+  display: block;
+  margin-bottom: 2px;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+  line-height: 1;
+}
+.tmap-card .tmap-name {
+  font-family: var(--tmap-font-serif);
+  font-size: clamp(9px, 1.2vw, 12px);
+  font-weight: 700;
+  color: var(--tmap-gold-pale);
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.tmap-card .tmap-desc {
+  font-size: clamp(7px, 0.9vw, 10px);
+  color: var(--tmap-text-muted);
+  margin-top: 1px;
+  white-space: nowrap;
+}
+
+.tmap-card.tmap-current {
+  border-color: var(--tmap-gold-bright);
+  border-width: 4px;
+  box-shadow: 0 0 22px rgba(255, 209, 102, 0.55), 0 6px 18px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(160deg, #5a3b1f 0%, #3b1e0a 100%);
+  animation: tmap-current-pulse 2.5s ease-in-out infinite;
+}
+@keyframes tmap-current-pulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(255, 209, 102, 0.55), 0 6px 18px rgba(0, 0, 0, 0.5); }
+  50%      { box-shadow: 0 0 35px rgba(255, 209, 102, 0.8),  0 8px 24px rgba(0, 0, 0, 0.55); }
+}
+
+.tmap-current-badge {
+  display: inline-block;
+  background: var(--tmap-cyan);
+  color: #fff;
+  font-size: clamp(7px, 0.8vw, 9px);
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+  margin-top: 3px;
+  animation: tmap-badge-glow 2s ease-in-out infinite;
+  white-space: nowrap;
+}
+@keyframes tmap-badge-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(52, 152, 219, 0.5); }
+  50%      { box-shadow: 0 0 14px rgba(52, 152, 219, 0.9); }
+}
+
+.tmap-card.tmap-blocked {
+  border-color: #6b4d3a;
+  opacity: 0.75;
+  cursor: not-allowed;
+  background: linear-gradient(160deg, #2e1c0f 0%, #1a0f06 100%);
+}
+.tmap-card.tmap-blocked:hover {
+  border-color: var(--tmap-danger);
+  opacity: 0.9;
+  box-shadow: 0 0 16px rgba(231, 76, 60, 0.4), var(--tmap-shadow-card);
+  transform: translate(-50%, -50%) scale(1.04);
+}
+.tmap-card.tmap-blocked .tmap-icon { filter: grayscale(0.4); }
+
+.tmap-gas {
+  position: absolute;
+  z-index: 4;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(22px, 3.2vw, 32px);
+  height: clamp(22px, 3.2vw, 32px);
+  background: rgba(46, 28, 15, 0.8);
+  border: 2px solid var(--tmap-cyan-bright);
+  border-radius: 50%;
+  font-size: clamp(12px, 1.6vw, 17px);
+  box-shadow: 0 0 8px rgba(52, 152, 219, 0.35);
+}
+.tmap-gas::after { content: '⛽'; line-height: 1; }
+
+/* Marcador do jogador: ícone bruto do personagem (sem moldura), com um
+   pulso suave de escala para destacar sua presença no mapa. */
+.tmap-player {
+  position: absolute;
+  z-index: 15;
+  width: clamp(30px, 4vw, 44px);
+  height: clamp(30px, 4vw, 44px);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  animation: tmap-player-bounce 1.4s ease-in-out infinite;
+}
+.tmap-player-icon {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* Mantém o pixel art crispy. */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+}
+
+@keyframes tmap-player-bounce {
+  0%, 100% { transform: translate(-50%, -50%) scale(1.1); }
+  50%      { transform: translate(-50%, -50%) scale(1.3); }
+}
+
+.tmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  justify-content: center;
+  padding: 10px 8px 4px;
+  font-size: clamp(9px, 1.1vw, 11px);
+  color: var(--tmap-text-muted);
+  position: relative;
+  z-index: 20;
+  pointer-events: none;
+}
+.tmap-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tmap-legend .tmap-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.tmap-dot.tmap-dot-gold { background: var(--tmap-gold-bright); box-shadow: 0 0 6px rgba(255, 209, 102, 0.6); }
+.tmap-dot.tmap-dot-cyan { background: var(--tmap-cyan-bright); box-shadow: 0 0 5px rgba(52, 152, 219, 0.5); }
+.tmap-dot.tmap-dot-red  { background: var(--tmap-danger);     box-shadow: 0 0 5px rgba(231, 76, 60, 0.5); }
+
+/* ================= POPUP DE FEEDBACK ================= */
+.tmap-popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 10501;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.tmap-popup-overlay.tmap-popup-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tmap-popup-dialog {
+  background: linear-gradient(160deg, #3b2612 0%, #2e1c0f 100%);
+  border: 3px solid var(--tmap-gold);
+  border-radius: var(--tmap-radius-lg);
+  padding: 24px 28px;
+  text-align: center;
+  color: var(--tmap-gold-pale);
+  font-family: var(--tmap-font-serif);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(201, 164, 99, 0.25);
+  max-width: 380px;
+  width: 90%;
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+.tmap-popup-overlay.tmap-popup-active .tmap-popup-dialog { transform: translateY(0); }
+.tmap-popup-icon { font-size: 3rem; display: block; margin-bottom: 8px; }
+.tmap-popup-msg { font-size: 1.2rem; margin-bottom: 16px; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); white-space: pre-line; }
+
+/* Múltiplos botões empilham horizontalmente; em telas estreitas, viram coluna. */
+.tmap-popup-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* Botão primário — DOURADO (não marrom!) para contrastar com o fundo da palheta. */
+.tmap-popup-btn {
+  background: linear-gradient(135deg, var(--tmap-gold) 0%, var(--tmap-gold-light) 100%);
+  color: var(--tmap-brown-deep);
+  border: 2px solid var(--tmap-gold-bright);
+  border-radius: 25px;
+  padding: 10px 28px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  font-family: var(--tmap-font-sans);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  min-width: 110px;
+}
+.tmap-popup-btn:hover {
+  background: linear-gradient(135deg, var(--tmap-gold-light) 0%, var(--tmap-gold-bright) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 209, 102, 0.4);
+}
+.tmap-popup-btn:active { transform: scale(0.96); }
+.tmap-popup-btn:focus-visible { outline: 3px solid var(--tmap-gold-bright); outline-offset: 2px; }
+
+/* Botão secundário (Não / Cancelar) — marrom-madeira com borda dourada. */
+.tmap-popup-btn-secondary {
+  background: linear-gradient(135deg, #8b5a2b 0%, var(--tmap-brown-warm) 100%);
+  color: var(--tmap-gold-pale);
+  border-color: var(--tmap-gold);
+}
+.tmap-popup-btn-secondary:hover {
+  background: linear-gradient(135deg, var(--tmap-brown-warm) 0%, #8b5a2b 100%);
+  color: var(--tmap-gold-pale);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+/* ================= MODAL DE ABASTECIMENTO (POSTO DE GASOLINA) ================= */
+.tmap-refuel-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10502;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  font-family: var(--tmap-font-sans);
+}
+.tmap-refuel-modal.tmap-refuel-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tmap-refuel-dialog {
+  width: 92%;
+  max-width: 460px;
+  background: linear-gradient(160deg, var(--tmap-brown-mid) 0%, var(--tmap-brown-deep) 100%);
+  border: 3px solid var(--tmap-gold);
+  border-radius: var(--tmap-radius-lg);
+  padding: 22px 24px 18px;
+  color: var(--tmap-gold-pale);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.7), 0 0 30px rgba(201, 164, 99, 0.25);
+  transform: translateY(24px) scale(0.97);
+  transition: transform 0.25s ease;
+}
+.tmap-refuel-modal.tmap-refuel-active .tmap-refuel-dialog {
+  transform: translateY(0) scale(1);
+}
+
+.tmap-refuel-title {
+  text-align: center;
+  font-family: var(--tmap-font-serif);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  letter-spacing: 1.2px;
+  margin: 0 0 14px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.55);
+}
+.tmap-refuel-title::after {
+  content: '';
+  display: block;
+  width: 60%;
+  max-width: 220px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--tmap-gold), transparent);
+  margin: 6px auto 0;
+}
+
+/* Linha de stats: tanque atual / após / saldo */
+.tmap-refuel-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.tmap-refuel-stats .tmap-stat {
+  background: rgba(46, 28, 15, 0.55);
+  border: 1px solid rgba(201, 164, 99, 0.35);
+  border-radius: var(--tmap-radius-sm);
+  padding: 8px 6px;
+  text-align: center;
+}
+.tmap-stat-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--tmap-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+.tmap-stat-value {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--tmap-gold-pale);
+  font-variant-numeric: tabular-nums;
+}
+
+.tmap-refuel-instr {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--tmap-text-muted);
+  margin: 0 0 10px;
+}
+
+/* Slider deslizante */
+.tmap-refuel-slider-wrap {
+  padding: 14px 12px 18px;
+}
+.tmap-refuel-slider {
+  position: relative;
+  width: 100%;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  touch-action: none;
+}
+.tmap-refuel-track {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(46, 28, 15, 0.7) 100%);
+  border: 1px solid rgba(201, 164, 99, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+.tmap-refuel-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--tmap-gold) 0%, var(--tmap-gold-bright) 100%);
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(255, 209, 102, 0.45);
+  transition: width 0.05s linear;
+}
+.tmap-refuel-handle {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 22px;
+  height: 26px;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, var(--tmap-gold-light) 0%, var(--tmap-gold) 100%);
+  border: 2px solid var(--tmap-gold-bright);
+  /* "quadradinho de pontas arredondadas" */
+  border-radius: 6px;
+  cursor: grab;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), 0 0 10px rgba(255, 209, 102, 0.35);
+  transition: left 0.05s linear, transform 0.15s ease, box-shadow 0.15s ease;
+  touch-action: none;
+}
+.tmap-refuel-handle:hover {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.55), 0 0 16px rgba(255, 209, 102, 0.6);
+  transform: translate(-50%, -50%) scale(1.1);
+}
+.tmap-refuel-handle:active { cursor: grabbing; }
+.tmap-refuel-handle:focus-visible {
+  outline: 3px solid var(--tmap-gold-bright);
+  outline-offset: 3px;
+}
+
+/* Resumo: +X% · X,XX L · R$ Y */
+.tmap-refuel-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: center;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 4px;
+}
+.tmap-refuel-amount { color: var(--tmap-gold-bright); }
+.tmap-refuel-liters { color: var(--tmap-gold-pale); }
+.tmap-refuel-cost   { color: var(--tmap-gold-bright); }
+
+.tmap-refuel-price {
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--tmap-text-muted);
+  margin: 0 0 16px;
+}
+
+/* Botões — mesma palheta dos botões do popup. */
+.tmap-refuel-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.tmap-refuel-btn {
+  border: 2px solid var(--tmap-gold-bright);
+  border-radius: 25px;
+  padding: 10px 24px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  font-family: var(--tmap-font-sans);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  min-width: 130px;
+}
+.tmap-refuel-btn:focus-visible { outline: 3px solid var(--tmap-gold-bright); outline-offset: 2px; }
+
+.tmap-refuel-confirm {
+  background: linear-gradient(135deg, var(--tmap-gold) 0%, var(--tmap-gold-light) 100%);
+  color: var(--tmap-brown-deep);
+}
+.tmap-refuel-confirm:hover:not(.tmap-refuel-btn-disabled) {
+  background: linear-gradient(135deg, var(--tmap-gold-light) 0%, var(--tmap-gold-bright) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), 0 0 18px rgba(255, 209, 102, 0.45);
+}
+.tmap-refuel-cancel {
+  background: linear-gradient(135deg, #8b5a2b 0%, var(--tmap-brown-warm) 100%);
+  color: var(--tmap-gold-pale);
+  border-color: var(--tmap-gold);
+}
+.tmap-refuel-cancel:hover {
+  background: linear-gradient(135deg, var(--tmap-brown-warm) 0%, #8b5a2b 100%);
+  transform: translateY(-2px);
+}
+.tmap-refuel-btn-disabled,
+.tmap-refuel-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+  transform: none !important;
+}
+
+/* ================= RESPONSIVO ================= */
+@media (max-width: 600px) {
+  .tmap-wrapper { padding: 10px; border-radius: 14px; border-width: 3px; outline-offset: 3px; outline-width: 1.5px; }
+  .tmap-inner   { padding: 10px 6px 6px; border-radius: 8px; }
+  .tmap-card    { padding: 6px 8px; border-radius: var(--tmap-radius-sm); border-width: 2px; min-width: 55px; max-width: 80px; }
+  .tmap-card.tmap-current { border-width: 3px; }
+  .tmap-card .tmap-icon { font-size: 18px; }
+  .tmap-card .tmap-name { font-size: 8px; }
+  .tmap-card .tmap-desc { font-size: 7px; }
+  .tmap-current-badge   { font-size: 7px; padding: 1px 5px; }
+  .tmap-gas             { width: 18px; height: 18px; font-size: 10px; }
+  .tmap-player          { width: 26px; height: 26px; }
+  .tmap-legend          { gap: 6px 10px; font-size: 8px; }
+  .tmap-close-btn       { width: 30px; height: 30px; font-size: 16px; }
+  .tmap-fuel-pill       { padding: 4px 9px; font-size: 10px; }
+  .tmap-refuel-dialog   { padding: 16px 16px 14px; }
+  .tmap-refuel-stats    { gap: 6px; }
+  .tmap-refuel-stats .tmap-stat { padding: 6px 4px; }
+  .tmap-stat-label      { font-size: 0.65rem; }
+  .tmap-stat-value      { font-size: 0.85rem; }
+  .tmap-refuel-summary  { font-size: 0.95rem; }
+}
+@media (max-width: 380px) {
+  .tmap-card { min-width: 44px; max-width: 60px; padding: 4px 5px; }
+  .tmap-card .tmap-icon { font-size: 15px; }
+  .tmap-card .tmap-name { font-size: 7px; letter-spacing: 0; }
+  .tmap-card .tmap-desc { display: none; }
+  .tmap-current-badge   { font-size: 6px; padding: 1px 4px; }
+}

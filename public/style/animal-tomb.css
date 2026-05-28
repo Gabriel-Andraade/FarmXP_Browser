@@ -1,0 +1,225 @@
+/**
+ * @file animal-tomb.css - Estilos para tumbas de animais e modal de memorial
+ * 
+ * Modal exibido quando player clica em uma tumba:
+ * - Overlay escuro (similar a dialogueSystem)
+ * - Card central com nome, espécie, dias vividos, últimas palavras
+ * - Botão "Despedir-se" para remover tumba
+ */
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Modal e Overlay de Memorial                                    */
+/* ─────────────────────────────────────────────────────────────── */
+
+#tomb-memorial-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#tomb-memorial-modal.open {
+  opacity: 1;
+}
+
+/* Overlay escuro atrás do card */
+.tmm-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+/* Card central do memorial */
+.tmm-card {
+  position: relative;
+  z-index: 10000;
+  background: linear-gradient(135deg, #2a3f1f 0%, #1f2817 100%);
+  border: 3px solid #8b7355;  /* Tom de madeira/terra para lápide */
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 0;
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  animation: slideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header com título e botão de fechar */
+.tmm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 2px solid #6b5345;
+  background-color: rgba(20, 20, 15, 0.5);
+}
+
+.tmm-title {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: bold;
+  color: #d4af87;  /* Tom de ouro/memorial */
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+.tmm-close {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: #a9a9a9;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.tmm-close:hover {
+  color: #e0e0e0;
+}
+
+/* Conteúdo principal */
+.tmm-content {
+  padding: 32px 20px;
+  background-color: rgba(30, 30, 20, 0.3);
+}
+
+.tmm-name {
+  font-family: Georgia, serif;
+  font-size: 28px;
+  font-weight: bold;
+  color: #f5f0e1;
+  margin-bottom: 8px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.tmm-species {
+  font-family: Georgia, serif;
+  font-size: 16px;
+  color: #b8a896;
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+.tmm-lifespan {
+  font-family: Georgia, serif;
+  font-size: 14px;
+  color: #d4af87;
+  margin-bottom: 24px;
+  padding: 12px;
+  background-color: rgba(139, 115, 85, 0.15);
+  border-left: 3px solid #8b7355;
+  text-align: left;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 300px;
+}
+
+.tmm-last-words {
+  font-family: Georgia, serif;
+  font-size: 13px;
+  color: #e8e8d0;
+  margin-bottom: 0;
+  font-style: italic;
+  line-height: 1.6;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Footer com botão de ação */
+.tmm-footer {
+  padding: 16px 20px;
+  border-top: 2px solid #6b5345;
+  background-color: rgba(20, 20, 15, 0.5);
+}
+
+.tmm-farewell {
+  background: linear-gradient(135deg, #5a7f4e 0%, #3d5a33 100%);
+  border: 2px solid #7a9f6e;
+  color: #f5f0e1;
+  padding: 10px 28px;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tmm-farewell:hover {
+  background: linear-gradient(135deg, #6f9a62 0%, #4a6d40 100%);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.tmm-farewell:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* ─────────────────────────────────────────────────────────────── */
+/* Responsivo                                                       */
+/* ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .tmm-card {
+    width: 95%;
+    max-width: none;
+  }
+
+  .tmm-title {
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .tmm-name {
+    font-size: 24px;
+  }
+
+  .tmm-content {
+    padding: 24px 16px;
+  }
+
+  .tmm-header {
+    padding: 12px 16px;
+  }
+
+  .tmm-footer {
+    padding: 12px 16px;
+  }
+}

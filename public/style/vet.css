@@ -1,0 +1,798 @@
+/* ================= VET PANEL — veterinária Alice ================= */
+#vet-overlay {
+  --vet-gold: #c9a463;
+  --vet-gold-light: #e0bc87;
+  --vet-gold-pale: #f5e9d3;
+  --vet-gold-bright: #ffd166;
+  --vet-brown-deep: #2e1c0f;
+  --vet-brown-mid: #3b2612;
+  --vet-brown-warm: #5a3b1f;
+  --vet-brown-wood: #6b4513;
+  --vet-text-muted: #a89070;
+  --vet-danger: #e74c3c;
+  --vet-radius-sm: 8px;
+  --vet-radius-md: 12px;
+  --vet-radius-lg: 18px;
+  --vet-shadow-card: 0 6px 20px rgba(0, 0, 0, 0.45);
+  --vet-shadow-gold: 0 0 18px rgba(201, 164, 99, 0.5);
+  --vet-font-serif: 'Playfair Display', 'Georgia', serif;
+  --vet-font-sans: 'Roboto', 'Segoe UI', sans-serif;
+
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Mesmo padrão dos demais modais (commerce/character-select/travelMap):
+     gradiente marrom escuro opaco + blur do que está atrás. */
+  background: linear-gradient(135deg, #1a0f07 0%, #2c1e12 50%, #1a0f07 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  font-family: var(--vet-font-sans);
+}
+#vet-overlay.vet-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vet-wrapper {
+  width: 100%;
+  max-width: 980px;
+  /* Altura DEFINIDA (não só max) — sem isso, o wrapper sobe pra caber
+     o conteúdo da sub-view e o painel "pulava de tamanho" ao trocar
+     de aba (lista pequena → wrapper baixo, lista grande → wrapper
+     alto). Com altura fixada, a chain interna de flex+overflow-auto
+     consegue ativar o scroll na .vet-list em vez de empurrar tudo
+     pra cima. O clamp adapta entre telas curtas (560px mínimo) e
+     amplas (até 760px), sempre limitado pelo viewport. */
+  height: clamp(560px, 85vh, 760px);
+  max-height: calc(100vh - 48px);
+  background: linear-gradient(180deg, var(--vet-brown-mid) 0%, var(--vet-brown-deep) 100%);
+  border-radius: 20px;
+  border: 4px solid var(--vet-gold);
+  box-shadow:
+    0 0 0 8px rgba(46, 28, 15, 0.7),
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(201, 164, 99, 0.2);
+  outline: 2px solid var(--vet-brown-wood);
+  outline-offset: 6px;
+  padding: 22px 26px 24px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.3s ease;
+}
+#vet-overlay.vet-visible .vet-wrapper {
+  transform: translateY(0) scale(1);
+}
+
+/* ===== Header ===== */
+.vet-header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(201, 164, 99, 0.35);
+}
+.vet-title-box {
+  text-align: center;
+}
+.vet-title {
+  font-family: var(--vet-font-serif);
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  color: var(--vet-gold-pale);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 1.4px;
+  margin: 0;
+}
+.vet-title::before {
+  content: '🏥 ';
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+}
+.vet-subtitle {
+  margin: 4px 0 0;
+  font-size: clamp(0.78rem, 1.1vw, 0.95rem);
+  color: var(--vet-text-muted);
+  letter-spacing: 0.4px;
+  font-style: italic;
+}
+
+.vet-close-btn {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  z-index: 30;
+  background: rgba(46, 28, 15, 0.85);
+  color: var(--vet-gold-pale);
+  border: 2px solid var(--vet-gold);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: var(--vet-font-sans);
+  line-height: 1;
+}
+.vet-close-btn:hover {
+  background: var(--vet-danger);
+  border-color: var(--vet-gold-bright);
+  transform: rotate(90deg);
+}
+
+/* ===== Body: sidebar + stage ===== */
+.vet-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: stretch;
+  min-height: 0;
+  /* Cresce pra ocupar a altura do wrapper (que agora é fixa). Sem isso,
+     o body sizearia ao conteúdo e a chain de scroll não dispararia. */
+  flex: 1;
+}
+
+/* ----- Sidebar (4 botões de ação) ----- */
+.vet-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 6px 0;
+}
+
+.vet-action-btn {
+  width: clamp(78px, 9vw, 104px);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  background: linear-gradient(160deg, #4a2e18 0%, var(--vet-brown-deep) 100%);
+  border: 3px solid var(--vet-gold);
+  border-radius: var(--vet-radius-md);
+  color: var(--vet-gold-pale);
+  font-family: var(--vet-font-sans);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: var(--vet-shadow-card);
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease,
+              background 0.25s ease;
+}
+.vet-action-btn:hover {
+  transform: scale(1.06);
+  border-color: var(--vet-gold-bright);
+  box-shadow: var(--vet-shadow-gold), var(--vet-shadow-card);
+  background: linear-gradient(160deg, var(--vet-brown-warm) 0%, var(--vet-brown-mid) 100%);
+}
+.vet-action-btn:active { transform: scale(0.96); }
+.vet-action-btn:focus-visible {
+  outline: 3px solid var(--vet-gold-bright);
+  outline-offset: 3px;
+}
+
+.vet-action-icon {
+  font-size: clamp(26px, 3.4vw, 36px);
+  line-height: 1;
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+}
+.vet-action-label {
+  font-size: clamp(9px, 1.1vw, 11px);
+  letter-spacing: 0.4px;
+  color: var(--vet-gold-pale);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* ----- Stage (Alice ao centro) ----- */
+.vet-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 30%, rgba(122, 165, 92, 0.18) 0%, transparent 60%),
+    linear-gradient(180deg, #3a2616 0%, #251505 100%);
+  border: 3px solid var(--vet-brown-deep);
+  border-radius: var(--vet-radius-lg);
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  min-height: 320px;
+}
+/* Detalhe decorativo: leve textura cintilante (fica sutil atrás da Alice). */
+.vet-stage::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border: 1px dashed rgba(201, 164, 99, 0.18);
+  border-radius: calc(var(--vet-radius-lg) - 6px);
+  pointer-events: none;
+}
+
+/* Moldura elegante em volta da Alice (combina com o painel). */
+.vet-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: linear-gradient(160deg, var(--vet-brown-warm) 0%, var(--vet-brown-deep) 100%);
+  border: 3px solid var(--vet-gold);
+  border-radius: var(--vet-radius-md);
+  box-shadow:
+    0 0 0 4px rgba(46, 28, 15, 0.6),
+    0 10px 30px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(201, 164, 99, 0.2),
+    var(--vet-shadow-gold);
+  max-width: 100%;
+  max-height: 100%;
+}
+.vet-frame::after {
+  /* Fita dourada cantos — adorno fino sem peso visual. */
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 209, 102, 0.45);
+  border-radius: calc(var(--vet-radius-md) - 4px);
+  pointer-events: none;
+}
+
+.vet-alice {
+  display: block;
+  height: auto;
+  width: auto;
+  max-width: 100%;
+  max-height: clamp(280px, 60vh, 540px);
+  border-radius: var(--vet-radius-sm);
+  user-select: none;
+  -webkit-user-drag: none;
+  /* Pixel art crispy. */
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+
+/* ===== Responsivo ===== */
+@media (max-width: 720px) {
+  #vet-overlay { padding: 12px; }
+  .vet-wrapper { padding: 14px 14px 16px; border-radius: 14px; border-width: 3px; outline-offset: 3px; outline-width: 1.5px; gap: 12px; }
+  .vet-header  { padding-bottom: 8px; }
+  .vet-close-btn { width: 30px; height: 30px; font-size: 16px; }
+  .vet-body    { grid-template-columns: 1fr; gap: 12px; }
+  .vet-sidebar {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .vet-action-btn { width: 70px; }
+  .vet-stage      { padding: 10px; min-height: 240px; }
+  .vet-alice      { max-height: clamp(200px, 50vh, 380px); }
+}
+@media (max-width: 380px) {
+  .vet-action-btn { width: 60px; padding: 4px 2px; }
+  .vet-action-icon { font-size: 22px; }
+  .vet-action-label { font-size: 8px; }
+}
+
+/* ============================================================================
+ * Pill de "animais internados" — flutua no canto do palco da Alice.
+ * Aparece somente quando há entradas no hospital.
+ * ============================================================================ */
+.vet-recovery-pill {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  background: linear-gradient(160deg, var(--vet-brown-warm) 0%, var(--vet-brown-deep) 100%);
+  color: var(--vet-gold-pale);
+  border: 2px solid var(--vet-gold);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-family: var(--vet-font-sans);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: var(--vet-shadow-card);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.vet-recovery-pill::before {
+  content: '🛏️';
+  font-size: 1rem;
+}
+.vet-recovery-pill[data-ready="1"] {
+  border-color: var(--vet-gold-bright);
+  box-shadow: var(--vet-shadow-gold), var(--vet-shadow-card);
+  animation: vet-pill-pulse 1.6s ease-in-out infinite;
+}
+.vet-recovery-pill:hover {
+  transform: scale(1.05);
+  border-color: var(--vet-gold-bright);
+}
+@keyframes vet-pill-pulse {
+  0%, 100% { box-shadow: var(--vet-shadow-card), 0 0 0 rgba(255, 209, 102, 0); }
+  50%      { box-shadow: var(--vet-shadow-card), 0 0 18px rgba(255, 209, 102, 0.55); }
+}
+
+/* ============================================================================
+ * Sub-views inline no stage da Alice (Internar / Recuperação).
+ * Substituem o retrato da Alice quando ativas. Mantêm a moldura externa do
+ * stage para parecer um quadro/painel docked na lateral oposta aos botões.
+ * ============================================================================ */
+
+/* Container raiz de uma sub-view: ocupa a área interna do stage (que tem
+   padding 18px). align-self: stretch + width 100% sobrepõe o
+   align-items: center do .vet-stage para o painel preencher o espaço. */
+.vet-subview-host {
+  position: relative;
+  align-self: stretch;
+  width: 100%;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.vet-subview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;        /* permite o scroll da lista funcionar */
+}
+
+/* Header da sub-view: botão voltar + título centralizado. */
+.vet-subview-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(201, 164, 99, 0.3);
+}
+.vet-subview-title {
+  margin: 0;
+  font-family: var(--vet-font-serif);
+  font-size: clamp(1.1rem, 2vw, 1.4rem);
+  letter-spacing: 1px;
+  color: var(--vet-gold-pale);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.55);
+  text-align: center;
+}
+.vet-back-btn {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(46, 28, 15, 0.85);
+  color: var(--vet-gold-pale);
+  border: 2px solid var(--vet-gold);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.vet-back-btn:hover {
+  background: var(--vet-brown-warm);
+  border-color: var(--vet-gold-bright);
+  transform: translateY(-50%) translateX(-2px);
+}
+
+/* Lista de cards de animais (rolável). */
+.vet-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.vet-list::-webkit-scrollbar { width: 8px; }
+.vet-list::-webkit-scrollbar-track { background: transparent; }
+.vet-list::-webkit-scrollbar-thumb {
+  background: rgba(201, 164, 99, 0.4);
+  border-radius: 4px;
+}
+
+/* Card de animal — sprite à esquerda, info no meio, botão à direita. */
+.vet-animal-entry {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(201, 164, 99, 0.35);
+  border-radius: 10px;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.vet-animal-entry:hover {
+  border-color: var(--vet-gold);
+  background: rgba(0, 0, 0, 0.38);
+}
+.vet-animal-entry[data-ready="1"] {
+  border-color: var(--vet-gold-bright);
+  box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.25) inset;
+}
+.vet-animal-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(201, 164, 99, 0.35);
+  image-rendering: pixelated;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+.vet-medicine-icon img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.vet-animal-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vet-animal-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--vet-gold-pale);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vet-animal-injury {
+  font-size: 0.85rem;
+  color: #e89045;
+  font-style: italic;
+}
+.vet-animal-status {
+  font-size: 0.78rem;
+  color: var(--vet-gold-light);
+}
+
+/* Botões dos cards e do diálogo de confirmação — versão "linha"
+   (não confundir com .vet-action-btn quadrado da sidebar da Alice). */
+.vet-subview .vet-action-btn,
+.vet-confirm-overlay .vet-action-btn {
+  width: auto;
+  aspect-ratio: auto;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: linear-gradient(160deg, #4a2e18 0%, var(--vet-brown-deep) 100%);
+  color: var(--vet-gold-pale);
+  border: 2px solid var(--vet-gold);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  flex-direction: row;
+  gap: 4px;
+}
+.vet-subview .vet-action-btn.small,
+.vet-confirm-overlay .vet-action-btn.small {
+  padding: 6px 12px;
+  font-size: 0.78rem;
+}
+.vet-subview .vet-action-btn:hover:not(:disabled),
+.vet-confirm-overlay .vet-action-btn:hover:not(:disabled) {
+  transform: scale(1.04);
+  border-color: var(--vet-gold-bright);
+}
+.vet-subview .vet-action-btn:disabled,
+.vet-confirm-overlay .vet-action-btn:disabled {
+  cursor: not-allowed;
+  border-color: rgba(201, 164, 99, 0.4);
+  color: rgba(245, 233, 211, 0.6);
+  opacity: 0.7;
+}
+.vet-confirm-overlay .vet-action-btn.secondary,
+.vet-subview .vet-action-btn.secondary {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(201, 164, 99, 0.5);
+}
+
+/* Estado vazio (sem animais para internar / nenhum internado). */
+.vet-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  text-align: center;
+  color: var(--vet-text-muted);
+  font-style: italic;
+  border: 1px dashed rgba(201, 164, 99, 0.25);
+  border-radius: 10px;
+}
+
+/* Toast inline: aparece no topo da sub-view por ~2s após retirada. */
+.vet-inline-toast {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 14px;
+  background: rgba(46, 28, 15, 0.95);
+  color: var(--vet-gold-pale);
+  border: 2px solid var(--vet-gold);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+  z-index: 6;
+  animation: vet-toast-in 0.25s ease-out;
+}
+.vet-inline-toast[data-error="1"] {
+  border-color: #e25656;
+  color: #ffd6d6;
+}
+@keyframes vet-toast-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Confirmação de internação: overlay coberto sobre o stage (não fullscreen) */
+.vet-confirm-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 6, 2, 0.65);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  border-radius: var(--vet-radius-lg);
+}
+.vet-dialog {
+  background: linear-gradient(180deg, var(--vet-brown-mid) 0%, var(--vet-brown-deep) 100%);
+  border: 3px solid var(--vet-gold);
+  border-radius: 14px;
+  color: var(--vet-gold-pale);
+  padding: 18px 20px;
+  width: min(360px, calc(100% - 24px));
+  text-align: center;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.6);
+}
+.vet-dialog p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+.vet-dialog-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+/* Layout responsivo dos cards em telas estreitas. */
+@media (max-width: 540px) {
+  .vet-animal-entry {
+    grid-template-columns: 48px 1fr;
+    grid-template-areas:
+      "thumb info"
+      "btn   btn";
+    row-gap: 8px;
+  }
+  .vet-animal-entry > .vet-animal-thumb { grid-area: thumb; }
+  .vet-animal-entry > .vet-animal-info  { grid-area: info; }
+  .vet-animal-entry > .vet-action-btn   { grid-area: btn; justify-self: stretch; }
+}
+
+/* ============================================================================
+ * Crossfade Alice ↔ sub-view. A classe `vet-fading-in` é aplicada pelo JS
+ * em quem está entrando, removida no frame seguinte — opacity 0 → 1 anima
+ * com a transition. Evita o "snap" da troca de view.
+ * ============================================================================ */
+.vet-frame,
+.vet-subview-host {
+  transition: opacity 0.22s ease;
+}
+.vet-frame.vet-fading-in,
+.vet-subview-host.vet-fading-in {
+  opacity: 0;
+}
+
+/* ============================================================================
+ * Fallback da Alice — usado quando `Alice.png` não carrega. Silhueta médica
+ * + nome dentro da mesma moldura dourada, em vez de ícone quebrado.
+ * ============================================================================ */
+.vet-alice-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-width: 220px;
+  min-height: 280px;
+  padding: 24px;
+  color: var(--vet-gold-pale);
+  text-align: center;
+}
+.vet-alice-fallback-icon {
+  font-size: clamp(72px, 9vw, 110px);
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.55));
+}
+.vet-alice-fallback-name {
+  font-family: var(--vet-font-serif);
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  letter-spacing: 0.6px;
+  color: var(--vet-gold-light);
+  font-style: italic;
+}
+
+/* ============================================================================
+ * Diálogo com Alice (modo balão de fala).
+ * Aparece quando o player clica em "Conversar". A Alice permanece visível à
+ * esquerda; o balão ocupa a metade direita do palco (mesma área que os
+ * sub-views de diagnose/medicine usariam). Cauda do balão aponta pra esquerda,
+ * na altura aproximada do rosto da Alice.
+ *
+ * Cores do nome são por personagem:
+ *   - alice:  warm orange (vet theme)
+ *   - stella: verde
+ *   - ben:    marrom
+ *   - graham: azul
+ * ============================================================================ */
+.vet-subview-host.alice-bubble-mode {
+  justify-content: center;        /* centro vertical do balão dentro do stage */
+  padding: 0 6px 0 12px;
+}
+
+.alice-bubble {
+  position: relative;
+  background: var(--vet-gold-pale);
+  border: 4px solid var(--vet-brown-wood);
+  border-radius: 12px;
+  padding: 18px 20px 12px;
+  max-width: 100%;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.alice-bubble:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Cauda do balão — triângulo apontando pra esquerda, na altura do nome
+   (que agora fica no topo do balão, então a cauda também sobe pra alinhar
+   com o rosto da Alice). Camada externa (borda) + camada interna (fundo)
+   criam o efeito de balão com contorno. */
+.alice-bubble-tail {
+  position: absolute;
+  left: -22px;
+  top: 22%;
+  width: 0;
+  height: 0;
+  border: 14px solid transparent;
+  border-right-color: var(--vet-brown-wood);
+  border-left: 0;
+  pointer-events: none;
+}
+.alice-bubble-tail::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: -10px;
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-right-color: var(--vet-gold-pale);
+  border-left: 0;
+}
+
+/* Nome agora vem PRIMEIRO no DOM (cabeçalho do balão). Press Start 2P
+   é bitmap em grid de 8px — usamos 1rem (16px), múltiplo limpo, pra
+   eliminar o serrilhado que aparecia em 0.95rem (15.2px). */
+.alice-bubble-name {
+  font-family: var(--font-family-pixel-title), var(--font-family-pixel), monospace;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Texto da fala — VT323 lê bem em 1.25rem (20px). Antes em 1.05rem
+   (~16.8px) algumas palavras ficavam "esfumaçadas" pelo antialiasing
+   desencontrado com o grid bitmap. */
+.alice-bubble-text {
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--vet-brown-deep);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Cores do nome por personagem (definidas pelo data-char-id no balão). */
+.alice-bubble[data-char-id="stella"]  .alice-bubble-name { color: #3d8c40; }  /* verde */
+.alice-bubble[data-char-id="ben"]     .alice-bubble-name { color: #7a4a23; }  /* marrom */
+.alice-bubble[data-char-id="graham"]  .alice-bubble-name { color: #2a5fa3; }  /* azul */
+.alice-bubble[data-char-id="alice"]   .alice-bubble-name { color: #b85c00; }  /* warm vet */
+
+.alice-bubble-hint {
+  margin-top: 8px;
+  font-family: var(--font-family-pixel), monospace;
+  font-size: 0.7rem;
+  color: var(--vet-brown-warm);
+  font-style: italic;
+  text-align: right;
+  opacity: 0.7;
+  letter-spacing: 0.4px;
+}
+
+/* Em telas estreitas a sidebar quebra pra cima (grid 1fr). A cauda continua
+   à esquerda do balão pra simplificar — não trocamos o lado dinamicamente.
+   Tamanhos de fonte NÃO são reduzidos no mobile: Press Start 2P fora dos
+   múltiplos de 8px volta a serrilhar. Mantemos 16/20px e deixamos o
+   `word-break: break-word` do .alice-bubble-text fazer a quebra. */
+@media (max-width: 720px) {
+  .alice-bubble-tail { left: -18px; }
+}
+
+/* ============================================================================
+ * prefers-reduced-motion — respeita a preferência do SO de animações
+ * reduzidas. Mantém o feedback (cor/borda) mas zera scale/rotate/pulse.
+ * ============================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  #vet-overlay,
+  .vet-wrapper,
+  .vet-frame,
+  .vet-subview-host,
+  .vet-action-btn,
+  .vet-back-btn,
+  .vet-close-btn,
+  .vet-recovery-pill,
+  .vet-inline-toast,
+  .alice-bubble {
+    transition: none !important;
+    animation: none !important;
+  }
+  .vet-close-btn:hover { transform: none; }
+  .vet-action-btn:hover,
+  .vet-recovery-pill:hover,
+  .alice-bubble:hover,
+  .vet-subview .vet-action-btn:hover:not(:disabled) {
+    transform: none;
+  }
+  .vet-back-btn:hover { transform: translateY(-50%); }
+}
