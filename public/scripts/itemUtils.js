@@ -208,7 +208,9 @@ function _atlasClassFor(icon) {
     if (typeof icon !== 'string') return null;
     // Aceita ambos: "assets/icons/foo.png" ou só "foo.png" ou
     // até "/assets/icons/foo.png".
-    const m = icon.match(/(?:^|[\\/])assets[\\/]icons[\\/]([^\\/?#]+?)\.(?:png|webp)$/i);
+    // Aceita .png/.webp seguido de fim, query string (?v=1) ou fragment (#x)
+    // pra não regredir o atlas em paths versionados.
+    const m = icon.match(/(?:^|[\\/])assets[\\/]icons[\\/]([^\\/?#]+?)\.(?:png|webp)(?:$|[?#])/i);
     if (!m) return null;
     return `icon-${m[1]}`;
 }

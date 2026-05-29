@@ -176,9 +176,11 @@ async function loadSingleImage(src) {
     // Detection na primeira chamada — todas as outras pegam o cache.
     if (_webpSupport === null) await _detectWebPSupport();
 
-    const tryWebP = _webpSupport && /\.png$/i.test(src);
+    // Regex aceita .png seguido de fim, query string (?v=1) ou fragment (#x).
+    // Sem isso, paths versionados como "foo.png?v=2" pulavam a tentativa webp.
+    const tryWebP = _webpSupport && /\.png(?=$|[?#])/i.test(src);
     const candidates = tryWebP
-        ? [src.replace(/\.png$/i, '.webp'), src]
+        ? [src.replace(/\.png(?=$|[?#])/i, '.webp'), src]
         : [src];
 
     for (const candidate of candidates) {

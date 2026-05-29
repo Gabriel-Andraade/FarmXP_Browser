@@ -134,7 +134,6 @@ const Y_SORT_THRESHOLD = 16;
  * o wrapper é GC'd automaticamente — sem leak.
  *
  * Antes: 150 wrappers alocados a cada player.y > threshold → GC pause →
- * stutter de 60→25fps ao andar.
  * Depois: zero alocações em rebuilds, só pool lookups + sort.
  */
 const _wrapperPool = new WeakMap();

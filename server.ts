@@ -25,10 +25,11 @@ import { transform as esbuildTransform } from "esbuild";
 // pode setar SERVER_NO_MINIFY=1 e ver código original.
 const MINIFY_JS = process.env.SERVER_NO_MINIFY !== "1";
 
-// Cache em memória das versões minificadas. Chave = path completo.
-// Dev com --watch reinicia o processo no file change, então não precisa
-// invalidar por mtime aqui.
-const _minifiedJsCache = new Map<string, Uint8Array>();
+// Cache em memória das versões minificadas. Chave = path completo. Valor
+// guarda mtime do arquivo no momento da minificação — invalidamos quando
+// o arquivo no disco mudou (caso o processo NÃO esteja com --watch ou em
+// produção sem restart).
+const _minifiedJsCache = new Map<string, { mtimeMs: number; bytes: Uint8Array }>();
 
 /**
  * Server port number
@@ -43,10 +44,10 @@ const COMPRESSIBLE_EXT = new Set([
   ".html", ".js", ".css", ".json", ".svg", ".map", ".txt",
 ]);
 
-// Cache de versões comprimidas. Chave: `${ext}|${path}|${encoding}` →
-// Uint8Array. Dev com --watch reinicia o processo quando arquivos
-// mudam, então não precisa de invalidação por mtime aqui.
-const _compressedCache = new Map<string, Uint8Array>();
+// Cache de versões comprimidas. Chave: `${ext}|${path}|${encoding}`.
+// Guarda mtime do arquivo de origem pra invalidar se mudou no disco
+// (cobrindo deploys sem restart e edição manual sem --watch).
+const _compressedCache = new Map<string, { mtimeMs: number; bytes: Uint8Array }>();
 
 /**
  * Comprime `bytes` no formato indicado. Resultado é cacheado em memória.
@@ -58,9 +59,10 @@ function getCompressed(
   cacheKey: string,
   rawBytes: Uint8Array,
   encoding: "br" | "gzip",
+  mtimeMs: number,
 ): Uint8Array {
   const cached = _compressedCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached && cached.mtimeMs === mtimeMs) return cached.bytes;
 
   let compressed: Uint8Array;
   if (encoding === "br") {
@@ -73,7 +75,7 @@ function getCompressed(
   } else {
     compressed = Bun.gzipSync(rawBytes);
   }
-  _compressedCache.set(cacheKey, compressed);
+  _compressedCache.set(cacheKey, { mtimeMs, bytes: compressed });
   return compressed;
 }
 
@@ -84,10 +86,10 @@ function getCompressed(
  *
  * Falhas (sintaxe inválida etc) caem pro código original — defensivo.
  */
-async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array): Promise<Uint8Array> {
+async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array, mtimeMs: number): Promise<Uint8Array> {
   if (!MINIFY_JS) return rawBytes;
   const cached = _minifiedJsCache.get(fullPath);
-  if (cached) return cached;
+  if (cached && cached.mtimeMs === mtimeMs) return cached.bytes;
   try {
     const source = new TextDecoder().decode(rawBytes);
     const result = await esbuildTransform(source, {
@@ -99,7 +101,7 @@ async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array): Promise<Ui
       treeShaking: false,     // sem bundling — não tem como saber o uso real
     });
     const out = new TextEncoder().encode(result.code);
-    _minifiedJsCache.set(fullPath, out);
+    _minifiedJsCache.set(fullPath, { mtimeMs, bytes: out });
     return out;
   } catch (err) {
     // Em caso de erro de parse, retorna original (evita derrubar o jogo).
@@ -108,12 +110,30 @@ async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array): Promise<Ui
   }
 }
 
-/** Escolhe o melhor encoding suportado pelo client. br > gzip > identity. */
+/**
+ * Escolhe o melhor encoding suportado pelo client. br > gzip > identity.
+ * Honra q-values: `Accept-Encoding: identity, br;q=0` recusa brotli
+ * explicitamente. `includes("br")` ingênuo cairia nessa armadilha.
+ */
 function pickEncoding(acceptEncoding: string | null): "br" | "gzip" | null {
   if (!acceptEncoding) return null;
-  const ae = acceptEncoding.toLowerCase();
-  if (ae.includes("br")) return "br";
-  if (ae.includes("gzip")) return "gzip";
+  const accepted = new Map<string, number>();
+  for (const raw of acceptEncoding.toLowerCase().split(",")) {
+    const parts = raw.trim().split(";");
+    const token = parts[0].trim();
+    if (!token) continue;
+    let q = 1;
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i].trim();
+      if (p.startsWith("q=")) {
+        const v = parseFloat(p.slice(2));
+        if (!Number.isNaN(v)) q = v;
+      }
+    }
+    accepted.set(token, q);
+  }
+  if ((accepted.get("br") ?? 0) > 0) return "br";
+  if ((accepted.get("gzip") ?? 0) > 0) return "gzip";
   return null;
 }
 
@@ -292,19 +312,23 @@ serve({
 
     // Pipeline texto: 1) ler bytes  2) minify (se .js)  3) comprimir.
     // Cache aplica nos passos 2 e 3 — primeira request por path paga
-    // o custo, demais requests são instantâneas.
+    // o custo, demais requests são instantâneas. mtimeMs é usado pra
+    // invalidar entradas quando o arquivo muda no disco (deploys sem
+    // restart, edição manual).
     if (COMPRESSIBLE_EXT.has(ext)) {
       const encoding = pickEncoding(req.headers.get("Accept-Encoding"));
-      let rawBytes = new Uint8Array(await Bun.file(fullPath).arrayBuffer());
+      const file = Bun.file(fullPath);
+      const mtimeMs = file.lastModified || 0;
+      let rawBytes = new Uint8Array(await file.arrayBuffer());
 
       // Minify JS antes de comprimir (compressão de minified é melhor).
       if (ext === ".js") {
-        rawBytes = await getMinifiedJs(fullPath, rawBytes);
+        rawBytes = await getMinifiedJs(fullPath, rawBytes, mtimeMs);
       }
 
       if (encoding) {
         const cacheKey = `${encoding}|${ext === ".js" && MINIFY_JS ? "min|" : ""}${fullPath}`;
-        const compressed = getCompressed(cacheKey, rawBytes, encoding);
+        const compressed = getCompressed(cacheKey, rawBytes, encoding, mtimeMs);
         return new Response(compressed, {
           headers: {
             ...SECURITY_HEADERS,
