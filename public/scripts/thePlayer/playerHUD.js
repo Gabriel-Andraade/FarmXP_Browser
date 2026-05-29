@@ -366,6 +366,13 @@ export class PlayerHUD {
     }
 
     setHUDValue(id, value) {
+        // Cache de valores anteriores — pula DOM write quando valor não
+        // mudou. Antes: 1000+ setHUDValue/10s no profile, custo dominado
+        // por `el.textContent = ...` que força reflow. Agora: só atualiza
+        // quando valor muda de verdade (~5-10/10s típico).
+        if (!this._lastValues) this._lastValues = Object.create(null);
+        if (this._lastValues[id] === value) return;
+        this._lastValues[id] = value;
         const el = document.getElementById(id);
         if (el) el.textContent = value;
     }

@@ -199,11 +199,41 @@ export function isImageIcon(icon) {
  * @param {string} icon - Caminho da imagem ou emoji
  * @param {string} [alt] - Texto alternativo para imagens
  */
+/**
+ * Tenta extrair o filename pra usar como classe do atlas. Espera paths
+ * tipo "assets/icons/breadIcon.png" → "breadIcon". Retorna null se não
+ * é um path de icon (paths externos, portraits, etc — caem no <img>).
+ */
+function _atlasClassFor(icon) {
+    if (typeof icon !== 'string') return null;
+    // Aceita ambos: "assets/icons/foo.png" ou só "foo.png" ou
+    // até "/assets/icons/foo.png".
+    const m = icon.match(/(?:^|[\\/])assets[\\/]icons[\\/]([^\\/?#]+?)\.(?:png|webp)$/i);
+    if (!m) return null;
+    return `icon-${m[1]}`;
+}
+
 export function setItemIcon(el, icon, alt = '') {
     if (!el) return;
     el.replaceChildren();
     if (!icon) return;
+
     if (isImageIcon(icon)) {
+        // Sprite atlas: usa classe CSS (1 atlas WebP em vez de 77 PNGs).
+        // CSS gerada por `tools/build-icon-atlas.mjs` em /style/icon-atlas.css.
+        // Fallback pra <img> quando o icon não está no atlas (portraits,
+        // imagens externas, etc).
+        const atlasClass = _atlasClassFor(icon);
+        if (atlasClass) {
+            const sprite = document.createElement('span');
+            sprite.className = `icon-atlas ${atlasClass}`;
+            sprite.setAttribute('role', 'img');
+            if (alt) sprite.setAttribute('aria-label', alt);
+            el.appendChild(sprite);
+            return;
+        }
+
+        // Fallback: <img> direto (paths não-icon ou icons custom).
         const img = document.createElement('img');
         img.src = icon;
         img.alt = alt;

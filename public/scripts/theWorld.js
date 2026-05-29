@@ -120,8 +120,33 @@ let lastPlayerHeight = -1;
  */
 const CULLING_BUFFER = CAMERA.CULLING_BUFFER;
 
-/** Threshold em pixels para invalidar cache de Y-sort (evita rebuild a cada pixel) */
-const Y_SORT_THRESHOLD = 4;
+/**
+ * Threshold em pixels pra invalidar cache de Y-sort. Com wrapper pool em
+ * uso (`_wrapperPool`), rebuild não causa mais alocações grandes — só uma
+ * reordenação. Threshold pode ficar baixo sem pagar GC.
+ */
+const Y_SORT_THRESHOLD = 16;
+
+/**
+ * Pool de wrappers do Y-sort. Cada objeto subjacente (tree, rock, animal,
+ * etc.) tem UM wrapper estável reusado em todo rebuild. WeakMap garante
+ * que se o objeto subjacente sumir (animal morre, árvore derrubada),
+ * o wrapper é GC'd automaticamente — sem leak.
+ *
+ * Antes: 150 wrappers alocados a cada player.y > threshold → GC pause →
+ * stutter de 60→25fps ao andar.
+ * Depois: zero alocações em rebuilds, só pool lookups + sort.
+ */
+const _wrapperPool = new WeakMap();
+function _getOrCreateWrapper(original, factory) {
+  let w = _wrapperPool.get(original);
+  if (!w) {
+    w = factory(original);
+    w.original = original;
+    _wrapperPool.set(original, w);
+  }
+  return w;
+}
 
 /**
  * Invalidates the world object cache, forcing recalculation on next render
@@ -388,140 +413,130 @@ export function getSortedWorldObjects(player) {
   const allObjects = [];
 
   for (const tree of trees) {
-    const tid = tree.id || `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    if (!tree.id) tree.id = tid;
-
-    allObjects.push({
-      id: tid,
+    if (!tree.id) tree.id = `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    allObjects.push(_getOrCreateWrapper(tree, (t) => ({
+      id: t.id,
       type: "TREE",
       originalType: "tree",
-      x: tree.x || 0,
-      y: tree.y || 0,
-      width: tree.width || 64,
-      height: tree.height || 96,
-      hp: tree.hp || 6,
-      maxHealth: tree.hp || 6,
+      x: t.x || 0,
+      y: t.y || 0,
+      width: t.width || 64,
+      height: t.height || 96,
+      hp: t.hp || 6,
+      maxHealth: t.hp || 6,
       draw: (ctx) => {
-        if (isInViewportWithBuffer(tree.x, tree.y, tree.width || 64, tree.height || 96)) {
-          drawSingleObject(ctx, tree, "trees", drawTreeFallback);
+        if (isInViewportWithBuffer(t.x, t.y, t.width || 64, t.height || 96)) {
+          drawSingleObject(ctx, t, "trees", drawTreeFallback);
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const rock of rocks) {
-    const rid = rock.id || `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    if (!rock.id) rock.id = rid;
-
-    allObjects.push({
-      id: rid,
+    if (!rock.id) rock.id = `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    allObjects.push(_getOrCreateWrapper(rock, (r) => ({
+      id: r.id,
       type: "ROCK",
       originalType: "rock",
-      x: rock.x || 0,
-      y: rock.y || 0,
-      width: rock.width || 48,
-      height: rock.height || 48,
-      hp: rock.hp || 3,
-      maxHealth: rock.hp || 3,
+      x: r.x || 0,
+      y: r.y || 0,
+      width: r.width || 48,
+      height: r.height || 48,
+      hp: r.hp || 3,
+      maxHealth: r.hp || 3,
       draw: (ctx) => {
-        if (isInViewportWithBuffer(rock.x, rock.y, rock.width || 48, rock.height || 48)) {
-          drawSingleObject(ctx, rock, "rocks", drawRockFallback);
+        if (isInViewportWithBuffer(r.x, r.y, r.width || 48, r.height || 48)) {
+          drawSingleObject(ctx, r, "rocks", drawRockFallback);
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const thicket of thickets) {
-    const thid = thicket.id || `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    if (!thicket.id) thicket.id = thid;
-
-    allObjects.push({
-      id: thid,
+    if (!thicket.id) thicket.id = `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    allObjects.push(_getOrCreateWrapper(thicket, (th) => ({
+      id: th.id,
       type: "THICKET",
       originalType: "thicket",
-      x: thicket.x || 0,
-      y: thicket.y || 0,
-      width: thicket.width || 32,
-      height: thicket.height || 32,
-      hp: thicket.hp || 1,
-      maxHealth: thicket.hp || 1,
+      x: th.x || 0,
+      y: th.y || 0,
+      width: th.width || 32,
+      height: th.height || 32,
+      hp: th.hp || 1,
+      maxHealth: th.hp || 1,
       draw: (ctx) => {
-        if (isInViewportWithBuffer(thicket.x, thicket.y, thicket.width || 32, thicket.height || 32)) {
-          drawSingleObject(ctx, thicket, "thickets", drawThicketFallback);
+        if (isInViewportWithBuffer(th.x, th.y, th.width || 32, th.height || 32)) {
+          drawSingleObject(ctx, th, "thickets", drawThicketFallback);
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const building of placedBuildings) {
-    allObjects.push({
-      ...building,
-      type: building.type || "CONSTRUCTION",
+    allObjects.push(_getOrCreateWrapper(building, (b) => ({
+      ...b,
+      type: b.type || "CONSTRUCTION",
       draw: (ctx) => {
-        if (isInViewportWithBuffer(building.x, building.y, building.width || 32, building.height || 32)) {
-          if (building.draw) building.draw(ctx);
-          else drawBuilding(ctx, building);
+        if (isInViewportWithBuffer(b.x, b.y, b.width || 32, b.height || 32)) {
+          if (b.draw) b.draw(ctx);
+          else drawBuilding(ctx, b);
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const well of placedWells) {
-    allObjects.push({
-      ...well,
+    allObjects.push(_getOrCreateWrapper(well, (w) => ({
+      ...w,
       type: "WELL",
       originalType: "well",
       draw: (ctx) => {
-        if (isInViewportWithBuffer(well.x, well.y, well.width || 64, well.height || 64)) {
-          if (well.draw) well.draw(ctx);
-          else drawBuilding(ctx, Object.assign({}, well, { originalType: "well" }));
+        if (isInViewportWithBuffer(w.x, w.y, w.width || 64, w.height || 64)) {
+          if (w.draw) w.draw(ctx);
+          else drawBuilding(ctx, Object.assign({}, w, { originalType: "well" }));
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const house of houses) {
-    const hid = house.id || `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    if (!house.id) house.id = hid;
-
-    allObjects.push({
-      id: hid,
-      type: house.type,
+    if (!house.id) house.id = `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    allObjects.push(_getOrCreateWrapper(house, (h) => ({
+      id: h.id,
+      type: h.type,
       originalType: "house",
-      x: house.x || 0,
-      y: house.y || 0,
-      width: house.width || 128,
-      height: house.height || 128,
-      interactable: house.type === "HOUSE_WALLS",
+      x: h.x || 0,
+      y: h.y || 0,
+      width: h.width || 128,
+      height: h.height || 128,
+      interactable: h.type === "HOUSE_WALLS",
       draw: (ctx) => {
-        if (isInViewportWithBuffer(house.x, house.y, house.width || 128, house.height || 128)) {
-          if (house.type === "HOUSE_WALLS") drawHouseWalls(ctx, house);
-          else drawHouseRoof(ctx, house);
+        if (isInViewportWithBuffer(h.x, h.y, h.width || 128, h.height || 128)) {
+          if (h.type === "HOUSE_WALLS") drawHouseWalls(ctx, h);
+          else drawHouseRoof(ctx, h);
         }
-      }
-    });
+      },
+    })));
   }
 
   for (const animal of animals) {
-    const aid = animal.id || (`animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-    if (!animal.id) animal.id = aid;
-
-    allObjects.push({
+    if (!animal.id) animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    allObjects.push(_getOrCreateWrapper(animal, (a) => ({
       type: "ANIMAL",
-      id: aid,
-      x: animal.x || 0,
-      y: animal.y || 0,
-      width: animal.width || 32,
-      height: animal.height || 32,
-      assetName: animal.assetName,
-      draw: (ctx) => {
+      id: a.id,
+      x: a.x || 0,
+      y: a.y || 0,
+      width: a.width || 32,
+      height: a.height || 32,
+      assetName: a.assetName,
+      draw: (ctx, frameNow) => {
         try {
-          animal.draw(ctx, camera);
+          a.draw(ctx, camera, frameNow);
         } catch (e) {
-          handleWarn("Failed to draw animal", "theWorld:getSortedWorldObjects:animalDraw", { animalId: animal.id, err: e });
+          handleWarn("Failed to draw animal", "theWorld:getSortedWorldObjects:animalDraw", { animalId: a.id, err: e });
         }
-      }
-    });
+      },
+    })));
   }
 
   if (player) {
@@ -591,27 +606,33 @@ export function getSortedWorldObjects(player) {
     const tombSys = getSystem('animalTomb');
     if (tombSys && typeof tombSys.getTombs === 'function') {
       for (const tomb of tombSys.getTombs()) {
-        allObjects.push({
-          id: tomb.id,
+        allObjects.push(_getOrCreateWrapper(tomb, (tb) => ({
+          id: tb.id,
           type: 'TOMB',
           originalType: 'tomb',
-          x: tomb.x || 0,
-          y: tomb.y || 0,
-          width: tomb.width || 48,
-          height: tomb.height || 48,
+          x: tb.x || 0,
+          y: tb.y || 0,
+          width: tb.width || 48,
+          height: tb.height || 48,
           draw: (ctx) => {
-            if (isInViewportWithBuffer(tomb.x, tomb.y, tomb.width, tomb.height)) {
-              if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, tomb);
+            if (isInViewportWithBuffer(tb.x, tb.y, tb.width, tb.height)) {
+              if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, tb);
             }
-          }
-        });
+          },
+        })));
       }
     }
   }
 
+  // Sort: lê y/height de `original` quando disponível (entidades que se
+  // movem — animais, player — têm posição atualizada toda frame mesmo
+  // com wrapper cacheado). Pra static (trees, rocks), original === wrapper
+  // semanticamente equivalente.
   sortedWorldObjectsCache = allObjects.sort((a, b) => {
-    const ay = (a.y || 0) + (a.height || 0);
-    const by = (b.y || 0) + (b.height || 0);
+    const aSrc = a.original || a;
+    const bSrc = b.original || b;
+    const ay = (aSrc.y || 0) + (aSrc.height || 0);
+    const by = (bSrc.y || 0) + (bSrc.height || 0);
     const diff = ay - by;
 
     // Para objetos de camadas Tiled diferentes e próximos em Y,

@@ -38,6 +38,27 @@ let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem, wate
 let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
+// AbortController centralizado pra TODOS os listeners deste arquivo. Sem
+// isso, qualquer re-init do jogo (save/load, hot-reload em dev) acumulava
+// listeners duplicados que disparavam o handler N vezes. Aborta uma vez
+// e todos os listeners associados são removidos automaticamente. Outros
+// arquivos (control.js, etc) já têm seus próprios AbortControllers.
+const _mainAbortController = new AbortController();
+const _mainSignal = _mainAbortController.signal;
+
+/**
+ * Helper local: addEventListener com signal do _mainAbortController.
+ * Use em vez de `target.addEventListener(...)` direto.
+ */
+function _onMain(target, type, handler, opts = {}) {
+    target.addEventListener(type, handler, { ...opts, signal: _mainSignal });
+}
+
+/** Para testes / hot reload: aborta TODOS os listeners desta camada. */
+if (typeof window !== 'undefined') {
+    window.__disposeMain = () => _mainAbortController.abort();
+}
+
 // =============================================================================
 // VARIÁVEIS GLOBAIS DO JOGO
 // =============================================================================
@@ -344,7 +365,7 @@ async function initializePlayerSystem() {
  * @returns {void}
  */
 function setupInteractionSystem() {
-  document.addEventListener("keydown", (e) => {
+  _onMain(document,"keydown", (e) => {
     if (!interactionEnabled) return;
     if (sleepBlockedControls) return;
     if (checkGameFlag('interactionsBlocked')) return;
@@ -354,7 +375,7 @@ function setupInteractionSystem() {
     }
   });
 
-  document.addEventListener("playerInteract", async (e) => {
+  _onMain(document,"playerInteract", async (e) => {
     if (!interactionEnabled || isSleeping) return;
 
     const { objectId, originalType } = e.detail || {};
@@ -428,7 +449,7 @@ function setupInteractionSystem() {
   });
 
   // ─── Animal interaction handler (pet / feed / guide / applyMedicine) ───
-  document.addEventListener("animalAction", (e) => {
+  _onMain(document,"animalAction", (e) => {
     const { action, animal, itemId } = e.detail || {};
     if (!animal || typeof animal.pet !== 'function') return;
 
@@ -553,7 +574,7 @@ function spawnGameAnimals() {
 // =============================================================================
 
 function setupSleepListeners() {
-  document.addEventListener("sleepStarted", () => {
+  _onMain(document,"sleepStarted", () => {
     logger.debug("SONO INICIADO: Bloqueando interações e congelando lógica");
     isSleeping = true;
     sleepBlockedControls = true;
@@ -578,7 +599,7 @@ function setupSleepListeners() {
     canvas.classList.add("cursor-wait");
   });
 
-  document.addEventListener("sleepEnded", () => {
+  _onMain(document,"sleepEnded", () => {
     logger.debug("SONO TERMINADO: Restaurando interações");
     isSleeping = false;
 
@@ -604,7 +625,7 @@ function setupSleepListeners() {
     }, 500);
   });
 
-  document.addEventListener("sleepOptimizationsComplete", () => {
+  _onMain(document,"sleepOptimizationsComplete", () => {
     logger.debug("Otimizações de sono concluídas");
     if (window.performance && window.performance.memory) {
       const mem = window.performance.memory;
@@ -618,7 +639,7 @@ function setupSleepListeners() {
 // =============================================================================
 
 function setupGamePauseListeners() {
-  document.addEventListener("game:pause", () => {
+  _onMain(document,"game:pause", () => {
     logger.debug("GAME PAUSE: Congelando simulação para load");
     simulationPaused = true;
     interactionEnabled = false;
@@ -633,7 +654,7 @@ function setupGamePauseListeners() {
     }
   });
 
-  document.addEventListener("game:resume", () => {
+  _onMain(document,"game:resume", () => {
     logger.debug("GAME RESUME: Retomando simulação");
     simulationPaused = false;
     interactionEnabled = true;
@@ -827,6 +848,10 @@ async function startFullGameLoad() {
 
   showLoadingScreen();
   updateLoadingProgress(0.05, "carregando mundo...");
+  // Tempo mínimo de exibição do loading screen. Em PCs rápidos o load
+  // real terminava em <300ms e o usuário só via um flash da tela ("parecia
+  // fake"). 1500ms permite que a animação da barra + dots seja lida.
+  const _loadStartedAt = performance.now();
 
   try {
     await assets.loadWorld();
@@ -864,23 +889,57 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar questSystem", "main:startFullGameLoad:questSystem", e);
     }
 
-    // Dialogue & NPC Systems
+    // Dialogue + NPC core — críticos (registry de NPC e diálogo)
     try {
-      await import('./dialogueSystem.js');
-      await import('./npcs/npcSystem.js');
-      await import('./npcs/npcBartolomeu.js');
-      await import('./npcs/npcMilly.js');
-      await import('./npcs/npcJuan.js');
-      await import('./npcs/npcBru.js');
-      await import('./npcs/npcCouple.js');
-      await import('./npcs/npcJeremy.js');
-      await import('./npcs/family/npcJohn.js');
-      await import('./npcs/family/npcLucas.js');
-      await import('./npcs/family/npcIsabela.js');
-      await import('./npcs/family/npcMolly.js');
+      await Promise.all([
+        import('./dialogueSystem.js'),
+        import('./npcs/npcSystem.js'),
+      ]);
     } catch (e) {
-      handleWarn("falha ao carregar NPC/dialogue systems", "main:startFullGameLoad:npc", e);
+      handleWarn("falha ao carregar NPC/dialogue core", "main:startFullGameLoad:npcCore", e);
     }
+
+    // NPCs individuais — NÃO bloqueiam o boot. Player só interage com
+    // eles ao caminhar até. Cada NPC carrega UM POR VEZ em
+    // requestIdleCallback (browser só dispara quando ocioso, entre frames).
+    // ANTES: Promise.all paralelo → 10 módulos parsing simultâneo → CPU
+    // spike → game loop dropava de 60→20fps. AGORA: ~1 NPC por idle
+    // callback, game loop fica fluido enquanto carrega.
+    const npcModulesToLoad = [
+      './npcs/npcBartolomeu.js',
+      './npcs/npcMilly.js',
+      './npcs/npcJuan.js',
+      './npcs/npcBru.js',
+      './npcs/npcCouple.js',
+      './npcs/npcJeremy.js',
+      './npcs/family/npcJohn.js',
+      './npcs/family/npcLucas.js',
+      './npcs/family/npcIsabela.js',
+      './npcs/family/npcMolly.js',
+    ];
+    const scheduleNextNpc = () => {
+      const mod = npcModulesToLoad.shift();
+      if (!mod) return;
+      import(mod).catch((e) => {
+        handleWarn(`falha ao carregar ${mod}`, "main:startFullGameLoad:npcBackground", e);
+      }).finally(() => {
+        // Próximo NPC só roda quando o browser estiver ocioso.
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(scheduleNextNpc, { timeout: 5000 });
+        } else {
+          setTimeout(scheduleNextNpc, 200);
+        }
+      });
+    };
+    // Começa depois do primeiro frame renderizar — dá tempo do game loop
+    // estabilizar antes de competir com parse de módulo.
+    requestAnimationFrame(() => {
+      if (typeof requestIdleCallback === 'function') {
+        requestIdleCallback(scheduleNextNpc, { timeout: 5000 });
+      } else {
+        setTimeout(scheduleNextNpc, 500);
+      }
+    });
 
     updateLoadingProgress(0.65, "carregando sistemas...");
 
@@ -1018,6 +1077,13 @@ async function startFullGameLoad() {
     }
 
     updateLoadingProgress(1, "pronto");
+    // Garante 1500ms mínimos de visibilidade do loading screen — se o
+    // load real foi rápido demais, espera o resto.
+    const _loadElapsed = performance.now() - _loadStartedAt;
+    const MIN_LOADING_MS = 1500;
+    if (_loadElapsed < MIN_LOADING_MS) {
+      await new Promise(r => setTimeout(r, MIN_LOADING_MS - _loadElapsed));
+    }
     hideLoadingScreen();
 
     gameStarted = true;
@@ -1047,7 +1113,7 @@ function setupPortalKeyListener() {
   if (_portalListenerAdded) return;
   _portalListenerAdded = true;
 
-  document.addEventListener('keydown', async (e) => {
+  _onMain(document,'keydown', async (e) => {
     if (e.key !== 'e' && e.key !== 'E') return;
     if (simulationPaused || isSleeping) return;
 
@@ -1073,7 +1139,7 @@ function setupCityHouseKeyListener() {
   if (_cityHouseListenerAdded) return;
   _cityHouseListenerAdded = true;
 
-  document.addEventListener('keydown', async (e) => {
+  _onMain(document,'keydown', async (e) => {
     if (e.key !== 'e' && e.key !== 'E') return;
     if (simulationPaused || isSleeping) return;
 
@@ -1105,34 +1171,34 @@ function setupStateChangeListenersForSave() {
   // 1. Mudanças no mundo (animais spawnados, construções, etc.)
   //    Agora usando evento customizado 'worldChanged' que deve ser disparado
   //    pela função markWorldChanged em theWorld.js
-  document.addEventListener('worldChanged', () => {
+  _onMain(document,'worldChanged', () => {
     saveRef.markDirty();
   });
 
   // 2. Mudanças no inventário
-  document.addEventListener('inventoryChanged', () => {
+  _onMain(document,'inventoryChanged', () => {
     saveRef.markDirty();
   });
 
   // 3. Mudanças na moeda
-  document.addEventListener('currencyChanged', () => {
+  _onMain(document,'currencyChanged', () => {
     saveRef.markDirty();
   });
 
   // 4. Player spawnado/atualizado
-  document.addEventListener('playerReady', () => {
+  _onMain(document,'playerReady', () => {
     saveRef.markDirty();
   });
 
   // 5. Adicionar animais via debug ou sistemas
   //    Agora usando evento customizado 'animalAdded' que deve ser disparado
   //    pela função addAnimal em theWorld.js
-  document.addEventListener('animalAdded', () => {
+  _onMain(document,'animalAdded', () => {
     saveRef.markDirty();
   });
 
   // 6. Eventos de sono (mudam o tempo do jogo)
-  document.addEventListener('sleepEnded', () => {
+  _onMain(document,'sleepEnded', () => {
     saveRef.markDirty();
   });
 
@@ -1214,12 +1280,12 @@ async function initGameBootstrap() {
 // LISTENERS GLOBAIS
 // =============================================================================
 
-document.addEventListener("characterSelected", () => {
+_onMain(document,"characterSelected", () => {
   startFullGameLoad();
 });
 
 // Main Menu → New Game → show CharacterSelection
-document.addEventListener("mainMenu:newGame", () => {
+_onMain(document,"mainMenu:newGame", () => {
   // Reseta XP/Level para não herdar progresso de uma sessão anterior.
   const xp = getSystem('xp');
   if (xp?.reset) xp.reset();
@@ -1231,7 +1297,7 @@ document.addEventListener("mainMenu:newGame", () => {
 });
 
 // Main Menu → Load Game (save already set in window._pendingSaveData)
-document.addEventListener("mainMenu:loadGame", (e) => {
+_onMain(document,"mainMenu:loadGame", (e) => {
   const slot = e.detail?.saveData;
   const charId = slot?.data?.player?.characterId || 'stella';
 
@@ -1246,7 +1312,7 @@ document.addEventListener("mainMenu:loadGame", (e) => {
   }));
 });
 
-document.addEventListener("playerReady", async (e) => {
+_onMain(document,"playerReady", async (e) => {
   currentPlayer = e.detail.player;
   updatePlayer = e.detail.updateFunction;
 
@@ -1274,7 +1340,7 @@ document.addEventListener("playerReady", async (e) => {
     handleWarn("falha ao expor globais no playerReady", "main:playerReady:exposeGlobals", e);
   }
 });
-document.addEventListener("DOMContentLoaded", async () => {
+_onMain(document,"DOMContentLoaded", async () => {
   // Criar canvas se não existir
   canvas = document.getElementById("gameCanvas");
   if (!canvas) {
@@ -1369,7 +1435,7 @@ function setupDebugCoordinatesDisplay() {
   if (debugCoordinatesDisplayInitialized) return;
   debugCoordinatesDisplayInitialized = true;
 
-  canvas.addEventListener('mousemove', (e) => {
+  _onMain(canvas,'mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     const screenX = e.clientX - rect.left;
     const screenY = e.clientY - rect.top;
@@ -1386,7 +1452,7 @@ function setupDebugCoordinatesDisplay() {
   });
 
   // F2 toggle do painel de coordenadas
-  window.addEventListener('keydown', (e) => {
+  _onMain(window,'keydown', (e) => {
     if (e.key === 'F2') {
       e.preventDefault();
       showCoordinatePanel = !showCoordinatePanel;
@@ -1459,6 +1525,12 @@ function drawDebugCoordinates(ctx) {
 
 function gameLoop(timestamp) {
   if (!gameInitialized) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  if (typeof document !== 'undefined' && document.hidden) {
+    lastTime = timestamp;  // evita salto temporal ao voltar
     requestAnimationFrame(gameLoop);
     return;
   }
@@ -1536,7 +1608,7 @@ function gameLoop(timestamp) {
 
     for (const o of objectsToDraw) {
       try {
-        if (o && o.draw) o.draw(ctx);
+        if (o && o.draw) o.draw(ctx, timestamp);
       } catch (err) {
         handleWarn("falha ao desenhar objeto individual", "main:gameLoop:drawObject", { id: o?.id, err });
       }
@@ -1564,10 +1636,14 @@ function gameLoop(timestamp) {
 
     // Marker "+" do cocho no hover — independente do build mode.
     // Drink slots: overlay debug ativado com `?drinkSlots=1` na URL.
+    // Gate o draw atrás da flag antes de chamar pra evitar overhead de
+    // chamada de função quando debug está off (caso comum em produção).
     if (camera) {
       const wtSys = getSystem('waterTrough');
       wtSys?.drawHoverMarker?.(ctx, camera);
-      wtSys?.drawDrinkSlots?.(ctx, camera);
+      if (getDebugFlag('drinkSlots')) {
+        wtSys?.drawDrinkSlots?.(ctx, camera);
+      }
     }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);

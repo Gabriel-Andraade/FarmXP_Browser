@@ -128,6 +128,21 @@ export class MinimapSystem {
 
   /** Paint explored area around player on the full-world fog map */
   updateExploration(playerWorldX, playerWorldY) {
+    // Skip se player não andou o suficiente. Antes: rodava 60×/s mesmo
+    // parado, fazendo loop 2D de ~400 cells + 400 string allocs por frame.
+    // Threshold = metade do raio de exploração (player precisa se mover
+    // significativamente pra novas células serem descobertas).
+    const lastX = this._lastExplorationX;
+    const lastY = this._lastExplorationY;
+    if (lastX !== undefined) {
+      const ddx = playerWorldX - lastX;
+      const ddy = playerWorldY - lastY;
+      const moveThresholdSq = (EXPLORATION_RADIUS_WORLD * 0.5) ** 2;
+      if (ddx * ddx + ddy * ddy < moveThresholdSq) return;
+    }
+    this._lastExplorationX = playerWorldX;
+    this._lastExplorationY = playerWorldY;
+
     const fx = this._fullOffsetX + playerWorldX * this._fullScale;
     const fy = this._fullOffsetY + playerWorldY * this._fullScale;
     this.explorationCtx.fillStyle = this.colors.ground;

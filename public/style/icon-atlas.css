@@ -1,0 +1,91 @@
+/**
+ * @file icon-atlas.css — gerado automaticamente por
+ * `tools/build-icon-atlas.mjs`. NÃO edite à mão. Bumpa quando rodar
+ * `npm run build-icon-atlas` após adicionar/remover icons.
+ */
+
+.icon-atlas {
+  background-image: url('/assets/icons/atlas.webp');
+  background-repeat: no-repeat;
+  display: inline-block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.icon-appleIcon { background-position: -48px -35px; width: 63px; height: 72px; }
+.icon-applePieIcon { background-position: -200px -37px; width: 79px; height: 68px; }
+.icon-appleSeedIcon { background-position: -367px -26px; width: 65px; height: 90px; }
+.icon-axeIcon { background-position: -524px -35px; width: 72px; height: 73px; }
+.icon-benIcon { background-position: -650px -6px; width: 139px; height: 130px; }
+.icon-breadIcon { background-position: -838px -36px; width: 84px; height: 71px; }
+.icon-brickIcon { background-position: -1001px -34px; width: 78px; height: 75px; }
+.icon-bucketIcon { background-position: -1169px -35px; width: 61px; height: 72px; }
+.icon-carrotIcon { background-position: -1332px -38px; width: 56px; height: 66px; }
+.icon-carrotSeedIcon { background-position: -47px -169px; width: 66px; height: 91px; }
+.icon-catFeedIcon { background-position: -206px -173px; width: 67px; height: 82px; }
+.icon-cheeseIcon { background-position: -362px -178px; width: 76px; height: 73px; }
+.icon-chickenFeedIcon { background-position: -526px -170px; width: 68px; height: 88px; }
+.icon-coalIcon { background-position: -684px -178px; width: 72px; height: 72px; }
+.icon-commonDewormerIcon { background-position: -856px -174px; width: 47px; height: 81px; }
+.icon-cornIcon { background-position: -1006px -175px; width: 67px; height: 78px; }
+.icon-cornSeedIcon { background-position: -1166px -170px; width: 67px; height: 89px; }
+.icon-cowFeedIcon { background-position: -1326px -171px; width: 67px; height: 87px; }
+.icon-dogFeedIcon { background-position: -46px -316px; width: 67px; height: 83px; }
+.icon-eggIcon { background-position: -218px -331px; width: 44px; height: 53px; }
+.icon-fabricIcon { background-position: -365px -319px; width: 70px; height: 76px; }
+.icon-fastDewormerIcon { background-position: -536px -318px; width: 48px; height: 79px; }
+.icon-flowerSeedIcon { background-position: -688px -312px; width: 64px; height: 90px; }
+.icon-fruitJuiceIcon { background-position: -850px -309px; width: 60px; height: 96px; }
+.icon-fruitSaladIcon { background-position: -1001px -320px; width: 78px; height: 74px; }
+.icon-glassIcon { background-position: -1163px -324px; width: 73px; height: 67px; }
+.icon-glueIcon { background-position: -1335px -315px; width: 50px; height: 84px; }
+.icon-grahamIcon { background-position: -11px -431px; width: 138px; height: 139px; }
+.icon-groundCornSoyMealIcon { background-position: -207px -458px; width: 66px; height: 84px; }
+.icon-hammerIcon { background-position: -366px -465px; width: 68px; height: 70px; }
+.icon-hayIcon { background-position: -521px -458px; width: 78px; height: 84px; }
+.icon-hoeIcon { background-position: -684px -465px; width: 71px; height: 71px; }
+.icon-homemadeSyrupIcon { background-position: -856px -459px; width: 47px; height: 83px; }
+.icon-honeyIcon { background-position: -1005px -458px; width: 69px; height: 84px; }
+.icon-houseIcon { background-position: -1120px -429px; width: 160px; height: 142px; }
+.icon-ironBarIcon { background-position: -1325px -467px; width: 69px; height: 67px; }
+.icon-macheteIcon { background-position: -46px -603px; width: 68px; height: 80px; }
+.icon-madalenaIcon { background-position: -185px -596px; width: 109px; height: 95px; }
+.icon-mayorContractIcon { background-position: -365px -603px; width: 69px; height: 81px; }
+.icon-medicinalTeaIcon { background-position: -522px -605px; width: 75px; height: 77px; }
+.icon-milkBottleIcon { background-position: -695px -601px; width: 49px; height: 84px; }
+.icon-omeletIcon { background-position: -843px -609px; width: 74px; height: 68px; }
+.icon-paintBucketIcon { background-position: -1010px -605px; width: 60px; height: 77px; }
+.icon-pickaxeIcon { background-position: -1166px -608px; width: 67px; height: 70px; }
+.icon-plantFiberIcon { background-position: -1324px -604px; width: 72px; height: 78px; }
+.icon-potatoIcon { background-position: -53px -758px; width: 53px; height: 57px; }
+.icon-potatoSeedIcon { background-position: -207px -741px; width: 66px; height: 91px; }
+.icon-poultryGrainIcon { background-position: -366px -744px; width: 68px; height: 84px; }
+.icon-premiumAntibioticIcon { background-position: -538px -746px; width: 44px; height: 80px; }
+.icon-premiumFeedIcon { background-position: -687px -745px; width: 65px; height: 82px; }
+.icon-rawWoodIcon { background-position: -837px -745px; width: 85px; height: 82px; }
+.icon-rockIcon { background-position: -980px -721px; width: 119px; height: 131px; }
+.icon-ropeIcon { background-position: -1164px -751px; width: 72px; height: 71px; }
+.icon-screwIcon { background-position: -1332px -756px; width: 56px; height: 61px; }
+.icon-scytheIcon { background-position: -48px -894px; width: 63px; height: 71px; }
+.icon-shearsIcon { background-position: -209px -894px; width: 62px; height: 71px; }
+.icon-sheepFeedIcon { background-position: -368px -885px; width: 64px; height: 88px; }
+.icon-stellaIcon { background-position: -500px -880px; width: 120px; height: 98px; }
+.icon-stoneIcon { background-position: -683px -894px; width: 73px; height: 70px; }
+.icon-strongAntipyreticIcon { background-position: -855px -888px; width: 50px; height: 82px; }
+.icon-temperedSteelIcon { background-position: -1004px -894px; width: 72px; height: 71px; }
+.icon-thicketIcon { background-position: -1147px -874px; width: 106px; height: 110px; }
+.icon-threadIcon { background-position: -1332px -890px; width: 56px; height: 78px; }
+.icon-toolboxIcon { background-position: -41px -1031px; width: 78px; height: 83px; }
+.icon-treeIcon { background-position: -178px -1001px; width: 123px; height: 143px; }
+.icon-vegetableSoupIcon { background-position: -359px -1035px; width: 82px; height: 74px; }
+.icon-vetAntacidIcon { background-position: -534px -1030px; width: 51px; height: 84px; }
+.icon-waterBottleIcon { background-position: -700px -1030px; width: 40px; height: 85px; }
+.icon-waterBucketIcon { background-position: -845px -1032px; width: 70px; height: 81px; }
+.icon-wateringCanIcon { background-position: -1002px -1042px; width: 75px; height: 61px; }
+.icon-wellIcon { background-position: -1155px -1025px; width: 90px; height: 94px; }
+.icon-wheatIcon { background-position: -1333px -1039px; width: 54px; height: 67px; }
+.icon-wheatSeedIcon { background-position: -47px -1170px; width: 66px; height: 91px; }
+.icon-woodChipIcon { background-position: -203px -1177px; width: 73px; height: 76px; }
+.icon-woodFenceIcon { background-position: -349px -1183px; width: 102px; height: 64px; }
+.icon-woodPlankIcon { background-position: -526px -1182px; width: 68px; height: 67px; }
+.icon-woodStickIcon { background-position: -695px -1178px; width: 49px; height: 74px; }

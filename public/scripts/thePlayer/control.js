@@ -288,8 +288,10 @@ export class TouchMoveSystem {
             ev.preventDefault();
 
             const rect = this.canvas.getBoundingClientRect();
-            const scaleX = this.canvas.width / rect.width;
-            const scaleY = this.canvas.height / rect.height;
+            // Bug fix: dividir por DPR (ver comment no setupMouseInteraction).
+            const dpr = window.devicePixelRatio || 1;
+            const scaleX = this.canvas.width / rect.width / dpr;
+            const scaleY = this.canvas.height / rect.height / dpr;
 
             const canvasX = (ev.clientX - rect.left) * scaleX;
             const canvasY = (ev.clientY - rect.top) * scaleY;
@@ -458,8 +460,13 @@ export class PlayerInteractionSystem {
             if (isSleeping) { ev.preventDefault(); ev.stopPropagation(); return; }
 
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            // Bug fix: dividir por DPR. canvas.width = INTERNAL × dpr;
+            // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
+            // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
+            // ponto clicado (clique perto do animal abria painel longe).
+            const dpr = window.devicePixelRatio || 1;
+            const scaleX = canvas.width / rect.width / dpr;
+            const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;
             const canvasY = (ev.clientY - rect.top) * scaleY;
             const worldPos = camera.screenToWorld(canvasX, canvasY);
@@ -516,8 +523,13 @@ export class PlayerInteractionSystem {
             ev.preventDefault();
 
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            // Bug fix: dividir por DPR. canvas.width = INTERNAL × dpr;
+            // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
+            // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
+            // ponto clicado (clique perto do animal abria painel longe).
+            const dpr = window.devicePixelRatio || 1;
+            const scaleX = canvas.width / rect.width / dpr;
+            const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;
             const canvasY = (ev.clientY - rect.top) * scaleY;
             const worldPos = camera.screenToWorld(canvasX, canvasY);
@@ -533,8 +545,13 @@ export class PlayerInteractionSystem {
             if (isSleeping) return;
 
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            // Bug fix: dividir por DPR. canvas.width = INTERNAL × dpr;
+            // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
+            // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
+            // ponto clicado (clique perto do animal abria painel longe).
+            const dpr = window.devicePixelRatio || 1;
+            const scaleX = canvas.width / rect.width / dpr;
+            const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;
             const canvasY = (ev.clientY - rect.top) * scaleY;
             const worldPos = camera.screenToWorld(canvasX, canvasY);
