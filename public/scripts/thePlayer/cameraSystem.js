@@ -38,6 +38,16 @@ export const camera = {
 
         this.x = Math.max(0, Math.min(this._mapWidth - this.width, this.x));
         this.y = Math.max(0, Math.min(this._mapHeight - this.height, this.y));
+
+        // PIXEL SNAP: quantiza a posição da câmera pra que `camera.x * zoom`
+        // seja sempre inteiro. Sem isso, cada objeto fazia `Math.floor` da
+        // sua própria screen position independentemente — como zoom é 1.4
+        // (não-inteiro), trees diferentes cruzavam boundaries de pixel em
+        // frames diferentes, criando jitter visível ("árvore saltando").
+        // Com a câmera quantizada, todos os objetos compartilham o mesmo
+        // erro de arredondamento → movem juntos como um scroll só.
+        this.x = Math.round(this.x * this.zoom) / this.zoom;
+        this.y = Math.round(this.y * this.zoom) / this.zoom;
     },
     
     worldToScreen(x, y) {

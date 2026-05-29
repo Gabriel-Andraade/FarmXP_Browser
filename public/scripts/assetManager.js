@@ -145,11 +145,62 @@ async function loadAssetList(assetList, category = "UNKNOWN") {
     return loadedAssets;
 }
 
-/* carrega uma imagem individual com fallback */
+// Cache global de suporte a WebP. Detectado no boot — depois disso é
+// uma comparação booleana. Sem isso, cada loadSingleImage faria a
+// checagem (custo: criar Image + decodificar uma string base64).
+let _webpSupport = null;
+
+/** Detecta suporte a WebP carregando um WebP 1x1 inline. ~1ms uma vez. */
+function _detectWebPSupport() {
+    if (_webpSupport !== null) return _webpSupport;
+    return new Promise((resolve) => {
+        const probe = new Image();
+        probe.onload = () => { _webpSupport = probe.width === 1; resolve(_webpSupport); };
+        probe.onerror = () => { _webpSupport = false; resolve(_webpSupport); };
+        // WebP 1x1 transparente, válido pra todos os browsers que suportam WebP.
+        probe.src = 'data:image/webp;base64,UklGRiQAAABXRUJQVlA4IBgAAAAwAQCdASoBAAEAAwA0JaQAA3AA/vshgAA=';
+    });
+}
+
+/**
+ * Carrega uma imagem. Estratégia:
+ *   1. Se suporte a WebP foi detectado E src termina em .png → tenta .webp primeiro
+ *   2. Se falhar (404 — webp não foi gerado pro asset), fallback automático pro .png
+ *   3. Se .png falhar também → placeholder
+ *
+ * WebPs são gerados por `npm run optimize-assets`. Pra novos assets que
+ * ainda não foram convertidos, o fallback PNG cobre. Browsers sem suporte
+ * a WebP (< 2% global) usam PNG direto.
+ */
 async function loadSingleImage(src) {
+    // Detection na primeira chamada — todas as outras pegam o cache.
+    if (_webpSupport === null) await _detectWebPSupport();
+
+    // Regex aceita .png seguido de fim, query string (?v=1) ou fragment (#x).
+    // Sem isso, paths versionados como "foo.png?v=2" pulavam a tentativa webp.
+    const tryWebP = _webpSupport && /\.png(?=$|[?#])/i.test(src);
+    const candidates = tryWebP
+        ? [src.replace(/\.png(?=$|[?#])/i, '.webp'), src]
+        : [src];
+
+    for (const candidate of candidates) {
+        try {
+            return await _loadImageStrict(candidate);
+        } catch {
+            // Tenta o próximo candidato (geralmente PNG fallback).
+        }
+    }
+
+    logger.warn(`[AssetManager] Falha ao carregar imagem: ${src} — usando placeholder`);
+    return createPlaceholderImage();
+}
+
+/** Promise que resolve quando img carrega, REJEITA quando 404/erro.
+ *  Diferente do antigo loadSingleImage, esta versão rejeita pra permitir
+ *  cascade de fallback. */
+function _loadImageStrict(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
-
         img.onload = () => {
             if (img.decode) {
                 img.decode().then(() => resolve(img)).catch(() => resolve(img));
@@ -157,13 +208,7 @@ async function loadSingleImage(src) {
                 resolve(img);
             }
         };
-
-        img.onerror = () => {
-            logger.warn(`[AssetManager] Falha ao carregar imagem: ${src} — usando placeholder`);
-            const placeholder = createPlaceholderImage();
-            resolve(placeholder);
-        };
-
+        img.onerror = () => reject(new Error(`load failed: ${src}`));
         img.src = src;
     });
 }

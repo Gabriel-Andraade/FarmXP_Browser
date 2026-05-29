@@ -18,6 +18,18 @@
 
 import { serve } from "bun";
 import * as path from "path";
+import { brotliCompressSync, constants as zlibConst } from "node:zlib";
+import { transform as esbuildTransform } from "esbuild";
+
+// Liga/desliga minificação on-the-fly. true por padrão; pra debugar
+// pode setar SERVER_NO_MINIFY=1 e ver código original.
+const MINIFY_JS = process.env.SERVER_NO_MINIFY !== "1";
+
+// Cache em memória das versões minificadas. Chave = path completo. Valor
+// guarda mtime do arquivo no momento da minificação — invalidamos quando
+// o arquivo no disco mudou (caso o processo NÃO esteja com --watch ou em
+// produção sem restart).
+const _minifiedJsCache = new Map<string, { mtimeMs: number; bytes: Uint8Array }>();
 
 /**
  * Server port number
@@ -25,6 +37,105 @@ import * as path from "path";
  * @type {number}
  */
 const port = Number(process.env.PORT) || 3000;
+
+// Extensões de TEXTO que valem a pena comprimir. Binários (png/webp/mp3)
+// já são comprimidos no formato, gzip em cima só desperdiça CPU.
+const COMPRESSIBLE_EXT = new Set([
+  ".html", ".js", ".css", ".json", ".svg", ".map", ".txt",
+]);
+
+// Cache de versões comprimidas. Chave: `${ext}|${path}|${encoding}`.
+// Guarda mtime do arquivo de origem pra invalidar se mudou no disco
+// (cobrindo deploys sem restart e edição manual sem --watch).
+const _compressedCache = new Map<string, { mtimeMs: number; bytes: Uint8Array }>();
+
+/**
+ * Comprime `bytes` no formato indicado. Resultado é cacheado em memória.
+ * - "br" → Brotli quality 6 (bom balanço — qualidade 11 é mais lento sem
+ *   ganho proporcional pra arquivos de KB).
+ * - "gzip" → nivel default (6), Bun.gzipSync rápido.
+ */
+function getCompressed(
+  cacheKey: string,
+  rawBytes: Uint8Array,
+  encoding: "br" | "gzip",
+  mtimeMs: number,
+): Uint8Array {
+  const cached = _compressedCache.get(cacheKey);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.bytes;
+
+  let compressed: Uint8Array;
+  if (encoding === "br") {
+    compressed = brotliCompressSync(rawBytes, {
+      params: {
+        [zlibConst.BROTLI_PARAM_QUALITY]: 6,
+        [zlibConst.BROTLI_PARAM_MODE]: zlibConst.BROTLI_MODE_TEXT,
+      },
+    });
+  } else {
+    compressed = Bun.gzipSync(rawBytes);
+  }
+  _compressedCache.set(cacheKey, { mtimeMs, bytes: compressed });
+  return compressed;
+}
+
+/**
+ * Minifica JS via esbuild (preserva ES modules — não bundla). Cacheado.
+ * Reduz ~40% antes da compressão; somado com brotli, fica ~70% menor que
+ * o original. Bonus: minified JS parseia mais rápido em CPU fraca.
+ *
+ * Falhas (sintaxe inválida etc) caem pro código original — defensivo.
+ */
+async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array, mtimeMs: number): Promise<Uint8Array> {
+  if (!MINIFY_JS) return rawBytes;
+  const cached = _minifiedJsCache.get(fullPath);
+  if (cached && cached.mtimeMs === mtimeMs) return cached.bytes;
+  try {
+    const source = new TextDecoder().decode(rawBytes);
+    const result = await esbuildTransform(source, {
+      minify: true,
+      target: "es2020",       // browsers modernos (98%+). Mantém ES modules.
+      format: "esm",
+      sourcemap: false,
+      legalComments: "none",  // remove license/JSDoc comments
+      treeShaking: false,     // sem bundling — não tem como saber o uso real
+    });
+    const out = new TextEncoder().encode(result.code);
+    _minifiedJsCache.set(fullPath, { mtimeMs, bytes: out });
+    return out;
+  } catch (err) {
+    // Em caso de erro de parse, retorna original (evita derrubar o jogo).
+    console.warn(`[server] minify falhou em ${path.basename(fullPath)}: ${err}`);
+    return rawBytes;
+  }
+}
+
+/**
+ * Escolhe o melhor encoding suportado pelo client. br > gzip > identity.
+ * Honra q-values: `Accept-Encoding: identity, br;q=0` recusa brotli
+ * explicitamente. `includes("br")` ingênuo cairia nessa armadilha.
+ */
+function pickEncoding(acceptEncoding: string | null): "br" | "gzip" | null {
+  if (!acceptEncoding) return null;
+  const accepted = new Map<string, number>();
+  for (const raw of acceptEncoding.toLowerCase().split(",")) {
+    const parts = raw.trim().split(";");
+    const token = parts[0].trim();
+    if (!token) continue;
+    let q = 1;
+    for (let i = 1; i < parts.length; i++) {
+      const p = parts[i].trim();
+      if (p.startsWith("q=")) {
+        const v = parseFloat(p.slice(2));
+        if (!Number.isNaN(v)) q = v;
+      }
+    }
+    accepted.set(token, q);
+  }
+  if ((accepted.get("br") ?? 0) > 0) return "br";
+  if ((accepted.get("gzip") ?? 0) > 0) return "gzip";
+  return null;
+}
 
 // serve apenas arquivos publicos daqui
 const BASE_DIR = path.resolve(import.meta.dir, "public");
@@ -36,6 +147,7 @@ const ALLOWED_TOP_FILES = new Set([
   "style.css",
   "responsive.css",
   "manifest.json",
+  "sw.js",
 ]);
 
 const ALLOWED_TOP_DIRS = new Set([
@@ -51,6 +163,7 @@ const MIME_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".png": "image/png",
+  ".webp": "image/webp",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".jfif": "image/jpeg",
@@ -64,8 +177,17 @@ const MIME_TYPES: Record<string, string> = {
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
+  // connect-src adicionado pra permitir o SW fazer fetch() das fontes
+  // do Google e cachear pra uso offline. Sem isso, CSP bloqueia o
+  // request dentro do service worker e os nomes de NPC/player caíam
+  // pro fallback de system font (visualmente "negrito") quando offline.
   "Content-Security-Policy":
-  "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; script-src 'self';",
+    "default-src 'self'; " +
+    "img-src 'self' data:; " +
+    "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
+    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+    "script-src 'self'; " +
+    "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
 };
 
 type BodyLike = ConstructorParameters<typeof Response>[0];
@@ -178,10 +300,63 @@ serve({
     const ext = path.extname(fullPath).toLowerCase();
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
+    // Cache:
+    //   - HTML: no-cache (sempre revalida, deploys novos refletem)
+    //   - sw.js: no-cache TAMBÉM (crítico — se cachear o SW antigo, ele
+    //     fica preso e o cache de assets nunca atualiza pro player)
+    //   - Resto: max-age=3600 (1h) — o SW dele lida com cache long-term
+    const basename = path.basename(fullPath).toLowerCase();
+    const cacheHeader = (ext === ".html" || basename === "sw.js")
+      ? "no-cache, must-revalidate"
+      : "public, max-age=3600";
+
+    // Pipeline texto: 1) ler bytes  2) minify (se .js)  3) comprimir.
+    // Cache aplica nos passos 2 e 3 — primeira request por path paga
+    // o custo, demais requests são instantâneas. mtimeMs é usado pra
+    // invalidar entradas quando o arquivo muda no disco (deploys sem
+    // restart, edição manual).
+    if (COMPRESSIBLE_EXT.has(ext)) {
+      const encoding = pickEncoding(req.headers.get("Accept-Encoding"));
+      const file = Bun.file(fullPath);
+      const mtimeMs = file.lastModified || 0;
+      let rawBytes = new Uint8Array(await file.arrayBuffer());
+
+      // Minify JS antes de comprimir (compressão de minified é melhor).
+      if (ext === ".js") {
+        rawBytes = await getMinifiedJs(fullPath, rawBytes, mtimeMs);
+      }
+
+      if (encoding) {
+        const cacheKey = `${encoding}|${ext === ".js" && MINIFY_JS ? "min|" : ""}${fullPath}`;
+        const compressed = getCompressed(cacheKey, rawBytes, encoding, mtimeMs);
+        return new Response(compressed, {
+          headers: {
+            ...SECURITY_HEADERS,
+            "Content-Type": contentType,
+            "Content-Encoding": encoding,
+            "Vary": "Accept-Encoding",
+            "Cache-Control": cacheHeader,
+          },
+        });
+      }
+
+      // Sem compressão suportada mas ainda assim aplica minify pra JS.
+      if (ext === ".js" && MINIFY_JS) {
+        return new Response(rawBytes, {
+          headers: {
+            ...SECURITY_HEADERS,
+            "Content-Type": contentType,
+            "Cache-Control": cacheHeader,
+          },
+        });
+      }
+    }
+
     return new Response(Bun.file(fullPath), {
       headers: {
         ...SECURITY_HEADERS,
         "Content-Type": contentType,
+        "Cache-Control": cacheHeader,
       },
     });
   },

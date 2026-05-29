@@ -540,8 +540,80 @@ export class CollisionSystem {
         return false;
     }
 
+    /**
+     * Variante de `areaCollides` que aceita um set de candidatos pré-fetched
+     * em vez de queryar o spatial grid. Usado pelo animalAI no
+     * `_tryMoveTowards` que faz até 9 tentativas de step (direto + 2 slides
+     * + 6 rotações) — sem esse cache, eram 9 queries de grid por animal por
+     * frame de movimento. Com cache, é 1 query (cobrindo a área toda) + 9
+     * checks AABB inline.
+     *
+     * @param {number} x
+     * @param {number} y
+     * @param {number} w
+     * @param {number} h
+     * @param {Set<string>|Iterable<string>} candidates  IDs retornados de
+     *   `_physGrid.query` previamente (área >= step max).
+     * @param {string} [ignoreId]
+     * @param {{ignoreTypes?: string[]}} [opts]
+     * @returns {boolean}
+     */
+    areaCollidesAgainst(x, y, w, h, candidates, ignoreId = null, opts = null) {
+        if (!candidates) return false;
+        const ignoreTypes = opts && opts.ignoreTypes;
+        const rect = { x, y, width: w, height: h };
+        for (const id of candidates) {
+            if (ignoreId && id === ignoreId) continue;
+            const hitbox = this.hitboxes.get(id);
+            if (!hitbox) continue;
+            if (ignoreTypes && ignoreTypes.includes(hitbox.type)) continue;
+            if (checkAABBCollision(rect, hitbox)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Wrapper público pra query do spatial grid físico. Retorna Set<id>
+     * de hitboxes cujas células se sobrepõem ao rect dado. Use com
+     * `areaCollidesAgainst` pra evitar queries redundantes.
+     */
+    queryPhysicalCandidates(x, y, w, h) {
+        return this._physGrid.query(x, y, w, h);
+    }
+
     getInteractionObject(id) {
         return this.interactionHitboxes.get(id);
+    }
+
+    /**
+     * Retorna entidades de animal num raio ao redor do ponto (centerX, centerY).
+     * Usa o spatial grid (`_physGrid`) pra evitar iterar a lista inteira —
+     * O(k) em vez de O(n). Crítico pro cálculo de separação entre animais
+     * (chamado por animal por frame).
+     *
+     * Filtra por `type === 'ANIMAL'` no hitbox e retorna o `object` (a
+     * `AnimalEntity`) de cada um. Exclui `excludeId` se passado (pra não
+     * incluir o próprio animal no resultado).
+     *
+     * @param {number} centerX
+     * @param {number} centerY
+     * @param {number} radius     Raio em pixels.
+     * @param {string} [excludeId] Id pra ignorar (normalmente o próprio).
+     * @returns {Array<object>} animais únicos dentro do raio.
+     */
+    queryNearbyAnimals(centerX, centerY, radius, excludeId = null) {
+        const candidates = this._physGrid.query(
+            centerX - radius, centerY - radius, radius * 2, radius * 2,
+        );
+        const out = [];
+        for (const id of candidates) {
+            if (excludeId && id === excludeId) continue;
+            const hb = this.hitboxes.get(id);
+            if (!hb || hb.type !== 'ANIMAL') continue;
+            const obj = hb.object || hb.original;
+            if (obj) out.push(obj);
+        }
+        return out;
     }
 
     checkCollision(boxA, boxB) {

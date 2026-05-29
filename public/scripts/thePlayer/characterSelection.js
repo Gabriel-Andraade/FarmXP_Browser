@@ -1,7 +1,7 @@
 import { playerSystem } from "./playerSystem.js";
 import { logger } from "../logger.js";
 import { t } from '../i18n/i18n.js';
-import { setObject } from "../gameState.js";
+import { setObject, getSystem } from "../gameState.js";
 
 export class CharacterSelection {
     constructor() {
@@ -189,7 +189,9 @@ portrait.className = 'chs-character-portrait';
         detailsSection.querySelector('.chs-character-name').textContent = this.selectedCharacter.name;
         detailsSection.querySelector('.chs-character-description').textContent = t(`characterSelection.descriptions.${this.selectedCharacter.id}`);
 
-        this.updatePlayerInfo();
+        // Bug pré-existente: chamava `this.updatePlayerInfo()` que não existe
+        // nessa classe. O método mora em playerHUD — delega via getSystem.
+        getSystem('hud')?.updatePlayerInfo?.();
     }
 
     startGame() {

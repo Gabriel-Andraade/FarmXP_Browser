@@ -8,6 +8,7 @@
 import { logger } from '../logger.js';
 import { collisionSystem } from "../collisionSystem.js";
 import { getSystem, getObject, getDebugFlag } from '../gameState.js';
+import { qualityMode } from '../qualityMode.js';
 import { resolveReach } from './animalHitboxConfig.js';
 import { IDLE_STATE_MIN_MS, IDLE_STATE_MAX_MS, MOVE_STATE_MIN_MS, MOVE_STATE_MAX_MS, MOVEMENT, ANIMATION, RANGES } from '../constants.js';
 import { items } from '../item.js';
@@ -568,13 +569,18 @@ export class AnimalEntity {
     }
 
     getHitbox() {
+        // Pool de hitbox por animal: reusa o mesmo objeto em vez de alocar
+        // um novo por chamada. updateAnimals + collision queries chamam
+        // ~3× por frame por animal — com 30 animais a 60fps = 5400 alocações/s
+        // antes. Agora 0. GC pressure dropa drasticamente.
+        let hb = this._hitboxBuf;
+        if (!hb) hb = this._hitboxBuf = { x: 0, y: 0, width: 0, height: 0 };
         const cb = this.collisionBox;
-        return {
-            x: this.x + (cb.offsetX || 0),
-            y: this.y + (cb.offsetY || 0),
-            width: cb.width || this.width,
-            height: cb.height || this.height
-        };
+        hb.x = this.x + (cb.offsetX || 0);
+        hb.y = this.y + (cb.offsetY || 0);
+        hb.width = cb.width || this.width;
+        hb.height = cb.height || this.height;
+        return hb;
     }
 
     /**
@@ -1634,7 +1640,22 @@ export class AnimalEntity {
      * movimento foi aplicado.
      */
     _tryMoveTowards(vx, vy) {
-        if (this._tryStep(vx, vy)) {
+        // Pré-fetch candidatos de colisão UMA VEZ pra essa busca de step.
+        // _tryStep faz até 9 tentativas (direto + 2 slides + 6 rotações);
+        // sem cache eram 9 queries do spatial grid por animal por frame.
+        // Área de query cobre o bounding box de TODOS os possíveis steps
+        // (origem + |vx|+|vy| em cada eixo + buffer pra rotações).
+        const speed = Math.max(Math.abs(vx), Math.abs(vy), 1);
+        const buffer = speed + 2;
+        const queryX = this.x + (this.collisionBox.offsetX || 0) - buffer;
+        const queryY = this.y + (this.collisionBox.offsetY || 0) - buffer;
+        const queryW = this.collisionBox.width  + buffer * 2;
+        const queryH = this.collisionBox.height + buffer * 2;
+        const candidates = (typeof collisionSystem.queryPhysicalCandidates === 'function')
+            ? collisionSystem.queryPhysicalCandidates(queryX, queryY, queryW, queryH)
+            : null;
+
+        if (this._tryStep(vx, vy, candidates)) {
             // Movimento direto liberou — limpa o "compromisso" de eixo.
             this._lastEscapeAxis = null;
             return true;
@@ -1649,11 +1670,11 @@ export class AnimalEntity {
         const yValid = Math.abs(vy) > 0.01;
         const preferY = this._lastEscapeAxis === 'y';
         if (preferY) {
-            if (yValid && this._tryStep(0, vy)) { this._lastEscapeAxis = 'y'; return true; }
-            if (xValid && this._tryStep(vx, 0)) { this._lastEscapeAxis = 'x'; return true; }
+            if (yValid && this._tryStep(0, vy, candidates)) { this._lastEscapeAxis = 'y'; return true; }
+            if (xValid && this._tryStep(vx, 0, candidates)) { this._lastEscapeAxis = 'x'; return true; }
         } else {
-            if (xValid && this._tryStep(vx, 0)) { this._lastEscapeAxis = 'x'; return true; }
-            if (yValid && this._tryStep(0, vy)) { this._lastEscapeAxis = 'y'; return true; }
+            if (xValid && this._tryStep(vx, 0, candidates)) { this._lastEscapeAxis = 'x'; return true; }
+            if (yValid && this._tryStep(0, vy, candidates)) { this._lastEscapeAxis = 'y'; return true; }
         }
 
         const speedSq = vx * vx + vy * vy;
@@ -1671,8 +1692,8 @@ export class AnimalEntity {
             { c: 0,     s: 1 },       // 90° (perpendicular)
         ];
         for (const { c, s } of ROTATIONS) {
-            if (this._tryStep(vx * c - vy * s, vx * s + vy * c)) return true;
-            if (this._tryStep(vx * c + vy * s, -vx * s + vy * c)) return true;
+            if (this._tryStep(vx * c - vy * s, vx * s + vy * c, candidates)) return true;
+            if (this._tryStep(vx * c + vy * s, -vx * s + vy * c, candidates)) return true;
         }
         return false;
     }
@@ -1687,21 +1708,35 @@ export class AnimalEntity {
      * do outro e todos congelavam. Obstáculos do mundo (árvores,
      * cercas, jogador) continuam sendo barreiras duras.
      */
-    _tryStep(dx, dy) {
+    _tryStep(dx, dy, cachedCandidates = null) {
         const nextX = this.x + dx;
         const nextY = this.y + dy;
 
         const boxX = nextX + (this.collisionBox.offsetX || 0);
         const boxY = nextY + (this.collisionBox.offsetY || 0);
 
-        const willCollide = (typeof collisionSystem.areaCollides === 'function')
-            ? collisionSystem.areaCollides(
+        // Se candidatos foram pré-fetched (caller é `_tryMoveTowards`),
+        // usa AABB inline contra eles. Senão queryea o grid (caller
+        // standalone tipo `_spreadFromNearbyAnimals`).
+        let willCollide;
+        if (cachedCandidates && typeof collisionSystem.areaCollidesAgainst === 'function') {
+            willCollide = collisionSystem.areaCollidesAgainst(
+                boxX, boxY,
+                this.collisionBox.width, this.collisionBox.height,
+                cachedCandidates,
+                this.id,
+                { ignoreTypes: ['ANIMAL'] }
+            );
+        } else if (typeof collisionSystem.areaCollides === 'function') {
+            willCollide = collisionSystem.areaCollides(
                 boxX, boxY,
                 this.collisionBox.width, this.collisionBox.height,
                 this.id,
                 { ignoreTypes: ['ANIMAL'] }
-              )
-            : false;
+            );
+        } else {
+            willCollide = false;
+        }
 
         if (willCollide) return false;
         this.x = nextX;
@@ -1742,11 +1777,17 @@ export class AnimalEntity {
      */
     _computeSeparation(minDist = 28, maxMag = null) {
         const out = { x: 0, y: 0 };
-        if (!Array.isArray(animals)) return out;
         const myCx = this.x + this.width / 2;
         const myCy = this.y + this.height / 2;
         const minSq = minDist * minDist;
-        for (const other of animals) {
+
+        // Query no spatial grid em vez de iterar `animals` inteiro.
+        // O(k) onde k = vizinhos próximos, vs O(n) onde n = todos os
+        // animais do mundo. Com 30 animais, k típico é 2-5 (cluster
+        // pequeno). Cai bem o custo por frame por animal.
+        const neighbors = collisionSystem.queryNearbyAnimals(myCx, myCy, minDist, this.id);
+        for (let i = 0; i < neighbors.length; i++) {
+            const other = neighbors[i];
             if (!other || other === this) continue;
             const ocx = other.x + other.width / 2;
             const ocy = other.y + other.height / 2;
@@ -1861,7 +1902,7 @@ export class AnimalEntity {
         }
     }
 
-    draw(ctx, camera) {
+    draw(ctx, camera, frameNow) {
         if (!this.img || !camera) return;
 
         const screenPos = camera.worldToScreen(this.x, this.y);
@@ -1870,6 +1911,13 @@ export class AnimalEntity {
 
         if (screenPos.x < -zoomedWidth || screenPos.x > camera.width ||
             screenPos.y < -zoomedHeight || screenPos.y > camera.height) return;
+
+        // Timestamp do frame — usado em vários FX (bounce de emote, fade
+        // out, pulse, etc). Aceita argumento do caller (gameLoop cacheia
+        // 1x por frame e propaga); fallback pra `performance.now()` se
+        // o caller for antigo. Sem isso, draw() chama performance.now()
+        // 5+ vezes por animal por frame → 150 syscalls/frame com 30 animais.
+        const _now = (frameNow != null) ? frameNow : performance.now();
 
         const sx = this.frameIndex * this.frameWidth;
         const sy = this.direction * this.frameHeight;
@@ -1914,7 +1962,7 @@ export class AnimalEntity {
         // coleta de manhã).
         if (this._pendingProduct) {
             const productEmoji = PRODUCT_EMOJI[this._pendingProduct] || '✨';
-            const bounce = Math.sin(performance.now() / 250) * 2 * camera.zoom;
+            const bounce = Math.sin(_now / 250) * 2 * camera.zoom;
             ctx.save();
             ctx.font = `${Math.round(16 * camera.zoom)}px sans-serif`;
             ctx.textAlign = 'center';
@@ -1930,7 +1978,7 @@ export class AnimalEntity {
         // Dura ~2.5s (mais que coleta porque é evento memorável).
         if (this._ageUpFx) {
             const fx = this._ageUpFx;
-            const elapsed = performance.now() - fx.startedAt;
+            const elapsed = _now - fx.startedAt;
             const duration = fx.duration || 2500;
             if (elapsed >= duration) {
                 this._ageUpFx = null;
@@ -1995,7 +2043,7 @@ export class AnimalEntity {
         const isThirsty = (this.stats.thirst || 0) < this._drinkThreshold;
         const showThirstEmote = isThirsty && this.state !== AnimalState.DRINKING;
         if (showThirstEmote) {
-            const now = performance.now();
+            const now = _now;
             const bob = Math.sin(now / 280) * 2.5 * camera.zoom;
             const isSeeking = this.state === AnimalState.SEEKING_WATER;
             ctx.save();
@@ -2017,7 +2065,7 @@ export class AnimalEntity {
 
         // ─── Barra de sede + FX visual durante DRINKING ────────────────
         if (this.state === AnimalState.DRINKING) {
-            const now = performance.now();
+            const now = _now;
             const barW = Math.max(36, this.width * 0.75) * camera.zoom;
             const barH = 6 * camera.zoom;
             const radius = barH / 2;
@@ -2025,75 +2073,93 @@ export class AnimalEntity {
             const by = Math.floor(screenPos.y - 14 * camera.zoom);
             const pct = Math.max(0, Math.min(1, (this.stats.thirst || 0) / 100));
 
+            // Quality mode: low = só barra básica (fill simples + outline).
+            // Medium/high = todos os FX (halo, gradient, shine, bolhas, shadow).
+            const heavyFX = qualityMode.enableHeavyFX;
+
             ctx.save();
 
-            // Halo radial sob o animal — sutil "vibe de água" no chão.
-            const haloX = screenPos.x + zoomedWidth / 2;
-            const haloY = screenPos.y + zoomedHeight - 4 * camera.zoom;
-            const haloR = Math.max(zoomedWidth, zoomedHeight) * 0.45;
-            const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, haloR);
-            halo.addColorStop(0, 'rgba(120, 200, 255, 0.22)');
-            halo.addColorStop(1, 'rgba(120, 200, 255, 0)');
-            ctx.fillStyle = halo;
-            ctx.beginPath();
-            ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
-            ctx.fill();
+            // Halo radial sob o animal (HEAVY — radialGradient é caro).
+            if (heavyFX) {
+                const haloX = screenPos.x + zoomedWidth / 2;
+                const haloY = screenPos.y + zoomedHeight - 4 * camera.zoom;
+                const haloR = Math.max(zoomedWidth, zoomedHeight) * 0.45;
+                const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, haloR);
+                halo.addColorStop(0, 'rgba(120, 200, 255, 0.22)');
+                halo.addColorStop(1, 'rgba(120, 200, 255, 0)');
+                ctx.fillStyle = halo;
+                ctx.beginPath();
+                ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-            // Ícone 💧 antes da barra (com bounce leve).
-            const iconBounce = Math.sin(now / 200) * 1.5 * camera.zoom;
+            // Ícone 💧 antes da barra (sempre — é só um texto).
+            const iconBounce = heavyFX ? Math.sin(now / 200) * 1.5 * camera.zoom : 0;
             ctx.font = `${Math.round(11 * camera.zoom)}px sans-serif`;
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-            ctx.shadowBlur = 3 * camera.zoom;
+            if (heavyFX) {
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+                ctx.shadowBlur = 3 * camera.zoom;
+            }
             ctx.fillStyle = '#cde9ff';
             ctx.fillText('💧', bx - 3 * camera.zoom, by + barH / 2 + iconBounce);
             ctx.shadowBlur = 0;
 
-            // Fundo da barra — pílula escura com leve gradiente.
-            const bgGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
-            bgGrad.addColorStop(0, 'rgba(8, 20, 38, 0.85)');
-            bgGrad.addColorStop(1, 'rgba(4, 12, 24, 0.85)');
-            ctx.fillStyle = bgGrad;
+            // Fundo da barra — gradient no high, cor sólida no low.
+            if (heavyFX) {
+                const bgGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+                bgGrad.addColorStop(0, 'rgba(8, 20, 38, 0.85)');
+                bgGrad.addColorStop(1, 'rgba(4, 12, 24, 0.85)');
+                ctx.fillStyle = bgGrad;
+            } else {
+                ctx.fillStyle = 'rgba(6, 16, 30, 0.85)';
+            }
             this._roundRect(ctx, bx, by, barW, barH, radius);
             ctx.fill();
 
-            // Preenchimento gradient cyan→azul vivo, com pulso de brilho.
-            const pulse = 0.85 + 0.15 * Math.sin(now / 180);
+            // Preenchimento — gradient + shadow + shine no high, fill simples no low.
             const fillW = Math.max(0, Math.round(barW * pct));
             if (fillW > 1) {
-                const fillGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
-                fillGrad.addColorStop(0, '#9be3ff');
-                fillGrad.addColorStop(0.5, '#5bbcff');
-                fillGrad.addColorStop(1, '#2d7ec8');
-                ctx.fillStyle = fillGrad;
-                ctx.shadowColor = `rgba(123, 200, 255, ${0.55 * pulse})`;
-                ctx.shadowBlur = 8 * camera.zoom;
-                this._roundRect(ctx, bx, by, fillW, barH, radius);
-                ctx.fill();
-                ctx.shadowBlur = 0;
+                if (heavyFX) {
+                    const pulse = 0.85 + 0.15 * Math.sin(now / 180);
+                    const fillGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+                    fillGrad.addColorStop(0, '#9be3ff');
+                    fillGrad.addColorStop(0.5, '#5bbcff');
+                    fillGrad.addColorStop(1, '#2d7ec8');
+                    ctx.fillStyle = fillGrad;
+                    ctx.shadowColor = `rgba(123, 200, 255, ${0.55 * pulse})`;
+                    ctx.shadowBlur = 8 * camera.zoom;
+                    this._roundRect(ctx, bx, by, fillW, barH, radius);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
 
-                // Highlight rolando pra dar sensação de "água escorrendo".
-                const shineX = bx + ((now / 12) % (barW + 20)) - 10;
-                if (shineX > bx && shineX < bx + fillW - 4) {
-                    const shineGrad = ctx.createLinearGradient(shineX - 6, 0, shineX + 6, 0);
-                    shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-                    shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
-                    shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                    ctx.fillStyle = shineGrad;
-                    ctx.fillRect(shineX - 6, by + 1, 12, barH - 2);
+                    // Shine animado atravessando a barra.
+                    const shineX = bx + ((now / 12) % (barW + 20)) - 10;
+                    if (shineX > bx && shineX < bx + fillW - 4) {
+                        const shineGrad = ctx.createLinearGradient(shineX - 6, 0, shineX + 6, 0);
+                        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                        shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+                        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                        ctx.fillStyle = shineGrad;
+                        ctx.fillRect(shineX - 6, by + 1, 12, barH - 2);
+                    }
+                } else {
+                    // Low: fill chapado cyan.
+                    ctx.fillStyle = '#5bbcff';
+                    this._roundRect(ctx, bx, by, fillW, barH, radius);
+                    ctx.fill();
                 }
             }
 
-            // Contorno fino dourado pra destacar.
-            ctx.strokeStyle = 'rgba(255, 230, 180, 0.7)';
+            // Contorno (sempre — barato).
+            ctx.strokeStyle = heavyFX ? 'rgba(255, 230, 180, 0.7)' : 'rgba(255, 230, 180, 0.4)';
             ctx.lineWidth = Math.max(1, camera.zoom);
             this._roundRect(ctx, bx, by, barW, barH, radius);
             ctx.stroke();
 
-            // Bolhas subindo dentro da barra (3 a 4, ciclando) — só
-            // quando há água a desenhar.
-            if (fillW > 6) {
+            // Bolhas subindo (HEAVY — 3 arcs por frame).
+            if (heavyFX && fillW > 6) {
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
                 for (let i = 0; i < 3; i++) {
                     const phase = (now / 600 + i * 0.33) % 1;
@@ -2114,7 +2180,7 @@ export class AnimalEntity {
         // em ~1.5s. Stroke branco pra legibilidade sobre qualquer fundo.
         if (this._collectFx) {
             const fx = this._collectFx;
-            const elapsed = performance.now() - fx.startedAt;
+            const elapsed = _now - fx.startedAt;
             const duration = fx.duration || 1500;
             if (elapsed >= duration) {
                 this._collectFx = null;

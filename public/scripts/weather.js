@@ -9,6 +9,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
 import { t } from './i18n/i18n.js';
 import { getSystem } from './gameState.js';
+import { qualityMode } from './qualityMode.js';
 
 const WEATHER_UI_ID = "weather-ui-panel";
 
@@ -470,7 +471,13 @@ export const WeatherSystem = {
   },
 
   generateRainParticles() {
-    const total = this.weatherType === "storm" ? 1600 : 900;
+    // Sequência de reduções: 1600 → 800 → 500 (storm), 900 → 450 → 300
+    // (rain). Cada partícula é update + draw por frame; sobreposição
+    // visual mantém aparência densa.
+    // qualityMode multiplica por device: 'low' = 35%, 'medium' = 70%,
+    // 'high' = 100%. Auto-downgrade se FPS cair.
+    const base = this.weatherType === "storm" ? 500 : 300;
+    const total = Math.floor(base * qualityMode.particleMult);
     const wind = this.weatherType === "storm" ? 12 : 5;
     const angle = Math.PI * 0.45;
 
@@ -502,7 +509,10 @@ export const WeatherSystem = {
   },
 
   generateSnowParticles() {
-    for (let i = 0; i < 500; i++) {
+    // 500 → 320 (parecido visualmente, menos CPU).
+    // qualityMode auto-reduz mais em CPU fraca.
+    const total = Math.floor(320 * qualityMode.particleMult);
+    for (let i = 0; i < total; i++) {
       this.snowParticles.push({
         x: Math.random() * 2500 - 500,
         y: Math.random() * 1500 - 500,
@@ -742,6 +752,12 @@ export function drawWeatherEffects(ctx, player, canvas) {
     const rainP = WeatherSystem.rainParticles;
     const camX = camera.x;
     const camY = camera.y;
+    // Todas as partículas têm o mesmo angle (Math.PI * 0.45). Calcula
+    // cos/sin UMA vez em vez de N por frame. Pra 500 partículas, isso
+    // sai de ~1000 trig ops/frame pra 2.
+    const angle0 = rainP[0]?.angle ?? Math.PI * 0.45;
+    const cosA = Math.cos(angle0);
+    const sinA = Math.sin(angle0);
     for (let i = 0, len = rainP.length; i < len; i++) {
       const p = rainP[i];
       const screenX = p.x - camX;
@@ -749,7 +765,7 @@ export function drawWeatherEffects(ctx, player, canvas) {
 
       if (screenX > -100 && screenX < width + 100 && screenY > -100 && screenY < height + 100) {
         ctx.moveTo(screenX, screenY);
-        ctx.lineTo(screenX - Math.cos(p.angle) * p.length, screenY + Math.sin(p.angle) * p.length);
+        ctx.lineTo(screenX - cosA * p.length, screenY + sinA * p.length);
       }
     }
 

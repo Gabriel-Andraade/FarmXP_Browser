@@ -9,10 +9,15 @@
     "dev": "bun --watch run server.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "test:coverage": "bun test --coverage"
+    "test:coverage": "bun test --coverage",
+    "optimize-assets": "node tools/optimize-assets.mjs",
+    "optimize-assets:force": "node tools/optimize-assets.mjs --force",
+    "build-icon-atlas": "node tools/build-icon-atlas.mjs"
   },
   "devDependencies": {
     "@types/bun": "^1.3.10",
+    "esbuild": "^0.28.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.9.3"
   },
   "license": "ISC"
