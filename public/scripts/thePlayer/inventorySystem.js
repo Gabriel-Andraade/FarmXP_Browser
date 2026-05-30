@@ -30,9 +30,11 @@ export class InventorySystem {
             resources: { limit: INVENTORY_CATEGORIES.resources.limit, stackLimit: INVENTORY_CATEGORIES.resources.stackLimit, items: [] }
         };
         
+        // Issue #166: removido `food: null`. Equipar comida nunca foi
+        // exposto na UI e a comida agora tem fluxo dedicado (consume
+        // direto, sem slot de equip). Tool segue sendo único equipável.
         this.equipped = {
             tool: null,
-            food: null
         };
         
         this.selectedItem = null;
@@ -121,8 +123,6 @@ export class InventorySystem {
             const item = e.detail.item;
             if (item.type === 'tool') {
                 this.equipped.tool = item.id;
-            } else if (item.type === 'food') {
-                this.equipped.food = item.id;
             }
             this._markSaveDirty();
             this.scheduleUIUpdate();
@@ -130,8 +130,7 @@ export class InventorySystem {
 
         document.addEventListener('itemUnequipped', () => {
             this.equipped.tool = null;
-            this.equipped.food = null;
-            this._markSaveDirty(); 
+            this._markSaveDirty();
             this.scheduleUIUpdate();
         }, { signal });
 
@@ -331,7 +330,6 @@ export class InventorySystem {
         }
 
         if (this.equipped.tool === id) this.equipped.tool = null;
-        if (this.equipped.food === id) this.equipped.food = null;
 
         this.scheduleUIUpdate();
         return true;
@@ -352,23 +350,16 @@ export class InventorySystem {
         const item = this.categories[category].items.find(item => item.id === itemId);
         if (!item) return false;
 
-        // ✅ Validação de tipo
-        if (category === 'tools') {
-            if (item.type !== 'tool') {
-                logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
-                return false;
-            }
-            this.equipped.tool = itemId;
-        } else if (category === 'food') {
-            if (!item.fillUp) {
-                logger.warn(` Tentativa de equipar comida não-consumível: ${item.name}`);
-                return false;
-            }
-            this.equipped.food = itemId;
-        } else {
+        // Issue #166: removida a branch `food`. Só tools é equipável agora.
+        if (category !== 'tools') {
             logger.warn(` Categoria '${category}' não pode ser equipada`);
             return false;
         }
+        if (item.type !== 'tool') {
+            logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
+            return false;
+        }
+        this.equipped.tool = itemId;
 
         this._markSaveDirty();
         this.scheduleUIUpdate();
@@ -416,7 +407,7 @@ export class InventorySystem {
         Object.keys(this.categories).forEach(category => {
             this.categories[category].items = [];
         });
-        this.equipped = { tool: null, food: null };
+        this.equipped = { tool: null };
         this._markSaveDirty();
         this.triggerUIUpdate();
         logger.debug('🗑️ Inventário limpo');
@@ -437,7 +428,7 @@ export class InventorySystem {
                 logger.debug('   🚫 Vazio');
             } else {
                 data.items.forEach(item => {
-                    const equipped = (this.equipped.tool === item.id || this.equipped.food === item.id) ? ' ⚡' : '';
+                    const equipped = this.equipped.tool === item.id ? ' ⚡' : '';
                     const consumable = item.fillUp ? ' 🍽️' : '';
                     const placeable = item.placeable ? ' 🏗️' : '';
                     logger.debug(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
@@ -448,7 +439,6 @@ export class InventorySystem {
 
         logger.debug('⚡ EQUIPADO:');
         logger.debug(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
-        logger.debug(`   Comida: ${this.equipped.food ? this.findItemData(this.equipped.food)?.name : 'Nenhuma'}`);
         logger.debug('');
 
         const totalItems = Object.values(this.categories).reduce((total, cat) =>

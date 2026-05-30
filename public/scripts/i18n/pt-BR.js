@@ -166,6 +166,7 @@ export default {
     },
     actions: {
       equip: 'Equipar',
+      unequip: 'Desequipar',
       consume: 'Consumir',
       discard: 'Descartar',
       build: 'Construir',
@@ -513,6 +514,10 @@ export default {
     interact: {
       label: 'Interagir',
       desc: 'Interação / usar'
+    },
+    toolWheel: {
+      label: 'Trocar ferramenta',
+      desc: 'Segure para abrir o seletor de ferramentas; solte para equipar'
     },
     inventory: {
       label: 'Inventário',

@@ -153,3 +153,23 @@
     display: block;
     white-space: nowrap;
 }
+
+/* ===== BADGE "EQUIPADO: X" (Issue #166) =====
+   Sibling de .player-panel posicionado logo abaixo do quadrado resting
+   (130px). Não depende do hover do panel — feedback constante do que
+   está equipado. .hidden ainda esconde quando nada está equipado. */
+#equipped-item {
+    position: absolute;
+    top: 135px;          /* 130px panel resting + 5px gap */
+    right: 0;
+    max-width: 190px;    /* mesma largura do panel pra alinhar visualmente */
+    background: linear-gradient(135deg, rgba(43, 26, 12, 0.97) 0%, rgba(59, 38, 18, 0.93) 100%);
+    border-left: 2px solid #8b5a2b;
+    border-bottom: 2px solid #8b5a2b;
+    border-bottom-left-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    padding: 6px 12px;
+    z-index: 100;        /* abaixo do panel (z-index 101) pra ser coberto no hover-expand */
+    box-sizing: border-box;
+    pointer-events: none;
+}

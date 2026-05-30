@@ -272,6 +272,38 @@ const createInventoryUI = () => {
       animation: pulse 2s infinite;
     }
 
+    /* Issue #166: slot do item equipado — borda verde + glow suave. Combina
+       com selected (player pode estar olhando o item equipado). */
+    .inv-slot-equipped {
+      border-color: #b6f5b6;
+      box-shadow: 0 0 12px rgba(182, 245, 182, 0.45), inset 0 0 12px rgba(182, 245, 182, 0.15);
+    }
+    .inv-slot-equipped:hover {
+      border-color: #b6f5b6;
+      box-shadow: 0 0 18px rgba(182, 245, 182, 0.7);
+    }
+
+    .inv-slot-equipped-badge {
+      position: absolute;
+      top: 4px;
+      left: 4px;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #5a8a5a, #3e6b3e);
+      border: 1px solid #b6f5b6;
+      border-radius: 50%;
+      color: #f5f5e9;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      pointer-events: none;
+      z-index: 2;
+    }
+
     @keyframes pulse {
       0% { box-shadow: 0 0 20px rgba(185, 120, 47, 0.8), inset 0 0 20px rgba(185, 120, 47, 0.2); }
       50% { box-shadow: 0 0 25px rgba(185, 120, 47, 1), inset 0 0 25px rgba(185, 120, 47, 0.3); }
@@ -394,10 +426,18 @@ const createInventoryUI = () => {
       border: 1px solid #2ecc71;
     }
 
-    .btn-equip { 
-      background: linear-gradient(135deg, #e67e22, #d35400); 
-      color: white; 
+    .btn-equip {
+      background: linear-gradient(135deg, #e67e22, #d35400);
+      color: white;
       border: 1px solid #f39c12;
+    }
+
+    /* Variante "Desequipar" — verde-acinzentado pra sinalizar "item ativo,
+       clique pra remover". Cor diferente do Equipar (laranja) e do
+       Discard (vermelho) pra não confundir as ações. */
+    .btn-equip.is-equipped {
+      background: linear-gradient(135deg, #5a8a5a, #3e6b3e);
+      border: 1px solid #b6f5b6;
     }
 
     .btn-discard { 
@@ -626,6 +666,17 @@ export function initInventoryUI() {
     }
   }, { signal });
 
+  // Quando estado de equipar muda externamente (ex: Q-wheel), refresca
+  // o painel de detalhes pra alternar Equipar ↔ Desequipar no botão.
+  const refreshDetailsOnEquipChange = () => {
+    if (!modalEl.classList.contains('open')) return;
+    if (selectedSlotIndex < 0 || !currentItems[selectedSlotIndex]) return;
+    const fullItem = getItem(currentItems[selectedSlotIndex].id);
+    if (fullItem) updateDetailsPanel(fullItem, currentItems[selectedSlotIndex].quantity);
+  };
+  document.addEventListener('itemEquipped',   refreshDetailsOnEquipChange, { signal });
+  document.addEventListener('itemUnequipped', refreshDetailsOnEquipChange, { signal });
+
   // Listener para mudança de idioma - re-renderiza UI com novo idioma
   document.addEventListener('languageChanged', () => {
     if (shadowRoot && modalEl) {
@@ -735,13 +786,19 @@ function renderInventory() {
 
   currentItems = categoryData.items;
 
+  // Pega o id equipado UMA vez fora do loop pra não chamar getSystem por slot.
+  // Issue #166: slot do item equipado ganha borda verde + badge "E" pra
+  // feedback visual (complementa o badge "Equipado:" no HUD).
+  const equippedId = getSystem('player')?.getEquippedItem()?.id;
+
   currentItems.forEach((slot, index) => {
     const fullItem = getItem(slot.id);
     if (!fullItem) return;
 
     const itemQuantity = slot.quantity || slot.qty || 1;
+    const isEquipped = equippedId === slot.id;
     const slotEl = document.createElement('div');
-    slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}`;
+    slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}${isEquipped ? ' inv-slot-equipped' : ''}`;
     slotEl.setAttribute('data-index', index);
     
     // Ícone
@@ -770,6 +827,15 @@ function renderInventory() {
       qtySpan.className = 'inv-slot-qty';
       qtySpan.textContent = itemQuantity;
       slotEl.appendChild(qtySpan);
+    }
+
+    // Badge "E" no canto pra slot do item equipado. CSS posiciona absoluto.
+    if (isEquipped) {
+      const eqBadge = document.createElement('span');
+      eqBadge.className = 'inv-slot-equipped-badge';
+      eqBadge.textContent = 'E';
+      eqBadge.setAttribute('aria-label', t('inventory.actions.equip'));
+      slotEl.appendChild(eqBadge);
     }
 
     // Click handler
@@ -823,11 +889,24 @@ function updateDetailsPanel(item, qty) {
     readBtn.onclick = () => showContractPanel();
     actionsDiv.appendChild(readBtn);
   } else if (item.type === 'tool') {
+    // Issue #166: botão alterna entre Equipar / Desequipar conforme estado
+    // atual. playerSystem.equipItem(sameItem) já tem toggle nativo, mas o
+    // botão explícito dá feedback visual imediato sem o player precisar
+    // adivinhar que clicar de novo desequipa.
+    const equipped = getSystem('player')?.getEquippedItem();
+    const isEquipped = equipped && equipped.id === item.id;
+
     const equipBtn = document.createElement('button');
-    equipBtn.className = 'btn-action btn-equip';
-    equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
+    equipBtn.className = `btn-action btn-equip${isEquipped ? ' is-equipped' : ''}`;
+    equipBtn.textContent = isEquipped
+      ? `🔓 ${t('inventory.actions.unequip')}`
+      : `🛠️ ${t('inventory.actions.equip')}`;
     equipBtn.addEventListener('click', () => {
-      document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
+      if (isEquipped) {
+        document.dispatchEvent(new Event('unequipItemRequest'));
+      } else {
+        document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
+      }
       closeInventoryModal();
     });
     actionsDiv.appendChild(equipBtn);

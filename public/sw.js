@@ -15,7 +15,11 @@
  * antigos são apagados no evento `activate`.
  */
 
-const CACHE_VERSION = 'farmxp-v10';  // bump invalida cache antigo
+// Fallback estático — em prod via server.ts, o build hash dinâmico substitui
+// este literal a cada boot. Se você está editando manualmente, prefira deixar
+// o auto-bump fazer o trabalho. Útil só como fallback se o sw.js for servido
+// por um host estático sem o rewrite do server (ex: GitHub Pages).
+const CACHE_VERSION = 'farmxp-static';
 const HTML_CACHE = `${CACHE_VERSION}-html`;
 const ASSET_CACHE = `${CACHE_VERSION}-assets`;
 
