@@ -19,6 +19,8 @@
 import { serve } from "bun";
 import * as path from "path";
 import { brotliCompressSync, constants as zlibConst } from "node:zlib";
+import { readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { transform as esbuildTransform } from "esbuild";
 
 // Liga/desliga minificação on-the-fly. true por padrão; pra debugar
@@ -149,6 +151,66 @@ const ALLOWED_TOP_FILES = new Set([
   "manifest.json",
   "sw.js",
 ]);
+
+// Build hash: computado UMA vez no boot do server, derivado de mtime+size
+// de cada source file em public/. Injetado no CACHE_VERSION de sw.js a
+// cada request — assim deploy em prod (= novo processo = potencialmente
+// novo hash) invalida o cache do SW automaticamente, sem que ninguém
+// precise editar sw.js. Em dev com --watch, cada save de arquivo gera
+// novo hash, mas o register-sw.js NEM registra o SW em localhost, então
+// não há reload chato.
+const SW_BASENAME = "sw.js";
+const SW_SOURCE_EXTS = new Set([
+  ".js", ".css", ".html", ".mjs", ".json",
+]);
+
+function _computeBuildHash(): string {
+  const hasher = createHash("sha1");
+  function walk(dir: string) {
+    let entries: ReturnType<typeof readdirSync>;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    // sort por nome pra hash ser determinístico cross-platform
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // skip node_modules-like e pastas geradas (atlas já é asset binário)
+        if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+        walk(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!SW_SOURCE_EXTS.has(ext)) continue;
+      try {
+        const stat = statSync(full);
+        // path relativo pra evitar leak da hierarquia local no hash
+        const rel = path.relative(BASE_DIR, full);
+        hasher.update(`${rel}:${stat.size}:${Math.floor(stat.mtimeMs)}\n`);
+      } catch {}
+    }
+  }
+  walk(BASE_DIR);
+  return hasher.digest("hex").slice(0, 10);
+}
+
+const BUILD_HASH = _computeBuildHash();
+console.log(`[server] build hash: farmxp-${BUILD_HASH}`);
+
+/**
+ * Reescreve o literal `const CACHE_VERSION = '...'` em sw.js pro hash
+ * deste boot. Tolerante: se o pattern não bate (sw.js mudou de formato),
+ * retorna os bytes originais sem quebrar nada.
+ */
+function rewriteServiceWorker(bytes: Uint8Array): Uint8Array {
+  const text = new TextDecoder().decode(bytes);
+  const replaced = text.replace(
+    /const CACHE_VERSION\s*=\s*['"][^'"]+['"]/,
+    `const CACHE_VERSION = 'farmxp-${BUILD_HASH}'`,
+  );
+  if (replaced === text) return bytes; // pattern não encontrado, devolve original
+  return new TextEncoder().encode(replaced);
+}
 
 const ALLOWED_TOP_DIRS = new Set([
   "assets",
@@ -321,9 +383,20 @@ serve({
       const mtimeMs = file.lastModified || 0;
       let rawBytes = new Uint8Array(await file.arrayBuffer());
 
+      // sw.js: injetar o BUILD_HASH no CACHE_VERSION antes de qualquer
+      // transformação. Isso faz o cache do Service Worker invalidar
+      // automaticamente quando algo no public/ muda (= novo boot = novo
+      // hash). Bypass do minify cache pra essa request via key próprio.
+      if (basename === SW_BASENAME) {
+        rawBytes = rewriteServiceWorker(rawBytes);
+      }
+
       // Minify JS antes de comprimir (compressão de minified é melhor).
       if (ext === ".js") {
-        rawBytes = await getMinifiedJs(fullPath, rawBytes, mtimeMs);
+        // sw.js usa BUILD_HASH como parte da key — assim o cache de
+        // minified bytes se renova quando o hash muda em prod.
+        const cacheTag = basename === SW_BASENAME ? `${fullPath}#${BUILD_HASH}` : fullPath;
+        rawBytes = await getMinifiedJs(cacheTag, rawBytes, mtimeMs);
       }
 
       if (encoding) {

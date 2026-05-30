@@ -5,6 +5,7 @@ import { animals } from "../theWorld.js";
 import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { getSystem, getDebugFlag } from '../gameState.js';
+import { openToolWheel, closeToolWheel, isToolWheelOpen } from './toolWheel.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -1099,6 +1100,46 @@ function setupUIShortcuts() {
     }, { signal });
 }
 
+// Tool wheel (hold Q): mostra ferramentas + slot X; release pra equipar.
+// Issue #166. Não interfere com Q no build mode — esse handler só dispara
+// quando BuildSystem.active === false.
+function setupToolWheelControls() {
+    const { signal } = controlsAbortController;
+
+    document.addEventListener('keydown', (e) => {
+        if (isSleeping) return;
+        const tgt = e.target;
+        if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
+                 || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
+        if (BuildSystem.active) return; // Q reservado pra cycleNextItem no build
+        if (!isActionKeyEvent(e, 'toolWheel')) return;
+        if (e.repeat) return;
+
+        // Não abrir wheel por cima do inventário/loja/etc — UX confusa.
+        const invHost = document.getElementById('inventory-ui-host');
+        const invOpen = invHost?.shadowRoot?.getElementById('inventoryModal')?.classList.contains('open');
+        if (invOpen) return;
+        const anyModalOpen = document.querySelector('.modal.active');
+        if (anyModalOpen) return;
+
+        e.preventDefault();
+        openToolWheel();
+    }, { signal });
+
+    document.addEventListener('keyup', (e) => {
+        if (!isActionKeyEvent(e, 'toolWheel')) return;
+        if (!isToolWheelOpen()) return;
+        e.preventDefault();
+        closeToolWheel(true);
+    }, { signal });
+
+    // Fechar sem commit se o player solta foco/janela (evita equipar
+    // por acidente quando alt-tab segurando Q).
+    window.addEventListener('blur', () => {
+        if (isToolWheelOpen()) closeToolWheel(false);
+    }, { signal });
+}
+
 // Build mode controls (b, r, t, 1-6, esc)
 function setupBuildControls() {
     const { signal } = controlsAbortController;
@@ -1181,6 +1222,7 @@ function _initControlsDOMReady() {
     bootstrapKeybindsFromConfigUI();
     setupInventoryControls();
     setupUIShortcuts();
+    setupToolWheelControls();
 
     if (!isMobile()) {
         ['mobile-interact-btn','joystick-area'].forEach(id => {

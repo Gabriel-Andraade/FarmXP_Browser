@@ -166,6 +166,7 @@ export default {
     },
     actions: {
       equip: 'Equip',
+      unequip: 'Unequip',
       consume: 'Consume',
       discard: 'Discard',
       build: 'Build',
@@ -514,6 +515,10 @@ export default {
     interact: {
       label: 'Interact',
       desc: 'Interaction / use'
+    },
+    toolWheel: {
+      label: 'Swap tool',
+      desc: 'Hold to open the tool selector; release to equip'
     },
     inventory: {
       label: 'Inventory',

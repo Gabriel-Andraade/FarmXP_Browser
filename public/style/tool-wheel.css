@@ -1,0 +1,98 @@
+/**
+ * @file tool-wheel.css - Overlay do quick tool selector (issue #166).
+ * Carregado via <link> no index.html. CSP `style-src 'self'` bloqueia
+ * <style> programático então NÃO mover esse CSS pro JS.
+ */
+
+.tw-overlay {
+    position: fixed;
+    left: 50%;
+    bottom: 80px;
+    transform: translateX(-50%);
+    display: none;
+    z-index: 9000;
+    pointer-events: auto;
+    user-select: none;
+}
+.tw-overlay.tw-open { display: block; }
+
+.tw-row {
+    display: flex;
+    gap: 10px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(43, 26, 12, 0.95), rgba(59, 38, 18, 0.92));
+    border: 2px solid #8b5a2b;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+}
+
+.tw-slot {
+    width: 72px;
+    height: 84px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(30, 18, 10, 0.6);
+    border: 2px solid #5a3a25;
+    border-radius: 10px;
+    padding: 6px 4px;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease;
+    color: #f5e9d3;
+}
+
+.tw-slot:hover { border-color: #c9a463; }
+
+.tw-slot.tw-selected {
+    transform: translateY(-6px) scale(1.08);
+    border-color: #f5e9d3;
+    box-shadow: 0 0 14px rgba(245, 233, 211, 0.5);
+    background: rgba(60, 40, 22, 0.85);
+}
+
+.tw-slot-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+.tw-slot-icon img {
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
+}
+
+.tw-slot-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: #c9a463;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 64px;
+}
+
+.tw-slot.tw-selected .tw-slot-label { color: #f5e9d3; }
+
+/* Slot especial de desequipar — vermelho discreto */
+.tw-slot.tw-unequip {
+    background: rgba(80, 30, 30, 0.55);
+    border-color: #803030;
+}
+.tw-slot.tw-unequip.tw-selected {
+    border-color: #ffb6b6;
+    box-shadow: 0 0 14px rgba(255, 182, 182, 0.55);
+}
+.tw-slot.tw-unequip .tw-slot-icon { color: #ffb6b6; }
+
+.tw-hint {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 11px;
+    color: rgba(245, 233, 211, 0.7);
+}

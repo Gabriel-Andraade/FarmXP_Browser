@@ -1,16 +1,35 @@
 /* ===== CORREÇÕES DO HUD (COM PREFIXOS hud-) ===== */
 
-/* ===== Equipped Item ===== */
+/* ===== Equipped Item =====
+   Issue #166: agora é um badge posicionado abaixo do player-panel
+   (posicionamento absoluto em player-panel.css). Mantém font/color base
+   aqui; posição + background vivem em player-panel.css.
+*/
 #equipped-item {
-    font-size: 14px;
+    font-size: 13px;
     color: #cfc;
-    margin-top: 4px;
 }
 
 .equipped-item-wrapper {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+}
+
+.equipped-item-label {
+    color: #c9a463;
+    font-weight: bold;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.equipped-item-name {
+    color: #b6f5b6;
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .equipped-item-icon img {

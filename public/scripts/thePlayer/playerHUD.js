@@ -161,7 +161,11 @@ export class PlayerHUD {
             stat.append(labelSpan, valueSpan);
             infoGrid.appendChild(stat);
         }
-        playerInfo.append(nameH3, equippedItem, infoGrid);
+        // Issue #166: equipped-item agora vive FORA do .player-info (que
+        // só aparece no hover). Reposicionado como sibling do .player-panel
+        // logo abaixo dele — feedback constante do que o player tem na mão
+        // sem precisar abrir o HUD. CSS em player-panel.css faz o resto.
+        playerInfo.append(nameH3, infoGrid);
         playerPanel.append(portrait, playerInfo);
 
         const actionButtons = document.createElement('div');
@@ -192,6 +196,8 @@ export class PlayerHUD {
         }
         gameContainer.prepend(actionButtons);
         gameContainer.prepend(playerPanel);
+        // Badge "Equipado: X" — sibling do panel, posicionado pelo CSS.
+        gameContainer.appendChild(equippedItem);
 
         // Rebindeia os listeners nos botões do HUD (necessário após recriação do HTML)
         this.bindHUDButtons();
@@ -400,6 +406,11 @@ export class PlayerHUD {
                 equippedElement.replaceChildren();
                 const wrapper = document.createElement('div');
                 wrapper.className = 'equipped-item-wrapper';
+                // Label "Equipado: " — texto literal por enquanto; i18n
+                // entra na parte final da issue #166 com player.equipped.
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'equipped-item-label';
+                labelSpan.textContent = 'Equipado: ';
                 const iconSpan = document.createElement('span');
                 iconSpan.className = 'equipped-item-icon';
                 if (item.icon && isImageIcon(item.icon)) {
@@ -411,8 +422,9 @@ export class PlayerHUD {
                     iconSpan.textContent = item.icon || '';
                 }
                 const nameSpan = document.createElement('span');
+                nameSpan.className = 'equipped-item-name';
                 nameSpan.textContent = itemName;
-                wrapper.append(iconSpan, nameSpan);
+                wrapper.append(labelSpan, iconSpan, nameSpan);
                 equippedElement.appendChild(wrapper);
                 equippedElement.classList.remove('hidden');
             } else {
