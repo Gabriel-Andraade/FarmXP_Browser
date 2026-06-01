@@ -32,6 +32,17 @@
     text-overflow: ellipsis;
 }
 
+/* Hint da tecla do Q-wheel — discreto, ensina o atalho sem competir
+   com o nome do item. Esconde se a key estiver vazia (text:empty). */
+.equipped-item-hint {
+    color: rgba(201, 164, 99, 0.75);
+    font-size: 10px;
+    font-weight: bold;
+    margin-left: 4px;
+    letter-spacing: 0.3px;
+}
+.equipped-item-hint:empty { display: none; }
+
 .equipped-item-icon img {
     width: 20px;
     height: 20px;

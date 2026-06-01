@@ -354,12 +354,16 @@ export class InventorySystem {
             categoryData.items.splice(itemIndex, 1);
         }
 
-        // CodeRabbit: o unequip implícito (item removido enquanto equipado)
-        // precisa marcar o save como dirty — senão o estado persistido fica
-        // mostrando a ferramenta antiga equipada após reload.
+        // Issue #166 polish: quando o item equipado é removido programaticamente
+        // (merchant vende, quest consome), dispara o evento canônico em vez de
+        // setar `equipped.tool = null` direto. O playerSystem ouve, chama
+        // `unequipItem()` que dispara `itemUnequipped` — esse evento cascateia:
+        //   - `inventorySystem` (listener próprio) limpa `equipped.tool` + save dirty
+        //   - `playerHUD` esconde o badge "Equipado: X"
+        //   - Q-wheel deixa de marcar a slot como atual
+        // Setar direto pulava todos os 3 → estado fantasma no HUD/wheel após venda.
         if (this.equipped.tool === id) {
-            this.equipped.tool = null;
-            this._markSaveDirty();
+            document.dispatchEvent(new Event('unequipItemRequest'));
         }
 
         this.scheduleUIUpdate();

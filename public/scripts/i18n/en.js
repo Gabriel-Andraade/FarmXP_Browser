@@ -172,6 +172,9 @@ export default {
       build: 'Build',
       use: 'Use'
     },
+    toolWheel: {
+      empty: 'No tools in inventory'
+    },
     confirmDiscard: 'Discard {name}?',
     selectItem: 'Select an item'
   },

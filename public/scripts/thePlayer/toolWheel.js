@@ -115,11 +115,18 @@ function _render() {
   const { row, hint } = _ensureDom();
   row.replaceChildren();
 
+  // Item atualmente equipado — pra marcar a slot mesmo quando a seleção
+  // navegou pra outra. Lê 1x fora do loop.
+  const equippedId = getSystem('player')?.getEquippedItem()?.id;
+
   state.entries.forEach((entry, idx) => {
     const slot = document.createElement('div');
     slot.className = 'tw-slot';
     if (idx === state.selectedIndex) slot.classList.add('tw-selected');
     if (entry.id === SLOT_UNEQUIP) slot.classList.add('tw-unequip');
+    if (entry.id === equippedId && entry.id !== SLOT_UNEQUIP) {
+      slot.classList.add('tw-current');
+    }
 
     const iconBox = document.createElement('div');
     iconBox.className = 'tw-slot-icon';
@@ -207,9 +214,35 @@ function _onWheel(e) {
 }
 
 /**
+ * Mostra um toast curto reusando o estilo `.inventory-message` global.
+ * Auto-remove após 1.5s + 300ms da animação de saída. Idempotente: se
+ * já existe um toast nosso, atualiza o texto em vez de empilhar.
+ *
+ * @param {string} text
+ * @returns {void}
+ */
+function _showToast(text) {
+  let existing = document.getElementById('toolWheelToast');
+  if (existing) {
+    existing.textContent = text;
+    return;
+  }
+  const msg = document.createElement('div');
+  msg.id = 'toolWheelToast';
+  msg.className = 'inventory-message';
+  msg.textContent = text;
+  document.body.appendChild(msg);
+  requestAnimationFrame(() => msg.classList.add('visible'));
+  setTimeout(() => {
+    msg.classList.remove('visible');
+    setTimeout(() => msg.remove(), 300);
+  }, 1300);
+}
+
+/**
  * Abre o wheel. Re-lê o inventário a cada abertura pra refletir compras/
- * descartes recentes. Se o inventário não tem NENHUMA ferramenta, nem
- * exibe o overlay (entries só teria o slot X, não faz sentido).
+ * descartes recentes. Se o inventário não tem NENHUMA ferramenta, mostra
+ * um toast amigável em vez de ignorar Q em silêncio.
  *
  * Registra o listener de `wheel` na window pra capturar scroll só
  * enquanto o overlay está aberto.
@@ -219,9 +252,10 @@ function _onWheel(e) {
 export function openToolWheel() {
   if (state.open) return;
   _refreshEntries();
-  // Se a única entry é o slot X (sem ferramentas), não vale a pena abrir.
+  // Se a única entry é o slot X (sem ferramentas), avisa o player.
   if (state.entries.length <= 1) {
-    logger.debug('[toolWheel] sem ferramentas no inventário, ignorando Q');
+    logger.debug('[toolWheel] sem ferramentas no inventário');
+    _showToast(t('inventory.toolWheel.empty'));
     return;
   }
   state.open = true;

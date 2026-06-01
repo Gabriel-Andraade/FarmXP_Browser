@@ -172,6 +172,9 @@ export default {
       build: 'Construir',
       use: 'Usar'
     },
+    toolWheel: {
+      empty: 'Nenhuma ferramenta no inventário'
+    },
     confirmDiscard: 'Descartar {name}?',
     selectItem: 'Selecione um item'
   },

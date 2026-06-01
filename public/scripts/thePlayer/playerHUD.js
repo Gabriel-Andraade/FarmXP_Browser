@@ -102,6 +102,13 @@ export class PlayerHUD {
             this.updatePlayerInfo();
         };
         document.addEventListener('languageChanged', this._onLanguageChanged);
+
+        // Issue #166 polish A: re-renderiza o badge "Equipado: X (Q)" quando
+        // o player rebindeia a tecla do toolWheel, pra hint refletir a key nova.
+        this._onControlsChanged = () => {
+            if (this._lastEquippedItem) this.updateEquippedItem(this._lastEquippedItem);
+        };
+        document.addEventListener('controlsChanged', this._onControlsChanged);
     }
 
     createHUDStructure() {
@@ -412,6 +419,10 @@ export class PlayerHUD {
      * @returns {void}
      */
     updateEquippedItem(item) {
+        // Lembra do último item pra re-render em controlsChanged
+        // (rebind de Q precisa atualizar a hint key no badge).
+        this._lastEquippedItem = item;
+
         const equippedElement = document.getElementById('equipped-item');
         if (equippedElement) {
             if (item) {
@@ -438,7 +449,15 @@ export class PlayerHUD {
                 const nameSpan = document.createElement('span');
                 nameSpan.className = 'equipped-item-name';
                 nameSpan.textContent = itemName;
-                wrapper.append(labelSpan, iconSpan, nameSpan);
+
+                // Hint da tecla do Q-wheel pra ensinar o atalho.
+                // Lê do keybind atual (respeita rebind), em cinza/pequeno.
+                const hintSpan = document.createElement('span');
+                hintSpan.className = 'equipped-item-hint';
+                const wheelKey = getKeyForAction('toolWheel');
+                hintSpan.textContent = wheelKey ? `(${wheelKey})` : '';
+
+                wrapper.append(labelSpan, iconSpan, nameSpan, hintSpan);
                 equippedElement.appendChild(wrapper);
                 equippedElement.classList.remove('hidden');
             } else {
@@ -463,6 +482,7 @@ export class PlayerHUD {
         document.removeEventListener('levelUp', this._onLevelUp);
         document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
+        document.removeEventListener('controlsChanged', this._onControlsChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);
 
