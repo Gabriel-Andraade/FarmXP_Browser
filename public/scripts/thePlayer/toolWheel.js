@@ -28,9 +28,16 @@ const state = {
   dom: null,
 };
 
-/** Cria o DOM do overlay uma vez. Reusa em aberturas subsequentes.
- *  CSS vive em `public/style/tool-wheel.css` — não injeta inline aqui
- *  pois CSP `style-src 'self'` bloqueia <style> programático. */
+/**
+ * Cria o DOM do overlay uma vez (lazy). Reusa em aberturas subsequentes.
+ *
+ * O CSS associado vive em `public/style/tool-wheel.css` — não injeta
+ * inline aqui pois o CSP `style-src 'self'` do server bloqueia `<style>`
+ * programático.
+ *
+ * @returns {{overlay: HTMLDivElement, row: HTMLDivElement, hint: HTMLDivElement}}
+ *   Refs cacheadas pra serem reutilizadas em `_render` e em `openToolWheel`.
+ */
 function _ensureDom() {
   if (state.dom) return state.dom;
 
@@ -54,7 +61,17 @@ function _ensureDom() {
   return state.dom;
 }
 
-/** Lê o inventário e monta a lista de entries (X + ferramentas). */
+/**
+ * Lê o inventário e monta `state.entries` com:
+ *   - índice 0: slot de "desequipar" (id = `SLOT_UNEQUIP`)
+ *   - índices 1+: cada ferramenta válida da categoria `tools` (filtra
+ *     itens sem registro em `items.js` ou com `type !== 'tool'`).
+ *
+ * Também posiciona `state.selectedIndex` no item atualmente equipado
+ * (se houver) — assim release-sem-mover não muda nada.
+ *
+ * @returns {void}
+ */
 function _refreshEntries() {
   const inv = inventorySystem.getInventory();
   const toolSlots = inv?.tools?.items || [];
@@ -84,7 +101,16 @@ function _refreshEntries() {
   }
 }
 
-/** Pinta os slots no DOM. Chama após mudança em entries ou selectedIndex. */
+/**
+ * Pinta todos os slots no DOM baseado em `state.entries` e
+ * `state.selectedIndex`. Chama após qualquer mudança em entries
+ * (re-fetch do inventário) ou em selectedIndex (scroll, hover, click).
+ *
+ * Cada slot ouve `mouseenter` (atualiza seleção) e `click` (seleciona
+ * + commit imediato fechando o wheel).
+ *
+ * @returns {void}
+ */
 function _render() {
   const { row, hint } = _ensureDom();
   row.replaceChildren();
@@ -138,6 +164,13 @@ function _render() {
   }
 }
 
+/**
+ * Atualiza a seleção pra `idx` e re-renderiza. No-op se índice é
+ * inválido ou é o mesmo já selecionado (evita re-paint desnecessário).
+ *
+ * @param {number} idx - Índice em `state.entries`.
+ * @returns {void}
+ */
 function _setSelection(idx) {
   if (idx < 0 || idx >= state.entries.length) return;
   if (idx === state.selectedIndex) return;
@@ -145,20 +178,44 @@ function _setSelection(idx) {
   _render();
 }
 
-/** Move a seleção. dir = +1 ou -1. Clamp nas pontas (sem wrap). */
+/**
+ * Move a seleção em uma direção. Clamp nas pontas (sem wrap-around) pra
+ * dar feedback tátil de "fim da lista" — usuário sabe que chegou no
+ * limite porque o scroll para.
+ *
+ * @param {number} dir - +1 pra direita / próximo, -1 pra esquerda / anterior.
+ * @returns {void}
+ */
 function cycleSelection(dir) {
   if (!state.open) return;
   const next = Math.max(0, Math.min(state.entries.length - 1, state.selectedIndex + dir));
   _setSelection(next);
 }
 
+/**
+ * Handler do evento `wheel` da window — converte scroll vertical em
+ * navegação horizontal pelo wheel. `preventDefault` evita scroll da
+ * página enquanto o wheel está aberto.
+ *
+ * @param {WheelEvent} e
+ * @returns {void}
+ */
 function _onWheel(e) {
   if (!state.open) return;
   e.preventDefault();
   cycleSelection(e.deltaY > 0 ? 1 : -1);
 }
 
-/** Abre o wheel. Se inventário não tem nenhuma ferramenta, nem abre. */
+/**
+ * Abre o wheel. Re-lê o inventário a cada abertura pra refletir compras/
+ * descartes recentes. Se o inventário não tem NENHUMA ferramenta, nem
+ * exibe o overlay (entries só teria o slot X, não faz sentido).
+ *
+ * Registra o listener de `wheel` na window pra capturar scroll só
+ * enquanto o overlay está aberto.
+ *
+ * @returns {void}
+ */
 export function openToolWheel() {
   if (state.open) return;
   _refreshEntries();
@@ -175,8 +232,19 @@ export function openToolWheel() {
 }
 
 /**
- * Fecha o wheel. Se commit=true, equipa/desequipa baseado no selectedIndex.
- * Se commit=false (ex: cancelado por outra UI), só esconde.
+ * Fecha o wheel.
+ *
+ * Se `commit=true` (release normal de Q ou click): dispara o evento de
+ * equip/unequip baseado no slot selecionado.
+ *   - slot X → `unequipItemRequest`
+ *   - item já equipado → no-op (evita toggle indesejado do playerSystem)
+ *   - novo item → `equipItemRequest` com o item no `detail`
+ *
+ * Se `commit=false` (cancelado por blur, outra UI etc): só esconde
+ * sem disparar nenhum evento.
+ *
+ * @param {boolean} [commit=true]
+ * @returns {void}
  */
 export function closeToolWheel(commit = true) {
   if (!state.open) return;
@@ -199,7 +267,13 @@ export function closeToolWheel(commit = true) {
   }
 }
 
-/** True se o wheel está visível agora. Outros sistemas podem checar. */
+/**
+ * Indica se o wheel está visível no momento. Outros sistemas (control.js,
+ * builds, modais futuros) podem checar antes de roubar foco ou disparar
+ * ações conflitantes.
+ *
+ * @returns {boolean}
+ */
 export function isToolWheelOpen() {
   return state.open;
 }

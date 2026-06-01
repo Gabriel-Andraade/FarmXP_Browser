@@ -397,6 +397,20 @@ export class PlayerHUD {
         this.setHUDValue('hudPlayerXP', `${cur}/${max}`);
     }
 
+    /**
+     * Pinta o badge "Equipado: <ícone> <nome>" abaixo do portrait do HUD.
+     *
+     * Issue #166: o badge vive FORA do `.player-info` (que só aparece no
+     * hover do panel) — feedback constante do item equipado sem precisar
+     * abrir o HUD. Esconde via `.hidden` quando `item` é null.
+     *
+     * Ouvido pelos eventos `itemEquipped` (call com `e.detail.item`) e
+     * `itemUnequipped` (call com null), registrados no bottom deste arquivo.
+     *
+     * @param {object|null} item - Item completo (com `icon`, `name`, `id`)
+     *   ou null pra esconder o badge.
+     * @returns {void}
+     */
     updateEquippedItem(item) {
         const equippedElement = document.getElementById('equipped-item');
         if (equippedElement) {

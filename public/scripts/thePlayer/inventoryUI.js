@@ -635,6 +635,16 @@ const CATEGORY_MAP = INVENTORY_CATEGORIES;
 // Cache de elementos DOM
 let modalEl, contentEl, tabsEl, detailsEl;
 
+/**
+ * Inicializa o inventário (idempotente). Cria o host com Shadow DOM,
+ * cacheia refs de elementos, registra listeners de eventos do jogo
+ * (`inventoryUpdated`, `itemEquipped`, `itemUnequipped`, `languageChanged`),
+ * e expõe `window.openInventory` / `closeInventory` pra debug.
+ *
+ * Sai cedo se o host já existe (chamada duplicada).
+ *
+ * @returns {void}
+ */
 export function initInventoryUI() {
   if (document.getElementById('inventory-ui-host')) return;
 
@@ -693,11 +703,24 @@ export function initInventoryUI() {
   logger.info('✅ Inventory UI (Shadow DOM) Carregada');
 }
 
+/**
+ * Checa se o foco está num INPUT ou TEXTAREA — usado pra suprimir
+ * atalhos globais (I, ESC etc.) enquanto o player digita em campo.
+ *
+ * @returns {boolean}
+ */
 function isInputActive() {
   const active = document.activeElement;
   return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
 }
 
+/**
+ * Abre o modal do inventário. Renderiza tabs + grade, marca o modal como
+ * `.open`, desabilita o input do player e foca o botão de fechar pra
+ * permitir teclado-only.
+ *
+ * @returns {void}
+ */
 export function openInventoryModal() {
   if (!shadowRoot) initInventoryUI();
 
@@ -717,6 +740,12 @@ export function openInventoryModal() {
   }, 100);
 }
 
+/**
+ * Fecha o modal do inventário. Limpa a seleção, esconde o painel de
+ * detalhes e devolve o input pro player.
+ *
+ * @returns {void}
+ */
 export function closeInventoryModal() {
   if (modalEl) {
     modalEl.classList.remove('open');
@@ -731,6 +760,12 @@ export function closeInventoryModal() {
   }
 }
 
+/**
+ * Pinta os botões de categoria (ferramentas, sementes, comida etc.) em
+ * `tabsEl`. Click muda `activeCategory` e dispara `renderInventory`.
+ *
+ * @returns {void}
+ */
 function renderTabs() {
   if (!tabsEl) return;
   
@@ -761,9 +796,23 @@ function renderTabs() {
   });
 }
 
+/**
+ * Pinta a grade de slots da categoria ativa em `contentEl`. Lê os items
+ * de `inventorySystem.categories[activeCategory]` e cria um `.inv-slot`
+ * por item.
+ *
+ * Issue #166: cada slot do item atualmente equipado (igualdade por id)
+ * ganha a classe `inv-slot-equipped` + badge "E". O id equipado é lido
+ * uma única vez fora do loop pra não chamar `getSystem` por slot.
+ *
+ * Re-renderiza automaticamente nos eventos `inventoryUpdated`,
+ * `itemEquipped` e `itemUnequipped` (registrados em `initInventoryUI`).
+ *
+ * @returns {void}
+ */
 function renderInventory() {
   if (!contentEl) return;
-  
+
   // fix: innerHTML → DOM API
   contentEl.replaceChildren();
 
@@ -864,9 +913,24 @@ function renderInventory() {
   }
 }
 
+/**
+ * Atualiza o painel lateral de detalhes do item selecionado (nome,
+ * descrição, botões de ação).
+ *
+ * Issue #166: o botão de ferramenta alterna entre "Equipar" (laranja)
+ * e "Desequipar" (verde) baseado em `playerSystem.getEquippedItem()`.
+ * Click em Equipar dispara `equipItemRequest`; click em Desequipar
+ * dispara `unequipItemRequest`. Em ambos os casos o inventário fecha.
+ *
+ * Se `item` for null/undefined, esconde o painel (`.hidden`) e retorna.
+ *
+ * @param {object|null} item - Item completo (do `items.js`) ou null pra esconder.
+ * @param {number} [qty] - Quantidade pra mostrar no nome (ex: "Machado (x3)").
+ * @returns {void}
+ */
 function updateDetailsPanel(item, qty) {
   if (!detailsEl) return;
-  
+
   if (!item) {
     detailsEl.classList.add('hidden');
     return;
@@ -1016,6 +1080,13 @@ function updateDetailsPanel(item, qty) {
  */
 // ─── Contract Panel ────────────────────────────────────────────────────────
 
+/**
+ * Mostra o painel especial do contrato do Bartolomeu (item de quest
+ * com id 100). Fecha o inventário primeiro e exibe o texto do contrato
+ * em uma modal própria.
+ *
+ * @returns {void}
+ */
 function showContractPanel() {
   // Close inventory first
   closeInventoryModal();
@@ -1131,6 +1202,14 @@ function showContractPanel() {
   requestAnimationFrame(() => { overlay.style.opacity = '1'; });
 }
 
+/**
+ * Cleanup completo do inventário: aborta todos os listeners via
+ * `AbortController`, remove o host do DOM, libera refs cacheadas e
+ * deletes os globals expostos em `window`. Usado por testes / hot
+ * reload pra evitar leaks entre runs.
+ *
+ * @returns {void}
+ */
 export function destroyInventoryUI() {
   // Remove todos os event listeners via AbortController
   if (inventoryAbortController) {
