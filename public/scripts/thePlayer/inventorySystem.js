@@ -30,9 +30,11 @@ export class InventorySystem {
             resources: { limit: INVENTORY_CATEGORIES.resources.limit, stackLimit: INVENTORY_CATEGORIES.resources.stackLimit, items: [] }
         };
         
+        // Issue #166: removido `food: null`. Equipar comida nunca foi
+        // exposto na UI e a comida agora tem fluxo dedicado (consume
+        // direto, sem slot de equip). Tool segue sendo único equipável.
         this.equipped = {
             tool: null,
-            food: null
         };
         
         this.selectedItem = null;
@@ -121,8 +123,6 @@ export class InventorySystem {
             const item = e.detail.item;
             if (item.type === 'tool') {
                 this.equipped.tool = item.id;
-            } else if (item.type === 'food') {
-                this.equipped.food = item.id;
             }
             this._markSaveDirty();
             this.scheduleUIUpdate();
@@ -130,8 +130,7 @@ export class InventorySystem {
 
         document.addEventListener('itemUnequipped', () => {
             this.equipped.tool = null;
-            this.equipped.food = null;
-            this._markSaveDirty(); 
+            this._markSaveDirty();
             this.scheduleUIUpdate();
         }, { signal });
 
@@ -279,11 +278,36 @@ export class InventorySystem {
         return mapTypeToCategory(itemType);
     }
 
+    /**
+     * Resolve o id pro objeto completo do item (do `items.js`). Wrapper
+     * em torno de `getItem()` mantido por compat com chamadas antigas.
+     *
+     * @param {number} itemId
+     * @returns {object|null}
+     */
     findItemData(itemId) {
         // Usar getItem() centralizado em vez de items.find()
         return getItem(itemId);
     }
 
+    /**
+     * Remove `quantity` unidades de um item do inventário.
+     *
+     * Aceita duas formas de chamada por compat:
+     *   - `removeItem(category, itemId, qty)` — explicit
+     *   - `removeItem(itemId, qty)` — short form (descobre a categoria
+     *     via `findItemCategory`)
+     *
+     * Se após a remoção o item ficar com `quantity === 0`, a entry é
+     * removida do array. Se o item era a ferramenta equipada, faz unequip
+     * implícito e marca o save como dirty (issue #166 / CodeRabbit fix).
+     *
+     * @param {string|number} categoryOrId - Nome da categoria OU id do item.
+     * @param {number} itemIdOrQty - id do item OU quantidade (short form).
+     * @param {number} [quantity=1] - Quantidade a remover (forma explícita).
+     * @returns {boolean} `true` se removeu com sucesso, `false` em qualquer
+     *   validação que falhe (categoria inválida, item ausente, qty insuf).
+     */
     removeItem(categoryOrId, itemIdOrQty, quantity = 1) {
         let category = categoryOrId;
         let id = itemIdOrQty;
@@ -330,13 +354,29 @@ export class InventorySystem {
             categoryData.items.splice(itemIndex, 1);
         }
 
-        if (this.equipped.tool === id) this.equipped.tool = null;
-        if (this.equipped.food === id) this.equipped.food = null;
+        // Issue #166 polish: quando o item equipado é removido programaticamente
+        // (merchant vende, quest consome), dispara o evento canônico em vez de
+        // setar `equipped.tool = null` direto. O playerSystem ouve, chama
+        // `unequipItem()` que dispara `itemUnequipped` — esse evento cascateia:
+        //   - `inventorySystem` (listener próprio) limpa `equipped.tool` + save dirty
+        //   - `playerHUD` esconde o badge "Equipado: X"
+        //   - Q-wheel deixa de marcar a slot como atual
+        // Setar direto pulava todos os 3 → estado fantasma no HUD/wheel após venda.
+        if (this.equipped.tool === id) {
+            document.dispatchEvent(new Event('unequipItemRequest'));
+        }
 
         this.scheduleUIUpdate();
         return true;
     }
 
+    /**
+     * Descobre em qual categoria um item está atualmente. Usado pelo
+     * `removeItem` short-form `(itemId, qty)` que não recebe a categoria.
+     *
+     * @param {number} itemId
+     * @returns {string|null} Nome da categoria ou null se não encontrado.
+     */
     findItemCategory(itemId) {
         for (const [category, data] of Object.entries(this.categories)) {
             if (data.items.some(item => item.id === itemId)) {
@@ -346,29 +386,42 @@ export class InventorySystem {
         return null;
     }
 
+    /**
+     * Marca um item da categoria `tools` como equipado em
+     * `this.equipped.tool` (shadow do estado de `playerSystem`).
+     *
+     * Validações:
+     *   1. Categoria existe.
+     *   2. Item existe na categoria.
+     *   3. Categoria é `'tools'` (issue #166 removeu suporte a equipar
+     *      comida — não há mais slot `equipped.food`).
+     *   4. `item.type === 'tool'`.
+     *
+     * Não é chamado ativamente pelo código (playerSystem fica responsável
+     * pela fonte da verdade); existe pra debug/legado. Em produção, o
+     * fluxo usa `playerInventory.equipItem()` → `equipItemRequest` event.
+     *
+     * @param {string} category - Nome da categoria do inventário.
+     * @param {number} itemId - ID do item a equipar.
+     * @returns {boolean} `true` se equipou, `false` em qualquer falha de
+     *   validação.
+     */
     equipItem(category, itemId) {
         if (!this.categories[category]) return false;
 
         const item = this.categories[category].items.find(item => item.id === itemId);
         if (!item) return false;
 
-        // ✅ Validação de tipo
-        if (category === 'tools') {
-            if (item.type !== 'tool') {
-                logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
-                return false;
-            }
-            this.equipped.tool = itemId;
-        } else if (category === 'food') {
-            if (!item.fillUp) {
-                logger.warn(` Tentativa de equipar comida não-consumível: ${item.name}`);
-                return false;
-            }
-            this.equipped.food = itemId;
-        } else {
+        // Issue #166: removida a branch `food`. Só tools é equipável agora.
+        if (category !== 'tools') {
             logger.warn(` Categoria '${category}' não pode ser equipada`);
             return false;
         }
+        if (item.type !== 'tool') {
+            logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
+            return false;
+        }
+        this.equipped.tool = itemId;
 
         this._markSaveDirty();
         this.scheduleUIUpdate();
@@ -404,19 +457,39 @@ export class InventorySystem {
         return item ? item.quantity : 0;
     }
 
+    /**
+     * Retorna a referência DIRETA do objeto de categorias. Mutar o
+     * resultado afeta o estado interno — não clone manualmente, prefira
+     * `addItem`/`removeItem`. Usado por `inventoryUI` e `toolWheel`.
+     *
+     * @returns {Record<string, {limit:number, stackLimit:number, items:object[]}>}
+     */
     getInventory() {
         return this.categories;
     }
 
+    /**
+     * Retorna o estado dos slots equipados (`{ tool: id|null }`).
+     * Após issue #166, só `tool` existe — `food` foi removido.
+     *
+     * @returns {{tool: number|null}}
+     */
     getEquippedItems() {
         return this.equipped;
     }
 
+    /**
+     * Reset completo do inventário: esvazia todas as categorias e
+     * desequipa qualquer ferramenta. Marca o save como dirty pra
+     * persistir o reset.
+     *
+     * @returns {void}
+     */
     clear() {
         Object.keys(this.categories).forEach(category => {
             this.categories[category].items = [];
         });
-        this.equipped = { tool: null, food: null };
+        this.equipped = { tool: null };
         this._markSaveDirty();
         this.triggerUIUpdate();
         logger.debug('🗑️ Inventário limpo');
@@ -437,7 +510,7 @@ export class InventorySystem {
                 logger.debug('   🚫 Vazio');
             } else {
                 data.items.forEach(item => {
-                    const equipped = (this.equipped.tool === item.id || this.equipped.food === item.id) ? ' ⚡' : '';
+                    const equipped = this.equipped.tool === item.id ? ' ⚡' : '';
                     const consumable = item.fillUp ? ' 🍽️' : '';
                     const placeable = item.placeable ? ' 🏗️' : '';
                     logger.debug(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
@@ -448,7 +521,6 @@ export class InventorySystem {
 
         logger.debug('⚡ EQUIPADO:');
         logger.debug(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
-        logger.debug(`   Comida: ${this.equipped.food ? this.findItemData(this.equipped.food)?.name : 'Nenhuma'}`);
         logger.debug('');
 
         const totalItems = Object.values(this.categories).reduce((total, cat) =>

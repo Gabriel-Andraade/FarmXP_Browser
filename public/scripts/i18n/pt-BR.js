@@ -166,10 +166,14 @@ export default {
     },
     actions: {
       equip: 'Equipar',
+      unequip: 'Desequipar',
       consume: 'Consumir',
       discard: 'Descartar',
       build: 'Construir',
       use: 'Usar'
+    },
+    toolWheel: {
+      empty: 'Nenhuma ferramenta no inventário'
     },
     confirmDiscard: 'Descartar {name}?',
     selectItem: 'Selecione um item'
@@ -513,6 +517,10 @@ export default {
     interact: {
       label: 'Interagir',
       desc: 'Interação / usar'
+    },
+    toolWheel: {
+      label: 'Trocar ferramenta',
+      desc: 'Segure para abrir o seletor de ferramentas; solte para equipar'
     },
     inventory: {
       label: 'Inventário',

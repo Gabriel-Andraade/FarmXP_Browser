@@ -102,6 +102,13 @@ export class PlayerHUD {
             this.updatePlayerInfo();
         };
         document.addEventListener('languageChanged', this._onLanguageChanged);
+
+        // Issue #166 polish A: re-renderiza o badge "Equipado: X (Q)" quando
+        // o player rebindeia a tecla do toolWheel, pra hint refletir a key nova.
+        this._onControlsChanged = () => {
+            if (this._lastEquippedItem) this.updateEquippedItem(this._lastEquippedItem);
+        };
+        document.addEventListener('controlsChanged', this._onControlsChanged);
     }
 
     createHUDStructure() {
@@ -161,7 +168,11 @@ export class PlayerHUD {
             stat.append(labelSpan, valueSpan);
             infoGrid.appendChild(stat);
         }
-        playerInfo.append(nameH3, equippedItem, infoGrid);
+        // Issue #166: equipped-item agora vive FORA do .player-info (que
+        // só aparece no hover). Reposicionado como sibling do .player-panel
+        // logo abaixo dele — feedback constante do que o player tem na mão
+        // sem precisar abrir o HUD. CSS em player-panel.css faz o resto.
+        playerInfo.append(nameH3, infoGrid);
         playerPanel.append(portrait, playerInfo);
 
         const actionButtons = document.createElement('div');
@@ -192,6 +203,8 @@ export class PlayerHUD {
         }
         gameContainer.prepend(actionButtons);
         gameContainer.prepend(playerPanel);
+        // Badge "Equipado: X" — sibling do panel, posicionado pelo CSS.
+        gameContainer.appendChild(equippedItem);
 
         // Rebindeia os listeners nos botões do HUD (necessário após recriação do HTML)
         this.bindHUDButtons();
@@ -391,7 +404,25 @@ export class PlayerHUD {
         this.setHUDValue('hudPlayerXP', `${cur}/${max}`);
     }
 
+    /**
+     * Pinta o badge "Equipado: <ícone> <nome>" abaixo do portrait do HUD.
+     *
+     * Issue #166: o badge vive FORA do `.player-info` (que só aparece no
+     * hover do panel) — feedback constante do item equipado sem precisar
+     * abrir o HUD. Esconde via `.hidden` quando `item` é null.
+     *
+     * Ouvido pelos eventos `itemEquipped` (call com `e.detail.item`) e
+     * `itemUnequipped` (call com null), registrados no bottom deste arquivo.
+     *
+     * @param {object|null} item - Item completo (com `icon`, `name`, `id`)
+     *   ou null pra esconder o badge.
+     * @returns {void}
+     */
     updateEquippedItem(item) {
+        // Lembra do último item pra re-render em controlsChanged
+        // (rebind de Q precisa atualizar a hint key no badge).
+        this._lastEquippedItem = item;
+
         const equippedElement = document.getElementById('equipped-item');
         if (equippedElement) {
             if (item) {
@@ -400,6 +431,11 @@ export class PlayerHUD {
                 equippedElement.replaceChildren();
                 const wrapper = document.createElement('div');
                 wrapper.className = 'equipped-item-wrapper';
+                // Label "Equipado: " — texto literal por enquanto; i18n
+                // entra na parte final da issue #166 com player.equipped.
+                const labelSpan = document.createElement('span');
+                labelSpan.className = 'equipped-item-label';
+                labelSpan.textContent = 'Equipado: ';
                 const iconSpan = document.createElement('span');
                 iconSpan.className = 'equipped-item-icon';
                 if (item.icon && isImageIcon(item.icon)) {
@@ -411,8 +447,17 @@ export class PlayerHUD {
                     iconSpan.textContent = item.icon || '';
                 }
                 const nameSpan = document.createElement('span');
+                nameSpan.className = 'equipped-item-name';
                 nameSpan.textContent = itemName;
-                wrapper.append(iconSpan, nameSpan);
+
+                // Hint da tecla do Q-wheel pra ensinar o atalho.
+                // Lê do keybind atual (respeita rebind), em cinza/pequeno.
+                const hintSpan = document.createElement('span');
+                hintSpan.className = 'equipped-item-hint';
+                const wheelKey = getKeyForAction('toolWheel');
+                hintSpan.textContent = wheelKey ? `(${wheelKey})` : '';
+
+                wrapper.append(labelSpan, iconSpan, nameSpan, hintSpan);
                 equippedElement.appendChild(wrapper);
                 equippedElement.classList.remove('hidden');
             } else {
@@ -437,6 +482,7 @@ export class PlayerHUD {
         document.removeEventListener('levelUp', this._onLevelUp);
         document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
+        document.removeEventListener('controlsChanged', this._onControlsChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);
 

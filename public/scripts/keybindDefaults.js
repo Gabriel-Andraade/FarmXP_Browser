@@ -17,4 +17,8 @@ export const DEFAULT_KEYBINDS = {
   merchants: ['KeyU'],
   config: ['KeyO'],
   help: ['KeyH'],
+
+  // Issue #166: hold Q pra abrir o wheel de ferramentas, release pra equipar
+  // o slot selecionado. Slot X dentro do wheel desequipa.
+  toolWheel: ['KeyQ'],
 };

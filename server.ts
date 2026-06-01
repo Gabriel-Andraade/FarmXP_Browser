@@ -19,6 +19,8 @@
 import { serve } from "bun";
 import * as path from "path";
 import { brotliCompressSync, constants as zlibConst } from "node:zlib";
+import { readdirSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { transform as esbuildTransform } from "esbuild";
 
 // Liga/desliga minificação on-the-fly. true por padrão; pra debugar
@@ -50,10 +52,20 @@ const COMPRESSIBLE_EXT = new Set([
 const _compressedCache = new Map<string, { mtimeMs: number; bytes: Uint8Array }>();
 
 /**
- * Comprime `bytes` no formato indicado. Resultado é cacheado em memória.
- * - "br" → Brotli quality 6 (bom balanço — qualidade 11 é mais lento sem
- *   ganho proporcional pra arquivos de KB).
- * - "gzip" → nivel default (6), Bun.gzipSync rápido.
+ * Comprime `bytes` no formato indicado e cacheia o resultado em memória.
+ * Cache invalida quando `mtimeMs` muda (cobre edição manual sem restart).
+ *
+ * - `"br"` → Brotli quality 6. Boa razão custo/benefício; q=11 demora
+ *   muito mais sem ganho proporcional pra arquivos de poucos KB.
+ * - `"gzip"` → nível default via `Bun.gzipSync` (rápido em runtime Bun).
+ *
+ * @param {string} cacheKey - Identificador único por (path, encoding, etc).
+ *   Caller decide a granularidade.
+ * @param {Uint8Array} rawBytes - Conteúdo a comprimir.
+ * @param {"br"|"gzip"} encoding - Algoritmo de compressão.
+ * @param {number} mtimeMs - mtime do arquivo de origem; usado pra invalidar
+ *   entry cacheada quando o arquivo mudou.
+ * @returns {Uint8Array} Bytes comprimidos.
  */
 function getCompressed(
   cacheKey: string,
@@ -80,11 +92,20 @@ function getCompressed(
 }
 
 /**
- * Minifica JS via esbuild (preserva ES modules — não bundla). Cacheado.
- * Reduz ~40% antes da compressão; somado com brotli, fica ~70% menor que
- * o original. Bonus: minified JS parseia mais rápido em CPU fraca.
+ * Minifica um JS source via esbuild, preservando ES modules (não bundla).
  *
- * Falhas (sintaxe inválida etc) caem pro código original — defensivo.
+ * Reduz ~40% antes da compressão; somado com brotli, dá ~70% menor que
+ * o original. Bonus: JS minified parseia mais rápido em CPU fraca.
+ * Resultado cacheado em memória, invalidado por mtime do arquivo.
+ *
+ * Falhas (sintaxe inválida etc.) caem pro código original — comportamento
+ * defensivo, evita derrubar o jogo por causa de um arquivo quebrado.
+ *
+ * @param {string} fullPath - Path absoluto do arquivo (usado como cache key).
+ * @param {Uint8Array} rawBytes - Source bruto lido do disco.
+ * @param {number} mtimeMs - mtime do arquivo de origem (invalida o cache).
+ * @returns {Promise<Uint8Array>} Bytes minificados ou os originais em
+ *   caso de erro de parse.
  */
 async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array, mtimeMs: number): Promise<Uint8Array> {
   if (!MINIFY_JS) return rawBytes;
@@ -111,9 +132,15 @@ async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array, mtimeMs: nu
 }
 
 /**
- * Escolhe o melhor encoding suportado pelo client. br > gzip > identity.
- * Honra q-values: `Accept-Encoding: identity, br;q=0` recusa brotli
- * explicitamente. `includes("br")` ingênuo cairia nessa armadilha.
+ * Escolhe o melhor encoding suportado pelo client (br > gzip > identity).
+ *
+ * Honra q-values do header `Accept-Encoding` — `identity, br;q=0` recusa
+ * brotli explicitamente, e um `includes("br")` ingênuo cairia nessa
+ * armadilha enviando brotli pra cliente que recusou.
+ *
+ * @param {string|null} acceptEncoding - Valor cru do header `Accept-Encoding`
+ *   (ou null se ausente).
+ * @returns {"br"|"gzip"|null} Encoding escolhido ou null pra servir identity.
  */
 function pickEncoding(acceptEncoding: string | null): "br" | "gzip" | null {
   if (!acceptEncoding) return null;
@@ -149,6 +176,100 @@ const ALLOWED_TOP_FILES = new Set([
   "manifest.json",
   "sw.js",
 ]);
+
+// Build hash: computado UMA vez no boot do server, derivado de mtime+size
+// de cada source file em public/. Injetado no CACHE_VERSION de sw.js a
+// cada request — assim deploy em prod (= novo processo = potencialmente
+// novo hash) invalida o cache do SW automaticamente, sem que ninguém
+// precise editar sw.js. Em dev com --watch, cada save de arquivo gera
+// novo hash, mas o register-sw.js NEM registra o SW em localhost, então
+// não há reload chato.
+const SW_BASENAME = "sw.js";
+const SW_SOURCE_EXTS = new Set([
+  ".js", ".css", ".html", ".mjs", ".json",
+]);
+
+/**
+ * Computa um hash SHA-1 (10 chars hex) determinístico a partir de
+ * todos os source files em `public/` cuja extensão está em
+ * `SW_SOURCE_EXTS`. O hash entra como `CACHE_VERSION` no Service Worker
+ * via `rewriteServiceWorker`.
+ *
+ * Inputs do hash por arquivo: `rel_path:size:mtime`. Sort por nome
+ * garante mesmo hash em filesystems com ordens diferentes (Linux/Mac/Win).
+ * Diretórios `node_modules` e dotfiles são pulados.
+ *
+ * Falhas de I/O em arquivos individuais são silenciosamente ignoradas
+ * — o objetivo é "best-effort" stable signal, não auditoria.
+ *
+ * @returns {string} 10 chars hex (sha1 truncado).
+ */
+function _computeBuildHash(): string {
+  const hasher = createHash("sha1");
+  /**
+   * Visita recursiva. Mantida inline em vez de helper top-level pra
+   * fechar sobre `hasher` sem precisar passar adiante.
+   */
+  function walk(dir: string) {
+    let entries: ReturnType<typeof readdirSync>;
+    try { entries = readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    // sort por nome pra hash ser determinístico cross-platform
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        // skip node_modules-like e pastas geradas (atlas já é asset binário)
+        if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+        walk(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!SW_SOURCE_EXTS.has(ext)) continue;
+      try {
+        const stat = statSync(full);
+        // path relativo pra evitar leak da hierarquia local no hash
+        const rel = path.relative(BASE_DIR, full);
+        hasher.update(`${rel}:${stat.size}:${Math.floor(stat.mtimeMs)}\n`);
+      } catch {}
+    }
+  }
+  walk(BASE_DIR);
+  return hasher.digest("hex").slice(0, 10);
+}
+
+const BUILD_HASH = _computeBuildHash();
+console.log(`[server] build hash: farmxp-${BUILD_HASH}`);
+
+/**
+ * Reescreve o literal `const CACHE_VERSION = '...'` no source do sw.js
+ * pelo hash do boot atual (`BUILD_HASH`). Aplicado em cada request a
+ * `/sw.js` antes do minify/compress pipeline.
+ *
+ * Se o regex não bater (sw.js refatorado pra `let`, template literal,
+ * comentário no meio etc.), retorna os bytes originais E loga um warn
+ * — fail silent aqui significaria cache-busting morto em produção.
+ *
+ * @param {Uint8Array} bytes - Conteúdo bruto do sw.js lido do disco.
+ * @returns {Uint8Array} Bytes possivelmente modificados (ou originais
+ *   se o pattern não foi encontrado).
+ */
+function rewriteServiceWorker(bytes: Uint8Array): Uint8Array {
+  const text = new TextDecoder().decode(bytes);
+  const replaced = text.replace(
+    /const CACHE_VERSION\s*=\s*['"][^'"]+['"]/,
+    `const CACHE_VERSION = 'farmxp-${BUILD_HASH}'`,
+  );
+  if (replaced === text) {
+    // Falha silenciosa aqui significa cache-busting do SW desativado em
+    // PROD sem ninguém notar — todos pegariam asset velho indefinidamente.
+    // Loga warn pra surfar regressão (ex: alguém refatorou sw.js pra usar
+    // `let` ou template literal e o regex parou de bater).
+    console.warn("[server] CACHE_VERSION pattern não encontrado em sw.js — cache-busting do SW desativado");
+    return bytes;
+  }
+  return new TextEncoder().encode(replaced);
+}
 
 const ALLOWED_TOP_DIRS = new Set([
   "assets",
@@ -321,9 +442,20 @@ serve({
       const mtimeMs = file.lastModified || 0;
       let rawBytes = new Uint8Array(await file.arrayBuffer());
 
+      // sw.js: injetar o BUILD_HASH no CACHE_VERSION antes de qualquer
+      // transformação. Isso faz o cache do Service Worker invalidar
+      // automaticamente quando algo no public/ muda (= novo boot = novo
+      // hash). Bypass do minify cache pra essa request via key próprio.
+      if (basename === SW_BASENAME) {
+        rawBytes = rewriteServiceWorker(rawBytes);
+      }
+
       // Minify JS antes de comprimir (compressão de minified é melhor).
       if (ext === ".js") {
-        rawBytes = await getMinifiedJs(fullPath, rawBytes, mtimeMs);
+        // sw.js usa BUILD_HASH como parte da key — assim o cache de
+        // minified bytes se renova quando o hash muda em prod.
+        const cacheTag = basename === SW_BASENAME ? `${fullPath}#${BUILD_HASH}` : fullPath;
+        rawBytes = await getMinifiedJs(cacheTag, rawBytes, mtimeMs);
       }
 
       if (encoding) {
