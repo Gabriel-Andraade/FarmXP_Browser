@@ -18,11 +18,9 @@ const ACTION_META = [
   { action: 'moveLeft', fallbackLabel: 'Mover para esquerda', fallbackDesc: 'Andar para esquerda' },
   { action: 'moveRight', fallbackLabel: 'Mover para direita', fallbackDesc: 'Andar para direita' },
   { action: 'interact', fallbackLabel: 'Interagir', fallbackDesc: 'Interação / usar' },
-  { action: 'toolWheel', fallbackLabel: 'Trocar ferramenta', fallbackDesc: 'Segure para abrir o seletor; solte para equipar' },
   { action: 'inventory', fallbackLabel: 'Inventário', fallbackDesc: 'Abrir/fechar inventário' },
   { action: 'merchants', fallbackLabel: 'Mercadores', fallbackDesc: 'Abrir/fechar mercadores' },
   { action: 'config', fallbackLabel: 'Configurações', fallbackDesc: 'Abrir/fechar configurações' },
-  { action: 'help', fallbackLabel: 'Ajuda', fallbackDesc: 'Abrir/fechar atalhos' },
 ];
 
 let keybindsState = loadKeybinds();

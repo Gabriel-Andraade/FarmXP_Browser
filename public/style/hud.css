@@ -1,47 +1,17 @@
 /* ===== CORREÇÕES DO HUD (COM PREFIXOS hud-) ===== */
 
-/* ===== Equipped Item =====
-   Issue #166: agora é um badge posicionado abaixo do player-panel
-   (posicionamento absoluto em player-panel.css). Mantém font/color base
-   aqui; posição + background vivem em player-panel.css.
-*/
+/* ===== Equipped Item ===== */
 #equipped-item {
-    font-size: 13px;
+    font-size: 14px;
     color: #cfc;
+    margin-top: 4px;
 }
 
 .equipped-item-wrapper {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
 }
-
-.equipped-item-label {
-    color: #c9a463;
-    font-weight: bold;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-}
-
-.equipped-item-name {
-    color: #b6f5b6;
-    font-weight: bold;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Hint da tecla do Q-wheel — discreto, ensina o atalho sem competir
-   com o nome do item. Esconde se a key estiver vazia (text:empty). */
-.equipped-item-hint {
-    color: rgba(201, 164, 99, 0.75);
-    font-size: 10px;
-    font-weight: bold;
-    margin-left: 4px;
-    letter-spacing: 0.3px;
-}
-.equipped-item-hint:empty { display: none; }
 
 .equipped-item-icon img {
     width: 20px;

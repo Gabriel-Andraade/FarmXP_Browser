@@ -52,7 +52,7 @@ const HELP_FALLBACK_CODE = 'KeyH';
 // Meta de seções/ações (mostra o que vem do config/remap)
 const SECTIONS = [
   { titleKey: 'shortcutsPanel.sections.movement', actions: ['moveUp', 'moveDown', 'moveLeft', 'moveRight'] },
-  { titleKey: 'shortcutsPanel.sections.actions', actions: ['interact', 'toolWheel'] },
+  { titleKey: 'shortcutsPanel.sections.actions', actions: ['interact'] },
   { titleKey: 'shortcutsPanel.sections.menus', actions: ['inventory', 'merchants', 'config', HELP_ACTION] },
 ];
 

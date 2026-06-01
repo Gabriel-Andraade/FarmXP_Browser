@@ -272,38 +272,6 @@ const createInventoryUI = () => {
       animation: pulse 2s infinite;
     }
 
-    /* Issue #166: slot do item equipado — borda verde + glow suave. Combina
-       com selected (player pode estar olhando o item equipado). */
-    .inv-slot-equipped {
-      border-color: #b6f5b6;
-      box-shadow: 0 0 12px rgba(182, 245, 182, 0.45), inset 0 0 12px rgba(182, 245, 182, 0.15);
-    }
-    .inv-slot-equipped:hover {
-      border-color: #b6f5b6;
-      box-shadow: 0 0 18px rgba(182, 245, 182, 0.7);
-    }
-
-    .inv-slot-equipped-badge {
-      position: absolute;
-      top: 4px;
-      left: 4px;
-      width: 18px;
-      height: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #5a8a5a, #3e6b3e);
-      border: 1px solid #b6f5b6;
-      border-radius: 50%;
-      color: #f5f5e9;
-      font-size: 11px;
-      font-weight: bold;
-      line-height: 1;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
-      pointer-events: none;
-      z-index: 2;
-    }
-
     @keyframes pulse {
       0% { box-shadow: 0 0 20px rgba(185, 120, 47, 0.8), inset 0 0 20px rgba(185, 120, 47, 0.2); }
       50% { box-shadow: 0 0 25px rgba(185, 120, 47, 1), inset 0 0 25px rgba(185, 120, 47, 0.3); }
@@ -426,18 +394,10 @@ const createInventoryUI = () => {
       border: 1px solid #2ecc71;
     }
 
-    .btn-equip {
-      background: linear-gradient(135deg, #e67e22, #d35400);
-      color: white;
+    .btn-equip { 
+      background: linear-gradient(135deg, #e67e22, #d35400); 
+      color: white; 
       border: 1px solid #f39c12;
-    }
-
-    /* Variante "Desequipar" — verde-acinzentado pra sinalizar "item ativo,
-       clique pra remover". Cor diferente do Equipar (laranja) e do
-       Discard (vermelho) pra não confundir as ações. */
-    .btn-equip.is-equipped {
-      background: linear-gradient(135deg, #5a8a5a, #3e6b3e);
-      border: 1px solid #b6f5b6;
     }
 
     .btn-discard { 
@@ -635,16 +595,6 @@ const CATEGORY_MAP = INVENTORY_CATEGORIES;
 // Cache de elementos DOM
 let modalEl, contentEl, tabsEl, detailsEl;
 
-/**
- * Inicializa o inventário (idempotente). Cria o host com Shadow DOM,
- * cacheia refs de elementos, registra listeners de eventos do jogo
- * (`inventoryUpdated`, `itemEquipped`, `itemUnequipped`, `languageChanged`),
- * e expõe `window.openInventory` / `closeInventory` pra debug.
- *
- * Sai cedo se o host já existe (chamada duplicada).
- *
- * @returns {void}
- */
 export function initInventoryUI() {
   if (document.getElementById('inventory-ui-host')) return;
 
@@ -676,17 +626,6 @@ export function initInventoryUI() {
     }
   }, { signal });
 
-  // Quando estado de equipar muda externamente (ex: Q-wheel), refresca
-  // o painel de detalhes pra alternar Equipar ↔ Desequipar no botão.
-  const refreshDetailsOnEquipChange = () => {
-    if (!modalEl.classList.contains('open')) return;
-    if (selectedSlotIndex < 0 || !currentItems[selectedSlotIndex]) return;
-    const fullItem = getItem(currentItems[selectedSlotIndex].id);
-    if (fullItem) updateDetailsPanel(fullItem, currentItems[selectedSlotIndex].quantity);
-  };
-  document.addEventListener('itemEquipped',   refreshDetailsOnEquipChange, { signal });
-  document.addEventListener('itemUnequipped', refreshDetailsOnEquipChange, { signal });
-
   // Listener para mudança de idioma - re-renderiza UI com novo idioma
   document.addEventListener('languageChanged', () => {
     if (shadowRoot && modalEl) {
@@ -703,24 +642,11 @@ export function initInventoryUI() {
   logger.info('✅ Inventory UI (Shadow DOM) Carregada');
 }
 
-/**
- * Checa se o foco está num INPUT ou TEXTAREA — usado pra suprimir
- * atalhos globais (I, ESC etc.) enquanto o player digita em campo.
- *
- * @returns {boolean}
- */
 function isInputActive() {
   const active = document.activeElement;
   return active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
 }
 
-/**
- * Abre o modal do inventário. Renderiza tabs + grade, marca o modal como
- * `.open`, desabilita o input do player e foca o botão de fechar pra
- * permitir teclado-only.
- *
- * @returns {void}
- */
 export function openInventoryModal() {
   if (!shadowRoot) initInventoryUI();
 
@@ -740,12 +666,6 @@ export function openInventoryModal() {
   }, 100);
 }
 
-/**
- * Fecha o modal do inventário. Limpa a seleção, esconde o painel de
- * detalhes e devolve o input pro player.
- *
- * @returns {void}
- */
 export function closeInventoryModal() {
   if (modalEl) {
     modalEl.classList.remove('open');
@@ -760,12 +680,6 @@ export function closeInventoryModal() {
   }
 }
 
-/**
- * Pinta os botões de categoria (ferramentas, sementes, comida etc.) em
- * `tabsEl`. Click muda `activeCategory` e dispara `renderInventory`.
- *
- * @returns {void}
- */
 function renderTabs() {
   if (!tabsEl) return;
   
@@ -796,23 +710,9 @@ function renderTabs() {
   });
 }
 
-/**
- * Pinta a grade de slots da categoria ativa em `contentEl`. Lê os items
- * de `inventorySystem.categories[activeCategory]` e cria um `.inv-slot`
- * por item.
- *
- * Issue #166: cada slot do item atualmente equipado (igualdade por id)
- * ganha a classe `inv-slot-equipped` + badge "E". O id equipado é lido
- * uma única vez fora do loop pra não chamar `getSystem` por slot.
- *
- * Re-renderiza automaticamente nos eventos `inventoryUpdated`,
- * `itemEquipped` e `itemUnequipped` (registrados em `initInventoryUI`).
- *
- * @returns {void}
- */
 function renderInventory() {
   if (!contentEl) return;
-
+  
   // fix: innerHTML → DOM API
   contentEl.replaceChildren();
 
@@ -835,19 +735,13 @@ function renderInventory() {
 
   currentItems = categoryData.items;
 
-  // Pega o id equipado UMA vez fora do loop pra não chamar getSystem por slot.
-  // Issue #166: slot do item equipado ganha borda verde + badge "E" pra
-  // feedback visual (complementa o badge "Equipado:" no HUD).
-  const equippedId = getSystem('player')?.getEquippedItem()?.id;
-
   currentItems.forEach((slot, index) => {
     const fullItem = getItem(slot.id);
     if (!fullItem) return;
 
     const itemQuantity = slot.quantity || slot.qty || 1;
-    const isEquipped = equippedId === slot.id;
     const slotEl = document.createElement('div');
-    slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}${isEquipped ? ' inv-slot-equipped' : ''}`;
+    slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}`;
     slotEl.setAttribute('data-index', index);
     
     // Ícone
@@ -878,15 +772,6 @@ function renderInventory() {
       slotEl.appendChild(qtySpan);
     }
 
-    // Badge "E" no canto pra slot do item equipado. CSS posiciona absoluto.
-    if (isEquipped) {
-      const eqBadge = document.createElement('span');
-      eqBadge.className = 'inv-slot-equipped-badge';
-      eqBadge.textContent = 'E';
-      eqBadge.setAttribute('aria-label', t('inventory.actions.equip'));
-      slotEl.appendChild(eqBadge);
-    }
-
     // Click handler
     slotEl.addEventListener('click', () => {
       const prevSelected = shadowRoot.querySelector('.inv-slot.selected');
@@ -913,24 +798,9 @@ function renderInventory() {
   }
 }
 
-/**
- * Atualiza o painel lateral de detalhes do item selecionado (nome,
- * descrição, botões de ação).
- *
- * Issue #166: o botão de ferramenta alterna entre "Equipar" (laranja)
- * e "Desequipar" (verde) baseado em `playerSystem.getEquippedItem()`.
- * Click em Equipar dispara `equipItemRequest`; click em Desequipar
- * dispara `unequipItemRequest`. Em ambos os casos o inventário fecha.
- *
- * Se `item` for null/undefined, esconde o painel (`.hidden`) e retorna.
- *
- * @param {object|null} item - Item completo (do `items.js`) ou null pra esconder.
- * @param {number} [qty] - Quantidade pra mostrar no nome (ex: "Machado (x3)").
- * @returns {void}
- */
 function updateDetailsPanel(item, qty) {
   if (!detailsEl) return;
-
+  
   if (!item) {
     detailsEl.classList.add('hidden');
     return;
@@ -953,24 +823,11 @@ function updateDetailsPanel(item, qty) {
     readBtn.onclick = () => showContractPanel();
     actionsDiv.appendChild(readBtn);
   } else if (item.type === 'tool') {
-    // Issue #166: botão alterna entre Equipar / Desequipar conforme estado
-    // atual. playerSystem.equipItem(sameItem) já tem toggle nativo, mas o
-    // botão explícito dá feedback visual imediato sem o player precisar
-    // adivinhar que clicar de novo desequipa.
-    const equipped = getSystem('player')?.getEquippedItem();
-    const isEquipped = equipped && equipped.id === item.id;
-
     const equipBtn = document.createElement('button');
-    equipBtn.className = `btn-action btn-equip${isEquipped ? ' is-equipped' : ''}`;
-    equipBtn.textContent = isEquipped
-      ? `🔓 ${t('inventory.actions.unequip')}`
-      : `🛠️ ${t('inventory.actions.equip')}`;
+    equipBtn.className = 'btn-action btn-equip';
+    equipBtn.textContent = `🛠️ ${t('inventory.actions.equip')}`;
     equipBtn.addEventListener('click', () => {
-      if (isEquipped) {
-        document.dispatchEvent(new Event('unequipItemRequest'));
-      } else {
-        document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
-      }
+      document.dispatchEvent(new CustomEvent('equipItemRequest', { detail: { item } }));
       closeInventoryModal();
     });
     actionsDiv.appendChild(equipBtn);
@@ -1080,13 +937,6 @@ function updateDetailsPanel(item, qty) {
  */
 // ─── Contract Panel ────────────────────────────────────────────────────────
 
-/**
- * Mostra o painel especial do contrato do Bartolomeu (item de quest
- * com id 100). Fecha o inventário primeiro e exibe o texto do contrato
- * em uma modal própria.
- *
- * @returns {void}
- */
 function showContractPanel() {
   // Close inventory first
   closeInventoryModal();
@@ -1202,14 +1052,6 @@ function showContractPanel() {
   requestAnimationFrame(() => { overlay.style.opacity = '1'; });
 }
 
-/**
- * Cleanup completo do inventário: aborta todos os listeners via
- * `AbortController`, remove o host do DOM, libera refs cacheadas e
- * deletes os globals expostos em `window`. Usado por testes / hot
- * reload pra evitar leaks entre runs.
- *
- * @returns {void}
- */
 export function destroyInventoryUI() {
   // Remove todos os event listeners via AbortController
   if (inventoryAbortController) {

@@ -590,15 +590,6 @@ html, body {
         margin: 0 !important;
         color: #f5e9d3 !important;
     }
-
-    /* Badge "Equipado: X" no mobile — abaixo do panel row layout (60px) */
-    #equipped-item {
-        top: calc(75px + env(safe-area-inset-top)) !important;
-        right: 10px !important;
-        max-width: 200px !important;
-        padding: 4px 10px !important;
-        font-size: 11px !important;
-    }
     
     /* ==========================================================================
        5. SCROLLBARS E OTIMIZAÇÕES

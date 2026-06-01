@@ -166,14 +166,10 @@ export default {
     },
     actions: {
       equip: 'Equip',
-      unequip: 'Unequip',
       consume: 'Consume',
       discard: 'Discard',
       build: 'Build',
       use: 'Use'
-    },
-    toolWheel: {
-      empty: 'No tools in inventory'
     },
     confirmDiscard: 'Discard {name}?',
     selectItem: 'Select an item'
@@ -518,10 +514,6 @@ export default {
     interact: {
       label: 'Interact',
       desc: 'Interaction / use'
-    },
-    toolWheel: {
-      label: 'Swap tool',
-      desc: 'Hold to open the tool selector; release to equip'
     },
     inventory: {
       label: 'Inventory',
