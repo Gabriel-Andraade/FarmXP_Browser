@@ -854,6 +854,10 @@ class MerchantSystem {
     // obtém itens do mercador filtrados por categoria
     getMerchantItems() {
         let merchantItems = this.currentMerchant.items;
+        // Issue #170: hide items marked experimental — they have no loop in
+        // the game (no use, no consume), so letting players buy them would
+        // be misleading. When a feature unlocks them, drop the flag.
+        merchantItems = merchantItems.filter(mi => !getItem(mi.id)?.experimental);
         if (this.currentMerchantCategory !== 'all') {
             merchantItems = merchantItems.filter(item => item.category === this.currentMerchantCategory);
         }

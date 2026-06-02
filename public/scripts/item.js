@@ -311,7 +311,12 @@ export const items = [
     price: 40,
     description: "Usada para alimentar ovelhas",
     type: "animal_food",
-    targetAnimals: ["Lamb", "Sheep"]
+    // Issue #170: was missing foodValue + nutrition (compare with id 7
+    // which had the full structure). Without these, feeding sheep had
+    // no effect on the animal.
+    foodValue: 12,
+    targetAnimals: ["Lamb", "Sheep"],
+    nutrition: { energy: 5, happiness: 3 }
   },
   {
     id: 29,
@@ -634,24 +639,28 @@ export const items = [
     type: "animal_food",
     targetAnimals: ["Chick", "Chicken", "Rooster", "Turkey"]
   },
-  {
-    id: 101,
-    name: "ração para felinos",
-    icon: "assets/icons/catFeedIcon.png",
-    price: 30,
-    description: "Ração especializada para gatos domésticos",
-    type: "animal_food",
-    targetAnimals: []  // nenhuma espécie atual do farm — pra gato futuro
-  },
-  {
-    id: 102,
-    name: "ração para cachorros",
-    icon: "assets/icons/dogFeedIcon.png",
-    price: 30,
-    description: "Ração especializada para cães domésticos",
-    type: "animal_food",
-    targetAnimals: []  // nenhuma espécie atual do farm — pra cachorro futuro
-  },
+  /* Issue #170: Cat feed (101) and dog feed (102) are reserved.
+     No "Cat" or "Dog" species exist on the farm yet — when they arrive,
+     uncomment below + populate `targetAnimals`. Kept as a roadmap
+     breadcrumb instead of deleting outright. */
+  // {
+  //   id: 101,
+  //   name: "ração para felinos",
+  //   icon: "assets/icons/catFeedIcon.png",
+  //   price: 30,
+  //   description: "Ração especializada para gatos domésticos",
+  //   type: "animal_food",
+  //   targetAnimals: ["Cat"]
+  // },
+  // {
+  //   id: 102,
+  //   name: "ração para cachorros",
+  //   icon: "assets/icons/dogFeedIcon.png",
+  //   price: 30,
+  //   description: "Ração especializada para cães domésticos",
+  //   type: "animal_food",
+  //   targetAnimals: ["Dog"]
+  // },
   // ==================================================================================
 
   // ==================================================================================
@@ -672,7 +681,10 @@ export const items = [
     icon: "🏠",
     price: 25,
     description: "Para telhados das construções",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Marked experimental —
+    // reserved for a future custom house-roof feature.
+    experimental: true
   },
   {
     id: 34,
@@ -696,7 +708,10 @@ export const items = [
     icon: "assets/icons/glassIcon.png",
     price: 35,
     description: "Para janelas e estufas",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved for a future
+    // greenhouse feature (planting #2) or custom house windows.
+    experimental: true
   },
   {
     id: 37,
@@ -712,7 +727,10 @@ export const items = [
     icon: "assets/icons/temperedSteelIcon.png",
     price: 90,
     description: "material resistente para construção",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved for future
+    // tier-2 tools or advanced structures.
+    experimental: true
   },
   {
     id: 48,
@@ -720,7 +738,10 @@ export const items = [
     icon: "assets/icons/threadIcon.png",
     price: 8,
     description: "Para costurar e craftar",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved for future
+    // clothing or refined-fabric recipes.
+    experimental: true
   },
   {
     id: 49,
@@ -736,7 +757,10 @@ export const items = [
     icon: "assets/icons/paintBucketIcon.png",
     price: 25,
     description: "Para colorir construções",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved for a future
+    // building color-customization feature.
+    experimental: true
   },
   {
     id: 51,
@@ -744,7 +768,9 @@ export const items = [
     icon: "assets/icons/glueIcon.png",
     price: 12,
     description: "Para colar materiais",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved.
+    experimental: true
   },
   {
     id: 52,
@@ -752,7 +778,10 @@ export const items = [
     icon: "assets/icons/toolboxIcon.png",
     price: 55,
     description: "Conserta ferramentas danificadas",
-    type: "resource"
+    type: "resource",
+    // Issue #170: blocked by the tool-durability feature which doesn't
+    // exist yet. Marked experimental until the spec lands.
+    experimental: true
   },
   {
     id: 58,
@@ -784,7 +813,10 @@ export const items = [
     icon: "▭",
     price: 35,
     description: "Metal laminado para estruturas",
-    type: "resource"
+    type: "resource",
+    // Issue #170: no recipe to produce nor consume. Reserved for future
+    // industrial-tier structures.
+    experimental: true
   },
   {
     id: 75,
@@ -792,7 +824,13 @@ export const items = [
     icon: "assets/icons/screwIcon.png",
     price: 3,
     description: "Para fixações mais resistentes",
-    type: "resource"
+    type: "resource",
+    // Issue #170: consolidated with Nail (34). Screw was pulled from the
+    // water-trough recipe to avoid confusing two functionally identical
+    // fasteners. Kept experimental — if a future feature adds a durability
+    // tier or industrial structures, Screw becomes the premium fastener.
+    // Dormant for now.
+    experimental: true
   },
   {
     id: 76,

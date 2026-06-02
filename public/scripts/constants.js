@@ -69,7 +69,11 @@ export const GAME_BALANCE = {
     DEFAULT_HP: 1,
     AXE_DAMAGE: 2,
     PICKAXE_DAMAGE: 2,
-    MACHETE_DAMAGE: 1
+    MACHETE_DAMAGE: 1,
+    // Issue #170: Shears as an alternative to the machete for pruning
+    // thickets. Same damage (one-shot on thicket HP 1) — both work, the
+    // player picks. Adjust here if balance ever needs to differentiate.
+    SHEARS_DAMAGE: 1
   },
 
   NEEDS: {

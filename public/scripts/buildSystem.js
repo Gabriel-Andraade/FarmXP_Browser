@@ -559,7 +559,13 @@ export const BuildSystem = {
 
         if (constructionType === 'chest') {
             const chestSystem = getSystem('chest');
-            if (chestSystem && typeof chestSystem.addChest === 'function') {
+            if (!chestSystem) {
+                // Trigger lazy load so the next click works.
+                import('./chestSystem.js').catch(err => logger.warn('chestSystem lazy load failed', err));
+                this.showDebugMessage(t('build.chestLoading'), 1500);
+                return;
+            }
+            if (typeof chestSystem.addChest === 'function') {
                 const newChestId = `chest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
                 const buildingData = {
@@ -595,7 +601,13 @@ export const BuildSystem = {
 
         if (constructionType === 'well') {
             const wellSystem = getSystem('well');
-            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) { 
+            if (!wellSystem && !(window.theWorld && typeof window.theWorld.placeWell === 'function')) {
+                // Trigger lazy load so next click works.
+                import('./wellSystem.js').catch(err => logger.warn('wellSystem lazy load failed', err));
+                this.showDebugMessage(t('build.wellLoading'), 1500);
+                return;
+            }
+            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) {
                 
                 const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 

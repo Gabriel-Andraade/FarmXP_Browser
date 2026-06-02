@@ -146,6 +146,14 @@ export default {
     animals: 'Animais',
     resource: 'Recurso',
     material: 'Materiais',
+    // Issue #170: singular aliases that match `item.type` values directly,
+    // used by callers that look up `categories.${item.type}` (craftingSystem,
+    // merchant). Without these the console warns about missing translations.
+    tool: 'Ferramenta',
+    seed: 'Semente',
+    crop: 'Colheita',
+    medicine: 'Remédio',
+    animal: 'Animal',
   },
 
   // Inventory System
@@ -174,6 +182,46 @@ export default {
     },
     toolWheel: {
       empty: 'Nenhuma ferramenta no inventário'
+    },
+    details: {
+      sectionTitle: 'Informações técnicas',
+      type: 'Tipo',
+      toolType: 'Ferramenta',
+      restores: 'Restaura',
+      hunger: 'Fome',
+      thirst: 'Sede',
+      energy: 'Energia',
+      acceptedBy: 'Aceito por',
+      foodValue: 'Valor nutritivo',
+      treats: 'Trata',
+      cureMode: 'Cura',
+      instant: 'Imediata',
+      gradual: '{n} dias',
+      dosesPerDay: 'Doses por dia',
+      palatability: 'Sabor',
+      palatable: 'Agradável',
+      neutral: 'Neutro',
+      bitter: 'Amargo',
+      size: 'Tamanho',
+      placeable: 'Construível',
+      experimental: 'Em desenvolvimento',
+      types: {
+        tool: 'Ferramenta',
+        seed: 'Semente',
+        food: 'Comida',
+        animal_food: 'Comida de animal',
+        medicine: 'Remédio',
+        animal: 'Animal',
+        resource: 'Recurso',
+        crop: 'Colheita',
+        construction: 'Construção'
+      },
+      diseases: {
+        parasitosis: 'Verminose',
+        respiratory: 'Respiratória',
+        digestive: 'Digestiva',
+        fever: 'Febre'
+      }
     },
     confirmDiscard: 'Descartar {name}?',
     selectItem: 'Selecione um item'
@@ -537,6 +585,20 @@ export default {
     help: {
       label: 'Ajuda',
       desc: 'Abrir/fechar atalhos'
+    },
+    // Issue #170: human-readable tool type names (toolType field on items).
+    // Shown on the inventory details panel as "Type: Axe" etc.
+    toolTypes: {
+      shears: 'Tesoura',
+      hoe: 'Enxada',
+      hammer: 'Martelo',
+      scythe: 'Foice',
+      watering_can: 'Regador',
+      pickaxe: 'Picareta',
+      axe: 'Machado',
+      rake: 'Rastelo',
+      bucket: 'Balde',
+      machete: 'Machete'
     }
   },
 
