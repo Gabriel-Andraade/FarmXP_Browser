@@ -146,6 +146,14 @@ export default {
     animals: 'Animals',
     resource: 'Resource',
     material: 'Materials',
+    // Issue #170: singular aliases that match `item.type` values directly,
+    // used by callers that look up `categories.${item.type}` (craftingSystem,
+    // merchant). Without these the console warns about missing translations.
+    tool: 'Tool',
+    seed: 'Seed',
+    crop: 'Crop',
+    medicine: 'Medicine',
+    animal: 'Animal',
   },
 
   // Inventory System
@@ -174,6 +182,46 @@ export default {
     },
     toolWheel: {
       empty: 'No tools in inventory'
+    },
+    details: {
+      sectionTitle: 'Technical info',
+      type: 'Type',
+      toolType: 'Tool',
+      restores: 'Restores',
+      hunger: 'Hunger',
+      thirst: 'Thirst',
+      energy: 'Energy',
+      acceptedBy: 'Accepted by',
+      foodValue: 'Food value',
+      treats: 'Treats',
+      cureMode: 'Cure',
+      instant: 'Instant',
+      gradual: '{n} days',
+      dosesPerDay: 'Doses per day',
+      palatability: 'Palatability',
+      palatable: 'Palatable',
+      neutral: 'Neutral',
+      bitter: 'Bitter',
+      size: 'Size',
+      placeable: 'Placeable',
+      experimental: 'Under development',
+      types: {
+        tool: 'Tool',
+        seed: 'Seed',
+        food: 'Food',
+        animal_food: 'Animal Feed',
+        medicine: 'Medicine',
+        animal: 'Animal',
+        resource: 'Resource',
+        crop: 'Crop',
+        construction: 'Construction'
+      },
+      diseases: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Respiratory',
+        digestive: 'Digestive',
+        fever: 'Fever'
+      }
     },
     confirmDiscard: 'Discard {name}?',
     selectItem: 'Select an item'
@@ -538,6 +586,20 @@ export default {
     help: {
       label: 'Help',
       desc: 'Open/close shortcuts'
+    },
+    // Issue #170: human-readable tool type names (toolType field on items).
+    // Shown on the inventory details panel as "Type: Axe" etc.
+    toolTypes: {
+      shears: 'Shears',
+      hoe: 'Hoe',
+      hammer: 'Hammer',
+      scythe: 'Scythe',
+      watering_can: 'Watering Can',
+      pickaxe: 'Pickaxe',
+      axe: 'Axe',
+      rake: 'Rake',
+      bucket: 'Bucket',
+      machete: 'Machete'
     }
   },
 

@@ -108,12 +108,17 @@ export const recipes = [
         icon: ""
     },
 
-    /* ferramentas */
+    /* Tools
+       Issue #170: Wooden Rod (76) was produced via `wooden_rod` but never
+       consumed — orphan output. Reused here as a tool handle. Since 1×
+       Plank yields 2× Rod, swapping plank for rod is balance-neutral but
+       closes the loop and reads better thematically (tool needs a handle). */
     {
         id: "axe",
         name: "Machado",
         requiredItems: [
-            { itemId: 58, qty: 2 },
+            { itemId: 76, qty: 1 },  // Wooden Rod (handle)
+            { itemId: 58, qty: 1 },  // Wooden Plank (structure)
             { itemId: 37, qty: 3 },
             { itemId: 35, qty: 1 }
         ],
@@ -126,7 +131,8 @@ export const recipes = [
         id: "pickaxe",
         name: "Picareta",
         requiredItems: [
-            { itemId: 58, qty: 2 },
+            { itemId: 76, qty: 1 },  // Wooden Rod (handle)
+            { itemId: 58, qty: 1 },  // Wooden Plank (structure)
             { itemId: 37, qty: 4 },
             { itemId: 35, qty: 1 }
         ],
@@ -139,7 +145,8 @@ export const recipes = [
         id: "hoe",
         name: "Enxada",
         requiredItems: [
-            { itemId: 58, qty: 2 },
+            { itemId: 76, qty: 1 },  // Wooden Rod (handle)
+            { itemId: 58, qty: 1 },  // Wooden Plank (structure)
             { itemId: 37, qty: 2 },
             { itemId: 35, qty: 1 }
         ],
@@ -152,7 +159,7 @@ export const recipes = [
         id: "scythe",
         name: "Foice",
         requiredItems: [
-            { itemId: 58, qty: 1 },
+            { itemId: 76, qty: 1 },  // Wooden Rod (handle only — scythe has no plank body)
             { itemId: 37, qty: 2 },
             { itemId: 35, qty: 1 }
         ],
@@ -181,7 +188,11 @@ export const recipes = [
         requiredItems: [
             { itemId: 58, qty: 8 },
             { itemId: 34, qty: 4 },
-            { itemId: 35, qty: 1 }
+            { itemId: 35, qty: 1 },
+            // Issue #170: Fabric (49) was produced via `wool_fabric` but
+            // never consumed. Added here as interior lining — pure flavor,
+            // doesn't change gameplay, just closes the loop.
+            { itemId: 49, qty: 1 }
         ],
         result: { itemId: 69, qty: 1 },
         category: "construction",
@@ -210,7 +221,11 @@ export const recipes = [
             { itemId: 10, qty: 25 },
             { itemId: 32, qty: 15 },
             { itemId: 73, qty: 6 },
-            { itemId: 75, qty: 12 },
+            // Issue #170: was Screw (75) qty: 12 — consolidated to Nail (34)
+            // to avoid confusing two functionally identical fasteners. Screw
+            // is marked experimental in item.js for possible future
+            // differentiation (e.g. durability tier).
+            { itemId: 34, qty: 12 },
             { itemId: 42, qty: 2 }
         ],
         result: { itemId: 103, qty: 1 },

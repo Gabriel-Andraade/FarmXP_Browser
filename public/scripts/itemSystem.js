@@ -230,6 +230,11 @@ export class ItemSystem {
                 } else if (targetType === 'thicket' && equippedTool.toolType === 'machete') {
                     damage = equippedTool.damage || GAME_BALANCE.DAMAGE.MACHETE_DAMAGE;
                     isCorrectTool = true;
+                } else if (targetType === 'thicket' && equippedTool.toolType === 'shears') {
+                    // Issue #170: Shears as an alternative for pruning thickets.
+                    // Same damage as machete; player picks which one to carry.
+                    damage = equippedTool.damage || GAME_BALANCE.DAMAGE.SHEARS_DAMAGE;
+                    isCorrectTool = true;
                 }
             }
 
@@ -258,7 +263,10 @@ export class ItemSystem {
         switch (type) {
             case 'tree': return 'machado';
             case 'rock': return 'picareta';
-            case 'thicket': return 'facão';
+            // Issue #170: Shears are a valid alternative to the machete
+            // for thickets. Message stays in PT-BR (i18n via t() is wired
+            // elsewhere in the project; consistent with sibling strings).
+            case 'thicket': return 'facão ou tesoura';
             default: return null;
         }
     }
@@ -395,6 +403,10 @@ export class ItemSystem {
     getDropsFromAssetManager(type) {
         if (type === 'tree') return [{ id: 9, minQty: 2, maxQty: 5 }];
         if (type === 'rock') return [{ id: 10, minQty: 1, maxQty: 3 }];
+        // Issue #170: thicket dropped nothing — destroying with machete/shears
+        // produced no Plant Fiber (54). Now drops 1-3 fibers per thicket,
+        // matching the game's existing resource scarcity (similar to rocks).
+        if (type === 'thicket') return [{ id: 54, minQty: 1, maxQty: 3 }];
         return [];
     }
 

@@ -11,7 +11,7 @@ import { inventorySystem } from "./thePlayer/inventorySystem.js";
 import { camera, CAMERA_ZOOM } from "./thePlayer/cameraSystem.js";
 import { TILE_SIZE } from "./worldConstants.js";
 import { perfLog } from "./optimizationConstants.js";
-import { wellSystem } from "./wellSystem.js";
+import { wellSystem as importedWellSystem } from "./wellSystem.js";
 import { t } from './i18n/i18n.js';
 import { MOUSE_UPDATE_INTERVAL_MS, DEBUG_UPDATE_INTERVAL_MS, VISUAL } from './constants.js';
 import { getObject, getSystem } from "./gameState.js";
@@ -559,7 +559,13 @@ export const BuildSystem = {
 
         if (constructionType === 'chest') {
             const chestSystem = getSystem('chest');
-            if (chestSystem && typeof chestSystem.addChest === 'function') {
+            if (!chestSystem) {
+                // Trigger lazy load so the next click works.
+                import('./chestSystem.js').catch(err => logger.warn('chestSystem lazy load failed', err));
+                this.showDebugMessage(t('build.chestLoading'), 1500);
+                return;
+            }
+            if (typeof chestSystem.addChest === 'function') {
                 const newChestId = `chest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
                 const buildingData = {
@@ -594,13 +600,20 @@ export const BuildSystem = {
         }
 
         if (constructionType === 'well') {
-            const wellSystem = getSystem('well');
-            if ((wellSystem && typeof wellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) { 
-                
+            // wellSystem is statically imported at the top of this file, so it's
+            // always available. Prefer the registry copy (gameState) but fall
+            // back to the static import if registration hasn't happened yet.
+            const availableWellSystem = getSystem('well') ?? importedWellSystem;
+            if (!availableWellSystem && !(window.theWorld && typeof window.theWorld.placeWell === 'function')) {
+                this.showDebugMessage(t('build.wellLoading'), 1500);
+                return;
+            }
+            if ((availableWellSystem && typeof availableWellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) {
+
                 const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
+
                 const wellBuildingData = {
-                    id: wellId, 
+                    id: wellId,
                     itemId: this.selectedItem.id,
                     name: this.selectedItem.name,
                     assetId: this.selectedItem.assetId || 'well',
@@ -616,8 +629,8 @@ export const BuildSystem = {
                     let wellObject = null;
                     if (window.theWorld && typeof window.theWorld.placeWell === 'function') {
                         wellObject = window.theWorld.placeWell(pos.x, pos.y, wellBuildingData);
-                    } else if (wellSystem) {
-                        wellObject = wellSystem.placeWell(wellId, pos.x, pos.y);
+                    } else if (availableWellSystem) {
+                        wellObject = availableWellSystem.placeWell(wellId, pos.x, pos.y);
                     }
 
                     if (wellObject) {

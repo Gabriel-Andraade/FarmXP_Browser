@@ -146,6 +146,14 @@ export default {
     animals: 'Animales',
     resource: 'Recurso',
     material: 'Materiales',
+    // Issue #170: singular aliases that match `item.type` values directly,
+    // used by callers that look up `categories.${item.type}` (craftingSystem,
+    // merchant). Without these the console warns about missing translations.
+    tool: 'Herramienta',
+    seed: 'Semilla',
+    crop: 'Cosecha',
+    medicine: 'Medicina',
+    animal: 'Animal',
   },
 
   // Inventory System
@@ -174,6 +182,46 @@ export default {
     },
     toolWheel: {
       empty: 'No hay herramientas en el inventario'
+    },
+    details: {
+      sectionTitle: 'Información técnica',
+      type: 'Tipo',
+      toolType: 'Herramienta',
+      restores: 'Restaura',
+      hunger: 'Hambre',
+      thirst: 'Sed',
+      energy: 'Energía',
+      acceptedBy: 'Aceptado por',
+      foodValue: 'Valor nutritivo',
+      treats: 'Trata',
+      cureMode: 'Cura',
+      instant: 'Inmediata',
+      gradual: '{n} días',
+      dosesPerDay: 'Dosis por día',
+      palatability: 'Sabor',
+      palatable: 'Agradable',
+      neutral: 'Neutro',
+      bitter: 'Amargo',
+      size: 'Tamaño',
+      placeable: 'Construible',
+      experimental: 'En desarrollo',
+      types: {
+        tool: 'Herramienta',
+        seed: 'Semilla',
+        food: 'Comida',
+        animal_food: 'Alimento Animal',
+        medicine: 'Medicina',
+        animal: 'Animal',
+        resource: 'Recurso',
+        crop: 'Cosecha',
+        construction: 'Construcción'
+      },
+      diseases: {
+        parasitosis: 'Parasitosis',
+        respiratory: 'Respiratoria',
+        digestive: 'Digestiva',
+        fever: 'Fiebre'
+      }
     },
     confirmDiscard: '¿Descartar {name}?',
     selectItem: 'Selecciona un artículo'
@@ -538,6 +586,20 @@ export default {
     help: {
       label: 'Ayuda',
       desc: 'Abrir/cerrar atajos'
+    },
+    // Issue #170: human-readable tool type names (toolType field on items).
+    // Shown on the inventory details panel as "Type: Axe" etc.
+    toolTypes: {
+      shears: 'Tijeras',
+      hoe: 'Azada',
+      hammer: 'Martillo',
+      scythe: 'Guadaña',
+      watering_can: 'Regadera',
+      pickaxe: 'Pico',
+      axe: 'Hacha',
+      rake: 'Rastrillo',
+      bucket: 'Cubo',
+      machete: 'Machete'
     }
   },
 
