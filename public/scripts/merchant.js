@@ -130,7 +130,10 @@ class MerchantSystem {
                     { id: 13, name: 'Picareta', price: 80, category: 'tool', icon: '', quantity: 5 },
                     { id: 14, name: 'Machado', price: 60, category: 'tool', icon: '', quantity: 5 },
                     { id: 22, name: 'Machete', price: 55, category: 'tool', icon: '', quantity: 5 },
-                    { id: 16, name: 'Balde', price: 30, category: 'tool', icon: '', quantity: 10 }
+                    { id: 16, name: 'Balde', price: 30, category: 'tool', icon: '', quantity: 10 },
+                    // Issue #170: Shears (0) had no acquisition path — gating the
+                    // wool → fabric → chest chain. Added here so the loop closes.
+                    { id: 0,  name: 'Tesoura de jardinagem', price: 20, category: 'tool', icon: '', quantity: 5 }
                 ]
             },
             {

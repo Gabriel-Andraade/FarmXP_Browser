@@ -915,6 +915,7 @@ export function closeInventoryModal() {
   if (modalEl) {
     modalEl.classList.remove('open');
   }
+  _hideTooltip();
   selectedSlotIndex = -1;
   updateDetailsPanel(null);
 
@@ -978,6 +979,7 @@ function renderTabs() {
 function renderInventory() {
   if (!contentEl) return;
 
+  _hideTooltip();
   // fix: innerHTML → DOM API
   contentEl.replaceChildren();
 
@@ -1382,14 +1384,13 @@ function updateDetailsPanel(item, qty) {
       logger.debug(`🔨 Iniciando construção: ${item.name}`);
       closeInventoryModal();
 
-      // chestSystem/wellSystem load lazily on first interaction in the world.
-      // If the player crafts and tries to place one BEFORE ever interacting
-      // with an existing chest/well, getSystem('chest'|'well') is null at
-      // placeObject() time and the build bails silently. Pre-load them here.
+      // chestSystem loads lazily on first chest interaction in the world. If
+      // the player crafts and tries to place one before ever interacting with
+      // an existing chest, getSystem('chest') is null at placeObject() time
+      // and the build bails silently. Pre-load here. wellSystem is already
+      // statically imported by buildSystem.js, no pre-load needed.
       if (item.id === 69) {
         try { await import('../chestSystem.js'); } catch (e) { logger.warn('chestSystem preload failed', e); }
-      } else if (item.id === 93) {
-        try { await import('../wellSystem.js'); } catch (e) { logger.warn('wellSystem preload failed', e); }
       }
 
       let BuildSystem = getSystem('build');

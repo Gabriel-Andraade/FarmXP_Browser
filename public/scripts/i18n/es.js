@@ -209,7 +209,7 @@ export default {
         tool: 'Herramienta',
         seed: 'Semilla',
         food: 'Comida',
-        animal_food: 'Comida de animal',
+        animal_food: 'Alimento Animal',
         medicine: 'Medicina',
         animal: 'Animal',
         resource: 'Recurso',
