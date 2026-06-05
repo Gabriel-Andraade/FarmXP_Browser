@@ -1598,6 +1598,16 @@ export class AnimalEntity {
         const ftSys = getSystem('foodTrough');
         if (!ftSys || !this._claimedFoodTrough) { this._exitFoodFlow(); return; }
 
+        // Positional guard — if the animal got displaced (pushed by another
+        // animal, FLEE interrupted and resumed, etc.) it shouldn't keep
+        // gaining hunger while standing somewhere else. Same pattern the
+        // drinking flow uses.
+        if (typeof ftSys.isAnimalAtSlot === 'function' &&
+            !ftSys.isAnimalAtSlot(this, this._claimedFoodTrough, this._claimedFoodSlot)) {
+            this._exitFoodFlow();
+            return;
+        }
+
         // Tick once per second. eat() returns { drained, fromPremium } or false.
         // Rates are species-specific so a chick doesn't drain a cow's worth
         // of feed and a bull actually gains meaningful hunger per tick.

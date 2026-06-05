@@ -25,20 +25,27 @@ async function _loadCityModules() {
     if (_cityModules) return _cityModules;
     if (_cityModulesPromise) return _cityModulesPromise;
     _cityModulesPromise = (async () => {
-        const [cityRenderer, houseMod, obsMod] = await Promise.all([
-            import('./cityRenderer.js'),
-            import('./cityHouseSystem.js'),
-            import('./cityObstaclesSystem.js'),
-        ]);
-        _cityModules = {
-            loadCityAssets:        cityRenderer.loadCityAssets,
-            areCityAssetsLoaded:   cityRenderer.areCityAssetsLoaded,
-            invalidateCityCache:   cityRenderer.invalidateCityCache,
-            ensureCityRendererReady: cityRenderer.ensureCityRendererReady,
-            cityHouseSystem:       houseMod.cityHouseSystem,
-            cityObstaclesSystem:   obsMod.cityObstaclesSystem,
-        };
-        return _cityModules;
+        try {
+            const [cityRenderer, houseMod, obsMod] = await Promise.all([
+                import('./cityRenderer.js'),
+                import('./cityHouseSystem.js'),
+                import('./cityObstaclesSystem.js'),
+            ]);
+            _cityModules = {
+                loadCityAssets:        cityRenderer.loadCityAssets,
+                areCityAssetsLoaded:   cityRenderer.areCityAssetsLoaded,
+                invalidateCityCache:   cityRenderer.invalidateCityCache,
+                ensureCityRendererReady: cityRenderer.ensureCityRendererReady,
+                cityHouseSystem:       houseMod.cityHouseSystem,
+                cityObstaclesSystem:   obsMod.cityObstaclesSystem,
+            };
+            return _cityModules;
+        } catch (err) {
+            // Drop the rejected promise so a later call can retry instead of
+            // returning the same cached failure forever.
+            _cityModulesPromise = null;
+            throw err;
+        }
     })();
     return _cityModulesPromise;
 }

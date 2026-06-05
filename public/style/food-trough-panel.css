@@ -14,7 +14,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
-  font-family: 'Georgia', serif;
+  font-family: Georgia, serif;
   background: linear-gradient(135deg, #1a0f07 0%, #2c1e12 50%, #1a0f07 100%);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -56,7 +56,7 @@
 }
 .ftp-title {
   margin: 0;
-  font-family: 'Playfair Display', 'Georgia', serif;
+  font-family: 'Playfair Display', Georgia, serif;
   font-size: 20px;
   font-weight: bold;
   color: #e0bc87;
@@ -160,7 +160,7 @@
 }
 .ftp-add-btn {
   padding: 12px 18px;
-  font-family: 'Georgia', serif;
+  font-family: Georgia, serif;
   font-size: 15px;
   font-weight: bold;
   color: #fff;
@@ -223,7 +223,7 @@
 }
 .ftp-feed-item .ftp-feed-add {
   padding: 6px 12px;
-  font-family: 'Georgia', serif;
+  font-family: Georgia, serif;
   font-size: 13px;
   font-weight: bold;
   color: #fff;

@@ -9,13 +9,11 @@ import { GAME_BALANCE } from './constants.js';
 import { registerSystem, getSystem, getObject } from './gameState.js';
 import { safeDispatch } from './safeDispatch.js';
 
-// Permanently protected structures — no tool is meant to demolish them so
-// E should never apply damage. Hoisted to module scope so it isn't rebuilt
-// on every interaction.
-const PROTECTED_FROM_DAMAGE = new Set([
-    'watertroughx', 'watertroughy',
-    'foodtroughx', 'foodtroughy',
-]);
+// Permanently protected structure type prefixes — no tool is meant to
+// demolish them so E should never apply damage. Prefix match so future
+// variants (foodTroughcattleX, watertrough_v2, etc.) inherit protection
+// automatically without touching this list.
+const PROTECTED_TYPE_PREFIXES = ['watertrough', 'foodtrough'];
 
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
@@ -211,7 +209,7 @@ export class ItemSystem {
             const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
             const targetType = (obj.type || '').toLowerCase();
 
-            if (PROTECTED_FROM_DAMAGE.has(targetType)) {
+            if (PROTECTED_TYPE_PREFIXES.some(p => targetType.startsWith(p))) {
                 return;
             }
 

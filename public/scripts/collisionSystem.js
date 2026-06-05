@@ -238,8 +238,20 @@ export class CollisionSystem {
             offsetX: -0.2, offsetY: 0.0,
             originalType: "watertrough"
         },
-        // Issue #171: generic food trough collision (variant + species
-        // tracked on the object itself, not in the collision label).
+        // Issue #171: food trough interaction zones. buildSystem creates
+        // objects with type=FOODTROUGHX/FOODTROUGHY (orientation-based);
+        // FOODTROUGH kept for any generic caller. All three resolve to the
+        // same originalType so downstream interaction code stays simple.
+        FOODTROUGHX: {
+            widthRatio: 1.0, heightRatio: 1.0,
+            offsetX: 0.0, offsetY: 0.0,
+            originalType: "foodtrough"
+        },
+        FOODTROUGHY: {
+            widthRatio: 1.0, heightRatio: 1.0,
+            offsetX: 0.0, offsetY: 0.0,
+            originalType: "foodtrough"
+        },
         FOODTROUGH: {
             widthRatio: 1.0, heightRatio: 1.0,
             offsetX: 0.0, offsetY: 0.0,
@@ -285,7 +297,7 @@ export class CollisionSystem {
             "HOUSE_WALLS", "CONSTRUCTION", "WELL",
             "FENCE", "FENCEX", "FENCEY", "ANIMAL",
             "WATERTROUGHX", "WATERTROUGHY",
-            "FOODTROUGH",
+            "FOODTROUGHX", "FOODTROUGHY", "FOODTROUGH",
             "QUEST_ANIMAL"
         ];
         if (interactiveTypes.includes(objectType)) {
