@@ -494,4 +494,5 @@ serve({
   },
 });
 
-console.log(`server running on http://localhost:${port}/`);
+console.log(`server running on http://localhost:${port}/?hitboxes=1&eatSlots=1&drinkSlots=1 `);
+// for test of collsion, or adjust something: localhost:${port}/?hitboxes=1&eatSlots=1&drinkSlots=1 

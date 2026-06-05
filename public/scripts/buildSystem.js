@@ -272,6 +272,9 @@ export const BuildSystem = {
         } else if (type === 'watertrough') {
             this.currentVariant = itemData.variants?.[0] || 'waterTroughX';
             this.previewImg = assets.furniture?.waterTroughs?.[this.currentVariant]?.img;
+        } else if (type === 'foodtrough') {
+            this.currentVariant = itemData.variants?.[0] || 'foodTroughcattleX';
+            this.previewImg = assets.furniture?.foodTroughs?.[this.currentVariant]?.img;
         } else if (itemData.variants && itemData.variants.length > 0) {
             this.currentVariant = itemData.variants[0];
             this.previewImg = assets.furniture?.fences?.[this.currentVariant]?.img;
@@ -332,6 +335,41 @@ export const BuildSystem = {
                 type: 'watertrough',
                 _isSynthetic: false,
             },
+            // Issue #171: food troughs cycle alongside the water trough.
+            // Player needs to actually own them in inventory to place.
+            {
+                id: 104,
+                name: t('itemNames.104') || 'Cocho de Ração (Gado/Ovelha)',
+                placeable: true,
+                variants: ['foodTroughcattleX', 'foodTroughcattleY'],
+                type: 'construction',
+                originalType: 'foodtrough',
+                species: 'cattle',
+                targetAnimals: ['Cow', 'Bull', 'Calf', 'Sheep', 'Lamb'],
+                _isSynthetic: false,
+            },
+            {
+                id: 105,
+                name: t('itemNames.105') || 'Cocho de Ração (Suínos)',
+                placeable: true,
+                variants: ['foodTroughporkX', 'foodTroughporkY'],
+                type: 'construction',
+                originalType: 'foodtrough',
+                species: 'pork',
+                targetAnimals: ['Pig', 'Piglet'],
+                _isSynthetic: false,
+            },
+            {
+                id: 106,
+                name: t('itemNames.106') || 'Cocho de Ração (Aves)',
+                placeable: true,
+                variants: ['foodTroughBirdX', 'foodTroughBirdY'],
+                type: 'construction',
+                originalType: 'foodtrough',
+                species: 'bird',
+                targetAnimals: ['Chicken', 'Chick', 'Rooster', 'Turkey'],
+                _isSynthetic: false,
+            },
         ];
     },
 
@@ -387,6 +425,8 @@ export const BuildSystem = {
         if (this.selectedItem.id === 69) return 'chest';
         if (this.selectedItem.id === 93) return 'well';
         if (this.selectedItem.id === 103) return 'watertrough';
+        // Issue #171: food troughs (cattle 104 / pork 105 / bird 106).
+        if (this.selectedItem.originalType === 'foodtrough') return 'foodtrough';
         if (this.selectedItem.variants && this.selectedItem.variants.length > 0) return 'fence';
         return 'construction';
     },
@@ -411,6 +451,12 @@ export const BuildSystem = {
                 return (this.currentVariant === 'waterTroughY')
                     ? { width: 30, height: 95 }
                     : { width: 95, height: 30 };
+            case 'foodtrough':
+                // Issue #171: same scale convention as water trough — X is
+                // horizontal (wide+short), Y is vertical (narrow+tall).
+                return (this.currentVariant || '').endsWith('Y')
+                    ? { width: 40, height: 95 }
+                    : { width: 95, height: 40 };
             default:
                 return {
                     width: this.selectedItem.buildWidth || 64,
@@ -677,6 +723,51 @@ export const BuildSystem = {
             return;
         }
 
+        // Issue #171: food troughs — mirror water trough placement flow.
+        // species (cattle/pork/bird) comes from the selected item and is
+        // stored on the placed object for foodTroughSystem to query.
+        if (constructionType === 'foodtrough') {
+            if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
+                try {
+                    const foodTroughId = `foodtrough_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const variant = this.currentVariant || (this.selectedItem.variants?.[0]) || 'foodTroughcattleX';
+                    const isY = variant.endsWith('Y');
+                    const collisionType = isY ? 'FOODTROUGHY' : 'FOODTROUGHX';
+
+                    const foodTroughObj = {
+                        id: foodTroughId,
+                        x: pos.x,
+                        y: pos.y,
+                        itemId: this.selectedItem.id,
+                        name: this.selectedItem.name,
+                        width: dim.width,
+                        height: dim.height,
+                        type: collisionType,
+                        originalType: 'foodtrough',
+                        variant,
+                        species: this.selectedItem.species || 'cattle',
+                        targetAnimals: this.selectedItem.targetAnimals || [],
+                        icon: this.selectedItem.icon,
+                        placeable: true,
+                        isInteractable: true,
+                        foodLevel: 0
+                    };
+
+                    window.theWorld.addWorldObject(foodTroughObj);
+                    inventorySystem.removeItem(this.selectedItem.id, 1);
+                    const restante = itemQuantity - 1;
+                    this.showDebugMessage(t('build.placed', { remaining: restante }), 1000);
+                    if (restante <= 0) this.stopBuilding();
+                } catch (err) {
+                    logger.error(t('build.placeError'), err);
+                    this.showDebugMessage(t('build.placeError'), 2000);
+                }
+            } else {
+                this.showDebugMessage(t('build.worldNotAvailable'), 2000);
+            }
+            return;
+        }
+
         if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
             try {
                 let constructionTypeForCollision = constructionType;
@@ -891,7 +982,7 @@ export const BuildSystem = {
         if (!this.selectedItem) return;
         const type = this.getConstructionType();
         // Tipos com variantes (X/Y). Adicione aqui se vier novo item rotacionável.
-        const ROTATABLE = { fence: 'fences', watertrough: 'waterTroughs' };
+        const ROTATABLE = { fence: 'fences', watertrough: 'waterTroughs', foodtrough: 'foodTroughs' };
         const assetGroup = ROTATABLE[type];
         if (!assetGroup) return;
 

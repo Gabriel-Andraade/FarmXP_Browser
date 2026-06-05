@@ -203,8 +203,20 @@ export class ItemSystem {
             const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
             const targetType = (obj.type || '').toLowerCase();
 
+            // Permanently protected structures — there is no tool meant to
+            // demolish them, so E should NEVER cause damage. Without this,
+            // a player carrying any damaging tool (axe, pickaxe, hammer)
+            // would one-shot the trough since its default HP is 1.
+            const PROTECTED_FROM_DAMAGE = new Set([
+                'watertroughx', 'watertroughy',
+                'foodtroughx', 'foodtroughy',
+            ]);
+            if (PROTECTED_FROM_DAMAGE.has(targetType)) {
+                return;
+            }
+
             // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
-            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence', 'watertroughx', 'watertroughy'];
+            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
             const isUtility = utilityTypes.includes(targetType);
 
             const isDamagingTool =

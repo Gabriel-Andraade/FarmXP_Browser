@@ -11,10 +11,29 @@ import { camera } from './thePlayer/cameraSystem.js';
 import { markWorldChanged, invalidateGrassCache, trees, rocks, thickets, houses, animals, placedBuildings, placedWells } from './theWorld.js';
 import { blockInteractions, unblockInteractions } from './loadingScreen.js';
 import { logger } from './logger.js';
-import { loadCityAssets, areCityAssetsLoaded, invalidateCityCache, ensureCityRendererReady } from './cityRenderer.js';
-import { cityHouseSystem } from './cityHouseSystem.js';
-import { cityObstaclesSystem } from './cityObstaclesSystem.js';
 import { t } from './i18n/i18n.js';
+
+// City modules are deferred — fetched only when the player actually walks
+// through the farm→city portal. Boot stays focused on the farm: zero parse,
+// zero fetch, zero memory for the city until the first transition.
+let _cityModules = null;
+async function _loadCityModules() {
+    if (_cityModules) return _cityModules;
+    const [cityRenderer, houseMod, obsMod] = await Promise.all([
+        import('./cityRenderer.js'),
+        import('./cityHouseSystem.js'),
+        import('./cityObstaclesSystem.js'),
+    ]);
+    _cityModules = {
+        loadCityAssets:        cityRenderer.loadCityAssets,
+        areCityAssetsLoaded:   cityRenderer.areCityAssetsLoaded,
+        invalidateCityCache:   cityRenderer.invalidateCityCache,
+        ensureCityRendererReady: cityRenderer.ensureCityRendererReady,
+        cityHouseSystem:       houseMod.cityHouseSystem,
+        cityObstaclesSystem:   obsMod.cityObstaclesSystem,
+    };
+    return _cityModules;
+}
 
 // ─── Map definitions ────────────────────────────────────────────────────────
 
@@ -247,24 +266,25 @@ async function _executePortalTransition(portal) {
             // Save farm state before leaving
             savedFarmState = snapshotFarmState();
             clearWorldObjects();
-            // Pre-load city assets
-            if (!areCityAssetsLoaded()) {
-                await loadCityAssets();
+            // First-time visit fetches the city modules + assets here.
+            const city = await _loadCityModules();
+            if (!city.areCityAssetsLoaded()) {
+                await city.loadCityAssets();
             }
-            // Ensure cityRenderer module is ready for sync rendering
-            await ensureCityRendererReady();
-            // Register city house hitboxes when entering city
-            cityHouseSystem.registerHouseHitboxes();
-            await cityObstaclesSystem.registerObstacles();
+            await city.ensureCityRendererReady();
+            city.cityHouseSystem.registerHouseHitboxes();
+            await city.cityObstaclesSystem.registerObstacles();
             // Re-register NPC hitboxes (cleared by collisionSystem.clear())
             const npcSys = getSystem('npc');
             if (npcSys) npcSys.registerHitboxesForMap('city');
         } else {
-            // Leaving city — clear city-only objects and hitboxes
-            cityHouseSystem.clearHouseHitboxes();
-            cityObstaclesSystem.clearObstacles();
+            // Leaving city — clear city-only objects and hitboxes.
+            // City modules are already loaded if we got here.
+            const city = await _loadCityModules();
+            city.cityHouseSystem.clearHouseHitboxes();
+            city.cityObstaclesSystem.clearObstacles();
             clearWorldObjects();
-            invalidateCityCache();
+            city.invalidateCityCache();
         }
 
         // Switch map
@@ -496,16 +516,17 @@ async function restoreMap(mapId) {
         savedFarmState = snapshotFarmState();
         clearWorldObjects();
 
-        if (!areCityAssetsLoaded()) {
-            await loadCityAssets();
+        const city = await _loadCityModules();
+        if (!city.areCityAssetsLoaded()) {
+            await city.loadCityAssets();
         }
-        await ensureCityRendererReady();
+        await city.ensureCityRendererReady();
 
         currentMapId = 'city';
         updateCameraBounds(MAPS.city.width, MAPS.city.height);
 
-        cityHouseSystem.registerHouseHitboxes();
-        await cityObstaclesSystem.registerObstacles();
+        city.cityHouseSystem.registerHouseHitboxes();
+        await city.cityObstaclesSystem.registerObstacles();
 
         const npcSys = getSystem('npc');
         if (npcSys) npcSys.registerHitboxesForMap('city');
@@ -516,10 +537,13 @@ async function restoreMap(mapId) {
 
         logger.info('[MapManager] Restored map to city (from save)');
     } else {
-        cityHouseSystem.clearHouseHitboxes();
-        cityObstaclesSystem.clearObstacles();
+        // We only get here if the save loaded with city as the current map,
+        // which means the city modules were loaded above. Safe to await.
+        const city = await _loadCityModules();
+        city.cityHouseSystem.clearHouseHitboxes();
+        city.cityObstaclesSystem.clearObstacles();
         clearWorldObjects();
-        invalidateCityCache();
+        city.invalidateCityCache();
 
         currentMapId = 'farm';
         updateCameraBounds(MAPS.farm.width, MAPS.farm.height);

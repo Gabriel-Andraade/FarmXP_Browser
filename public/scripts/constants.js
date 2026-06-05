@@ -244,7 +244,15 @@ export const HITBOX_CONFIGS = {
     // Tem que bater com `getConstructionDimensions('watertrough')` em
     // buildSystem.js (hoje 95×30 / 30×95). Se mudar lá, mude aqui.
     WATERTROUGHX: { width: 95, height: 30, offsetX: 0, offsetY: 0 },
-    WATERTROUGHY: { width: 30, height: 95, offsetX: 0, offsetY: 0 }
+    WATERTROUGHY: { width: 30, height: 95, offsetX: 0, offsetY: 0 },
+    // Food Trough collision — ratios em vez de absolutos pra escalar com as
+    // 3 espécies (cattle 95×60, pork 95×40, bird 95×35). Antes não havia
+    // entry → physical hitbox = sprite inteiro, bloqueando o animal de
+    // encostar nos eat slots. Width quase cheia (animal precisa do espaço
+    // pra parar do lado), height metade ancorada no fundo da arte (a tigela
+    // do cocho, não a sombra/borda alta).
+    FOODTROUGHX: { widthRatio: 0.8, heightRatio: 0.35, offsetXRatio: 0.1, offsetYRatio: 0.5 },
+    FOODTROUGHY: { widthRatio: 0.35, heightRatio: 0.8, offsetXRatio: 0.5, offsetYRatio: 0.1 }
   },
 
   ANIMALS: {

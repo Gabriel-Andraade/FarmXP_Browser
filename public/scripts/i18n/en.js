@@ -384,6 +384,9 @@ export default {
     94: 'Battery',
     100: 'Municipal Contract',
     103: 'Water Trough',
+    104: 'Food Trough (Cattle/Sheep)',
+    105: 'Food Trough (Pigs)',
+    106: 'Food Trough (Poultry)',
     // Veterinary medicines (ids 200-207)
     200: 'Fast Dewormer',
     201: 'Common Dewormer',
@@ -884,6 +887,25 @@ export default {
   },
 
   // Water Trough
+  foodTrough: {
+    needFeed: 'You need matching animal feed in your inventory',
+    needPremium: 'No premium feed (Treat / Quality Feed) in inventory',
+    filled: 'Trough filled with {feed}',
+    premiumFilled: 'Trough seasoned with {feed}',
+    alreadyFull: 'Food trough already full',
+    premiumFull: 'Premium bar already full',
+    panel: {
+      title: 'Food Trough',
+      close: 'Close',
+      levelName: 'Feed level',
+      premiumName: 'Special seasoning',
+      feedsLabel: 'Feeds in inventory:',
+      addBtn: 'Add feed',
+      addPremiumBtn: 'Add special',
+      fedSuccess: 'Feed added',
+      premiumSuccess: 'Special added',
+    },
+  },
   waterTrough: {
     needBucket: 'You need a water bucket',
     filled: 'Trough filled',

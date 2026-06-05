@@ -36,23 +36,19 @@ async function getCityRenderer() {
 let _cityRendererSync = null;
 function getCityRendererSync() { return _cityRendererSync; }
 
-// Listen for mapManager registration to clear cache
+// City renderer is fetched ONLY when the player actually enters the city.
+// Previously this also pre-loaded on `gamestate:registered` for mapManager,
+// which fired at boot — defeating the lazy-load. Now the only trigger is
+// the `mapChanged` event with mapId === 'city'.
 if (typeof document !== 'undefined') {
   document.addEventListener('mapChanged', async (e) => {
     _mapManager = getSystem('mapManager');
-    // Pre-load city renderer when entering city
     if (e.detail?.mapId === 'city' && !_cityRendererSync) {
       try {
         _cityRendererSync = await getCityRenderer();
       } catch (err) {
         logger.warn('[theWorld] Failed to load cityRenderer module: ' + err.message);
       }
-    }
-  });
-  // Also listen for system registration to eagerly load city renderer
-  document.addEventListener('gamestate:registered', (e) => {
-    if (e.detail?.name === 'mapManager' && !_cityRendererSync) {
-      getCityRenderer().then(m => { _cityRendererSync = m; });
     }
   });
 }
@@ -101,17 +97,35 @@ export { WORLD_WIDTH, WORLD_HEIGHT, GAME_WIDTH, GAME_HEIGHT };
 // Cache system for sorted world objects to improve rendering performance
 // =============================================================================
 
-/** @type {Array<Object>} Cached array of sorted world objects */
-let sortedWorldObjectsCache = [];
+// Static-objects render grid. Replaces the "walk every static per frame"
+// approach: insert each static object into the cells it overlaps; per frame,
+// query only the cells the viewport covers. For a 1920×1080 viewport with
+// 512px cells, a typical frame touches ~3×4 = 12 cells regardless of world
+// size. At 80 fences + 1000 trees + animals + troughs we go from iterating
+// ~2k items every frame to ~60-150.
+const RENDER_CELL_SIZE = 512;
+const _renderGrid = new Map();           // cellKey → Array<wrapper>
+let staticCacheValid = false;
 
-/** @type {boolean} Flag indicating if cache is still valid */
-let cacheValid = false;
+function _rgKey(cx, cy) { return (cx << 16) | (cy & 0xFFFF); }
 
-/** @type {number} Last known player Y position for cache invalidation */
-let lastPlayerY = -1;
-
-/** @type {number} Last known player height for cache invalidation */
-let lastPlayerHeight = -1;
+function _addToRenderGrid(wrapper) {
+  const src = wrapper.original || wrapper;
+  const x = src.x || 0, y = src.y || 0;
+  const w = src.width || 32, h = src.height || 32;
+  const minCX = Math.floor(x / RENDER_CELL_SIZE);
+  const minCY = Math.floor(y / RENDER_CELL_SIZE);
+  const maxCX = Math.floor((x + w) / RENDER_CELL_SIZE);
+  const maxCY = Math.floor((y + h) / RENDER_CELL_SIZE);
+  for (let cx = minCX; cx <= maxCX; cx++) {
+    for (let cy = minCY; cy <= maxCY; cy++) {
+      const k = _rgKey(cx, cy);
+      let cell = _renderGrid.get(k);
+      if (!cell) { cell = []; _renderGrid.set(k, cell); }
+      cell.push(wrapper);
+    }
+  }
+}
 
 /**
  * Buffer zone around viewport for culling calculations
@@ -121,20 +135,8 @@ let lastPlayerHeight = -1;
 const CULLING_BUFFER = CAMERA.CULLING_BUFFER;
 
 /**
- * Threshold em pixels pra invalidar cache de Y-sort. Com wrapper pool em
- * uso (`_wrapperPool`), rebuild não causa mais alocações grandes — só uma
- * reordenação. Threshold pode ficar baixo sem pagar GC.
- */
-const Y_SORT_THRESHOLD = 16;
-
-/**
- * Pool de wrappers do Y-sort. Cada objeto subjacente (tree, rock, animal,
- * etc.) tem UM wrapper estável reusado em todo rebuild. WeakMap garante
- * que se o objeto subjacente sumir (animal morre, árvore derrubada),
- * o wrapper é GC'd automaticamente — sem leak.
- *
- * Antes: 150 wrappers alocados a cada player.y > threshold → GC pause →
- * Depois: zero alocações em rebuilds, só pool lookups + sort.
+ * Wrapper pool — stable identity per underlying object. WeakMap so wrappers
+ * get GC'd automatically when the underlying object is removed.
  */
 const _wrapperPool = new WeakMap();
 function _getOrCreateWrapper(original, factory) {
@@ -148,12 +150,12 @@ function _getOrCreateWrapper(original, factory) {
 }
 
 /**
- * Invalidates the world object cache, forcing recalculation on next render
- * Call this when any world object is added, removed, or modified
- * @returns {void}
+ * Invalidates the static-objects sorted cache. Called when objects are
+ * added/removed/destroyed. Does NOT fire on player movement — the cache
+ * stays stable while only the camera moves.
  */
 export function markWorldChanged() {
-  cacheValid = false;
+  staticCacheValid = false;
   if (typeof document !== 'undefined') {
     document.dispatchEvent(new CustomEvent('worldChanged'));
   }
@@ -330,39 +332,55 @@ export function addAnimal(assetName, img, x, y, opts = {}) {
   return animal;
 }
 
+// Frame counter used to throttle hitbox sync for off-viewport animals.
+// AI ticks (animal.update()) still run every frame — only the spatial-grid
+// sync is skipped, since far-away animals rarely interact with anything.
+let _updateFrame = 0;
+const OFFSCREEN_HITBOX_INTERVAL = 5;  // sync 1× every 5 frames when off-screen
+
 /**
- * Updates all animals in the world (AI logic and collision positions)
- * Called each frame to process animal behavior and sync hitboxes
- * @returns {void}
+ * Updates all animals in the world. AI tick runs every frame so behavior
+ * states (eating, drinking, seeking) keep progressing. Spatial-grid hitbox
+ * sync is throttled for off-viewport animals — that's the heaviest part
+ * per frame and far animals don't need pixel-perfect collision.
  */
 export function updateAnimals() {
-  animals.forEach(animal => {
-    if (animal && typeof animal.update === "function") {
-      animal.update();
-      try {
-        if (animal.id) {
-          const hb = animal.getHitbox();
-          if (typeof collisionSystem.updateHitboxPosition === "function") {
-            collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
-          }
-          if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
-            const m = 0.1;
-            collisionSystem.setInteractionHitboxBounds(
-              animal.id,
-              animal.x + animal.width * m,
-              animal.y + animal.height * m,
-              animal.width * (1 - 2 * m),
-              animal.height * (1 - 2 * m)
-            );
-          }
-        }
-      } catch (err) {
-        handleWarn("Failed to update hitbox for animal", "theWorld:updateAnimals", { animalId: animal.id, err });
-      }
-    }
-  });
+  _updateFrame++;
+  const shouldSyncOffscreen = (_updateFrame % OFFSCREEN_HITBOX_INTERVAL) === 0;
 
-  // Update quest cat (Madalena)
+  for (const animal of animals) {
+    if (!animal || typeof animal.update !== "function") continue;
+
+    animal.update();
+
+    if (!animal.id) continue;
+
+    const visible = isInViewportWithBuffer(
+      animal.x, animal.y, animal.width || 32, animal.height || 32,
+    );
+    if (!visible && !shouldSyncOffscreen) continue;
+
+    try {
+      const hb = animal.getHitbox();
+      if (typeof collisionSystem.updateHitboxPosition === "function") {
+        collisionSystem.updateHitboxPosition(animal.id, hb.x, hb.y, hb.width, hb.height);
+      }
+      if (typeof collisionSystem.setInteractionHitboxBounds === "function") {
+        const m = 0.1;
+        collisionSystem.setInteractionHitboxBounds(
+          animal.id,
+          animal.x + animal.width * m,
+          animal.y + animal.height * m,
+          animal.width * (1 - 2 * m),
+          animal.height * (1 - 2 * m),
+        );
+      }
+    } catch (err) {
+      handleWarn("Failed to update hitbox for animal", "theWorld:updateAnimals", { animalId: animal.id, err });
+    }
+  }
+
+  // Update quest cat (Madalena) — single instance, cheap.
   const milly = getSystem('npcMilly');
   if (milly && typeof milly.updateMadalena === 'function') {
     milly.updateMadalena();
@@ -390,264 +408,231 @@ function isInViewportWithBuffer(x, y, width, height) {
          y < (camY + camH + CULLING_BUFFER);
 }
 
+// Y-sort comparator extracted for reuse between static and per-frame sorts.
+function _ySortCompare(a, b) {
+  const aSrc = a.original || a;
+  const bSrc = b.original || b;
+  const ay = (aSrc.y || 0) + (aSrc.height || 0);
+  const by = (bSrc.y || 0) + (bSrc.height || 0);
+  const diff = ay - by;
+  const al = a.layerIndex;
+  const bl = b.layerIndex;
+  if (al !== undefined && bl !== undefined && al !== bl && Math.abs(diff) < 30) {
+    return al - bl;
+  }
+  return diff;
+}
+
+// Wrap static objects into the sorted-cache representation. Pulled out so
+// rebuildStaticCache stays readable.
+function _wrapTree(t) {
+  if (!t.id) t.id = `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return _getOrCreateWrapper(t, (x) => ({
+    id: x.id, type: "TREE", originalType: "tree",
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 64, height: x.height || 96,
+    hp: x.hp || 6, maxHealth: x.hp || 6,
+    draw: (ctx) => drawSingleObject(ctx, x, "trees", drawTreeFallback),
+  }));
+}
+function _wrapRock(r) {
+  if (!r.id) r.id = `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return _getOrCreateWrapper(r, (x) => ({
+    id: x.id, type: "ROCK", originalType: "rock",
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 48, height: x.height || 48,
+    hp: x.hp || 3, maxHealth: x.hp || 3,
+    draw: (ctx) => drawSingleObject(ctx, x, "rocks", drawRockFallback),
+  }));
+}
+function _wrapThicket(th) {
+  if (!th.id) th.id = `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return _getOrCreateWrapper(th, (x) => ({
+    id: x.id, type: "THICKET", originalType: "thicket",
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 32, height: x.height || 32,
+    hp: x.hp || 1, maxHealth: x.hp || 1,
+    draw: (ctx) => drawSingleObject(ctx, x, "thickets", drawThicketFallback),
+  }));
+}
+function _wrapBuilding(b) {
+  return _getOrCreateWrapper(b, (x) => ({
+    ...x,
+    type: x.type || "CONSTRUCTION",
+    draw: (ctx) => { if (x.draw) x.draw(ctx); else drawBuilding(ctx, x); },
+  }));
+}
+function _wrapWell(w) {
+  return _getOrCreateWrapper(w, (x) => ({
+    ...x,
+    type: "WELL", originalType: "well",
+    draw: (ctx) => {
+      if (x.draw) x.draw(ctx);
+      else drawBuilding(ctx, Object.assign({}, x, { originalType: "well" }));
+    },
+  }));
+}
+function _wrapHouse(h) {
+  if (!h.id) h.id = `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return _getOrCreateWrapper(h, (x) => ({
+    id: x.id, type: x.type, originalType: "house",
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 128, height: x.height || 128,
+    interactable: x.type === "HOUSE_WALLS",
+    draw: (ctx) => {
+      if (x.type === "HOUSE_WALLS") drawHouseWalls(ctx, x);
+      else drawHouseRoof(ctx, x);
+    },
+  }));
+}
+function _wrapTomb(tb, tombSys) {
+  return _getOrCreateWrapper(tb, (x) => ({
+    id: x.id, type: 'TOMB', originalType: 'tomb',
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 48, height: x.height || 48,
+    draw: (ctx) => { if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, x); },
+  }));
+}
+function _wrapAnimal(a) {
+  if (!a.id) a.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return _getOrCreateWrapper(a, (x) => ({
+    type: "ANIMAL", id: x.id,
+    x: x.x || 0, y: x.y || 0,
+    width: x.width || 32, height: x.height || 32,
+    assetName: x.assetName,
+    draw: (ctx, frameNow) => {
+      try { x.draw(ctx, camera, frameNow); }
+      catch (e) { handleWarn("Failed to draw animal", "theWorld:animalDraw", { animalId: x.id, err: e }); }
+    },
+  }));
+}
+
 /**
- * Builds and returns a Y-sorted list of all world objects for rendering
- * Uses caching to optimize performance when player position hasn't changed
- * Objects are sorted by their bottom Y coordinate for proper depth ordering
- * @param {Object} player - Player object with x, y, width, height properties
- * @returns {Array<Object>} Sorted array of world objects with draw functions
+ * Rebuilds the static render grid. Runs only when markWorldChanged fires.
+ * Inserts each static wrapper into every grid cell it touches, so per-frame
+ * viewport queries return only the small subset that's actually visible.
+ */
+function rebuildStaticCache() {
+  perfLog("rebuilding static world grid");
+  _renderGrid.clear();
+  for (const t of trees)             _addToRenderGrid(_wrapTree(t));
+  for (const r of rocks)             _addToRenderGrid(_wrapRock(r));
+  for (const th of thickets)         _addToRenderGrid(_wrapThicket(th));
+  for (const b of placedBuildings)   _addToRenderGrid(_wrapBuilding(b));
+  for (const w of placedWells)       _addToRenderGrid(_wrapWell(w));
+  for (const h of houses)            _addToRenderGrid(_wrapHouse(h));
+
+  const tombSys = getSystem('animalTomb');
+  if (tombSys && typeof tombSys.getTombs === 'function') {
+    for (const tb of tombSys.getTombs()) _addToRenderGrid(_wrapTomb(tb, tombSys));
+  }
+
+  staticCacheValid = true;
+}
+
+/**
+ * Returns the per-frame visible world objects, Y-sorted for depth render.
+ * Statics live in a spatial grid (cells of RENDER_CELL_SIZE) rebuilt only
+ * on world mutation. Per frame we query just the cells the viewport covers
+ * — cost is independent of world size. Dynamics (animals/player/NPCs) are
+ * filtered and inserted each frame, then a single small sort merges them
+ * with the visible statics.
  */
 export function getSortedWorldObjects(player) {
-  const playerChanged = player && (
-    Math.abs(player.y - lastPlayerY) > Y_SORT_THRESHOLD ||
-    player.height !== lastPlayerHeight
-  );
+  if (!staticCacheValid) rebuildStaticCache();
 
-  if (cacheValid && !playerChanged) {
-    perfLog("using world objects cache");
-    return sortedWorldObjectsCache;
-  }
+  const out = [];
 
-  perfLog("recalculating world objects cache");
-  const allObjects = [];
+  const vxMin = camera.x - CULLING_BUFFER;
+  const vyMin = camera.y - CULLING_BUFFER;
+  const vxMax = camera.x + camera.width + CULLING_BUFFER;
+  const vyMax = camera.y + camera.height + CULLING_BUFFER;
 
-  for (const tree of trees) {
-    if (!tree.id) tree.id = `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    allObjects.push(_getOrCreateWrapper(tree, (t) => ({
-      id: t.id,
-      type: "TREE",
-      originalType: "tree",
-      x: t.x || 0,
-      y: t.y || 0,
-      width: t.width || 64,
-      height: t.height || 96,
-      hp: t.hp || 6,
-      maxHealth: t.hp || 6,
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(t.x, t.y, t.width || 64, t.height || 96)) {
-          drawSingleObject(ctx, t, "trees", drawTreeFallback);
+  // 1. Query render grid for cells overlapping viewport. Dedup objects that
+  //    span multiple cells via a per-frame Set (cheaper than scanning all
+  //    statics in the world).
+  const minCX = Math.floor(vxMin / RENDER_CELL_SIZE);
+  const minCY = Math.floor(vyMin / RENDER_CELL_SIZE);
+  const maxCX = Math.floor(vxMax / RENDER_CELL_SIZE);
+  const maxCY = Math.floor(vyMax / RENDER_CELL_SIZE);
+  const seen = new Set();
+  for (let cx = minCX; cx <= maxCX; cx++) {
+    for (let cy = minCY; cy <= maxCY; cy++) {
+      const cell = _renderGrid.get(_rgKey(cx, cy));
+      if (!cell) continue;
+      for (let i = 0; i < cell.length; i++) {
+        const obj = cell[i];
+        if (seen.has(obj)) continue;
+        seen.add(obj);
+        // Tight viewport check — grid cells include partial-overlap, so
+        // some candidates may be just outside the actual viewport.
+        const src = obj.original || obj;
+        const sx = src.x || 0, sy = src.y || 0;
+        const sw = src.width || 32, sh = src.height || 32;
+        if (sx + sw > vxMin && sx < vxMax && sy + sh > vyMin && sy < vyMax) {
+          out.push(obj);
         }
-      },
-    })));
+      }
+    }
   }
 
-  for (const rock of rocks) {
-    if (!rock.id) rock.id = `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    allObjects.push(_getOrCreateWrapper(rock, (r) => ({
-      id: r.id,
-      type: "ROCK",
-      originalType: "rock",
-      x: r.x || 0,
-      y: r.y || 0,
-      width: r.width || 48,
-      height: r.height || 48,
-      hp: r.hp || 3,
-      maxHealth: r.hp || 3,
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(r.x, r.y, r.width || 48, r.height || 48)) {
-          drawSingleObject(ctx, r, "rocks", drawRockFallback);
-        }
-      },
-    })));
+  // 2. Animals — filter visible (most are off-screen at scale)
+  for (let i = 0; i < animals.length; i++) {
+    const a = animals[i];
+    if (!a) continue;
+    const ax = a.x || 0, ay = a.y || 0;
+    const aw = a.width || 32, ah = a.height || 32;
+    if (!(ax + aw > vxMin && ax < vxMax && ay + ah > vyMin && ay < vyMax)) continue;
+    out.push(_wrapAnimal(a));
   }
 
-  for (const thicket of thickets) {
-    if (!thicket.id) thicket.id = `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    allObjects.push(_getOrCreateWrapper(thicket, (th) => ({
-      id: th.id,
-      type: "THICKET",
-      originalType: "thicket",
-      x: th.x || 0,
-      y: th.y || 0,
-      width: th.width || 32,
-      height: th.height || 32,
-      hp: th.hp || 1,
-      maxHealth: th.hp || 1,
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(th.x, th.y, th.width || 32, th.height || 32)) {
-          drawSingleObject(ctx, th, "thickets", drawThicketFallback);
-        }
-      },
-    })));
-  }
-
-  for (const building of placedBuildings) {
-    allObjects.push(_getOrCreateWrapper(building, (b) => ({
-      ...b,
-      type: b.type || "CONSTRUCTION",
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(b.x, b.y, b.width || 32, b.height || 32)) {
-          if (b.draw) b.draw(ctx);
-          else drawBuilding(ctx, b);
-        }
-      },
-    })));
-  }
-
-  for (const well of placedWells) {
-    allObjects.push(_getOrCreateWrapper(well, (w) => ({
-      ...w,
-      type: "WELL",
-      originalType: "well",
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(w.x, w.y, w.width || 64, w.height || 64)) {
-          if (w.draw) w.draw(ctx);
-          else drawBuilding(ctx, Object.assign({}, w, { originalType: "well" }));
-        }
-      },
-    })));
-  }
-
-  for (const house of houses) {
-    if (!house.id) house.id = `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    allObjects.push(_getOrCreateWrapper(house, (h) => ({
-      id: h.id,
-      type: h.type,
-      originalType: "house",
-      x: h.x || 0,
-      y: h.y || 0,
-      width: h.width || 128,
-      height: h.height || 128,
-      interactable: h.type === "HOUSE_WALLS",
-      draw: (ctx) => {
-        if (isInViewportWithBuffer(h.x, h.y, h.width || 128, h.height || 128)) {
-          if (h.type === "HOUSE_WALLS") drawHouseWalls(ctx, h);
-          else drawHouseRoof(ctx, h);
-        }
-      },
-    })));
-  }
-
-  for (const animal of animals) {
-    if (!animal.id) animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    allObjects.push(_getOrCreateWrapper(animal, (a) => ({
-      type: "ANIMAL",
-      id: a.id,
-      x: a.x || 0,
-      y: a.y || 0,
-      width: a.width || 32,
-      height: a.height || 32,
-      assetName: a.assetName,
-      draw: (ctx, frameNow) => {
-        try {
-          a.draw(ctx, camera, frameNow);
-        } catch (e) {
-          handleWarn("Failed to draw animal", "theWorld:getSortedWorldObjects:animalDraw", { animalId: a.id, err: e });
-        }
-      },
-    })));
-  }
-
+  // 3. Player
   if (player) {
-    allObjects.push({
-      type: "PLAYER",
-      id: "player",
-      x: player.x,
-      y: player.y,
-      width: player.width,
-      height: player.height,
-      draw: (ctx) => player.draw(ctx)
+    out.push({
+      type: "PLAYER", id: "player",
+      x: player.x, y: player.y,
+      width: player.width, height: player.height,
+      draw: (ctx) => player.draw(ctx),
     });
-    lastPlayerY = player.y;
-    lastPlayerHeight = player.height;
   }
 
-  // City objects (houses, cars, posts) when in city map
-  {
-    const mgr = getMapManager();
-    if (mgr && mgr.getCurrentMapId() === 'city') {
-      const cr = getCityRendererSync();
-      if (cr) {
-        const cityObjs = cr.getCityObjects();
-        allObjects.push(...cityObjs);
-      }
+  // 4. City objects (rare — only in city map)
+  const mgr = getMapManager();
+  if (mgr && mgr.getCurrentMapId() === 'city') {
+    const cr = getCityRendererSync();
+    if (cr) {
+      const cityObjs = cr.getCityObjects();
+      for (let i = 0; i < cityObjs.length; i++) out.push(cityObjs[i]);
     }
   }
 
-  // NPC objects (all maps)
-  {
-    const npcSys = getSystem('npc');
-    const mgr = getMapManager();
-    if (npcSys && mgr) {
-      const mapId = mgr.getCurrentMapId();
-      const npcObjs = npcSys.getWorldObjects(mapId);
-      allObjects.push(...npcObjs);
-    }
+  // 5. NPCs
+  const npcSys = getSystem('npc');
+  if (npcSys && mgr) {
+    const npcObjs = npcSys.getWorldObjects(mgr.getCurrentMapId());
+    for (let i = 0; i < npcObjs.length; i++) out.push(npcObjs[i]);
   }
 
-  // Quest animal (Madalena cat)
-  {
-    const milly = getSystem('npcMilly');
-    const mgr2 = getMapManager();
-    if (milly && mgr2 && typeof milly.getCatWorldObjects === 'function') {
-      const catObjs = milly.getCatWorldObjects(mgr2.getCurrentMapId());
-      allObjects.push(...catObjs);
-    }
+  // 6. Quest cat
+  const milly = getSystem('npcMilly');
+  if (milly && mgr && typeof milly.getCatWorldObjects === 'function') {
+    const catObjs = milly.getCatWorldObjects(mgr.getCurrentMapId());
+    for (let i = 0; i < catObjs.length; i++) out.push(catObjs[i]);
   }
 
-  // Portal draw object (rendered on top via high Y)
-  {
-    const mgr = getMapManager();
-    if (mgr) {
-      allObjects.push({
-        type: "PORTAL",
-        id: "map_portal",
-        x: 0, y: 99999,
-        width: 0, height: 0,
-        draw: (ctx) => mgr.drawPortal(ctx)
-      });
-    }
+  // 7. Portal (high Y forces it on top of everything)
+  if (mgr) {
+    out.push({
+      type: "PORTAL", id: "map_portal",
+      x: 0, y: 99999, width: 0, height: 0,
+      draw: (ctx) => mgr.drawPortal(ctx),
+    });
   }
 
-  // Tumbas de animais — entram no Y-sort pra ficarem corretas atrás de
-  // árvores/casas (sprite layering). Sem isso, ficavam sempre por cima.
-  {
-    const tombSys = getSystem('animalTomb');
-    if (tombSys && typeof tombSys.getTombs === 'function') {
-      for (const tomb of tombSys.getTombs()) {
-        allObjects.push(_getOrCreateWrapper(tomb, (tb) => ({
-          id: tb.id,
-          type: 'TOMB',
-          originalType: 'tomb',
-          x: tb.x || 0,
-          y: tb.y || 0,
-          width: tb.width || 48,
-          height: tb.height || 48,
-          draw: (ctx) => {
-            if (isInViewportWithBuffer(tb.x, tb.y, tb.width, tb.height)) {
-              if (typeof tombSys.drawSingle === 'function') tombSys.drawSingle(ctx, tb);
-            }
-          },
-        })));
-      }
-    }
-  }
-
-  // Sort: lê y/height de `original` quando disponível (entidades que se
-  // movem — animais, player — têm posição atualizada toda frame mesmo
-  // com wrapper cacheado). Pra static (trees, rocks), original === wrapper
-  // semanticamente equivalente.
-  sortedWorldObjectsCache = allObjects.sort((a, b) => {
-    const aSrc = a.original || a;
-    const bSrc = b.original || b;
-    const ay = (aSrc.y || 0) + (aSrc.height || 0);
-    const by = (bSrc.y || 0) + (bSrc.height || 0);
-    const diff = ay - by;
-
-    // Para objetos de camadas Tiled diferentes e próximos em Y,
-    // usa a ordem das camadas como desempate (camada superior renderiza por último)
-    const al = a.layerIndex;
-    const bl = b.layerIndex;
-    if (al !== undefined && bl !== undefined && al !== bl && Math.abs(diff) < 30) {
-      return al - bl;
-    }
-
-    return diff;
-  });
-
-  if (player) cacheValid = true;
-
-  return sortedWorldObjectsCache;
+  // Final Y-sort. Input is small (~50-150 items even on a packed farm)
+  // because the grid query already trimmed off-screen statics.
+  out.sort(_ySortCompare);
+  return out;
 }
 
 /**
@@ -743,8 +728,12 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   const objWidth = obj.width || 64;
   const objHeight = obj.height || 96;
 
-  // Viewport culling removido daqui — já é feito nas closures do wrapper
-  // em getSortedWorldObjects() via isInViewportWithBuffer()
+  // Defensive viewport check — getSortedWorldObjects already filters,
+  // but keep this so callers outside the sorted path (debug, etc.) don't
+  // pay for off-screen draws.
+  try {
+    if (camera?.isInViewport && !camera.isInViewport(obj.x || 0, obj.y || 0, objWidth, objHeight)) return;
+  } catch (_) { /* ignore — fall through */ }
 
   let actualWidth, actualHeight;
   if (assetCategory === "trees") {
@@ -902,9 +891,34 @@ function drawBuilding(ctx, building) {
     return;
   }
 
+  if (building.originalType === "foodtrough") {
+    // Variant encodes species + orientation (e.g. foodTroughcattleX).
+    // Use the "full" sprite if EITHER bar has content; only switch to
+    // Empty when both basic and premium bars are zero.
+    const baseVariant = building.variant || 'foodTroughcattleX';
+    const hasAnyFood = (building.foodLevel || 0) > 0 || (building.premiumLevel || 0) > 0;
+    const foodAssetKey = hasAnyFood ? baseVariant : `${baseVariant}Empty`;
+    const foodTroughImg = assets.furniture?.foodTroughs?.[foodAssetKey]?.img;
+
+    if (foodTroughImg && foodTroughImg.complete && foodTroughImg.naturalWidth > 0) {
+      try {
+        ctx.drawImage(foodTroughImg, drawX, drawY, drawW, drawH);
+      } catch (err) {
+        handleWarn("Failed to draw food trough image", "theWorld:drawBuilding:foodTroughImage", { buildingId: building.id, err });
+        ctx.fillStyle = "#8B7355";
+        ctx.fillRect(drawX, drawY, drawW, drawH);
+      }
+    } else {
+      ctx.fillStyle = (building.foodLevel || 0) > 0 ? "#c8a464" : "#8B7355";
+      ctx.fillRect(drawX, drawY, drawW, drawH);
+    }
+    ctx.restore();
+    return;
+  }
+
   if (building.originalType === "watertrough") {
     const isWaterY = building.variant === 'waterTroughY';
-    const waterAssetKey = building.waterLevel > 0 
+    const waterAssetKey = building.waterLevel > 0
       ? (isWaterY ? 'waterTroughY' : 'waterTroughX')
       : (isWaterY ? 'waterTroughYEmpty' : 'waterTroughXEmpty');
     const waterTroughImg = assets.furniture?.waterTroughs?.[waterAssetKey]?.img;
@@ -1105,7 +1119,7 @@ export function initializeWorld() {
   placedWells.length = 0;
   animals.length = 0;
 
-  cacheValid = false;
+  staticCacheValid = false;
 
   const worldObjects = (worldGenerator && typeof worldGenerator.generateWorld === "function")
     ? worldGenerator.generateWorld()
@@ -1405,10 +1419,19 @@ window.addWorldObject = function(objectData) {
   else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
   else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
   else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
+  // Issue #171: food troughs use generic FOODTROUGH for collision. Variant
+  // and species live on the object itself, not in the collision label.
+  else if (collisionType === "FOODTROUGH" || collisionType === "FOODTROUGHX" || collisionType === "FOODTROUGHY") collisionType = "FOODTROUGH";
   else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
-  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "FOODTROUGH", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
 
   const building = {
+    // Preserve ANY custom fields from objectData (species, targetAnimals,
+    // foodLevel, premiumLevel, waterLevel, etc.). Without this spread,
+    // future systems would silently lose data and we'd play whack-a-mole
+    // every time a new placeable type needed a field. Specific fields
+    // below override to enforce shape correctness.
+    ...objectData,
     id: objectId,
     type: objectData.type || "construction",
     originalType: objectData.originalType || objectData.type || "construction",

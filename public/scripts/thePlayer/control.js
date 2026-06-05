@@ -511,6 +511,16 @@ export class PlayerInteractionSystem {
                 return;
             }
 
+            // Issue #171: open the food trough panel (simple, one button).
+            const ftSys = getSystem('foodTrough');
+            const foodHit = ftSys?.getMarkerAt?.(worldPos.x, worldPos.y);
+            if (foodHit) {
+                import('../foodTroughPanelSimple.js').then(m => {
+                    m.openFoodTroughPanel(foodHit);
+                }).catch(err => console.warn('Falha ao abrir painel do cocho de ração:', err));
+                return;
+            }
+
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
         }, { signal: controlsAbortController.signal });
 
@@ -569,6 +579,8 @@ export class PlayerInteractionSystem {
             // o build mode tem seu próprio sistema.
             const wtSys = getSystem('waterTrough');
             wtSys?.updateHover?.(worldPos.x, worldPos.y);
+            const ftSys = getSystem('foodTrough');
+            ftSys?.updateHover?.(worldPos.x, worldPos.y);
         }, { signal: controlsAbortController.signal });
     }
 

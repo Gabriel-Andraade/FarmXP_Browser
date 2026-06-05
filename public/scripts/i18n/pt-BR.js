@@ -384,6 +384,9 @@ export default {
     94: 'Bateria',
     100: 'Contrato Municipal',
     103: 'Cocho de Água',
+    104: 'Cocho de Ração (Gado/Ovelha)',
+    105: 'Cocho de Ração (Suínos)',
+    106: 'Cocho de Ração (Aves)',
     // Remédios veterinários (ids 200-207)
     200: 'Vermífugo Rápido',
     201: 'Vermífugo Comum',
@@ -884,6 +887,25 @@ export default {
   },
 
   // Water Trough (Cocho)
+  foodTrough: {
+    needFeed: 'Precisa de ração compatível no inventário',
+    needPremium: 'Sem ração especial (Petisco / Ração de Qualidade)',
+    filled: 'Cocho abastecido com {feed}',
+    premiumFilled: 'Cocho temperado com {feed}',
+    alreadyFull: 'Cocho de ração já está cheio',
+    premiumFull: 'Barra especial já está cheia',
+    panel: {
+      title: 'Cocho de Ração',
+      close: 'Fechar',
+      levelName: 'Nível de ração',
+      premiumName: 'Tempero especial',
+      feedsLabel: 'Rações no inventário:',
+      addBtn: 'Adicionar ração',
+      addPremiumBtn: 'Adicionar especial',
+      fedSuccess: 'Ração adicionada',
+      premiumSuccess: 'Especial adicionado',
+    },
+  },
   waterTrough: {
     needBucket: 'Precisa de um balde com água',
     filled: 'Cocho abastecido',

@@ -384,6 +384,9 @@ export default {
     94: 'Batería',
     100: 'Contrato Municipal',
     103: 'Abrevadero',
+    104: 'Comedero (Ganado/Ovejas)',
+    105: 'Comedero (Cerdos)',
+    106: 'Comedero (Aves)',
     // Medicinas veterinarias (ids 200-207)
     200: 'Desparasitante Rápido',
     201: 'Desparasitante Común',
@@ -885,6 +888,25 @@ export default {
   },
 
   // Water Trough (Abrevadero)
+  foodTrough: {
+    needFeed: 'Necesitas alimento animal compatible en el inventario',
+    needPremium: 'Sin alimento premium (Golosina / Alimento de Calidad)',
+    filled: 'Comedero llenado con {feed}',
+    premiumFilled: 'Comedero sazonado con {feed}',
+    alreadyFull: 'Comedero ya está lleno',
+    premiumFull: 'Barra especial ya está llena',
+    panel: {
+      title: 'Comedero',
+      close: 'Cerrar',
+      levelName: 'Nivel de alimento',
+      premiumName: 'Especial gourmet',
+      feedsLabel: 'Alimentos en el inventario:',
+      addBtn: 'Añadir alimento',
+      addPremiumBtn: 'Añadir especial',
+      fedSuccess: 'Alimento añadido',
+      premiumSuccess: 'Especial añadido',
+    },
+  },
   waterTrough: {
     needBucket: 'Necesitas un balde con agua',
     filled: 'Abrevadero llenado',
