@@ -233,6 +233,47 @@ export const recipes = [
         craftTime: 25,
         icon: ""
     },
+    // Issue #171: food troughs. Cattle uses more wood (large trough), pork
+    // uses concrete (brick + stone), bird is metal-heavy (iron bar).
+    {
+        id: "cattle_food_trough",
+        name: "Cocho de Ração (Gado/Ovelha)",
+        requiredItems: [
+            { itemId: 58, qty: 10 },
+            { itemId: 34, qty: 8 },
+            { itemId: 73, qty: 2 }
+        ],
+        result: { itemId: 104, qty: 1 },
+        category: "construction",
+        craftTime: 18,
+        icon: ""
+    },
+    {
+        id: "pork_food_trough",
+        name: "Cocho de Ração (Suínos)",
+        requiredItems: [
+            { itemId: 10, qty: 12 },
+            { itemId: 32, qty: 8 },
+            { itemId: 34, qty: 6 }
+        ],
+        result: { itemId: 105, qty: 1 },
+        category: "construction",
+        craftTime: 18,
+        icon: ""
+    },
+    {
+        id: "bird_food_trough",
+        name: "Cocho de Ração (Aves)",
+        requiredItems: [
+            { itemId: 73, qty: 4 },
+            { itemId: 58, qty: 4 },
+            { itemId: 34, qty: 6 }
+        ],
+        result: { itemId: 106, qty: 1 },
+        category: "construction",
+        craftTime: 15,
+        icon: ""
+    },
 
     /* culinária */
     {

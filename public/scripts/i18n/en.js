@@ -432,6 +432,9 @@ export default {
     94: 'Battery',
     100: 'Municipal Contract',
     103: 'Water Trough',
+    104: 'Food Trough (Cattle/Sheep)',
+    105: 'Food Trough (Pigs)',
+    106: 'Food Trough (Poultry)',
     // Veterinary medicines (ids 200-207)
     200: 'Fast Dewormer',
     201: 'Common Dewormer',
@@ -479,7 +482,10 @@ export default {
     boiled_egg: 'Boiled Egg',
     fruit_salad: 'Fruit Salad',
     animal_feed_basic: 'Basic Feed (Hay)',
-    animal_treat: 'Animal Treat'
+    animal_treat: 'Animal Treat',
+    cattle_food_trough: 'Cattle Food Trough',
+    pork_food_trough: 'Pig Food Trough',
+    bird_food_trough: 'Poultry Food Trough'
   },
 
   // General Messages
@@ -946,6 +952,26 @@ export default {
   },
 
   // Water Trough
+  foodTrough: {
+    needFeed: 'You need matching animal feed in your inventory',
+    needPremium: 'No premium feed (Treat / Quality Feed) in inventory',
+    filled: 'Trough filled with {feed}',
+    premiumFilled: 'Trough seasoned with {feed}',
+    alreadyFull: 'Food trough already full',
+    premiumFull: 'Premium bar already full',
+    systemUnavailable: 'System unavailable',
+    panel: {
+      title: 'Food Trough',
+      close: 'Close',
+      levelName: 'Feed level',
+      premiumName: 'Special seasoning',
+      feedsLabel: 'Feeds in inventory:',
+      addBtn: 'Add feed',
+      addPremiumBtn: 'Add special',
+      fedSuccess: 'Feed added',
+      premiumSuccess: 'Special added',
+    },
+  },
   waterTrough: {
     needBucket: 'You need a water bucket',
     filled: 'Trough filled',

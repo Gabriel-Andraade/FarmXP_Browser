@@ -187,7 +187,11 @@ class MerchantSystem {
                     { id: 30, name: 'Ração para Vaca', price: 50, category: 'animal_food', icon: '', quantity: 15 },
                     { id: 31, name: 'Petisco para Animais', price: 15, category: 'animal_food', icon: '', quantity: 25 },
                     { id: 12, name: 'Regador', price: 35, category: 'tool', icon: '', quantity: 8 },
-                    { id: 15, name: 'Rastelo', price: 40, category: 'tool', icon: '', quantity: 6 }
+                    { id: 15, name: 'Rastelo', price: 40, category: 'tool', icon: '', quantity: 6 },
+                    // Issue #171: food troughs per species, livestock fits Rico's stock.
+                    { id: 104, name: 'Cocho de Ração (Gado/Ovelha)', price: 280, category: 'construction', icon: '', quantity: 4 },
+                    { id: 105, name: 'Cocho de Ração (Suínos)',      price: 260, category: 'construction', icon: '', quantity: 4 },
+                    { id: 106, name: 'Cocho de Ração (Aves)',        price: 220, category: 'construction', icon: '', quantity: 4 }
                 ]
             }
         ];

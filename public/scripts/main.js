@@ -34,7 +34,7 @@ import { initMinimap, updateMinimap } from "./minimap/minimapIntegration.js";
 // =============================================================================
 
 let currencyManager, merchantSystem, inventorySystem, playerSystem;
-let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem, waterTroughSystem;
+let itemSystem, worldUI, houseSystem, chestSystem, BuildSystem, wellSystem, waterTroughSystem, foodTroughSystem;
 let WeatherSystem, drawWeatherEffects;
 let saveRef;
 
@@ -314,6 +314,13 @@ async function initializeCriticalSystems() {
     waterTroughSystem = wtModule.waterTroughSystem;
     logger.debug("waterTroughSystem carregado");
 
+    // Cocho de ração (Issue #171) — mesmo padrão do cocho de água:
+    // eager-load pra click + hover marker funcionarem sem precisar
+    // apertar E primeiro.
+    const ftModule = await import("./foodTroughSystem.js");
+    foodTroughSystem = ftModule.foodTroughSystem;
+    logger.debug("foodTroughSystem carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -420,6 +427,16 @@ function setupInteractionSystem() {
       }
     }
 
+    if (!foodTroughSystem && originalType === "foodtrough") {
+      try {
+        const module = await import("./foodTroughSystem.js");
+        foodTroughSystem = module.foodTroughSystem;
+      } catch (error) {
+        handleWarn("erro ao carregar foodTroughSystem", "main:playerInteract:foodtrough", error);
+        return;
+      }
+    }
+
     switch (originalType) {
       case "chest":
         chestSystem?.openChest?.(objectId);
@@ -433,6 +450,22 @@ function setupInteractionSystem() {
       case "watertrough":
         waterTroughSystem?.openWaterTroughMenu?.(objectId);
         break;
+      case "foodtrough": {
+        // Open the dedicated panel (simple one-button UI to deposit compatible feed).
+        // Validate getFoodTroughs returned an array — optional chaining only
+        // guards null/undefined, not a wrong shape.
+        const troughs = foodTroughSystem?.getFoodTroughs?.();
+        const trough = Array.isArray(troughs) ? troughs.find(t => t.id === objectId) : null;
+        if (trough) {
+          try {
+            const m = await import("./foodTroughPanelSimple.js");
+            m.openFoodTroughPanel(trough);
+          } catch (err) {
+            handleWarn("erro ao abrir painel do cocho de ração", "main:foodtrough", err);
+          }
+        }
+        break;
+      }
       case "npc": {
         const npcSys = getSystem('npc');
         if (npcSys) npcSys.tryInteract();
@@ -1643,6 +1676,12 @@ function gameLoop(timestamp) {
       wtSys?.drawHoverMarker?.(ctx, camera);
       if (getDebugFlag('drinkSlots')) {
         wtSys?.drawDrinkSlots?.(ctx, camera);
+      }
+      const ftSys = getSystem('foodTrough');
+      ftSys?.drawHoverMarker?.(ctx, camera);
+      // Eat slots debug overlay — toggle with `?eatSlots=1` in URL.
+      if (getDebugFlag('eatSlots')) {
+        ftSys?.drawEatSlots?.(ctx, camera);
       }
     }
   } catch (e) {

@@ -70,7 +70,8 @@ async function loadWorldAssets() {
         assets.furniture.chest,
         assets.furniture.well,
         assets.furniture.animalTomb,
-        ...Object.values(assets.furniture.waterTroughs)
+        ...Object.values(assets.furniture.waterTroughs),
+        ...Object.values(assets.furniture.foodTroughs)
     ];
 
     await loadAssetList(worldAssets, "WORLD");
@@ -327,6 +328,22 @@ export const assets = {
                 height: 571,
                 img: null
             }
+        },
+        // Issue #171: food troughs split by species (cattle/pork/bird).
+        // Variant keys mirror file names (kept exact-case for clarity).
+        foodTroughs: {
+            foodTroughcattleX:      { src: "assets/furnitureInGeneral/foodTroughcattleX.png",      width: 360, height: 220, img: null },
+            foodTroughcattleXEmpty: { src: "assets/furnitureInGeneral/foodTroughcattleXEmpty.png", width: 360, height: 220, img: null },
+            foodTroughcattleY:      { src: "assets/furnitureInGeneral/foodTroughcattleY.png",      width: 220, height: 360, img: null },
+            foodTroughcattleYEmpty: { src: "assets/furnitureInGeneral/foodTroughcattleYEmpty.png", width: 220, height: 360, img: null },
+            foodTroughporkX:        { src: "assets/furnitureInGeneral/foodTroughporkX.png",        width: 360, height: 220, img: null },
+            foodTroughporkXEmpty:   { src: "assets/furnitureInGeneral/foodTroughporkXEmpty.png",   width: 360, height: 220, img: null },
+            foodTroughporkY:        { src: "assets/furnitureInGeneral/foodTroughporkY.png",        width: 220, height: 360, img: null },
+            foodTroughporkYEmpty:   { src: "assets/furnitureInGeneral/foodTroughporkYEmpty.png",   width: 220, height: 360, img: null },
+            foodTroughBirdX:        { src: "assets/furnitureInGeneral/foodTroughBirdX.png",        width: 360, height: 220, img: null },
+            foodTroughBirdXEmpty:   { src: "assets/furnitureInGeneral/foodTroughBirdXEmpty.png",   width: 360, height: 220, img: null },
+            foodTroughBirdY:        { src: "assets/furnitureInGeneral/foodTroughBirdY.png",        width: 220, height: 360, img: null },
+            foodTroughBirdYEmpty:   { src: "assets/furnitureInGeneral/foodTroughBirdYEmpty.png",   width: 220, height: 360, img: null }
         },
         // Tumba de animal — aparece quando animal morre de velhice no
         // último lugar onde ele estava. Sprite source é 980×980 (alta

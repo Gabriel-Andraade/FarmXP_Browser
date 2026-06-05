@@ -974,6 +974,54 @@ export const items = [
     variants: ["waterTroughX", "waterTroughY"],
     originalType: "watertrough"
   },
+  // Issue #171: food troughs split by species. `species` is read by
+  // foodTroughSystem to whitelist which animals can eat from each one.
+  // Sheep/Lamb share the cattle trough (same hay diet, item 29).
+  {
+    id: 104,
+    name: "Cocho de Ração (Gado/Ovelha)",
+    icon: "🐄",
+    price: 280,
+    description: "Comedouro para gado, bezerro, ovelha e cordeiro",
+    type: "construction",
+    placeable: true,
+    buildWidth: 95,
+    buildHeight: 60,
+    variants: ["foodTroughcattleX", "foodTroughcattleY"],
+    originalType: "foodtrough",
+    species: "cattle",
+    targetAnimals: ["Cow", "Bull", "Calf", "Sheep", "Lamb"]
+  },
+  {
+    id: 105,
+    name: "Cocho de Ração (Suínos)",
+    icon: "🐖",
+    price: 260,
+    description: "Comedouro para porcos e leitões",
+    type: "construction",
+    placeable: true,
+    buildWidth: 95,
+    buildHeight: 40,
+    variants: ["foodTroughporkX", "foodTroughporkY"],
+    originalType: "foodtrough",
+    species: "pork",
+    targetAnimals: ["Pig", "Piglet"]
+  },
+  {
+    id: 106,
+    name: "Cocho de Ração (Aves)",
+    icon: "🐔",
+    price: 220,
+    description: "Comedouro para galinhas, perus e galos",
+    type: "construction",
+    placeable: true,
+    buildWidth: 95,
+    buildHeight: 35,
+    variants: ["foodTroughBirdX", "foodTroughBirdY"],
+    originalType: "foodtrough",
+    species: "bird",
+    targetAnimals: ["Chicken", "Chick", "Rooster", "Turkey"]
+  },
 
   // ==================================================================================
   // 🎨 DECORAÇÕES

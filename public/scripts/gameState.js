@@ -131,6 +131,7 @@ export function checkGameFlag(flag) {
  * ?debug=1 - Enable debug mode
  * ?hitboxes=1 - Show hitboxes
  * ?drinkSlots=1 - Show water trough drinking slots overlay
+ * ?eatSlots=1 - Show food trough eating slots overlay (per species)
  */
 export function initDebugFlagsFromUrl() {
   if (typeof window === "undefined") return;
@@ -139,13 +140,16 @@ export function initDebugFlagsFromUrl() {
   // ?debug=1 habilita exposição de debug no window
   if (q.has("debug")) setDebugFlag("debug", q.get("debug") !== "0");
 
-  // ?hitboxes=1 liga hitboxes
+  // ?hitboxes=1 liga hitboxes (físicas vermelho, interação laranja/verde)
   if (q.has("hitboxes")) setDebugFlag("hitboxes", q.get("hitboxes") !== "0");
 
-  // ?drinkSlots=1 liga overlay das hitboxes de "posição pra beber" do cocho.
-  // Cor azul translúcida sobre os 3 compartimentos do cocho. Live-edit
-  // suportado via __debug.waterTroughDrinkSlots no devtools.
+  // ?drinkSlots=1 liga overlay dos 3 compartimentos de bebida (azul).
   if (q.has("drinkSlots")) setDebugFlag("drinkSlots", q.get("drinkSlots") !== "0");
+
+  // ?eatSlots=1 liga overlay dos 3 compartimentos de comida (dourado).
+  // Por variant (cattle/pork/bird × X/Y). Live-edit via
+  // __debug.foodTroughEatSlots.foodTroughcattleX[0].offsetY no devtools.
+  if (q.has("eatSlots")) setDebugFlag("eatSlots", q.get("eatSlots") !== "0");
 }
 
 /**
@@ -251,6 +255,13 @@ export function installLegacyGlobals() {
   Object.defineProperty(window, 'DEBUG_DRINK_SLOTS', {
     get() { return getDebugFlag('drinkSlots'); },
     set(value) { setDebugFlag('drinkSlots', value); },
+    configurable: true,
+  });
+
+  // Toggle do overlay dourado dos eat slots — devtools: DEBUG_EAT_SLOTS = true
+  Object.defineProperty(window, 'DEBUG_EAT_SLOTS', {
+    get() { return getDebugFlag('eatSlots'); },
+    set(value) { setDebugFlag('eatSlots', value); },
     configurable: true,
   });
 

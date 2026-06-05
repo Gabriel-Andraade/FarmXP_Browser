@@ -9,6 +9,12 @@ import { GAME_BALANCE } from './constants.js';
 import { registerSystem, getSystem, getObject } from './gameState.js';
 import { safeDispatch } from './safeDispatch.js';
 
+// Permanently protected structure type prefixes — no tool is meant to
+// demolish them so E should never apply damage. Prefix match so future
+// variants (foodTroughcattleX, watertrough_v2, etc.) inherit protection
+// automatically without touching this list.
+const PROTECTED_TYPE_PREFIXES = ['watertrough', 'foodtrough'];
+
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
  * Responsável por processar cliques, danos, destruição e coleta de recursos
@@ -203,8 +209,12 @@ export class ItemSystem {
             const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
             const targetType = (obj.type || '').toLowerCase();
 
+            if (PROTECTED_TYPE_PREFIXES.some(p => targetType.startsWith(p))) {
+                return;
+            }
+
             // proteção de estruturas: se for utilitário e não estiver com ferramenta de dano, retorna
-            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence', 'watertroughx', 'watertroughy'];
+            const utilityTypes = ['well', 'chest', 'house', 'construction', 'fence'];
             const isUtility = utilityTypes.includes(targetType);
 
             const isDamagingTool =

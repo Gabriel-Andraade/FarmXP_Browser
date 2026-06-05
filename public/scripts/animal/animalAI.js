@@ -97,12 +97,19 @@ const AnimalState = {
     // DRINKING = parado dentro do slot, recuperando thirst e drenando cocho.
     SEEKING_WATER: "seeking_water",
     DRINKING: "drinking",
+    // Issue #171: food (hunger-driven). Mirrors water states.
+    SEEKING_FOOD: "seeking_food",
+    EATING: "eating",
 };
 
 // Cada animal sorteia um threshold próprio entre 5 e 25 — uns são mais
 // vigilantes (correm pro cocho cedo), outros aguentam até quase secar.
 const THIRST_THRESHOLD_MIN = 5;
 const THIRST_THRESHOLD_MAX = 25;
+// Issue #171: hunger threshold. Same logic — varies per animal so they
+// don't all run to the food trough simultaneously.
+const HUNGER_THRESHOLD_MIN = 10;
+const HUNGER_THRESHOLD_MAX = 30;
 
 // Sessão de bebida: animal fica `DRINK_SESSION_DURATION_MS` no cocho. A
 // quantidade TOTAL (água drenada do cocho + thirst recuperado no animal)
@@ -144,6 +151,41 @@ const THIRST_RESTORE_BY_SPECIES = {
 
 const DEFAULT_WATER_CONSUMPTION = 5;
 const DEFAULT_THIRST_RESTORE    = 40;
+
+// Food trough drain per 1-second eat tick — basic feed vs premium tempero.
+// Premium drains slower than basic. Mirrors water sizing: larger animals
+// eat more per tick from the trough.
+const FOOD_CONSUMPTION_BY_SPECIES = {
+    Chick:   { basic: 2, premium: 1.5 },
+    Lamb:    { basic: 3, premium: 2 },
+    Piglet:  { basic: 4, premium: 2.5 },
+    Calf:    { basic: 4, premium: 2.5 },
+    Chicken: { basic: 3, premium: 2 },
+    Rooster: { basic: 3, premium: 2 },
+    Turkey:  { basic: 4, premium: 2.5 },
+    Sheep:   { basic: 5, premium: 3 },
+    Pig:     { basic: 6, premium: 3.5 },
+    Cow:     { basic: 7, premium: 4 },
+    Bull:    { basic: 8, premium: 4.5 },
+};
+
+// Hunger restored per 1-second eat tick. Premium gives a bigger boost.
+const HUNGER_RESTORE_BY_SPECIES = {
+    Chick:   { basic: 4, premium: 6 },
+    Lamb:    { basic: 5, premium: 8 },
+    Piglet:  { basic: 6, premium: 9 },
+    Calf:    { basic: 6, premium: 9 },
+    Chicken: { basic: 5, premium: 8 },
+    Rooster: { basic: 5, premium: 8 },
+    Turkey:  { basic: 6, premium: 9 },
+    Sheep:   { basic: 7, premium: 10 },
+    Pig:     { basic: 8, premium: 12 },
+    Cow:     { basic: 9, premium: 13 },
+    Bull:    { basic: 10, premium: 14 },
+};
+
+const DEFAULT_FOOD_CONSUMPTION = { basic: 5, premium: 3 };
+const DEFAULT_HUNGER_RESTORE   = { basic: 8, premium: 12 };
 
 // Stats decaem em granularidade de 1s real para serem visíveis enquanto o
 // painel do animal está aberto. Esse é apenas o intervalo BASE — cada stat
@@ -453,6 +495,16 @@ export class AnimalEntity {
         // Estado de "intersecta slot" cacheado pelo update — usado pelo
         // draw pra pintar a hitbox de interação em verde quando dentro.
         this._interactionActive = false;
+
+        // Issue #171: food (hunger). Mirrors the water slot system — claims
+        // 1 of 3 slots per trough so multiple animals can eat side by side
+        // but don't overlap on the same spot.
+        this._eatThreshold = opts.eatThreshold ?? randRange(HUNGER_THRESHOLD_MIN, HUNGER_THRESHOLD_MAX);
+        this._claimedFoodTrough = null;
+        this._claimedFoodSlot = null;
+        this._eatPos = null;
+        this._lastEatTickAt = 0;
+        this._eatCooldownUntil = 0;
     }
 
     /**
@@ -1169,7 +1221,9 @@ export class AnimalEntity {
             !this.following &&
             this.state !== AnimalState.FLEE &&
             this.state !== AnimalState.SEEKING_WATER &&
-            this.state !== AnimalState.DRINKING) return;
+            this.state !== AnimalState.DRINKING &&
+            this.state !== AnimalState.SEEKING_FOOD &&
+            this.state !== AnimalState.EATING) return;
 
         const now = performance.now();
 
@@ -1188,6 +1242,17 @@ export class AnimalEntity {
             this._drinkPos = null;
             this._drinkSession = null;
             this._interactionActive = false;
+        }
+
+        // Same cleanup for food trough slot claim.
+        if (this._claimedFoodTrough &&
+            this.state !== AnimalState.SEEKING_FOOD &&
+            this.state !== AnimalState.EATING) {
+            const ftSys = getSystem('foodTrough');
+            ftSys?.releaseSlot?.(this._claimedFoodTrough, this._claimedFoodSlot, this.id);
+            this._claimedFoodTrough = null;
+            this._claimedFoodSlot = null;
+            this._eatPos = null;
         }
 
         if (this._mood === AnimalMood.SLEEPING) {
@@ -1240,6 +1305,20 @@ export class AnimalEntity {
         // animal não está machucado/dormindo.
         if (this._tryEnterSeekingWater()) {
             this._updateSeekingWater(now);
+            return;
+        }
+
+        // ─── Eating states (Issue #171) — same priority tier as drinking ─
+        if (this.state === AnimalState.SEEKING_FOOD) {
+            this._updateSeekingFood(now);
+            return;
+        }
+        if (this.state === AnimalState.EATING) {
+            this._updateEating(now);
+            return;
+        }
+        if (this._tryEnterSeekingFood()) {
+            this._updateSeekingFood(now);
             return;
         }
 
@@ -1435,6 +1514,132 @@ export class AnimalEntity {
         this._drinkPos = null;
         this._drinkSession = null;
         this._interactionActive = false;
+        this.state = AnimalState.IDLE;
+        this.stateTimer = performance.now();
+        this.stateDuration = IDLE_STATE_MIN_MS + Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS);
+        this.frameIndex = 0;
+    }
+
+    // ─── Eating (Issue #171) ─────────────────────────────────────────────
+    // No slot reservation: multiple animals can crowd around the same
+    // trough. Simpler than water — pick nearest matching trough with food,
+    // walk to a side, drain food + restore hunger over ~6s.
+
+    _tryEnterSeekingFood() {
+        if (this._mood === AnimalMood.SLEEPING) return false;
+        if ((this.stats.hunger || 0) >= this._eatThreshold) return false;
+        if (this._claimedFoodTrough) return false;
+        if (performance.now() < this._eatCooldownUntil) return false;
+
+        const ftSys = getSystem('foodTrough');
+        const found = ftSys?.findFreeSlotFor?.(this);
+        if (!found) return false;
+
+        const claimed = ftSys.claimSlot(found.trough.id, found.slotIdx, this.id);
+        if (!claimed) return false;
+
+        this._claimedFoodTrough = found.trough.id;
+        this._claimedFoodSlot = found.slotIdx;
+        this._eatPos = found.eatPos;
+        this.targetX = found.eatPos.x;
+        this.targetY = found.eatPos.y;
+        this.state = AnimalState.SEEKING_FOOD;
+        this.stateTimer = performance.now();
+        this.stateDuration = 12000;
+        return true;
+    }
+
+    _updateSeekingFood(now) {
+        const ftSys = getSystem('foodTrough');
+        if (!ftSys) { this._exitFoodFlow(); return; }
+
+        const troughId = this._claimedFoodTrough;
+        // Bail if trough is now empty (both bars 0).
+        if (ftSys.getFoodLevel(troughId) <= 0 && ftSys.getPremiumLevel(troughId) <= 0) {
+            this._exitFoodFlow();
+            return;
+        }
+
+        // Reached the slot → transition to EATING.
+        if (ftSys.isAnimalAtSlot?.(this, troughId, this._claimedFoodSlot)) {
+            this.state = AnimalState.EATING;
+            this.stateTimer = now;
+            this.stateDuration = 8000;
+            this._lastEatTickAt = now;
+            this.frameIndex = 0;
+            return;
+        }
+
+        const ep = this._eatPos;
+        if (ep) {
+            this.targetX = ep.x;
+            this.targetY = ep.y;
+        }
+        const dx = (ep?.x || 0) - this.x;
+        const dy = (ep?.y || 0) - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8) {
+            this._setFacing?.(ep.facing === 'right' ? 1 : ep.facing === 'left' ? -1 : 0,
+                              ep.facing === 'down'  ? 1 : ep.facing === 'up'   ? -1 : 0);
+            this.frameIndex = 0;
+        } else {
+            this.move();
+            if (this.state !== AnimalState.SEEKING_FOOD) this.state = AnimalState.SEEKING_FOOD;
+        }
+        this.updateAnimation(now);
+
+        if (now - this.stateTimer > this.stateDuration) {
+            this._eatCooldownUntil = now + 5000;
+            this._exitFoodFlow();
+        }
+    }
+
+    _updateEating(now) {
+        const ftSys = getSystem('foodTrough');
+        if (!ftSys || !this._claimedFoodTrough) { this._exitFoodFlow(); return; }
+
+        // Positional guard — if the animal got displaced (pushed by another
+        // animal, FLEE interrupted and resumed, etc.) it shouldn't keep
+        // gaining hunger while standing somewhere else. Same pattern the
+        // drinking flow uses.
+        if (typeof ftSys.isAnimalAtSlot === 'function' &&
+            !ftSys.isAnimalAtSlot(this, this._claimedFoodTrough, this._claimedFoodSlot)) {
+            this._exitFoodFlow();
+            return;
+        }
+
+        // Tick once per second. eat() returns { drained, fromPremium } or false.
+        // Rates are species-specific so a chick doesn't drain a cow's worth
+        // of feed and a bull actually gains meaningful hunger per tick.
+        if (now - this._lastEatTickAt >= 1000) {
+            const consume = FOOD_CONSUMPTION_BY_SPECIES[this.assetName] ?? DEFAULT_FOOD_CONSUMPTION;
+            const restore = HUNGER_RESTORE_BY_SPECIES[this.assetName]   ?? DEFAULT_HUNGER_RESTORE;
+            const result = ftSys.eat(this._claimedFoodTrough, consume.basic, consume.premium);
+            if (result && result.drained) {
+                const gain = result.fromPremium ? restore.premium : restore.basic;
+                this.stats.hunger = Math.min(100, (this.stats.hunger || 0) + gain);
+            } else {
+                this._exitFoodFlow();
+                return;
+            }
+            this._lastEatTickAt = now;
+        }
+
+        // Stop when full or session timeout.
+        if ((this.stats.hunger || 0) >= 95 || now - this.stateTimer > this.stateDuration) {
+            this._exitFoodFlow();
+        }
+        this.updateAnimation(now);
+    }
+
+    _exitFoodFlow() {
+        const ftSys = getSystem('foodTrough');
+        if (ftSys && this._claimedFoodTrough && this._claimedFoodSlot != null) {
+            ftSys.releaseSlot(this._claimedFoodTrough, this._claimedFoodSlot, this.id);
+        }
+        this._claimedFoodTrough = null;
+        this._claimedFoodSlot = null;
+        this._eatPos = null;
         this.state = AnimalState.IDLE;
         this.stateTimer = performance.now();
         this.stateDuration = IDLE_STATE_MIN_MS + Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS);
