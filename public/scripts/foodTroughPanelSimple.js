@@ -128,18 +128,20 @@ export function openFoodTroughPanel(foodTrough) {
     premiumBarFill.style.setProperty('--pct', premPct);
     premiumText.textContent = `${prem}/${premMax}`;
 
-    // Disable buttons when nothing useful can happen.
+    // Disable buttons when nothing useful can happen. Safer default: if
+    // the system call is missing, assume NO feed available rather than
+    // leaving the button live and letting the player trigger a no-op.
     const basicFull = food >= foodMax;
     const premFull = prem >= premMax;
-    const hasBasic = sys.hasBasicFeedAvailable?.(foodTrough) ?? true;
-    const hasPrem = sys.hasPremiumFeedAvailable?.(foodTrough) ?? true;
+    const hasBasic = sys.hasBasicFeedAvailable?.(foodTrough) ?? false;
+    const hasPrem = sys.hasPremiumFeedAvailable?.(foodTrough) ?? false;
     addBtn.disabled = basicFull || !hasBasic;
     addPremiumBtn.disabled = premFull || !hasPrem;
   }
 
   addBtn.addEventListener('click', () => {
     const sys = getSystem('foodTrough');
-    if (!sys) { setToast('Sistema não disponível', 'error'); return; }
+    if (!sys) { setToast(t('foodTrough.systemUnavailable') || 'Sistema não disponível', 'error'); return; }
     if (sys.depositFeed(foodTrough.id)) {
       setToast(t('foodTrough.panel.fedSuccess') || 'Ração adicionada', 'success');
     } else {
@@ -150,7 +152,7 @@ export function openFoodTroughPanel(foodTrough) {
 
   addPremiumBtn.addEventListener('click', () => {
     const sys = getSystem('foodTrough');
-    if (!sys) { setToast('Sistema não disponível', 'error'); return; }
+    if (!sys) { setToast(t('foodTrough.systemUnavailable') || 'Sistema não disponível', 'error'); return; }
     if (sys.depositPremium(foodTrough.id)) {
       setToast(t('foodTrough.panel.premiumSuccess') || 'Especial adicionado', 'success');
     } else {

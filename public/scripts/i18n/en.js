@@ -434,7 +434,10 @@ export default {
     boiled_egg: 'Boiled Egg',
     fruit_salad: 'Fruit Salad',
     animal_feed_basic: 'Basic Feed (Hay)',
-    animal_treat: 'Animal Treat'
+    animal_treat: 'Animal Treat',
+    cattle_food_trough: 'Cattle Food Trough',
+    pork_food_trough: 'Pig Food Trough',
+    bird_food_trough: 'Poultry Food Trough'
   },
 
   // General Messages
@@ -894,6 +897,7 @@ export default {
     premiumFilled: 'Trough seasoned with {feed}',
     alreadyFull: 'Food trough already full',
     premiumFull: 'Premium bar already full',
+    systemUnavailable: 'System unavailable',
     panel: {
       title: 'Food Trough',
       close: 'Close',

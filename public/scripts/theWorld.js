@@ -755,7 +755,7 @@ function drawSingleObject(ctx, obj, assetCategory, drawFallback) {
   try {
     screenPos = camera.worldToScreen(obj.x || 0, obj.y || 0);
   } catch (e) {
-    handleWarn("Erro ao obter imagem do asset", "theWorld:drawSingleObject:getAsset", err);
+    handleWarn("Erro ao obter imagem do asset", "theWorld:drawSingleObject:worldToScreen", e);
     screenPos = { x: obj.x || 0, y: obj.y || 0 };
   }
 

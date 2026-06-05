@@ -754,7 +754,13 @@ export const BuildSystem = {
                     };
 
                     window.theWorld.addWorldObject(foodTroughObj);
-                    inventorySystem.removeItem(this.selectedItem.id, 1);
+                    const removed = inventorySystem.removeItem?.(this.selectedItem.id, 1);
+                    if (!removed) {
+                        // Rollback so world and inventory stay consistent.
+                        window.theWorld.objectDestroyed?.(foodTroughId);
+                        this.showDebugMessage(t('build.itemEmpty'), 1000);
+                        return;
+                    }
                     const restante = itemQuantity - 1;
                     this.showDebugMessage(t('build.placed', { remaining: restante }), 1000);
                     if (restante <= 0) this.stopBuilding();

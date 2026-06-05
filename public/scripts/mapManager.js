@@ -16,23 +16,31 @@ import { t } from './i18n/i18n.js';
 // City modules are deferred — fetched only when the player actually walks
 // through the farm→city portal. Boot stays focused on the farm: zero parse,
 // zero fetch, zero memory for the city until the first transition.
+//
+// Promise cached so concurrent callers (e.g., portal triggered mid-restore)
+// share one import batch instead of racing.
 let _cityModules = null;
+let _cityModulesPromise = null;
 async function _loadCityModules() {
     if (_cityModules) return _cityModules;
-    const [cityRenderer, houseMod, obsMod] = await Promise.all([
-        import('./cityRenderer.js'),
-        import('./cityHouseSystem.js'),
-        import('./cityObstaclesSystem.js'),
-    ]);
-    _cityModules = {
-        loadCityAssets:        cityRenderer.loadCityAssets,
-        areCityAssetsLoaded:   cityRenderer.areCityAssetsLoaded,
-        invalidateCityCache:   cityRenderer.invalidateCityCache,
-        ensureCityRendererReady: cityRenderer.ensureCityRendererReady,
-        cityHouseSystem:       houseMod.cityHouseSystem,
-        cityObstaclesSystem:   obsMod.cityObstaclesSystem,
-    };
-    return _cityModules;
+    if (_cityModulesPromise) return _cityModulesPromise;
+    _cityModulesPromise = (async () => {
+        const [cityRenderer, houseMod, obsMod] = await Promise.all([
+            import('./cityRenderer.js'),
+            import('./cityHouseSystem.js'),
+            import('./cityObstaclesSystem.js'),
+        ]);
+        _cityModules = {
+            loadCityAssets:        cityRenderer.loadCityAssets,
+            areCityAssetsLoaded:   cityRenderer.areCityAssetsLoaded,
+            invalidateCityCache:   cityRenderer.invalidateCityCache,
+            ensureCityRendererReady: cityRenderer.ensureCityRendererReady,
+            cityHouseSystem:       houseMod.cityHouseSystem,
+            cityObstaclesSystem:   obsMod.cityObstaclesSystem,
+        };
+        return _cityModules;
+    })();
+    return _cityModulesPromise;
 }
 
 // ─── Map definitions ────────────────────────────────────────────────────────

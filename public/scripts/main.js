@@ -452,7 +452,10 @@ function setupInteractionSystem() {
         break;
       case "foodtrough": {
         // Open the dedicated panel (simple one-button UI to deposit compatible feed).
-        const trough = foodTroughSystem?.getFoodTroughs?.()?.find(t => t.id === objectId);
+        // Validate getFoodTroughs returned an array — optional chaining only
+        // guards null/undefined, not a wrong shape.
+        const troughs = foodTroughSystem?.getFoodTroughs?.();
+        const trough = Array.isArray(troughs) ? troughs.find(t => t.id === objectId) : null;
         if (trough) {
           try {
             const m = await import("./foodTroughPanelSimple.js");

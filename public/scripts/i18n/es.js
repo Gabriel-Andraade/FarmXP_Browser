@@ -434,7 +434,10 @@ export default {
     boiled_egg: 'Huevo Cocido',
     fruit_salad: 'Ensalada de Frutas',
     animal_feed_basic: 'Alimento Básico (Heno)',
-    animal_treat: 'Golosina Animal'
+    animal_treat: 'Golosina Animal',
+    cattle_food_trough: 'Comedero de Forraje (Ganado/Oveja)',
+    pork_food_trough: 'Comedero de Forraje (Cerdos)',
+    bird_food_trough: 'Comedero de Forraje (Aves)'
   },
 
   // General Messages
@@ -895,6 +898,7 @@ export default {
     premiumFilled: 'Comedero sazonado con {feed}',
     alreadyFull: 'Comedero ya está lleno',
     premiumFull: 'Barra especial ya está llena',
+    systemUnavailable: 'Sistema no disponible',
     panel: {
       title: 'Comedero',
       close: 'Cerrar',

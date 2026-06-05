@@ -9,6 +9,14 @@ import { GAME_BALANCE } from './constants.js';
 import { registerSystem, getSystem, getObject } from './gameState.js';
 import { safeDispatch } from './safeDispatch.js';
 
+// Permanently protected structures — no tool is meant to demolish them so
+// E should never apply damage. Hoisted to module scope so it isn't rebuilt
+// on every interaction.
+const PROTECTED_FROM_DAMAGE = new Set([
+    'watertroughx', 'watertroughy',
+    'foodtroughx', 'foodtroughy',
+]);
+
 /**
  * Sistema de gerenciamento de itens e interações com objetos do mundo
  * Responsável por processar cliques, danos, destruição e coleta de recursos
@@ -203,14 +211,6 @@ export class ItemSystem {
             const equippedTool = playerSystem.getEquippedItem?.() || playerSystem.equippedTool || null;
             const targetType = (obj.type || '').toLowerCase();
 
-            // Permanently protected structures — there is no tool meant to
-            // demolish them, so E should NEVER cause damage. Without this,
-            // a player carrying any damaging tool (axe, pickaxe, hammer)
-            // would one-shot the trough since its default HP is 1.
-            const PROTECTED_FROM_DAMAGE = new Set([
-                'watertroughx', 'watertroughy',
-                'foodtroughx', 'foodtroughy',
-            ]);
             if (PROTECTED_FROM_DAMAGE.has(targetType)) {
                 return;
             }

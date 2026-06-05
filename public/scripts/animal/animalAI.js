@@ -152,6 +152,41 @@ const THIRST_RESTORE_BY_SPECIES = {
 const DEFAULT_WATER_CONSUMPTION = 5;
 const DEFAULT_THIRST_RESTORE    = 40;
 
+// Food trough drain per 1-second eat tick — basic feed vs premium tempero.
+// Premium drains slower than basic. Mirrors water sizing: larger animals
+// eat more per tick from the trough.
+const FOOD_CONSUMPTION_BY_SPECIES = {
+    Chick:   { basic: 2, premium: 1.5 },
+    Lamb:    { basic: 3, premium: 2 },
+    Piglet:  { basic: 4, premium: 2.5 },
+    Calf:    { basic: 4, premium: 2.5 },
+    Chicken: { basic: 3, premium: 2 },
+    Rooster: { basic: 3, premium: 2 },
+    Turkey:  { basic: 4, premium: 2.5 },
+    Sheep:   { basic: 5, premium: 3 },
+    Pig:     { basic: 6, premium: 3.5 },
+    Cow:     { basic: 7, premium: 4 },
+    Bull:    { basic: 8, premium: 4.5 },
+};
+
+// Hunger restored per 1-second eat tick. Premium gives a bigger boost.
+const HUNGER_RESTORE_BY_SPECIES = {
+    Chick:   { basic: 4, premium: 6 },
+    Lamb:    { basic: 5, premium: 8 },
+    Piglet:  { basic: 6, premium: 9 },
+    Calf:    { basic: 6, premium: 9 },
+    Chicken: { basic: 5, premium: 8 },
+    Rooster: { basic: 5, premium: 8 },
+    Turkey:  { basic: 6, premium: 9 },
+    Sheep:   { basic: 7, premium: 10 },
+    Pig:     { basic: 8, premium: 12 },
+    Cow:     { basic: 9, premium: 13 },
+    Bull:    { basic: 10, premium: 14 },
+};
+
+const DEFAULT_FOOD_CONSUMPTION = { basic: 5, premium: 3 };
+const DEFAULT_HUNGER_RESTORE   = { basic: 8, premium: 12 };
+
 // Stats decaem em granularidade de 1s real para serem visíveis enquanto o
 // painel do animal está aberto. Esse é apenas o intervalo BASE — cada stat
 // tem seu próprio agendamento jitterado (ver DECAY_INTERVAL_JITTER abaixo).
@@ -1564,11 +1599,14 @@ export class AnimalEntity {
         if (!ftSys || !this._claimedFoodTrough) { this._exitFoodFlow(); return; }
 
         // Tick once per second. eat() returns { drained, fromPremium } or false.
-        // Premium feeds drain slower (3 vs 5) but restore more hunger (+12 vs +8).
+        // Rates are species-specific so a chick doesn't drain a cow's worth
+        // of feed and a bull actually gains meaningful hunger per tick.
         if (now - this._lastEatTickAt >= 1000) {
-            const result = ftSys.eat(this._claimedFoodTrough, 5, 3);
+            const consume = FOOD_CONSUMPTION_BY_SPECIES[this.assetName] ?? DEFAULT_FOOD_CONSUMPTION;
+            const restore = HUNGER_RESTORE_BY_SPECIES[this.assetName]   ?? DEFAULT_HUNGER_RESTORE;
+            const result = ftSys.eat(this._claimedFoodTrough, consume.basic, consume.premium);
             if (result && result.drained) {
-                const gain = result.fromPremium ? 12 : 8;
+                const gain = result.fromPremium ? restore.premium : restore.basic;
                 this.stats.hunger = Math.min(100, (this.stats.hunger || 0) + gain);
             } else {
                 this._exitFoodFlow();

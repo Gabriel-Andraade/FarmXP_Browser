@@ -434,7 +434,10 @@ export default {
     boiled_egg: 'Ovo Cozido',
     fruit_salad: 'Salada de Frutas',
     animal_feed_basic: 'Ração Básica (Feno)',
-    animal_treat: 'Petisco Animal'
+    animal_treat: 'Petisco Animal',
+    cattle_food_trough: 'Cocho de Ração (Gado/Ovelha)',
+    pork_food_trough: 'Cocho de Ração (Suínos)',
+    bird_food_trough: 'Cocho de Ração (Aves)'
   },
 
   // General Messages
@@ -894,6 +897,7 @@ export default {
     premiumFilled: 'Cocho temperado com {feed}',
     alreadyFull: 'Cocho de ração já está cheio',
     premiumFull: 'Barra especial já está cheia',
+    systemUnavailable: 'Sistema não disponível',
     panel: {
       title: 'Cocho de Ração',
       close: 'Fechar',
