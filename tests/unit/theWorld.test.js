@@ -95,6 +95,8 @@ mock.module('../../public/scripts/logger.js', () => ({
 
 // Import real module after all mocks
 const theWorld = await import('../../public/scripts/theWorld.js');
+// Real collisionSystem singleton — the same instance theWorld registers into.
+const { collisionSystem } = await import('../../public/scripts/collisionSystem.js');
 
 describe('TheWorld (Production Implementation)', () => {
 
@@ -272,6 +274,39 @@ describe('TheWorld (Production Implementation)', () => {
       expect(() => theWorld.importWorldState({})).not.toThrow();
       expect(theWorld.trees).toHaveLength(0);
       expect(theWorld.rocks).toHaveLength(0);
+    });
+
+    // Issue #181: loading a save on top of another left the previous save's
+    // collision hitboxes registered (invisible collisions, ghost animals).
+    describe('collision hitbox crossover (issue #181)', () => {
+      // STATIC_OBJECTS.TREE config (mock): offsetX 16, offsetY 38, 38x40.
+      // Tree at (x,y) -> solid hitbox at (x+16, y+38, 38, 40).
+      const treeSolidRect = (x, y) => [x + 16, y + 38, 38, 40];
+
+      test('does not leak the previous save hitboxes into the loaded world', () => {
+        // Save A: a tree at P.
+        theWorld.importWorldState({
+          trees: [{ id: 'treeA', x: 100, y: 200, width: 64, height: 96, type: 'TREE' }],
+        });
+        expect(collisionSystem.areaCollides(...treeSolidRect(100, 200))).toBe(true);
+        const sizeAfterA = collisionSystem.hitboxes.size;
+
+        // Save B: empty world, nothing at P.
+        theWorld.importWorldState({ trees: [] });
+
+        // The spot where tree A stood is now walkable...
+        expect(collisionSystem.areaCollides(...treeSolidRect(100, 200))).toBe(false);
+        // ...and hitboxes were cleared, not accumulated across loads.
+        expect(collisionSystem.hitboxes.size).toBeLessThanOrEqual(sizeAfterA);
+        expect(collisionSystem.hitboxes.size).toBe(0);
+      });
+
+      test('registers solid hitboxes for the freshly loaded world objects', () => {
+        theWorld.importWorldState({
+          trees: [{ id: 'treeB', x: 300, y: 400, width: 64, height: 96, type: 'TREE' }],
+        });
+        expect(collisionSystem.areaCollides(...treeSolidRect(300, 400))).toBe(true);
+      });
     });
   });
 

@@ -1096,6 +1096,11 @@ class SaveSystem {
         // Atualizar iluminação ambiente baseado no horário
         if (typeof weather.updateAmbientLight === 'function') weather.updateAmbientLight();
 
+        // Notificar mudança de clima (mesmo evento que weather.js emite). Sem
+        // isso, o audioManager não sabe que o clima trocou no load e o loop de
+        // chuva/neblina do save anterior continua tocando no save novo.
+        this._dispatchEvent('weatherChanged', { type: weather.weatherType });
+
         // Disparar eventos para atualizar UI
         this._dispatchEvent('timeChanged', {
             day: weather.day,

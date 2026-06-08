@@ -1598,6 +1598,61 @@ export function exportWorldState() {
 }
 
 /**
+ * Registers physical collision hitboxes for the static world objects currently
+ * in the world arrays. `registerWorldObjects()` only feeds the item interaction
+ * registry — it does NOT add collision boxes — so a loaded save needs this or
+ * its solid objects (trees, houses, buildings…) would be passable.
+ * Mirrors mapManager.restoreFarmState so the load and map-return paths match.
+ */
+function registerStaticWorldHitboxes() {
+  const add = (id, type, x, y, width, height, ctx) => {
+    try {
+      collisionSystem.addHitbox(id, type, x, y, width, height);
+    } catch (e) {
+      handleWarn("Failed to add static hitbox", ctx, { id, type, err: e });
+    }
+  };
+
+  for (const tree of trees) add(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height, "theWorld:importWorldState:treeHitbox");
+  for (const rock of rocks) add(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height, "theWorld:importWorldState:rockHitbox");
+  for (const thicket of thickets) add(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height, "theWorld:importWorldState:thicketHitbox");
+
+  for (const house of houses) {
+    // HOUSE_ROOF is the box that actually blocks the player (offset wall).
+    // Register both so the house is solid after a save load, matching
+    // mapManager.restoreFarmState.
+    if (house.type === "HOUSE_WALLS" || house.type === "HOUSE_ROOF") {
+      add(house.id, house.type, house.x, house.y, house.width, house.height, "theWorld:importWorldState:houseHitbox");
+    }
+  }
+
+  for (const b of placedBuildings) add(b.id, b.type || "CONSTRUCTION", b.x, b.y, b.width, b.height, "theWorld:importWorldState:buildingHitbox");
+  for (const w of placedWells) add(w.id, "WELL", w.x, w.y, w.width, w.height, "theWorld:importWorldState:wellHitbox");
+}
+
+/**
+ * Re-registers NPC, Milly, house-door and pickup-truck hitboxes after a save
+ * load. `collisionSystem.clear()` wipes these along with the world hitboxes, so
+ * without this NPCs and the house become non-interactive post-load. Mirrors the
+ * farm branch of mapManager.performTransition (npcSystem.js:189, houseSystem,
+ * npcMilly, questSystem). House-door lookup depends on HOUSE_WALLS already being
+ * registered — call this AFTER registerStaticWorldHitboxes().
+ */
+function reregisterFarmEntityHitboxes() {
+  const npcSys = getSystem('npc');
+  if (npcSys?.registerHitboxesForMap) npcSys.registerHitboxesForMap('farm');
+
+  const milly = getSystem('npcMilly');
+  if (milly?.reregisterHitbox) milly.reregisterHitbox();
+
+  const house = getSystem('house');
+  if (house?.reregisterDoorHitbox) house.reregisterDoorHitbox();
+
+  const quests = getSystem('quests');
+  if (quests?.registerPickupHitbox) quests.registerPickupHitbox(true);
+}
+
+/**
  * Imports world state from saved data (save system)
  * Clears all existing world objects and restores from serialized data
  * @param {Object} data - Serialized world state from exportWorldState()
@@ -1606,6 +1661,13 @@ export function importWorldState(data) {
   const payload = (data && typeof data === 'object' && data.world && typeof data.world === 'object') ? data.world : data;
   try {
     if (!payload || typeof payload !== "object") return;
+
+    // Clear ALL collision hitboxes from the previous world before rebuilding.
+    // Without this, the prior save's boxes leak into the loaded farm: invisible
+    // collisions where old objects stood and ghost hitboxes for removed animals
+    // (issue #181). clear() also wipes NPC/house-door/pickup hitboxes — those
+    // are re-registered below via reregisterFarmEntityHitboxes().
+    collisionSystem.clear();
 
     // Reset existing data
     trees.length = 0;
@@ -1635,6 +1697,10 @@ export function importWorldState(data) {
     if (Array.isArray(payload.placedWells)) {
       placedWells.push(...payload.placedWells.map(o => ({ ...o, id: o.id || generateId() })));
     }
+
+    // Rebuild static collision hitboxes for the freshly loaded world.
+    registerStaticWorldHitboxes();
+
     if (Array.isArray(payload.animals)) {
       for (const o of payload.animals) {
         const assetData = assets.animals && assets.animals[o.assetName];
@@ -1698,6 +1764,10 @@ export function importWorldState(data) {
     if (tomb?.restoreState) {
       tomb.restoreState(payload.animalTombs ?? []);
     }
+
+    // Re-register entity hitboxes wiped by collisionSystem.clear() so NPCs and
+    // the house stay interactive after the load.
+    reregisterFarmEntityHitboxes();
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
   }
