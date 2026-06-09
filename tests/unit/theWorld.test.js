@@ -73,10 +73,15 @@ mock.module('../../public/scripts/constants.js', () => ({
   UI: { FONT_SIZES: { KEY_PROMPT: 14, HEALTH_BAR_TEXT: 10 } },
 }));
 
+// Registry of stub systems for getSystem(). Empty by default (so getSystem
+// returns null like before); individual tests populate it to exercise paths
+// like importWorldState's farm-entity hitbox re-registration.
+const mockSystems = {};
+
 // Mock gameState.js - ALL named exports
 mock.module('../../public/scripts/gameState.js', () => ({
   registerSystem: () => {},
-  getSystem: () => null,
+  getSystem: (name) => (name in mockSystems ? mockSystems[name] : null),
   getObject: () => null,
   setObject: () => {},
   setDebugFlag: () => {},
@@ -306,6 +311,28 @@ describe('TheWorld (Production Implementation)', () => {
           trees: [{ id: 'treeB', x: 300, y: 400, width: 64, height: 96, type: 'TREE' }],
         });
         expect(collisionSystem.areaCollides(...treeSolidRect(300, 400))).toBe(true);
+      });
+
+      test('re-registers farm entity hitboxes (NPC/Milly/house-door/pickup) after load', () => {
+        // clear() wipes NPC/door/pickup hitboxes too — importWorldState must
+        // re-register them or NPCs/house become non-interactive after a load.
+        const calls = [];
+        mockSystems.npc = { registerHitboxesForMap: (m) => calls.push(['npc', m]) };
+        mockSystems.npcMilly = { reregisterHitbox: () => calls.push(['milly']) };
+        mockSystems.house = { reregisterDoorHitbox: () => calls.push(['house']) };
+        mockSystems.quests = { registerPickupHitbox: (force) => calls.push(['pickup', force]) };
+        try {
+          theWorld.importWorldState({ trees: [] });
+          expect(calls).toContainEqual(['npc', 'farm']);
+          expect(calls).toContainEqual(['milly']);
+          expect(calls).toContainEqual(['house']);
+          expect(calls).toContainEqual(['pickup', true]);
+        } finally {
+          delete mockSystems.npc;
+          delete mockSystems.npcMilly;
+          delete mockSystems.house;
+          delete mockSystems.quests;
+        }
       });
     });
   });

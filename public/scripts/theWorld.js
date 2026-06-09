@@ -1407,23 +1407,39 @@ function drawThicketFallback(ctx, x, y, width, height) {
   ctx.fill();
 }
 
-/* função global útil para adicionar objetos dinâmicos */
-window.addWorldObject = function(objectData) {
-  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+/**
+ * Derives the collision-system hitbox type for a placed building from its
+ * originalType/type. Single source of truth shared by addWorldObject (live
+ * placement) and importWorldState (save load) so a saved placeable comes back
+ * with the SAME hitbox profile it had before saving — otherwise a food trough
+ * stored as {type:'construction', originalType:'foodtrough'} would reload as a
+ * generic CONSTRUCTION box (wrong size, lost interaction zone).
+ * @param {Object} objectData - has originalType and/or type.
+ * @returns {string} Uppercase collision type understood by collisionSystem.
+ */
+function getPlacedBuildingCollisionType(objectData) {
   let collisionType = (objectData.originalType || objectData.type || "construction").toString().toUpperCase();
 
-  if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
-  else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
-  else if (collisionType === "WATERTROUGHX" || collisionType.toLowerCase() === "watertroughx") collisionType = "WATERTROUGHX";
-  else if (collisionType === "WATERTROUGHY" || collisionType.toLowerCase() === "watertroughy") collisionType = "WATERTROUGHY";
-  else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
-  else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
-  else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
+  if (collisionType === "CHEST") collisionType = "CHEST";
+  else if (collisionType === "WELL") collisionType = "WELL";
+  else if (collisionType === "WATERTROUGHX") collisionType = "WATERTROUGHX";
+  else if (collisionType === "WATERTROUGHY") collisionType = "WATERTROUGHY";
+  else if (collisionType === "FENCEX") collisionType = "FENCEX";
+  else if (collisionType === "FENCEY") collisionType = "FENCEY";
+  else if (collisionType === "FENCE") collisionType = "FENCE";
   // Issue #171: food troughs use generic FOODTROUGH for collision. Variant
   // and species live on the object itself, not in the collision label.
   else if (collisionType === "FOODTROUGH" || collisionType === "FOODTROUGHX" || collisionType === "FOODTROUGHY") collisionType = "FOODTROUGH";
   else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
   else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "FOODTROUGH", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+
+  return collisionType;
+}
+
+/* função global útil para adicionar objetos dinâmicos */
+window.addWorldObject = function(objectData) {
+  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const collisionType = getPlacedBuildingCollisionType(objectData);
 
   const building = {
     // Preserve ANY custom fields from objectData (species, targetAnimals,
@@ -1626,7 +1642,7 @@ function registerStaticWorldHitboxes() {
     }
   }
 
-  for (const b of placedBuildings) add(b.id, b.type || "CONSTRUCTION", b.x, b.y, b.width, b.height, "theWorld:importWorldState:buildingHitbox");
+  for (const b of placedBuildings) add(b.id, getPlacedBuildingCollisionType(b), b.x, b.y, b.width, b.height, "theWorld:importWorldState:buildingHitbox");
   for (const w of placedWells) add(w.id, "WELL", w.x, w.y, w.width, w.height, "theWorld:importWorldState:wellHitbox");
 }
 

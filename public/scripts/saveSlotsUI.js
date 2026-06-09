@@ -37,6 +37,9 @@ class SaveSlotsUI {
         this.isOpen = false;
         this.mode = 'menu'; // 'menu', 'save', 'load'
         this.onLoadCallback = null;
+        // Cleanup fn for an open _dialog(), so destroy() can tear it down
+        // (otherwise its keydown listener + overlay leak). null when none open.
+        this._activeDialogCleanup = null;
 
         // fix: store named handler so destroy() can remove it
         this._onSaveChanged = () => {
@@ -318,8 +321,11 @@ class SaveSlotsUI {
         });
         if (name === null) return; // Cancelou
 
+        // Trim so whitespace-only names fall back to the default (mirrors the
+        // rename flow, which already rejects blank names).
+        const normalizedName = (name ?? '').trim();
         const success = saveSystem.createOrOverwriteSlot(slotIndex, {
-            saveName: name || defaultName
+            saveName: normalizedName || defaultName
         });
 
         if (success) {
@@ -519,6 +525,7 @@ class SaveSlotsUI {
             const settle = (result) => {
                 document.removeEventListener('keydown', onKey);
                 overlay.remove();
+                this._activeDialogCleanup = null;
                 resolve(result);
             };
             const confirm = () => settle(input ? field.value : true);
@@ -529,6 +536,8 @@ class SaveSlotsUI {
                 else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
             };
             document.addEventListener('keydown', onKey);
+            // Let destroy() abort an open dialog (cancel-equivalent resolution).
+            this._activeDialogCleanup = () => cancel();
 
             okBtn.addEventListener('click', confirm);
             cancelBtn.addEventListener('click', cancel);
@@ -566,6 +575,11 @@ class SaveSlotsUI {
 
     // fix: added destroy() for proper teardown of persistent listeners
     destroy() {
+        // Tear down an open dialog first, else its keydown handler + overlay leak.
+        if (this._activeDialogCleanup) {
+            this._activeDialogCleanup();
+        }
+
         if (this._onSaveChanged) {
             document.removeEventListener('save:changed', this._onSaveChanged);
             this._onSaveChanged = null;
