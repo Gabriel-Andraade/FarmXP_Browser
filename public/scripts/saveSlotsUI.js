@@ -285,22 +285,22 @@ class SaveSlotsUI {
      * @param {string} action - Ação (create, load, save, rename, delete)
      * @param {number} slotIndex - Índice do slot
      */
-    _handleAction(action, slotIndex) {
+    async _handleAction(action, slotIndex) {
         switch (action) {
             case 'create':
-                this._createSave(slotIndex);
+                await this._createSave(slotIndex);
                 break;
             case 'load':
-                this._loadSave(slotIndex);
+                await this._loadSave(slotIndex);
                 break;
             case 'save':
-                this._overwriteSave(slotIndex);
+                await this._overwriteSave(slotIndex);
                 break;
             case 'rename':
-                this._renameSave(slotIndex);
+                await this._renameSave(slotIndex);
                 break;
             case 'delete':
-                this._deleteSave(slotIndex);
+                await this._deleteSave(slotIndex);
                 break;
         }
     }
@@ -405,6 +405,7 @@ class SaveSlotsUI {
         const meta = saveSystem.getSlotMeta(slotIndex);
         const confirmed = await this._dialog({
             message: t('saveSlots.confirmOverwrite', { name: meta?.saveName || 'Save' }),
+            danger: true, // overwriting discards the previous save irreversibly
         });
 
         if (!confirmed) return;
@@ -483,11 +484,18 @@ class SaveSlotsUI {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.className = 'save-dialog-overlay';
+            overlay.setAttribute('role', 'presentation');
 
+            // Unique id so aria-labelledby is correct even if dialogs ever overlap.
+            const msgId = `save-dialog-msg-${Date.now()}`;
             const box = document.createElement('div');
             box.className = 'save-dialog';
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            box.setAttribute('aria-labelledby', msgId);
 
             const msg = document.createElement('p');
+            msg.id = msgId;
             msg.className = 'save-dialog-message';
             msg.textContent = message;
             box.appendChild(msg);
