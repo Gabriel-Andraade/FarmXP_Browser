@@ -46,7 +46,7 @@ function restoreGameState(snapshot) {
             playerSystem.needs.energy = snapshot.needs.energy;
         }
     } catch (e) {
-        console.error('Failed to restore game state:', e);
+        logger.error('Failed to restore game state:', e);
     }
 }
 
@@ -79,7 +79,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Currency NaN Block', passed: false, error: e.message });
         }
@@ -99,7 +99,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Currency Infinity Block', passed: false, error: e.message });
         }
@@ -120,7 +120,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Currency Overflow Protection', passed: false, error: e.message });
         }
@@ -141,7 +141,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Inventory Negative Quantity', passed: false, error: e.message });
         }
@@ -159,7 +159,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Inventory Invalid Item ID', passed: false, error: e.message });
         }
@@ -181,7 +181,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Storage NaN Handling', passed: false, error: e.message });
         }
@@ -200,7 +200,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Needs Clamping Max', passed: false, error: e.message });
         }
@@ -219,7 +219,7 @@ export function runValidationTests() {
             if (passed) results.passed++;
             else results.failed++;
         } catch (e) {
-            console.error('Test failed with error:', e);
+            logger.error('Test failed with error:', e);
             results.failed++;
             results.tests.push({ name: 'Needs Clamping Min', passed: false, error: e.message });
         }

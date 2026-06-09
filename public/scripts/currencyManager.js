@@ -2,6 +2,7 @@ import { GAME_BALANCE } from './constants.js';
 import { isValidPositiveNumber, MAX_CURRENCY } from './validation.js';
 import { registerSystem } from './gameState.js';
 import { safeDispatch } from './safeDispatch.js';
+import { logger } from './logger.js';
 
 /**
  * Sistema de gerenciamento de moeda do jogo
@@ -49,7 +50,7 @@ export class CurrencyManager {
     earn(amount, source = "unknown") {
         // CRÍTICO: Validar antes de qualquer operação (bloqueia NaN/Infinity)
         if (!isValidPositiveNumber(amount)) {
-            console.warn('[CurrencyManager] Invalid earn amount:', amount, 'from:', source);
+            logger.warn('[CurrencyManager] Invalid earn amount:', amount, 'from:', source);
             return false;
         }
 
@@ -57,7 +58,7 @@ export class CurrencyManager {
 
         // Proteção de overflow
         if (this.currentMoney + amount > MAX_CURRENCY) {
-            console.warn('[CurrencyManager] Currency overflow prevented');
+            logger.warn('[CurrencyManager] Currency overflow prevented');
             this.currentMoney = MAX_CURRENCY;
         } else {
             this.currentMoney += amount;
@@ -80,7 +81,7 @@ export class CurrencyManager {
     spend(amount, item = "unknown") {
         // CRÍTICO: Validar antes de qualquer operação (bloqueia NaN/Infinity)
         if (!isValidPositiveNumber(amount)) {
-            console.warn('[CurrencyManager] Invalid spend amount:', amount);
+            logger.warn('[CurrencyManager] Invalid spend amount:', amount);
             return false;
         }
 
@@ -129,14 +130,14 @@ export class CurrencyManager {
     setInitialAmount(amount) {
         // ✅ CRÍTICO: Validar ANTES de atribuir (bloqueia NaN/Infinity/negativo)
         if (!isValidPositiveNumber(amount)) {
-            console.warn('[CurrencyManager] Invalid initial amount:', amount);
+            logger.warn('[CurrencyManager] Invalid initial amount:', amount);
             return;
         }
 
         // ✅ Proteção de overflow
         let safeAmount = amount;
         if (amount > MAX_CURRENCY) {
-            console.warn('[CurrencyManager] Currency overflow prevented in setInitialAmount');
+            logger.warn('[CurrencyManager] Currency overflow prevented in setInitialAmount');
             safeAmount = MAX_CURRENCY;
         }
 
