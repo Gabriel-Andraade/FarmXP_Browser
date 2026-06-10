@@ -160,13 +160,18 @@ export function exposeDebug(extra = {}) {
   if (typeof window === "undefined") return;
   if (!getDebugFlag("debug")) return;
 
-  window.__debug = {
+  // Merge into the existing object instead of recreating it. Other systems
+  // (foodTroughSystem, waterTroughSystem) attach devtools helpers via
+  // `window.__debug = window.__debug || {}`; recreating here would clobber
+  // them depending on init order (#176).
+  window.__debug = window.__debug || {};
+  Object.assign(window.__debug, {
     systems: gameState.systems,
     objects: gameState.objects,
     debugFlags: gameState.debug,
     flags: gameState.flags,
     extra, // Namespaced to prevent override of core properties
-  };
+  });
 }
 
 /**
