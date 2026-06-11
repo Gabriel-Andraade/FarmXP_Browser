@@ -19,6 +19,7 @@ import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
 import { getItem } from "./itemUtils.js";
+import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
 const FOOD_TROUGH_CONFIG = {
   MAX_FOOD_LEVEL: 100,
@@ -27,7 +28,9 @@ const FOOD_TROUGH_CONFIG = {
   PREMIUM_PER_FEED: 50,
 };
 
-// Map animal asset name → species code (cattle/pork/bird)
+// Map animal asset name → species code. There are only three trough species
+// (cattle/pork/bird); Sheep/Lamb intentionally share the cattle trough — they're
+// grazing livestock and there's no dedicated sheep trough variant. (#179)
 const ANIMAL_TO_SPECIES = {
   Cow: "cattle", Bull: "cattle", Calf: "cattle",
   Sheep: "cattle", Lamb: "cattle",
@@ -83,17 +86,9 @@ function _slotsFor(variant) {
   return (variant || '').endsWith('Y') ? _SLOTS_Y : _SLOTS_X;
 }
 
-// Slot reservation map: troughId → [animalId|null, ...] (3 slots).
-const _slotOccupancy = new Map();
-
-function _occupancyFor(troughId) {
-  let arr = _slotOccupancy.get(troughId);
-  if (!arr) {
-    arr = [null, null, null];
-    _slotOccupancy.set(troughId, arr);
-  }
-  return arr;
-}
+// Slot reservation: troughId → [animalId|null, ...] (3 slots). Own registry
+// instance — food occupancy is separate from water's. See troughSlots.js.
+const _slots = createSlotRegistry();
 
 let _hoveredId = null;
 let _ftToastEl = null;
@@ -165,7 +160,7 @@ function _findFeedInInventory(trough, premium) {
   const inv = inventorySystem.getInventory?.();
   const slots = inv?.animal_food?.items || [];
   for (const slot of slots) {
-    if ((slot.quantity || slot.qty || 0) <= 0) continue;
+    if ((slot.quantity || 0) <= 0) continue;
     const itemData = getItem(slot.id);
     if (!itemData) continue;
     if (premium) {
@@ -400,19 +395,12 @@ export const foodTroughSystem = {
   getEatSlots(troughOrId) {
     const ft = (typeof troughOrId === 'string') ? _findTrough(troughOrId) : troughOrId;
     if (!ft) return [];
-    const slots = _slotsFor(ft.variant);
-    return slots.map((s, idx) => ({
-      idx,
-      x: ft.x + ft.width * s.offsetX,
-      y: ft.y + ft.height * s.offsetY,
-      w: ft.width * s.w,
-      h: ft.height * s.h,
-    }));
+    return slotWorldRects(ft, _slotsFor(ft.variant));
   },
 
   // Find the index of a free slot in this trough, or -1.
   findFreeSlotIn(troughId, animalId) {
-    const occ = _occupancyFor(troughId);
+    const occ = _slots.occupancyFor(troughId);
     for (let i = 0; i < occ.length; i++) {
       if (occ[i] == null || occ[i] === animalId) return i;
       // Stale check: slot owner no longer exists in world.
@@ -485,61 +473,18 @@ export const foodTroughSystem = {
    */
   getEatPosition(trough, slot, animal) {
     const isHorizontal = !(trough.variant || '').endsWith('Y');
-    const GAP = 2;
-    const slotCx = slot.x + slot.w / 2;
-    const slotCy = slot.y + slot.h / 2;
-
-    const cb = animal?.collisionBox
-      || { offsetX: 0, offsetY: 0, width: animal?.width || 32, height: animal?.height || 32 };
-    const cbX = cb.offsetX || 0;
-    const cbY = cb.offsetY || 0;
-    const cbW = cb.width  || animal?.width  || 32;
-    const cbH = cb.height || animal?.height || 32;
-
-    if (isHorizontal) {
-      const fromAbove = (animal?.y ?? 0) < slotCy;
-      return {
-        x: slotCx - cbX - cbW / 2,
-        y: fromAbove
-            ? (trough.y - GAP - cbY - cbH)
-            : (trough.y + trough.height + GAP - cbY),
-        facing: fromAbove ? 'down' : 'up',
-      };
-    }
-    const fromLeft = (animal?.x ?? 0) < slotCx;
-    return {
-      x: fromLeft
-          ? (trough.x - GAP - cbX - cbW)
-          : (trough.x + trough.width + GAP - cbX),
-      y: slotCy - cbY - cbH / 2,
-      facing: fromLeft ? 'right' : 'left',
-    };
+    return troughStandPosition(trough, slot, animal, isHorizontal);
   },
 
-  // Reserve a slot for the animal. Idempotent (re-claim by same animal = ok).
+  // Slot reservation — delegated to the shared registry (see troughSlots.js).
   claimSlot(troughId, slotIdx, animalId) {
-    if (slotIdx < 0 || slotIdx > 2) return false;
-    const occ = _occupancyFor(troughId);
-    if (occ[slotIdx] != null && occ[slotIdx] !== animalId) return false;
-    occ[slotIdx] = animalId;
-    return true;
+    return _slots.claimSlot(troughId, slotIdx, animalId);
   },
-
-  // Release the slot if the animal owns it. Safe if owned by someone else.
   releaseSlot(troughId, slotIdx, animalId) {
-    if (slotIdx < 0 || slotIdx > 2) return;
-    const occ = _slotOccupancy.get(troughId);
-    if (!occ) return;
-    if (occ[slotIdx] === animalId) occ[slotIdx] = null;
+    _slots.releaseSlot(troughId, slotIdx, animalId);
   },
-
-  // Free every slot held by this animal (cleanup on death / state escape).
   releaseAllSlotsFor(animalId) {
-    for (const [, occ] of _slotOccupancy) {
-      for (let i = 0; i < occ.length; i++) {
-        if (occ[i] === animalId) occ[i] = null;
-      }
-    }
+    _slots.releaseAllSlotsFor(animalId);
   },
 
   /**
@@ -557,10 +502,24 @@ export const foodTroughSystem = {
       ? animal.getInteractionHitbox()
       : null;
     if (!ih) return false;
-    return ih.x < slot.x + slot.w &&
-           ih.x + ih.w > slot.x &&
-           ih.y < slot.y + slot.h &&
-           ih.y + ih.h > slot.y;
+
+    const overlaps = (r) =>
+      ih.x < r.x + (r.w ?? r.width) &&
+      ih.x + ih.w > r.x &&
+      ih.y < r.y + (r.h ?? r.height) &&
+      ih.y + ih.h > r.y;
+
+    // Primary: reach hitbox pokes into the claimed slot.
+    if (overlaps(slot)) return true;
+
+    // Fallback (mirrors the water trough's lenient body-in-bounds check):
+    // small species (Chicken/Chick) have a short reach hitbox that pokes into
+    // the trough but falls short of the inset slot rect, so the strict slot
+    // overlap above never matched and they bounced out of EATING immediately
+    // (#179). The animal is positioned at the trough edge by getEatPosition,
+    // so a reach touching the trough's outer bounds means it's in place to eat.
+    const trough = _findTrough(troughId);
+    return !!trough && overlaps(trough);
   },
 
   // Back-compat: any slot of the trough.
@@ -589,7 +548,7 @@ export const foodTroughSystem = {
 
     for (const ft of this.getFoodTroughs()) {
       const slots = this.getEatSlots(ft);
-      const occ = _slotOccupancy.get(ft.id) || [];
+      const occ = _slots.occupancy.get(ft.id) || [];
       for (const s of slots) {
         const screen = camera.worldToScreen(s.x, s.y);
         const sx = Math.round(screen.x);

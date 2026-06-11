@@ -344,6 +344,30 @@ function pickGenderFor(assetName) {
     return Math.random() < 0.5 ? 'male' : 'female';
 }
 
+// Palettes for `_drawNeedBar` (thirst/hunger bars). Module-level constants so
+// the hot draw path allocates nothing per frame (mirrors the getHitbox pooling
+// philosophy). `waterFX` adds the drinking-only shine + rising bubbles.
+const NEED_BAR_THIRST = {
+    icon: '💧', iconColor: '#cde9ff',
+    bgGrad: ['rgba(8, 20, 38, 0.85)', 'rgba(4, 12, 24, 0.85)'],
+    bgFlat: 'rgba(6, 16, 30, 0.85)',
+    fill: ['#9be3ff', '#5bbcff', '#2d7ec8'], fillFlat: '#5bbcff',
+    glow: [123, 200, 255], glowAlpha: 0.55, glowPulse: true,
+    outline: ['rgba(255, 230, 180, 0.7)', 'rgba(255, 230, 180, 0.4)'],
+    halo: ['rgba(120, 200, 255, 0.22)', 'rgba(120, 200, 255, 0)'],
+    waterFX: true,
+};
+const NEED_BAR_HUNGER = {
+    icon: '🌾', iconColor: '#f4e2b0',
+    bgGrad: null, // flat bg for both quality modes
+    bgFlat: 'rgba(28, 20, 6, 0.85)',
+    fill: ['#f6d878', '#d9a441', '#a8761f'], fillFlat: '#d9a441',
+    glow: [216, 178, 90], glowAlpha: 0.5, glowPulse: false,
+    outline: ['rgba(255, 230, 180, 0.7)', 'rgba(255, 230, 180, 0.4)'],
+    halo: ['rgba(216, 178, 90, 0.22)', 'rgba(216, 178, 90, 0)'],
+    waterFX: false,
+};
+
 export class AnimalEntity {
     constructor(assetName, assetData, x, y, opts = {}) {
         // Id estável desde a construção. theWorld atribui o id real do
@@ -695,6 +719,288 @@ export class AnimalEntity {
         ctx.lineTo(x, y + rr);
         ctx.quadraticCurveTo(x, y, x + rr, y);
         ctx.closePath();
+    }
+
+    /**
+     * Draws a "need" bar (thirst/hunger) above the animal. Shared skeleton for
+     * the DRINKING and EATING flows — geometry + FX are identical, only the
+     * palette/icon differ (see NEED_BAR_THIRST / NEED_BAR_HUNGER). Keeping this
+     * in one place removed ~100 lines of near-duplicate bar rendering.
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {Object} camera
+     * @param {{x:number,y:number}} screenPos - animal top-left on screen
+     * @param {number} zoomedWidth
+     * @param {number} zoomedHeight
+     * @param {number} now - timestamp for animated FX
+     * @param {Object} pal - palette (NEED_BAR_THIRST | NEED_BAR_HUNGER)
+     * @param {number} pct - fill ratio 0..1
+     */
+    _drawNeedBar(ctx, camera, screenPos, zoomedWidth, zoomedHeight, now, pal, pct) {
+        // Quality mode: low = barra básica (fill simples + outline). Medium/high
+        // = todos os FX (halo, gradient, glow, e shine/bolhas no waterFX).
+        const heavyFX = qualityMode.enableHeavyFX;
+        const barW = Math.max(36, this.width * 0.75) * camera.zoom;
+        const barH = 6 * camera.zoom;
+        const radius = barH / 2;
+        const bx = Math.floor(screenPos.x + (zoomedWidth - barW) / 2);
+        const by = Math.floor(screenPos.y - 14 * camera.zoom);
+        const fillW = Math.max(0, Math.round(barW * Math.max(0, Math.min(1, pct))));
+
+        ctx.save();
+
+        // Halo radial sob o animal (HEAVY — radialGradient é caro).
+        if (heavyFX && pal.halo) {
+            const haloX = screenPos.x + zoomedWidth / 2;
+            const haloY = screenPos.y + zoomedHeight - 4 * camera.zoom;
+            const haloR = Math.max(zoomedWidth, zoomedHeight) * 0.45;
+            const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, haloR);
+            halo.addColorStop(0, pal.halo[0]);
+            halo.addColorStop(1, pal.halo[1]);
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Ícone antes da barra (sempre — é só um texto).
+        const iconBounce = heavyFX ? Math.sin(now / 200) * 1.5 * camera.zoom : 0;
+        ctx.font = `${Math.round(11 * camera.zoom)}px sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        if (heavyFX) {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+            ctx.shadowBlur = 3 * camera.zoom;
+        }
+        ctx.fillStyle = pal.iconColor;
+        ctx.fillText(pal.icon, bx - 3 * camera.zoom, by + barH / 2 + iconBounce);
+        ctx.shadowBlur = 0;
+
+        // Fundo — gradient no high (se pal.bgGrad), cor sólida no low.
+        if (heavyFX && pal.bgGrad) {
+            const bgGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+            bgGrad.addColorStop(0, pal.bgGrad[0]);
+            bgGrad.addColorStop(1, pal.bgGrad[1]);
+            ctx.fillStyle = bgGrad;
+        } else {
+            ctx.fillStyle = pal.bgFlat;
+        }
+        this._roundRect(ctx, bx, by, barW, barH, radius);
+        ctx.fill();
+
+        // Preenchimento — gradient + glow no high, fill simples no low.
+        if (fillW > 1) {
+            if (heavyFX) {
+                const pulse = pal.glowPulse ? (0.85 + 0.15 * Math.sin(now / 180)) : 1;
+                const fillGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
+                fillGrad.addColorStop(0, pal.fill[0]);
+                fillGrad.addColorStop(0.5, pal.fill[1]);
+                fillGrad.addColorStop(1, pal.fill[2]);
+                ctx.fillStyle = fillGrad;
+                ctx.shadowColor = `rgba(${pal.glow[0]}, ${pal.glow[1]}, ${pal.glow[2]}, ${pal.glowAlpha * pulse})`;
+                ctx.shadowBlur = 8 * camera.zoom;
+                this._roundRect(ctx, bx, by, fillW, barH, radius);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            } else {
+                ctx.fillStyle = pal.fillFlat;
+                this._roundRect(ctx, bx, by, fillW, barH, radius);
+                ctx.fill();
+            }
+        }
+
+        // Contorno (sempre — barato).
+        ctx.strokeStyle = heavyFX ? pal.outline[0] : pal.outline[1];
+        ctx.lineWidth = Math.max(1, camera.zoom);
+        this._roundRect(ctx, bx, by, barW, barH, radius);
+        ctx.stroke();
+
+        // FX exclusivo da água: shine atravessando + bolhas subindo.
+        if (heavyFX && pal.waterFX && fillW > 1) {
+            const shineX = bx + ((now / 12) % (barW + 20)) - 10;
+            if (shineX > bx && shineX < bx + fillW - 4) {
+                const shineGrad = ctx.createLinearGradient(shineX - 6, 0, shineX + 6, 0);
+                shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+                shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
+                shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                ctx.fillStyle = shineGrad;
+                ctx.fillRect(shineX - 6, by + 1, 12, barH - 2);
+            }
+            if (fillW > 6) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+                for (let i = 0; i < 3; i++) {
+                    const phase = (now / 600 + i * 0.33) % 1;
+                    const bbX = bx + 4 * camera.zoom + (i * (fillW - 10) / 3);
+                    const bbY = by + barH - phase * (barH - 2);
+                    if (bbX < bx + fillW - 2) {
+                        ctx.beginPath();
+                        ctx.arc(bbX, bbY, 1 * camera.zoom, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Floating need emote (💧 sede / 🍽️ fome) above the animal — feedback that
+     * it needs something before it starts consuming. Bobbing + a stronger pulse
+     * while it's already seeking the trough.
+     */
+    _drawNeedEmote(ctx, camera, screenPos, zoomedWidth, now, emoji, isSeeking) {
+        const bob = Math.sin(now / 280) * 2.5 * camera.zoom;
+        ctx.save();
+        ctx.font = `${Math.round(15 * camera.zoom)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+        ctx.shadowBlur = 4 * camera.zoom;
+        ctx.globalAlpha = isSeeking ? (0.65 + 0.35 * Math.abs(Math.sin(now / 220))) : 0.85;
+        ctx.fillText(
+            emoji,
+            Math.floor(screenPos.x + zoomedWidth / 2),
+            Math.floor(screenPos.y - 30 * camera.zoom + bob),
+        );
+        ctx.restore();
+    }
+
+    /**
+     * Floating collect FX (gather success/failure). Rises ~18px and fades over
+     * ~1.5s, then clears itself. No-op when there's no active FX.
+     */
+    _drawCollectFx(ctx, camera, screenPos, zoomedWidth, now) {
+        const fx = this._collectFx;
+        if (!fx) return;
+        const elapsed = now - fx.startedAt;
+        const duration = fx.duration || 1500;
+        if (elapsed >= duration) {
+            this._collectFx = null;
+            return;
+        }
+        const t = elapsed / duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - t;
+        ctx.font = `bold ${Math.round(12 * camera.zoom)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3 * camera.zoom;
+        ctx.strokeStyle = '#fff';
+        ctx.fillStyle = fx.success ? '#1f8b3a' : '#b73030';
+        const tx = Math.floor(screenPos.x + zoomedWidth / 2);
+        const ty = Math.floor(screenPos.y + (-34 - t * 18) * camera.zoom);
+        ctx.strokeText(fx.text, tx, ty);
+        ctx.fillText(fx.text, tx, ty);
+        ctx.restore();
+    }
+
+    /** Draws the animal sprite (mirrored when flipX), one frame from the sheet. */
+    _drawSprite(ctx, screenPos, zoomedWidth, zoomedHeight) {
+        const sx = this.frameIndex * this.frameWidth;
+        const sy = this.direction * this.frameHeight;
+        const drawX = Math.floor(screenPos.x);
+        const drawY = Math.floor(screenPos.y);
+        if (this.flipX) {
+            // Translada pro canto direito e inverte X — o sprite desenhado
+            // em (0,0) cai exatamente no lugar de antes, só espelhado.
+            ctx.save();
+            ctx.translate(drawX + zoomedWidth, drawY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(this.img, sx, sy, this.frameWidth, this.frameHeight, 0, 0, zoomedWidth, zoomedHeight);
+            ctx.restore();
+        } else {
+            ctx.drawImage(this.img, sx, sy, this.frameWidth, this.frameHeight, drawX, drawY, zoomedWidth, zoomedHeight);
+        }
+    }
+
+    /** Mood emoji just above the sprite (skipped when CALM). */
+    _drawMoodEmoji(ctx, camera, screenPos, zoomedWidth) {
+        if (this._mood === AnimalMood.CALM) return;
+        const emoji = this.moodEmoji;
+        if (!emoji) return;
+        ctx.save();
+        ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(emoji, Math.floor(screenPos.x + zoomedWidth / 2), Math.floor(screenPos.y - 4 * camera.zoom));
+        ctx.restore();
+    }
+
+    /**
+     * "Product ready" indicator (🥛/🧶/🥚) above the mood emoji, with a soft
+     * bounce. Visible in any mood (a sleeping animal can have an egg ready).
+     */
+    _drawPendingProduct(ctx, camera, screenPos, zoomedWidth, now) {
+        if (!this._pendingProduct) return;
+        const productEmoji = PRODUCT_EMOJI[this._pendingProduct] || '✨';
+        const bounce = Math.sin(now / 250) * 2 * camera.zoom;
+        ctx.save();
+        ctx.font = `${Math.round(16 * camera.zoom)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(productEmoji, Math.floor(screenPos.x + zoomedWidth / 2), Math.floor(screenPos.y - 20 * camera.zoom + bounce));
+        ctx.restore();
+    }
+
+    /**
+     * Age-up FX: "Cresceu!" text + 4 orbiting sparkles, ~2.5s. Clears itself
+     * when expired. No-op when there's no active FX.
+     */
+    _drawAgeUpFx(ctx, camera, screenPos, zoomedWidth, zoomedHeight, now) {
+        const fx = this._ageUpFx;
+        if (!fx) return;
+        const elapsed = now - fx.startedAt;
+        const duration = fx.duration || 2500;
+        if (elapsed >= duration) {
+            this._ageUpFx = null;
+            return;
+        }
+        const t = elapsed / duration;
+        ctx.save();
+        ctx.globalAlpha = 1 - Math.pow(t, 2);  // fade out quadrático
+
+        // Texto "Cresceu!" pulsando acima.
+        const pulse = 1 + 0.15 * Math.sin(elapsed / 100);
+        ctx.font = `bold ${Math.round(13 * camera.zoom * pulse)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.lineWidth = 3 * camera.zoom;
+        ctx.strokeStyle = '#fff';
+        ctx.fillStyle = '#d4a017';
+        const tx = Math.floor(screenPos.x + zoomedWidth / 2);
+        const ty = Math.floor(screenPos.y - 32 * camera.zoom - t * 12 * camera.zoom);
+        ctx.strokeText(fx.text || '✨', tx, ty);
+        ctx.fillText(fx.text || '✨', tx, ty);
+
+        // 4 sparkles orbitando o sprite (rotação simples).
+        ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
+        const cx = screenPos.x + zoomedWidth / 2;
+        const cy = screenPos.y + zoomedHeight / 2;
+        const radius = (zoomedWidth + zoomedHeight) / 2 * (0.6 + t * 0.3);
+        const angleBase = elapsed / 200;
+        for (let i = 0; i < 4; i++) {
+            const ang = angleBase + i * Math.PI / 2;
+            ctx.fillText('✨', Math.floor(cx + Math.cos(ang) * radius), Math.floor(cy + Math.sin(ang) * radius));
+        }
+        ctx.restore();
+    }
+
+    /**
+     * Debug overlay of the interaction (reach) hitbox — `?hitboxes=1`. Green
+     * when it currently intersects something interactable, orange otherwise.
+     */
+    _drawHitboxDebug(ctx, camera) {
+        if (!getDebugFlag('hitboxes')) return;
+        const ih = this.getInteractionHitbox();
+        const sp = camera.worldToScreen(ih.x, ih.y);
+        const zoom = camera.zoom || 1;
+        ctx.save();
+        ctx.lineWidth = 2;
+        if (this._interactionActive) {
+            ctx.strokeStyle = 'rgba(80, 220, 100, 0.95)';
+            ctx.fillStyle   = 'rgba(80, 220, 100, 0.30)';
+        } else {
+            ctx.strokeStyle = 'rgba(255, 140, 0, 0.95)';
+            ctx.fillStyle   = 'rgba(255, 140, 0, 0.18)';
+        }
+        ctx.fillRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
+        ctx.strokeRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
+        ctx.restore();
     }
 
     /** True se a hitbox de interação intersecta o slot {x,y,w,h} dado. */
@@ -1291,36 +1597,8 @@ export class AnimalEntity {
             return;
         }
 
-        // ─── Drinking states (prioridade média, abaixo de FLEE/FOLLOW) ────
-        if (this.state === AnimalState.SEEKING_WATER) {
-            this._updateSeekingWater(now);
-            return;
-        }
-        if (this.state === AnimalState.DRINKING) {
-            this._updateDrinking(now);
-            return;
-        }
-        // Transição: thirst caiu abaixo do threshold → tenta ir beber.
-        // Só dispara se NÃO está em FLEE/FOLLOW (já tratados acima) e o
-        // animal não está machucado/dormindo.
-        if (this._tryEnterSeekingWater()) {
-            this._updateSeekingWater(now);
-            return;
-        }
-
-        // ─── Eating states (Issue #171) — same priority tier as drinking ─
-        if (this.state === AnimalState.SEEKING_FOOD) {
-            this._updateSeekingFood(now);
-            return;
-        }
-        if (this.state === AnimalState.EATING) {
-            this._updateEating(now);
-            return;
-        }
-        if (this._tryEnterSeekingFood()) {
-            this._updateSeekingFood(now);
-            return;
-        }
+        // ─── Drinking/eating states (prioridade média, abaixo de FLEE/FOLLOW) ─
+        if (this._updateNeedStates(now)) return;
 
         if (now - this.stateTimer > this.stateDuration) {
             this.pickNewState();
@@ -1332,6 +1610,26 @@ export class AnimalEntity {
         }
 
         this.updateAnimation(now);
+    }
+
+    /**
+     * Dispatches the drinking/eating states. ORDER MATTERS: water dispatch +
+     * its `_tryEnter` transition come before the food ones, so a thirsty animal
+     * can interrupt eating to go drink (water has priority). A literal
+     * state→handler table would lose this interleaving. Returns true if it
+     * handled the tick (caller should `return`).
+     */
+    _updateNeedStates(now) {
+        if (this.state === AnimalState.SEEKING_WATER) { this._updateSeekingWater(now); return true; }
+        if (this.state === AnimalState.DRINKING) { this._updateDrinking(now); return true; }
+        // Transição: thirst < threshold → tenta ir beber (interrompe comer).
+        if (this._tryEnterSeekingWater()) { this._updateSeekingWater(now); return true; }
+
+        if (this.state === AnimalState.SEEKING_FOOD) { this._updateSeekingFood(now); return true; }
+        if (this.state === AnimalState.EATING) { this._updateEating(now); return true; }
+        if (this._tryEnterSeekingFood()) { this._updateSeekingFood(now); return true; }
+
+        return false;
     }
 
     /**
@@ -1619,6 +1917,12 @@ export class AnimalEntity {
                 const gain = result.fromPremium ? restore.premium : restore.basic;
                 this.stats.hunger = Math.min(100, (this.stats.hunger || 0) + gain);
             } else {
+                // Trough emptied mid-meal. Set the same 5s cooldown the
+                // seek-timeout path uses (line ~1592) so the animal doesn't
+                // immediately re-seek. Without this, not busy-looping relied on
+                // findFreeSlotFor() filtering out empty troughs — decouple from
+                // that filtering so it stays correct if findFreeSlotFor changes.
+                this._eatCooldownUntil = now + 5000;
                 this._exitFoodFlow();
                 return;
             }
@@ -2124,289 +2428,38 @@ export class AnimalEntity {
         // 5+ vezes por animal por frame → 150 syscalls/frame com 30 animais.
         const _now = (frameNow != null) ? frameNow : performance.now();
 
-        const sx = this.frameIndex * this.frameWidth;
-        const sy = this.direction * this.frameHeight;
-        const drawX = Math.floor(screenPos.x);
-        const drawY = Math.floor(screenPos.y);
+        // Camadas, de baixo pra cima (ordem importa). Cada helper é no-op
+        // quando não se aplica (mood CALM, sem produto, sem FX, etc.).
+        this._drawSprite(ctx, screenPos, zoomedWidth, zoomedHeight);
+        this._drawMoodEmoji(ctx, camera, screenPos, zoomedWidth);
+        this._drawPendingProduct(ctx, camera, screenPos, zoomedWidth, _now);
+        this._drawAgeUpFx(ctx, camera, screenPos, zoomedWidth, zoomedHeight, _now);
+        this._drawHitboxDebug(ctx, camera);
 
-        if (this.flipX) {
-            ctx.save();
-            // Translada pro canto direito e inverte X — o sprite desenhado
-            // em (0,0) cai exatamente no lugar de antes, só espelhado.
-            ctx.translate(drawX + zoomedWidth, drawY);
-            ctx.scale(-1, 1);
-            ctx.drawImage(
-                this.img,
-                sx, sy, this.frameWidth, this.frameHeight,
-                0, 0, zoomedWidth, zoomedHeight
-            );
-            ctx.restore();
-        } else {
-            ctx.drawImage(
-                this.img,
-                sx, sy, this.frameWidth, this.frameHeight,
-                drawX, drawY, zoomedWidth, zoomedHeight
-            );
+        // ─── Emote de necessidade (💧 sede / 🍽️ fome) antes de consumir ──
+        // Feedback acima do animal quando precisa mas ainda não está
+        // bebendo/comendo (a barra cobre esses estados). Sede tem prioridade
+        // (mesma ordem do update); um animal não mostra os dois ao mesmo tempo.
+        if ((this.stats.thirst || 0) < this._drinkThreshold && this.state !== AnimalState.DRINKING) {
+            this._drawNeedEmote(ctx, camera, screenPos, zoomedWidth, _now,
+                '💧', this.state === AnimalState.SEEKING_WATER);
+        } else if ((this.stats.hunger || 0) < this._eatThreshold && this.state !== AnimalState.EATING) {
+            this._drawNeedEmote(ctx, camera, screenPos, zoomedWidth, _now,
+                '🍽️', this.state === AnimalState.SEEKING_FOOD);
         }
 
-        if (this._mood !== AnimalMood.CALM) {
-            const emoji = this.moodEmoji;
-            if (emoji) {
-                ctx.save();
-                ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.fillText(emoji, Math.floor(screenPos.x + zoomedWidth / 2), Math.floor(screenPos.y - 4 * camera.zoom));
-                ctx.restore();
-            }
-        }
-
-        // Indicador de produto pronto pra coleta (🥛 leite, 🧶 lã, 🥚 ovo).
-        // Desenhado um pouco acima do mood emoji, com leve bounce vertical
-        // pra chamar atenção sem ser piscante demais. Visível em qualquer
-        // mood (até SLEEPING — animal pode ter ovo pronto e estar dormindo,
-        // coleta de manhã).
-        if (this._pendingProduct) {
-            const productEmoji = PRODUCT_EMOJI[this._pendingProduct] || '✨';
-            const bounce = Math.sin(_now / 250) * 2 * camera.zoom;
-            ctx.save();
-            ctx.font = `${Math.round(16 * camera.zoom)}px sans-serif`;
-            ctx.textAlign = 'center';
-            ctx.fillText(
-                productEmoji,
-                Math.floor(screenPos.x + zoomedWidth / 2),
-                Math.floor(screenPos.y - 20 * camera.zoom + bounce)
-            );
-            ctx.restore();
-        }
-
-        // FX de aging: sparkles ao redor + texto "Cresceu!" pulsando.
-        // Dura ~2.5s (mais que coleta porque é evento memorável).
-        if (this._ageUpFx) {
-            const fx = this._ageUpFx;
-            const elapsed = _now - fx.startedAt;
-            const duration = fx.duration || 2500;
-            if (elapsed >= duration) {
-                this._ageUpFx = null;
-            } else {
-                const t = elapsed / duration;
-                const alpha = 1 - Math.pow(t, 2);  // fade out quadrático
-                const pulse = 1 + 0.15 * Math.sin(elapsed / 100);
-                ctx.save();
-                ctx.globalAlpha = alpha;
-
-                // Texto "Cresceu!" pulsando acima
-                ctx.font = `bold ${Math.round(13 * camera.zoom * pulse)}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.lineWidth = 3 * camera.zoom;
-                ctx.strokeStyle = '#fff';
-                ctx.fillStyle = '#d4a017';
-                const tx = Math.floor(screenPos.x + zoomedWidth / 2);
-                const ty = Math.floor(screenPos.y - 32 * camera.zoom - t * 12 * camera.zoom);
-                ctx.strokeText(fx.text || '✨', tx, ty);
-                ctx.fillText(fx.text || '✨', tx, ty);
-
-                // 4 sparkles orbitando o sprite (rotação simples)
-                ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
-                const cx = screenPos.x + zoomedWidth / 2;
-                const cy = screenPos.y + zoomedHeight / 2;
-                const radius = (zoomedWidth + zoomedHeight) / 2 * (0.6 + t * 0.3);
-                const angleBase = elapsed / 200;
-                for (let i = 0; i < 4; i++) {
-                    const ang = angleBase + i * Math.PI / 2;
-                    const sx2 = cx + Math.cos(ang) * radius;
-                    const sy2 = cy + Math.sin(ang) * radius;
-                    ctx.fillText('✨', Math.floor(sx2), Math.floor(sy2));
-                }
-                ctx.restore();
-            }
-        }
-
-        // Hitbox de interação (laranja/verde). Visível com `?hitboxes=1` na URL.
-        // Verde = atualmente intersecta algo interagível (slot do cocho, etc.)
-        if (getDebugFlag('hitboxes')) {
-            const ih = this.getInteractionHitbox();
-            const sp = camera.worldToScreen(ih.x, ih.y);
-            const zoom = camera.zoom || 1;
-            ctx.save();
-            ctx.lineWidth = 2;
-            if (this._interactionActive) {
-                ctx.strokeStyle = 'rgba(80, 220, 100, 0.95)';
-                ctx.fillStyle   = 'rgba(80, 220, 100, 0.30)';
-            } else {
-                ctx.strokeStyle = 'rgba(255, 140, 0, 0.95)';
-                ctx.fillStyle   = 'rgba(255, 140, 0, 0.18)';
-            }
-            ctx.fillRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
-            ctx.strokeRect(Math.round(sp.x), Math.round(sp.y), Math.round(ih.w * zoom), Math.round(ih.h * zoom));
-            ctx.restore();
-        }
-
-        // ─── Emote 💧 quando com sede (mas não bebendo ainda) ────────────
-        // Aparece acima do animal quando thirst está abaixo do threshold,
-        // dando feedback ao player sem abrir painel. Esconde durante
-        // DRINKING (a barra já comunica). Bobbing leve pra chamar atenção.
-        const isThirsty = (this.stats.thirst || 0) < this._drinkThreshold;
-        const showThirstEmote = isThirsty && this.state !== AnimalState.DRINKING;
-        if (showThirstEmote) {
-            const now = _now;
-            const bob = Math.sin(now / 280) * 2.5 * camera.zoom;
-            const isSeeking = this.state === AnimalState.SEEKING_WATER;
-            ctx.save();
-            ctx.font = `${Math.round(15 * camera.zoom)}px sans-serif`;
-            ctx.textAlign = 'center';
-            // Sombra discreta pro emote destacar de qualquer fundo.
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
-            ctx.shadowBlur = 4 * camera.zoom;
-            // Pulsa quando seeking (animal já está atrás de água — feedback "indo!"),
-            // mais quieto quando só está com sede sem agir.
-            ctx.globalAlpha = isSeeking ? (0.65 + 0.35 * Math.abs(Math.sin(now / 220))) : 0.85;
-            ctx.fillText(
-                '💧',
-                Math.floor(screenPos.x + zoomedWidth / 2),
-                Math.floor(screenPos.y - 30 * camera.zoom + bob)
-            );
-            ctx.restore();
-        }
-
-        // ─── Barra de sede + FX visual durante DRINKING ────────────────
+        // ─── Barra de sede (DRINKING) / fome (EATING) ──────────────────
+        // Mesma barra, paletas diferentes. Ver _drawNeedBar + NEED_BAR_*.
         if (this.state === AnimalState.DRINKING) {
-            const now = _now;
-            const barW = Math.max(36, this.width * 0.75) * camera.zoom;
-            const barH = 6 * camera.zoom;
-            const radius = barH / 2;
-            const bx = Math.floor(screenPos.x + (zoomedWidth - barW) / 2);
-            const by = Math.floor(screenPos.y - 14 * camera.zoom);
-            const pct = Math.max(0, Math.min(1, (this.stats.thirst || 0) / 100));
-
-            // Quality mode: low = só barra básica (fill simples + outline).
-            // Medium/high = todos os FX (halo, gradient, shine, bolhas, shadow).
-            const heavyFX = qualityMode.enableHeavyFX;
-
-            ctx.save();
-
-            // Halo radial sob o animal (HEAVY — radialGradient é caro).
-            if (heavyFX) {
-                const haloX = screenPos.x + zoomedWidth / 2;
-                const haloY = screenPos.y + zoomedHeight - 4 * camera.zoom;
-                const haloR = Math.max(zoomedWidth, zoomedHeight) * 0.45;
-                const halo = ctx.createRadialGradient(haloX, haloY, 0, haloX, haloY, haloR);
-                halo.addColorStop(0, 'rgba(120, 200, 255, 0.22)');
-                halo.addColorStop(1, 'rgba(120, 200, 255, 0)');
-                ctx.fillStyle = halo;
-                ctx.beginPath();
-                ctx.arc(haloX, haloY, haloR, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            // Ícone 💧 antes da barra (sempre — é só um texto).
-            const iconBounce = heavyFX ? Math.sin(now / 200) * 1.5 * camera.zoom : 0;
-            ctx.font = `${Math.round(11 * camera.zoom)}px sans-serif`;
-            ctx.textAlign = 'right';
-            ctx.textBaseline = 'middle';
-            if (heavyFX) {
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-                ctx.shadowBlur = 3 * camera.zoom;
-            }
-            ctx.fillStyle = '#cde9ff';
-            ctx.fillText('💧', bx - 3 * camera.zoom, by + barH / 2 + iconBounce);
-            ctx.shadowBlur = 0;
-
-            // Fundo da barra — gradient no high, cor sólida no low.
-            if (heavyFX) {
-                const bgGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
-                bgGrad.addColorStop(0, 'rgba(8, 20, 38, 0.85)');
-                bgGrad.addColorStop(1, 'rgba(4, 12, 24, 0.85)');
-                ctx.fillStyle = bgGrad;
-            } else {
-                ctx.fillStyle = 'rgba(6, 16, 30, 0.85)';
-            }
-            this._roundRect(ctx, bx, by, barW, barH, radius);
-            ctx.fill();
-
-            // Preenchimento — gradient + shadow + shine no high, fill simples no low.
-            const fillW = Math.max(0, Math.round(barW * pct));
-            if (fillW > 1) {
-                if (heavyFX) {
-                    const pulse = 0.85 + 0.15 * Math.sin(now / 180);
-                    const fillGrad = ctx.createLinearGradient(bx, by, bx, by + barH);
-                    fillGrad.addColorStop(0, '#9be3ff');
-                    fillGrad.addColorStop(0.5, '#5bbcff');
-                    fillGrad.addColorStop(1, '#2d7ec8');
-                    ctx.fillStyle = fillGrad;
-                    ctx.shadowColor = `rgba(123, 200, 255, ${0.55 * pulse})`;
-                    ctx.shadowBlur = 8 * camera.zoom;
-                    this._roundRect(ctx, bx, by, fillW, barH, radius);
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-
-                    // Shine animado atravessando a barra.
-                    const shineX = bx + ((now / 12) % (barW + 20)) - 10;
-                    if (shineX > bx && shineX < bx + fillW - 4) {
-                        const shineGrad = ctx.createLinearGradient(shineX - 6, 0, shineX + 6, 0);
-                        shineGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-                        shineGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.55)');
-                        shineGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-                        ctx.fillStyle = shineGrad;
-                        ctx.fillRect(shineX - 6, by + 1, 12, barH - 2);
-                    }
-                } else {
-                    // Low: fill chapado cyan.
-                    ctx.fillStyle = '#5bbcff';
-                    this._roundRect(ctx, bx, by, fillW, barH, radius);
-                    ctx.fill();
-                }
-            }
-
-            // Contorno (sempre — barato).
-            ctx.strokeStyle = heavyFX ? 'rgba(255, 230, 180, 0.7)' : 'rgba(255, 230, 180, 0.4)';
-            ctx.lineWidth = Math.max(1, camera.zoom);
-            this._roundRect(ctx, bx, by, barW, barH, radius);
-            ctx.stroke();
-
-            // Bolhas subindo (HEAVY — 3 arcs por frame).
-            if (heavyFX && fillW > 6) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-                for (let i = 0; i < 3; i++) {
-                    const phase = (now / 600 + i * 0.33) % 1;
-                    const bbX = bx + 4 * camera.zoom + (i * (fillW - 10) / 3);
-                    const bbY = by + barH - phase * (barH - 2);
-                    if (bbX < bx + fillW - 2) {
-                        ctx.beginPath();
-                        ctx.arc(bbX, bbY, 1 * camera.zoom, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-            }
-
-            ctx.restore();
+            this._drawNeedBar(ctx, camera, screenPos, zoomedWidth, zoomedHeight,
+                _now, NEED_BAR_THIRST, (this.stats.thirst || 0) / 100);
+        } else if (this.state === AnimalState.EATING) {
+            this._drawNeedBar(ctx, camera, screenPos, zoomedWidth, zoomedHeight,
+                _now, NEED_BAR_HUNGER, (this.stats.hunger || 0) / 100);
         }
 
-        // FX flutuante de coleta (sucesso/falha). Texto sobe e desaparece
-        // em ~1.5s. Stroke branco pra legibilidade sobre qualquer fundo.
-        if (this._collectFx) {
-            const fx = this._collectFx;
-            const elapsed = _now - fx.startedAt;
-            const duration = fx.duration || 1500;
-            if (elapsed >= duration) {
-                this._collectFx = null;
-            } else {
-                const t = elapsed / duration;
-                const alpha = 1 - t;
-                const yOffset = -34 - (t * 18);  // sobe 18px no fim
-                ctx.save();
-                ctx.globalAlpha = alpha;
-                ctx.font = `bold ${Math.round(12 * camera.zoom)}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.lineWidth = 3 * camera.zoom;
-                ctx.strokeStyle = '#fff';
-                ctx.fillStyle = fx.success ? '#1f8b3a' : '#b73030';
-                const tx = Math.floor(screenPos.x + zoomedWidth / 2);
-                const ty = Math.floor(screenPos.y + yOffset * camera.zoom);
-                ctx.strokeText(fx.text, tx, ty);
-                ctx.fillText(fx.text, tx, ty);
-                ctx.restore();
-            }
-        }
+        // FX flutuante de coleta (sucesso/falha).
+        this._drawCollectFx(ctx, camera, screenPos, zoomedWidth, _now);
     }
 
     serialize() {
