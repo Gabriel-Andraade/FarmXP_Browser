@@ -505,9 +505,14 @@ class SaveSystem {
 
             // Run migrations on old saves
             if (slot.data) {
+                const beforeVersion = slot.data._dataVersion || 1;
                 slot.data = migrateSaveData(slot.data);
-                // Persist migrated data so we don't re-migrate next time
-                this._writeRoot(root);
+                // Persist only when a migration actually bumped the data version.
+                // Otherwise loadSlot() rewrote localStorage on every load even
+                // though nothing changed (#183).
+                if ((slot.data._dataVersion || 1) !== beforeVersion) {
+                    this._writeRoot(root);
+                }
             }
 
             // Selecionar como ativo
