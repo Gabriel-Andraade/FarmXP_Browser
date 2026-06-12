@@ -20,7 +20,9 @@
 (function () {
   if (!('serviceWorker' in navigator)) return;
 
-  var host = location.hostname;
+  // location.hostname returns "[::1]" (with brackets) for IPv6 loopback;
+  // strip them so the "::1" check below matches.
+  var host = location.hostname.replace(/^\[|\]$/g, '');
   var isDev =
     host === 'localhost' ||
     host === '127.0.0.1' ||
@@ -53,11 +55,17 @@
         );
       }
 
+      // Read the guard defensively — sessionStorage can throw SecurityError in
+      // sandboxed/storage-restricted contexts, which would abort this handler
+      // before the one-time reload runs.
+      var alreadyReloaded = false;
+      try { alreadyReloaded = !!sessionStorage.getItem('sw-dev-reloaded'); } catch (e) {}
+
       if (!wasControlled) {
         // Carga já veio limpa — libera o guard pra uma futura limpeza na mesma
         // sessão poder recarregar de novo se preciso.
         try { sessionStorage.removeItem('sw-dev-reloaded'); } catch (e) {}
-      } else if (!sessionStorage.getItem('sw-dev-reloaded')) {
+      } else if (!alreadyReloaded) {
         // Estava controlada por SW velho: espera a limpeza terminar e recarrega
         // UMA vez. Guard de sessão evita loop de reload.
         Promise.all(cleanup).then(function () {

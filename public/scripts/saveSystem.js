@@ -225,23 +225,31 @@ class SaveSystem {
         this.autoSaveInterval = null;
         this.isDirty = false;
         this._cachedRoot = null; // Cache para otimização
+        this._lastExitSaveAt = 0; // dedupe for the exit-save pair (#178)
 
         // Registrar no gameState
         registerSystem('save', this);
 
-        // Salvar antes de fechar a página
+        // Salvar antes de fechar a página. Tanto `visibilitychange->hidden`
+        // quanto `beforeunload` disparam ao fechar a aba (com ms de diferença);
+        // sem dedupe isso fazia DOIS _gatherGameData() completos (exporta o
+        // mundo inteiro) de uma vez (#178). Esta janela curta colapsa o par,
+        // mas ainda salva normalmente num hide/close genuíno mais tarde.
             if (typeof window !== 'undefined') {
-                window.addEventListener('beforeunload', () => {
-                if (this.activeSlot !== null) {
-                    this.saveActive('beforeunload');
-                }
-            });
+                const EXIT_SAVE_DEBOUNCE_MS = 2000;
+                const saveOnExit = (reason) => {
+                    if (this.activeSlot === null) return;
+                    const now = Date.now();
+                    if (now - this._lastExitSaveAt < EXIT_SAVE_DEBOUNCE_MS) return;
+                    this._lastExitSaveAt = now;
+                    this.saveActive(reason);
+                };
 
-            document.addEventListener('visibilitychange', () => {
-                if (document.visibilityState === 'hidden' && this.activeSlot !== null) {
-                    this.saveActive('visibilitychange');
-                }
-            });
+                window.addEventListener('beforeunload', () => saveOnExit('beforeunload'));
+
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') saveOnExit('visibilitychange');
+                });
 
              window.addEventListener('storage', (e) => {
                 if (e.key === ROOT_KEY || e.key === null) {
@@ -497,9 +505,14 @@ class SaveSystem {
 
             // Run migrations on old saves
             if (slot.data) {
+                const beforeVersion = slot.data._dataVersion || 1;
                 slot.data = migrateSaveData(slot.data);
-                // Persist migrated data so we don't re-migrate next time
-                this._writeRoot(root);
+                // Persist only when a migration actually bumped the data version.
+                // Otherwise loadSlot() rewrote localStorage on every load even
+                // though nothing changed (#183).
+                if ((slot.data._dataVersion || 1) !== beforeVersion) {
+                    this._writeRoot(root);
+                }
             }
 
             // Selecionar como ativo

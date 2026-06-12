@@ -9,6 +9,7 @@ import { getItem } from "./itemUtils.js";
 import { t } from './i18n/i18n.js';
 import { registerSystem, getSystem } from './gameState.js';
 import { sanitizeQuantity, isValidPositiveInteger, isValidItemId } from './validation.js';
+import { logger } from './logger.js';
 
 /**
  * Obtém nome traduzido do item pelo ID
@@ -243,14 +244,14 @@ export class StorageSystem {
     }
 
     if (typeof rawQuantity !== "number" || !Number.isFinite(rawQuantity)) {
-      console.warn("[Storage] Invalid quantity:", rawQuantity);
+      logger.warn("[Storage] Invalid quantity:", rawQuantity);
       return false;
     }
 
     const qty = sanitizeQuantity(rawQuantity, 1, 9999);
 
     if (!isValidItemId(itemId)) {
-      console.warn("[Storage] Item ID inválido:", itemId);
+      logger.warn("[Storage] Item ID inválido:", itemId);
       return false;
     }
 
@@ -338,14 +339,14 @@ export class StorageSystem {
     if (!inventory) return false;
 
     if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
-      console.warn("[Storage] Invalid quantity:", quantity);
+      logger.warn("[Storage] Invalid quantity:", quantity);
       return false;
     }
 
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
     if (!isValidItemId(itemId)) {
-      console.warn("[Storage] Item ID inválido:", itemId);
+      logger.warn("[Storage] Item ID inválido:", itemId);
       return false;
     }
 
@@ -379,14 +380,14 @@ export class StorageSystem {
    */
   addItem(itemId, quantity = 1) {
     if (typeof quantity !== "number" || !Number.isFinite(quantity)) {
-      console.warn("[Storage] Invalid quantity:", quantity);
+      logger.warn("[Storage] Invalid quantity:", quantity);
       return false;
     }
 
     const qty = sanitizeQuantity(quantity, 1, 9999);
 
     if (!isValidItemId(itemId)) {
-      console.warn("[Storage] Item ID inválido:", itemId);
+      logger.warn("[Storage] Item ID inválido:", itemId);
       return false;
     }
 
@@ -434,14 +435,14 @@ export class StorageSystem {
     }
 
     if (typeof rawQty !== "number" || !Number.isFinite(rawQty)) {
-      console.warn("[Storage] Invalid quantity:", rawQty);
+      logger.warn("[Storage] Invalid quantity:", rawQty);
       return false;
     }
 
     const qty = sanitizeQuantity(rawQty, 1, 9999);
 
     if (!isValidItemId(id)) {
-      console.warn("[Storage] Item ID inválido:", id);
+      logger.warn("[Storage] Item ID inválido:", id);
       return false;
     }
 

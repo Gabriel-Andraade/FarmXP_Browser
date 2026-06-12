@@ -811,15 +811,15 @@ async function exposeGlobals() {
                 const wtSys = getSystem('waterTrough');
                 const world = getObject('world');
                 if (!wtSys || !world) {
-                    console.warn('Sistema não pronto: waterTrough ou world ausente.');
+                    logger.warn('Sistema não pronto: waterTrough ou world ausente.');
                     return;
                 }
                 const troughs = wtSys.getWaterTroughs();
                 const animals = world.animals || [];
                 console.group('🥤 Diagnóstico de Bebida');
-                console.log(`Cochos: ${troughs.length}  Animais: ${animals.length}`);
+                logger.info(`Cochos: ${troughs.length}  Animais: ${animals.length}`);
                 troughs.forEach((t, i) => {
-                    console.log(`  Cocho ${i}: id=${t.id} variant=${t.variant} water=${t.waterLevel ?? 0}/100 pos=(${Math.round(t.x)},${Math.round(t.y)})`);
+                    logger.info(`  Cocho ${i}: id=${t.id} variant=${t.variant} water=${t.waterLevel ?? 0}/100 pos=(${Math.round(t.x)},${Math.round(t.y)})`);
                 });
                 animals.forEach(a => {
                     let reason;
@@ -833,7 +833,7 @@ async function exposeGlobals() {
                           ? `PRONTO — iria pro slot ${found.slotIdx} do cocho ${found.trough.id}`
                           : 'NENHUM cocho com água + slot livre no cercado';
                     }
-                    console.log(`  ${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} → ${reason}`);
+                    logger.info(`  ${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} → ${reason}`);
                 });
                 console.groupEnd();
             };
@@ -844,7 +844,7 @@ async function exposeGlobals() {
                 const world = getObject('world');
                 const animals = world?.animals || [];
                 animals.forEach(a => { a.stats.thirst = 3; a._drinkCooldownUntil = 0; });
-                console.log(`✓ ${animals.length} animais com thirst=3, cooldown zerado`);
+                logger.info(`✓ ${animals.length} animais com thirst=3, cooldown zerado`);
             };
 
             // fillAllTroughs(): enche todos os cochos sem precisar do balde.
@@ -852,7 +852,7 @@ async function exposeGlobals() {
                 const wtSys = getSystem('waterTrough');
                 const troughs = wtSys?.getWaterTroughs?.() || [];
                 troughs.forEach(t => { t.waterLevel = 100; });
-                console.log(`✓ ${troughs.length} cochos enchidos até 100`);
+                logger.info(`✓ ${troughs.length} cochos enchidos até 100`);
             };
         }
 
