@@ -6,7 +6,7 @@
  */
 
 import { collisionSystem } from './collisionSystem.js';
-import { getObject, registerSystem } from './gameState.js';
+import { getObject, registerSystem, getDebugFlag } from './gameState.js';
 import { camera } from './thePlayer/cameraSystem.js';
 import { logger } from './logger.js';
 
@@ -180,7 +180,11 @@ export class CityHouseSystem {
 
         this.isInitialized = true;
         this.setupProximityCheck();
-        if (typeof window !== 'undefined' && window.__FARMXP_DEBUG_HITBOXES) {
+        // Central debug flag (?hitboxes=1 / getDebugFlag('hitboxes')) — same one
+        // the rest of the project uses, so city-house hitboxes show in the debug
+        // overlay with everything else. The old window.__FARMXP_DEBUG_HITBOXES
+        // was never set anywhere (#177).
+        if (getDebugFlag('hitboxes')) {
             this.startHotReload();
         }
         logger.info('[CityHouseSystem] Hitboxes das casas registradas');

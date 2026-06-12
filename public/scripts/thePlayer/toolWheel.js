@@ -81,7 +81,7 @@ function _refreshEntries() {
   for (const slot of toolSlots) {
     const item = getItem(slot.id);
     if (!item || item.type !== 'tool') continue;
-    tools.push({ id: slot.id, item, quantity: slot.quantity || slot.qty || 1 });
+    tools.push({ id: slot.id, item, quantity: slot.quantity || 1 });
   }
 
   // Primeiro slot sempre é "desequipar"

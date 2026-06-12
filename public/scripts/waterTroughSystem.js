@@ -16,6 +16,7 @@ import { registerSystem, getSystem, getDebugFlag } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
+import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
 const WATER_TROUGH_CONFIG = {
   ITEM_ID_IN_HAND: 103,
@@ -65,18 +66,9 @@ const DRINK_SLOTS = {
 // Estado de hover atualizado pelo mousemove em control.js.
 let _hoveredId = null;
 
-// Ocupação de slots: Map<troughId, Array<animalId|null>> com 3 entradas.
-// Garante que no máximo 3 animais bebem por cocho, 1 por compartimento.
-const _slotOccupancy = new Map();
-
-function _occupancyFor(troughId) {
-  let arr = _slotOccupancy.get(troughId);
-  if (!arr) {
-    arr = [null, null, null];
-    _slotOccupancy.set(troughId, arr);
-  }
-  return arr;
-}
+// Ocupação de slots (Map<troughId, [animalId|null × 3]>). Registry próprio —
+// água é separada da comida. Garante no máx. 3 animais por cocho. troughSlots.js.
+const _slots = createSlotRegistry();
 
 function findTrough(id) {
   if (!id || !Array.isArray(placedBuildings)) return null;
@@ -363,12 +355,12 @@ export const waterTroughSystem = {
 
   /**
    * Procura um slot livre num cocho específico. Retorna o índice (0..2)
-   * ou -1 se todos ocupados. "Livre" = entrada do _slotOccupancy é null,
+   * ou -1 se todos ocupados. "Livre" = entrada de ocupação é null,
    * é o próprio animalId, ou cleanup oportunístico detectou um claim órfão
    * (animal sumiu, ou animal abandonou o estado de bebida sem liberar).
    */
   findFreeSlotIn(troughId, animalId) {
-    const occ = _occupancyFor(troughId);
+    const occ = _slots.occupancyFor(troughId);
     for (let i = 0; i < occ.length; i++) {
       if (occ[i] == null || occ[i] === animalId) return i;
       // Stale check (1): dono não existe mais no mundo.
@@ -456,93 +448,29 @@ export const waterTroughSystem = {
    */
   getDrinkPosition(trough, slot, animal) {
     const isHorizontal = (trough.variant || 'waterTroughX') === 'waterTroughX';
-    const GAP = 2;
-    const slotCx = slot.x + slot.w / 2;
-    const slotCy = slot.y + slot.h / 2;
-
-    // Usa COLLISION BOX (corpo real) pra posicionar — não o sprite todo.
-    // Bull tem sprite 48 mas corpo ~14×14 com offsetY ~24. Se usássemos
-    // o sprite, o animal ficaria 12+px longe do cocho (sprite encosta,
-    // corpo fica longe). Com a collision box, o corpo encosta no cocho.
-    const cb = animal?.collisionBox || { offsetX: 0, offsetY: 0, width: animal?.width || 32, height: animal?.height || 32 };
-    const cbX = cb.offsetX || 0;
-    const cbY = cb.offsetY || 0;
-    const cbW = cb.width  || animal?.width  || 32;
-    const cbH = cb.height || animal?.height || 32;
-
-    if (isHorizontal) {
-      const fromAbove = (animal?.y ?? 0) < slotCy;
-      // Animal.x tal que centro da collision box bate no centro do slot.
-      // Animal.y tal que bottom (ou top) da collision box encosta no cocho.
-      return {
-        x: slotCx - cbX - cbW / 2,
-        y: fromAbove
-            ? (trough.y - GAP - cbY - cbH)
-            : (trough.y + trough.height + GAP - cbY),
-        facing: fromAbove ? 'down' : 'up',
-      };
-    }
-    const fromLeft = (animal?.x ?? 0) < slotCx;
-    return {
-      x: fromLeft
-          ? (trough.x - GAP - cbX - cbW)
-          : (trough.x + trough.width + GAP - cbX),
-      y: slotCy - cbY - cbH / 2,
-      facing: fromLeft ? 'right' : 'left',
-    };
+    return troughStandPosition(trough, slot, animal, isHorizontal);
   },
 
-  /**
-   * Reserva o slot pro animal. Retorna true se claim foi bem-sucedido.
-   * Falha se o slot já tem outro dono. Idempotente: re-claim pelo mesmo
-   * animal é no-op com sucesso.
-   */
+  // Slot reservation — delegated to the shared registry (see troughSlots.js).
   claimSlot(troughId, slotIdx, animalId) {
-    if (slotIdx < 0 || slotIdx > 2) return false;
-    const occ = _occupancyFor(troughId);
-    if (occ[slotIdx] != null && occ[slotIdx] !== animalId) return false;
-    occ[slotIdx] = animalId;
-    return true;
+    return _slots.claimSlot(troughId, slotIdx, animalId);
   },
-
-  /**
-   * Libera o slot SE o dono atual for o animal especificado. Caso o
-   * slot já esteja com outro (ex: cleanup orfão), não toca.
-   */
   releaseSlot(troughId, slotIdx, animalId) {
-    if (slotIdx < 0 || slotIdx > 2) return;
-    const occ = _slotOccupancy.get(troughId);
-    if (!occ) return;
-    if (occ[slotIdx] === animalId) occ[slotIdx] = null;
+    _slots.releaseSlot(troughId, slotIdx, animalId);
   },
-
-  /** Libera TODOS os slots ocupados por esse animal. Pra cleanup quando
-   *  animal morre/sai do estado de drinking sem chamar release explícito. */
   releaseAllSlotsFor(animalId) {
-    for (const [, occ] of _slotOccupancy) {
-      for (let i = 0; i < occ.length; i++) {
-        if (occ[i] === animalId) occ[i] = null;
-      }
-    }
+    _slots.releaseAllSlotsFor(animalId);
   },
 
   /**
-   * Retorna os slots de bebida do cocho em coords de mundo (já aplicado
-   * o ratio sobre x/y/width/height do cocho). Cada slot:
-   *   { idx, x, y, w, h }
+   * Retorna os slots de bebida do cocho em coords de mundo (ratio aplicado
+   * sobre x/y/width/height). Cada slot: { idx, x, y, w, h }.
    */
   getDrinkSlots(troughOrId) {
     const wt = (typeof troughOrId === 'string') ? findTrough(troughOrId) : troughOrId;
     if (!wt) return [];
     const variant = wt.variant || 'waterTroughX';
-    const slots = DRINK_SLOTS[variant] || [];
-    return slots.map((s, idx) => ({
-      idx,
-      x: wt.x + wt.width * s.offsetX,
-      y: wt.y + wt.height * s.offsetY,
-      w: wt.width * s.w,
-      h: wt.height * s.h,
-    }));
+    return slotWorldRects(wt, DRINK_SLOTS[variant] || []);
   },
 
   /**
@@ -562,7 +490,7 @@ export const waterTroughSystem = {
 
     for (const wt of this.getWaterTroughs()) {
       const slots = this.getDrinkSlots(wt);
-      const occ = _slotOccupancy.get(wt.id) || [];
+      const occ = _slots.occupancy.get(wt.id) || [];
       for (const s of slots) {
         const screen = camera.worldToScreen(s.x, s.y);
         const sx = Math.round(screen.x);

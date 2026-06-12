@@ -229,7 +229,7 @@ export function placeWell(a, b, c) {
   }
 
   if (!wellObject) {
-    const wid = id || `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const wid = id || `well_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     wellObject = {
       id: wid,
       x,
@@ -289,7 +289,7 @@ export function addAnimal(assetName, img, x, y, opts = {}) {
   const animal = new AnimalEntity(assetName, img, x, y, opts);
 
   if (!animal.id) {
-    animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    animal.id = `animal_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   animals.push(animal);
@@ -426,7 +426,7 @@ function _ySortCompare(a, b) {
 // Wrap static objects into the sorted-cache representation. Pulled out so
 // rebuildStaticCache stays readable.
 function _wrapTree(t) {
-  if (!t.id) t.id = `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!t.id) t.id = `tree_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(t, (x) => ({
     id: x.id, type: "TREE", originalType: "tree",
     x: x.x || 0, y: x.y || 0,
@@ -436,7 +436,7 @@ function _wrapTree(t) {
   }));
 }
 function _wrapRock(r) {
-  if (!r.id) r.id = `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!r.id) r.id = `rock_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(r, (x) => ({
     id: x.id, type: "ROCK", originalType: "rock",
     x: x.x || 0, y: x.y || 0,
@@ -446,7 +446,7 @@ function _wrapRock(r) {
   }));
 }
 function _wrapThicket(th) {
-  if (!th.id) th.id = `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!th.id) th.id = `thicket_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(th, (x) => ({
     id: x.id, type: "THICKET", originalType: "thicket",
     x: x.x || 0, y: x.y || 0,
@@ -473,7 +473,7 @@ function _wrapWell(w) {
   }));
 }
 function _wrapHouse(h) {
-  if (!h.id) h.id = `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!h.id) h.id = `house_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(h, (x) => ({
     id: x.id, type: x.type, originalType: "house",
     x: x.x || 0, y: x.y || 0,
@@ -494,7 +494,7 @@ function _wrapTomb(tb, tombSys) {
   }));
 }
 function _wrapAnimal(a) {
-  if (!a.id) a.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!a.id) a.id = `animal_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(a, (x) => ({
     type: "ANIMAL", id: x.id,
     x: x.x || 0, y: x.y || 0,
@@ -712,7 +712,7 @@ export function registerWorldObjects() {
  * @returns {string} Unique identifier string
  */
 function generateId() {
-  return "obj_" + Math.random().toString(36).substr(2, 9);
+  return "obj_" + Math.random().toString(36).slice(2, 11);
 }
 
 /**
