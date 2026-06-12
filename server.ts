@@ -434,9 +434,9 @@ serve({
     // edições em dev só apareciam com hard-refresh manual. Em prod (host
     // externo) o cache longo continua valendo, com o Service Worker cuidando
     // do versionamento via BUILD_HASH.
-    // url.hostname returns "[::1]" (bracketed) for IPv6 loopback; strip the
-    // brackets so the "::1" check matches.
-    const reqHost = url.hostname.replace(/^\[|\]$/g, "");
+    // Lowercase: HTTP hostnames are case-insensitive (RFC 2616), so a client
+    // sending `Host: LocalHost` must still be treated as a dev host.
+    const reqHost = url.hostname.toLowerCase();
     const isDevHost =
       reqHost === "localhost" ||
       reqHost === "127.0.0.1" ||
