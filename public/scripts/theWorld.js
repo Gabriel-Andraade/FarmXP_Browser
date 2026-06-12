@@ -1407,23 +1407,39 @@ function drawThicketFallback(ctx, x, y, width, height) {
   ctx.fill();
 }
 
-/* função global útil para adicionar objetos dinâmicos */
-window.addWorldObject = function(objectData) {
-  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+/**
+ * Derives the collision-system hitbox type for a placed building from its
+ * originalType/type. Single source of truth shared by addWorldObject (live
+ * placement) and importWorldState (save load) so a saved placeable comes back
+ * with the SAME hitbox profile it had before saving — otherwise a food trough
+ * stored as {type:'construction', originalType:'foodtrough'} would reload as a
+ * generic CONSTRUCTION box (wrong size, lost interaction zone).
+ * @param {Object} objectData - has originalType and/or type.
+ * @returns {string} Uppercase collision type understood by collisionSystem.
+ */
+function getPlacedBuildingCollisionType(objectData) {
   let collisionType = (objectData.originalType || objectData.type || "construction").toString().toUpperCase();
 
-  if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
-  else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
-  else if (collisionType === "WATERTROUGHX" || collisionType.toLowerCase() === "watertroughx") collisionType = "WATERTROUGHX";
-  else if (collisionType === "WATERTROUGHY" || collisionType.toLowerCase() === "watertroughy") collisionType = "WATERTROUGHY";
-  else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
-  else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
-  else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
+  if (collisionType === "CHEST") collisionType = "CHEST";
+  else if (collisionType === "WELL") collisionType = "WELL";
+  else if (collisionType === "WATERTROUGHX") collisionType = "WATERTROUGHX";
+  else if (collisionType === "WATERTROUGHY") collisionType = "WATERTROUGHY";
+  else if (collisionType === "FENCEX") collisionType = "FENCEX";
+  else if (collisionType === "FENCEY") collisionType = "FENCEY";
+  else if (collisionType === "FENCE") collisionType = "FENCE";
   // Issue #171: food troughs use generic FOODTROUGH for collision. Variant
   // and species live on the object itself, not in the collision label.
   else if (collisionType === "FOODTROUGH" || collisionType === "FOODTROUGHX" || collisionType === "FOODTROUGHY") collisionType = "FOODTROUGH";
   else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
   else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "FOODTROUGH", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+
+  return collisionType;
+}
+
+/* função global útil para adicionar objetos dinâmicos */
+window.addWorldObject = function(objectData) {
+  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const collisionType = getPlacedBuildingCollisionType(objectData);
 
   const building = {
     // Preserve ANY custom fields from objectData (species, targetAnimals,
@@ -1598,6 +1614,61 @@ export function exportWorldState() {
 }
 
 /**
+ * Registers physical collision hitboxes for the static world objects currently
+ * in the world arrays. `registerWorldObjects()` only feeds the item interaction
+ * registry — it does NOT add collision boxes — so a loaded save needs this or
+ * its solid objects (trees, houses, buildings…) would be passable.
+ * Mirrors mapManager.restoreFarmState so the load and map-return paths match.
+ */
+function registerStaticWorldHitboxes() {
+  const add = (id, type, x, y, width, height, ctx) => {
+    try {
+      collisionSystem.addHitbox(id, type, x, y, width, height);
+    } catch (e) {
+      handleWarn("Failed to add static hitbox", ctx, { id, type, err: e });
+    }
+  };
+
+  for (const tree of trees) add(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height, "theWorld:importWorldState:treeHitbox");
+  for (const rock of rocks) add(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height, "theWorld:importWorldState:rockHitbox");
+  for (const thicket of thickets) add(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height, "theWorld:importWorldState:thicketHitbox");
+
+  for (const house of houses) {
+    // HOUSE_ROOF is the box that actually blocks the player (offset wall).
+    // Register both so the house is solid after a save load, matching
+    // mapManager.restoreFarmState.
+    if (house.type === "HOUSE_WALLS" || house.type === "HOUSE_ROOF") {
+      add(house.id, house.type, house.x, house.y, house.width, house.height, "theWorld:importWorldState:houseHitbox");
+    }
+  }
+
+  for (const b of placedBuildings) add(b.id, getPlacedBuildingCollisionType(b), b.x, b.y, b.width, b.height, "theWorld:importWorldState:buildingHitbox");
+  for (const w of placedWells) add(w.id, "WELL", w.x, w.y, w.width, w.height, "theWorld:importWorldState:wellHitbox");
+}
+
+/**
+ * Re-registers NPC, Milly, house-door and pickup-truck hitboxes after a save
+ * load. `collisionSystem.clear()` wipes these along with the world hitboxes, so
+ * without this NPCs and the house become non-interactive post-load. Mirrors the
+ * farm branch of mapManager.performTransition (npcSystem.js:189, houseSystem,
+ * npcMilly, questSystem). House-door lookup depends on HOUSE_WALLS already being
+ * registered — call this AFTER registerStaticWorldHitboxes().
+ */
+function reregisterFarmEntityHitboxes() {
+  const npcSys = getSystem('npc');
+  if (npcSys?.registerHitboxesForMap) npcSys.registerHitboxesForMap('farm');
+
+  const milly = getSystem('npcMilly');
+  if (milly?.reregisterHitbox) milly.reregisterHitbox();
+
+  const house = getSystem('house');
+  if (house?.reregisterDoorHitbox) house.reregisterDoorHitbox();
+
+  const quests = getSystem('quests');
+  if (quests?.registerPickupHitbox) quests.registerPickupHitbox(true);
+}
+
+/**
  * Imports world state from saved data (save system)
  * Clears all existing world objects and restores from serialized data
  * @param {Object} data - Serialized world state from exportWorldState()
@@ -1606,6 +1677,13 @@ export function importWorldState(data) {
   const payload = (data && typeof data === 'object' && data.world && typeof data.world === 'object') ? data.world : data;
   try {
     if (!payload || typeof payload !== "object") return;
+
+    // Clear ALL collision hitboxes from the previous world before rebuilding.
+    // Without this, the prior save's boxes leak into the loaded farm: invisible
+    // collisions where old objects stood and ghost hitboxes for removed animals
+    // (issue #181). clear() also wipes NPC/house-door/pickup hitboxes — those
+    // are re-registered below via reregisterFarmEntityHitboxes().
+    collisionSystem.clear();
 
     // Reset existing data
     trees.length = 0;
@@ -1635,6 +1713,10 @@ export function importWorldState(data) {
     if (Array.isArray(payload.placedWells)) {
       placedWells.push(...payload.placedWells.map(o => ({ ...o, id: o.id || generateId() })));
     }
+
+    // Rebuild static collision hitboxes for the freshly loaded world.
+    registerStaticWorldHitboxes();
+
     if (Array.isArray(payload.animals)) {
       for (const o of payload.animals) {
         const assetData = assets.animals && assets.animals[o.assetName];
@@ -1698,6 +1780,10 @@ export function importWorldState(data) {
     if (tomb?.restoreState) {
       tomb.restoreState(payload.animalTombs ?? []);
     }
+
+    // Re-register entity hitboxes wiped by collisionSystem.clear() so NPCs and
+    // the house stay interactive after the load.
+    reregisterFarmEntityHitboxes();
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
   }

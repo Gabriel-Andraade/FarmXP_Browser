@@ -399,6 +399,79 @@
     }
 }
 
+/* ===== DIÁLOGO (prompt/confirm in-DOM) ===== */
+.save-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--save-bg-overlay);
+    backdrop-filter: blur(4px);
+    z-index: 10002; /* acima do modal (10000) e do toast (10001) */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.save-dialog {
+    width: 90%;
+    max-width: 420px;
+    background: var(--save-bg-modal);
+    border: 3px solid var(--save-border-gold);
+    border-radius: var(--save-radius);
+    box-shadow: var(--save-shadow), 0 0 60px rgba(201, 164, 99, 0.15);
+    padding: 24px;
+    animation: modalSlideIn 0.25s ease;
+}
+
+.save-dialog-message {
+    margin: 0 0 16px;
+    color: var(--save-text-light);
+    font-size: 1rem;
+    line-height: 1.4;
+    white-space: pre-line; /* renderiza \n das mensagens de confirmação */
+}
+
+.save-dialog-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 2px solid var(--save-border-brown);
+    border-radius: var(--save-radius-sm);
+    color: var(--save-text-light);
+    font-size: 0.95rem;
+}
+
+.save-dialog-input:focus {
+    outline: none;
+    border-color: var(--save-border-gold);
+}
+
+.save-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.save-dialog-ok {
+    background: var(--save-accent-primary);
+    border-color: #a88942;
+    justify-content: center;
+}
+
+.save-dialog-ok:hover {
+    background: linear-gradient(135deg, #d9b46f, #c9a463);
+}
+
+.save-dialog-danger {
+    background: var(--save-accent-danger);
+    border-color: #e74c3c;
+}
+
+.save-dialog-danger:hover {
+    background: linear-gradient(135deg, #ff6655, #e74c3c);
+}
+
 /* ===== RESPONSIVO ===== */
 @media (max-width: 768px) {
     .save-slots-grid {
