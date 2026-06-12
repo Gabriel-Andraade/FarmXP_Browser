@@ -6,6 +6,7 @@ import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { getSystem, getDebugFlag } from '../gameState.js';
 import { openToolWheel, closeToolWheel, isToolWheelOpen } from './toolWheel.js';
+import { logger } from '../logger.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -481,7 +482,7 @@ export class PlayerInteractionSystem {
                 if (enc) {
                     import('../animal/enclosureAnimalPanel.js').then(m => {
                         m.openEnclosureAnimalPanel(enc);
-                    }).catch(err => console.warn('Falha ao abrir painel de animais:', err));
+                    }).catch(err => logger.warn('Falha ao abrir painel de animais:', err));
                     return;
                 }
 
@@ -507,7 +508,7 @@ export class PlayerInteractionSystem {
             if (troughHit) {
                 import('../waterTroughPanel.js').then(m => {
                     m.openWaterTroughPanel(troughHit);
-                }).catch(err => console.warn('Falha ao abrir painel do cocho:', err));
+                }).catch(err => logger.warn('Falha ao abrir painel do cocho:', err));
                 return;
             }
 
@@ -517,7 +518,7 @@ export class PlayerInteractionSystem {
             if (foodHit) {
                 import('../foodTroughPanelSimple.js').then(m => {
                     m.openFoodTroughPanel(foodHit);
-                }).catch(err => console.warn('Falha ao abrir painel do cocho de ração:', err));
+                }).catch(err => logger.warn('Falha ao abrir painel do cocho de ração:', err));
                 return;
             }
 

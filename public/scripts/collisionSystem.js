@@ -12,7 +12,9 @@ class SpatialGrid {
         this.cells = new Map();
     }
 
-    _key(cx, cy) { return (cx << 16) | (cy & 0xFFFF); }
+    // String key avoids collisions the old bit-packing `(cx << 16) | (cy & 0xFFFF)`
+    // produced for large or negative cell coordinates (16-bit overflow/wrap).
+    _key(cx, cy) { return `${cx},${cy}`; }
 
     _getCells(x, y, w, h) {
         const cs = this.cellSize;

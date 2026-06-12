@@ -113,7 +113,7 @@ export function setGameFlag(flag, value) {
     gameState.flags[flag] = value;
   } else {
     // fix: Warn if unknown flag is attempted - detects missing flag definitions (L105-106)
-    console.warn(`⚠️ Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
+    logger.warn(`⚠️ Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
   }
 }
 
@@ -210,7 +210,7 @@ export function installLegacyGlobals() {
       get() {
         // fix: Warn on first use of deprecated window.* globals when debug is enabled (L187-189)
         if (getDebugFlag('debug') && !warnedSystemKeys.has(windowKey)) {
-          console.warn(`⚠️ Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
+          logger.warn(`⚠️ Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
           warnedSystemKeys.add(windowKey);
         }
         return gameState.systems[systemKey];
@@ -239,7 +239,7 @@ export function installLegacyGlobals() {
     Object.defineProperty(window, windowKey, {
       get() {
         if (getDebugFlag('debug') && !warnedObjectKeys.has(windowKey)) {
-          console.warn(`⚠️ Deprecated: use getObject('${objectKey}') instead of window.${windowKey}`);
+          logger.warn(`⚠️ Deprecated: use getObject('${objectKey}') instead of window.${windowKey}`);
           warnedObjectKeys.add(windowKey);
         }
         return gameState.objects[objectKey];
