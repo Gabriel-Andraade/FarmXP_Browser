@@ -20,7 +20,9 @@
 (function () {
   if (!('serviceWorker' in navigator)) return;
 
-  var host = location.hostname;
+  // location.hostname returns "[::1]" (with brackets) for IPv6 loopback;
+  // strip them so the "::1" check below matches.
+  var host = location.hostname.replace(/^\[|\]$/g, '');
   var isDev =
     host === 'localhost' ||
     host === '127.0.0.1' ||
@@ -31,14 +33,45 @@
 
   window.addEventListener('load', function () {
     if (isDev) {
+      // A página foi carregada SOB controle de um SW remanescente? (ex: sessão
+      // de teste de prod anterior). Se sim, os assets desta carga vieram do
+      // cache dele (stale-while-revalidate) — então mesmo após limpar tudo, a
+      // aba atual continua rodando código velho. Por isso, ao final da limpeza,
+      // forçamos UM reload pra próxima carga vir limpa da rede.
+      var wasControlled = !!navigator.serviceWorker.controller;
+
       // Limpa SW antigo + caches dele pra dev não ficar servindo lixo cacheado.
-      navigator.serviceWorker.getRegistrations().then(function (regs) {
-        for (var i = 0; i < regs.length; i++) regs[i].unregister();
-      }).catch(function () {});
+      var cleanup = [];
+      cleanup.push(
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          return Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }).catch(function () {})
+      );
       if (typeof caches !== 'undefined' && caches.keys) {
-        caches.keys().then(function (keys) {
-          for (var i = 0; i < keys.length; i++) caches.delete(keys[i]);
-        }).catch(function () {});
+        cleanup.push(
+          caches.keys().then(function (keys) {
+            return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+          }).catch(function () {})
+        );
+      }
+
+      // Read the guard defensively — sessionStorage can throw SecurityError in
+      // sandboxed/storage-restricted contexts, which would abort this handler
+      // before the one-time reload runs.
+      var alreadyReloaded = false;
+      try { alreadyReloaded = !!sessionStorage.getItem('sw-dev-reloaded'); } catch (e) {}
+
+      if (!wasControlled) {
+        // Carga já veio limpa — libera o guard pra uma futura limpeza na mesma
+        // sessão poder recarregar de novo se preciso.
+        try { sessionStorage.removeItem('sw-dev-reloaded'); } catch (e) {}
+      } else if (!alreadyReloaded) {
+        // Estava controlada por SW velho: espera a limpeza terminar e recarrega
+        // UMA vez. Guard de sessão evita loop de reload.
+        Promise.all(cleanup).then(function () {
+          try { sessionStorage.setItem('sw-dev-reloaded', '1'); } catch (e) {}
+          window.location.reload();
+        });
       }
       return;
     }
@@ -64,6 +97,26 @@
             newWorker.postMessage('SKIP_WAITING');
           }
         });
+      });
+
+      // Checa por deploy novo a cada 60s. Num jogo single-page (canvas, sem
+      // navegação) o browser NÃO dispara o update-check automático sozinho —
+      // ele só checa em navegação e, no máximo, a cada 24h. Sem este poll, um
+      // player numa sessão longa (ex: teste de horas via ngrok) só pegaria a
+      // atualização ao recarregar na mão. Com ele, `reg.update()` força a
+      // re-busca do sw.js; se o BUILD_HASH mudou (= server reiniciado com novo
+      // código), o fluxo updatefound→SKIP_WAITING→controllerchange recarrega a
+      // aba UMA vez na versão nova. Saves ficam no localStorage e persistem.
+      setInterval(function () {
+        reg.update().catch(function () {});
+      }, 60000);
+
+      // Também checa quando o jogador volta pra aba (retomou o teste depois de
+      // sair) — pega o update na hora em vez de esperar o próximo tick.
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+          reg.update().catch(function () {});
+        }
       });
     }).catch(function (err) {
       console.warn('[SW] register failed:', err);

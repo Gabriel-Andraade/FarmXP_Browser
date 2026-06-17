@@ -273,7 +273,7 @@ class MerchantSystem {
         document.addEventListener('click', (e) => {
             const hexagon = e.target.closest('.mch-hexagon-slot');
             if (hexagon && hexagon.dataset.itemId) {
-                const itemId = parseInt(hexagon.dataset.itemId);
+                const itemId = parseInt(hexagon.dataset.itemId, 10);
                 this.selectPlayerItem(itemId);
             }
         }, { signal });
@@ -281,7 +281,7 @@ class MerchantSystem {
         document.addEventListener('click', (e) => {
             const merchantHexagon = e.target.closest('.mch-merchant-hexagon');
             if (merchantHexagon && merchantHexagon.dataset.itemId) {
-                const itemId = parseInt(merchantHexagon.dataset.itemId);
+                const itemId = parseInt(merchantHexagon.dataset.itemId, 10);
                 this.selectMerchantItem(itemId);
             }
         }, { signal });

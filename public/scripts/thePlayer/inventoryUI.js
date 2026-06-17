@@ -1011,7 +1011,7 @@ function renderInventory() {
     const fullItem = getItem(slot.id);
     if (!fullItem) return;
 
-    const itemQuantity = slot.quantity || slot.qty || 1;
+    const itemQuantity = slot.quantity || 1;
     const isEquipped = equippedId === slot.id;
     const slotEl = document.createElement('div');
     slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}${isEquipped ? ' inv-slot-equipped' : ''}`;

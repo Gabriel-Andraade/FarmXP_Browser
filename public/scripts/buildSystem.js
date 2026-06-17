@@ -612,7 +612,7 @@ export const BuildSystem = {
                 return;
             }
             if (typeof chestSystem.addChest === 'function') {
-                const newChestId = `chest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const newChestId = `chest_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
                 
                 const buildingData = {
                     id: newChestId,
@@ -656,7 +656,7 @@ export const BuildSystem = {
             }
             if ((availableWellSystem && typeof availableWellSystem.placeWell === 'function') || (window.theWorld && typeof window.theWorld.placeWell === 'function')) {
 
-                const wellId = `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                const wellId = `well_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
                 const wellBuildingData = {
                     id: wellId,
@@ -701,7 +701,7 @@ export const BuildSystem = {
         if (constructionType === 'watertrough') {
             if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
                 try {
-                    const waterTroughId = `watertrough_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const waterTroughId = `watertrough_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
                     const collisionType = (this.currentVariant === 'waterTroughY') ? 'WATERTROUGHY' : 'WATERTROUGHX';
                     
                     const waterTroughObj = {
@@ -742,7 +742,7 @@ export const BuildSystem = {
         if (constructionType === 'foodtrough') {
             if (window.theWorld && typeof window.theWorld.addWorldObject === 'function') {
                 try {
-                    const foodTroughId = `foodtrough_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const foodTroughId = `foodtrough_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
                     const variant = this.currentVariant || (this.selectedItem.variants?.[0]) || 'foodTroughcattleX';
                     const isY = variant.endsWith('Y');
                     const collisionType = isY ? 'FOODTROUGHY' : 'FOODTROUGHX';

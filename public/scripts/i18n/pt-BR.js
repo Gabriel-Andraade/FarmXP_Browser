@@ -1969,81 +1969,81 @@ export default {
     },
 
     couple: {
-  // Abertura
-  maryTease: "para bobo!!! hoje eu tô de folga",
-  noahReply: "ué e essa roupa de escritorio?",
-  maryCosplay: "é pro cosplay! já já chega a peruca.",
-  noahJeremyLook: "aaaha, e o outro ali já vai tarde trabalhar *olha para Jeremy*",
-  jeremyTaxi: "e tenho culpa que não chega o taxi?",
-  coupleYes: "sim",
-  jeremyMurmur: "*murmura*",
-  maryNotice: "*nota {name}* oi?",
-  greetMorning: "bom dia",
-  greetAfternoon: "boa tarde",
-  noahGreet: "opa! {greeting}!",
+      // Abertura
+      maryTease: "para bobo!!! hoje eu tô de folga",
+      noahReply: "ué e essa roupa de escritorio?",
+      maryCosplay: "é pro cosplay! já já chega a peruca.",
+      noahJeremyLook: "aaaha, e o outro ali já vai tarde trabalhar *olha para Jeremy*",
+      jeremyTaxi: "e tenho culpa que não chega o taxi?",
+      coupleYes: "sim",
+      jeremyMurmur: "*murmura*",
+      maryNotice: "*nota {name}* oi?",
+      greetMorning: "bom dia",
+      greetAfternoon: "boa tarde",
+      noahGreet: "opa! {greeting}!",
 
-  // Escolhas iniciais
-  choiceHello: "olá.",
-  choiceCosplay: "cosplay?",
-  choiceWave: "*acenar e sair*",
-  playerWave: "*acena e sai*",
+      // Escolhas iniciais
+      choiceHello: "olá.",
+      choiceCosplay: "cosplay?",
+      choiceWave: "*acenar e sair*",
+      playerWave: "*acena e sai*",
 
-  // Branch "olá"
-  coupleOpa: "opa!",
-  newHereF: "tudo bem contigo? Aparenta ser nova, como se chama?",
-  newHereM: "tudo bem contigo? Aparenta ser novo, como se chama?",
+      // Branch "olá"
+      coupleOpa: "opa!",
+      newHereF: "tudo bem contigo? Aparenta ser nova, como se chama?",
+      newHereM: "tudo bem contigo? Aparenta ser novo, como se chama?",
 
-  introStella: "é, sou nova mesmo, mudei pra cá para cuidar do terreno do meu avô, sou Stella.",
-  introGraham: "uhum, novo por aqui, aliás, cuidando da casa do meu avô, Graham.",
-  introBen: "é, vim pra cá recentemente ficar na casa do meu avô, me chamo Ben.",
+      introStella: "é, sou nova mesmo, mudei pra cá para cuidar do terreno do meu avô, sou Stella.",
+      introGraham: "uhum, novo por aqui, aliás, cuidando da casa do meu avô, Graham.",
+      introBen: "é, vim pra cá recentemente ficar na casa do meu avô, me chamo Ben.",
 
-  maryGilbert: "Gilbert?",
-  playerYes: "sim.",
-  noahCondolence: "ah... é mesmo, infelizmente ele não está entre nós.",
-  maryCosplayJudge: "hmmm, agora acho que não vou ter mais um avaliador de cosplay....",
-  noahNote: "verdade... ele sempre dava uma nota",
+      maryGilbert: "Gilbert?",
+      playerYes: "sim.",
+      noahCondolence: "ah... é mesmo, infelizmente ele não está entre nós.",
+      maryCosplayJudge: "hmmm, agora acho que não vou ter mais um avaliador de cosplay....",
+      noahNote: "verdade... ele sempre dava uma nota",
 
-  // Branch "cosplay?" (compartilhada)
-  maryCosplayExplain: "ah sim! sou cosplayer!! tanto de animes, séries, jogos.... praticamente se tiver um evento eu vou!",
-  maryIntro: "ah e claro eu sou Mary!",
-  noahIntro: "E eu sou Noah, sou desenhista.",
-  maryPraise: "o melhor artista desse planeta! ❤️",
-  noahPraise: "claro, tenho a melhor cosplayer me amando!",
-  coupleLaugh: "*risos tímidos*",
+      // Branch "cosplay?" (compartilhada)
+      maryCosplayExplain: "ah sim! sou cosplayer!! tanto de animes, séries, jogos.... praticamente se tiver um evento eu vou!",
+      maryIntro: "ah e claro eu sou Mary!",
+      noahIntro: "E eu sou Noah, sou desenhista.",
+      maryPraise: "o melhor artista desse planeta! ❤️",
+      noahPraise: "claro, tenho a melhor cosplayer me amando!",
+      coupleLaugh: "*risos tímidos*",
 
-  jeremyComplainF: "dá para terem um respeito na frente da moça?",
-  jeremyComplainM: "dá para terem um respeito na frente do pirralho?",
+      jeremyComplainF: "dá para terem um respeito na frente da moça?",
+      jeremyComplainM: "dá para terem um respeito na frente do pirralho?",
 
-  playerTurn: "*se vira para o lado*",
+      playerTurn: "*se vira para o lado*",
 
-  playerReactionJeremyStella: "agora decidiu não me ignorar?",
-  playerReactionJeremyBen: "o-oi",
-  playerReactionJeremyGraham: "", // Graham ignora
-  playerReactionJeremyNew: "ah oi.",
+      playerReactionJeremyStella: "agora decidiu não me ignorar?",
+      playerReactionJeremyBen: "o-oi",
+      playerReactionJeremyGraham: "", // Graham ignora
+      playerReactionJeremyNew: "ah oi.",
 
-  jeremyIntro: "me chamo Jeremy.",
+      jeremyIntro: "me chamo Jeremy.",
 
-  playerResponseStella: "*abre um sorriso falso, voltando a atenção para Mary & Noah*",
-  playerResponseBen: "prazer Jeremy.",
-  playerResponseGraham: "", // sem fala
+      playerResponseStella: "*abre um sorriso falso, voltando a atenção para Mary & Noah*",
+      playerResponseBen: "prazer Jeremy.",
+      playerResponseGraham: "", // sem fala
 
-  noahDismiss: "liga não! ele é todo frustradinho mesmo.",
-  jeremyLawsuit: "ainda te dou um processo",
-  maryFifthTime: "essa já é a quinta vez do dia que disse que vai processa-lo.",
-  noahExplain: "Bom, esse pateta chamado de Jeremy é meu irmão gêmeo, como pode ver, Mary é minha esposa, qualquer dia cola aí em casa! pra gente se conhecer melhor.",
-  noahInvite: "qualquer dia cola aí em casa! pra gente se conhecer melhor.",
-  maryCook: "sim!! posso preparar algo para gente!!!",
-  noahWeCook: "a gente prepara gata!",
-  maryBlush: "*ri timidamente* para bobinho!",
-  jeremyTaxiFinal: "vem logo taxista.....",
+      noahDismiss: "liga não! ele é todo frustradinho mesmo.",
+      jeremyLawsuit: "ainda te dou um processo",
+      maryFifthTime: "essa já é a quinta vez do dia que disse que vai processa-lo.",
+      noahExplain: "Bom, esse pateta chamado de Jeremy é meu irmão gêmeo, como pode ver, Mary é minha esposa, qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+      noahInvite: "qualquer dia cola aí em casa! pra gente se conhecer melhor.",
+      maryCook: "sim!! posso preparar algo para gente!!!",
+      noahWeCook: "a gente prepara gata!",
+      maryBlush: "*ri timidamente* para bobinho!",
+      jeremyTaxiFinal: "vem logo taxista.....",
 
-  // Diálogo livre (pós-intro)
-  freeGreet: "E aí, tudo bem? Volte sempre!",
-  jeremyWave: "*acena com a mão*",
-  postReactionStella: "*ignora*",
-  postReactionGraham: "*acena com a cabeça*",
-  postReactionBen: "*devolve o aceno*",
-},
+      // Diálogo livre (pós-intro)
+      freeGreet: "E aí, tudo bem? Volte sempre!",
+      jeremyWave: "*acena com a mão*",
+      postReactionStella: "*ignora*",
+      postReactionGraham: "*acena com a cabeça*",
+      postReactionBen: "*devolve o aceno*",
+    },
 
   },
 

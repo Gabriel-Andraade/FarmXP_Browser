@@ -56,7 +56,7 @@ export const chestSystem = {
      * @returns {string} ID do baú criado
      */
     addChest(chestData) {
-        const chestId = chestData.id || `chest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const chestId = chestData.id || `chest_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         
         const chest = {
             id: chestId,

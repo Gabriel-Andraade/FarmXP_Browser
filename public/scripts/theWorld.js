@@ -229,7 +229,7 @@ export function placeWell(a, b, c) {
   }
 
   if (!wellObject) {
-    const wid = id || `well_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const wid = id || `well_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     wellObject = {
       id: wid,
       x,
@@ -289,7 +289,7 @@ export function addAnimal(assetName, img, x, y, opts = {}) {
   const animal = new AnimalEntity(assetName, img, x, y, opts);
 
   if (!animal.id) {
-    animal.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    animal.id = `animal_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   animals.push(animal);
@@ -426,7 +426,7 @@ function _ySortCompare(a, b) {
 // Wrap static objects into the sorted-cache representation. Pulled out so
 // rebuildStaticCache stays readable.
 function _wrapTree(t) {
-  if (!t.id) t.id = `tree_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!t.id) t.id = `tree_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(t, (x) => ({
     id: x.id, type: "TREE", originalType: "tree",
     x: x.x || 0, y: x.y || 0,
@@ -436,7 +436,7 @@ function _wrapTree(t) {
   }));
 }
 function _wrapRock(r) {
-  if (!r.id) r.id = `rock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!r.id) r.id = `rock_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(r, (x) => ({
     id: x.id, type: "ROCK", originalType: "rock",
     x: x.x || 0, y: x.y || 0,
@@ -446,7 +446,7 @@ function _wrapRock(r) {
   }));
 }
 function _wrapThicket(th) {
-  if (!th.id) th.id = `thicket_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!th.id) th.id = `thicket_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(th, (x) => ({
     id: x.id, type: "THICKET", originalType: "thicket",
     x: x.x || 0, y: x.y || 0,
@@ -473,7 +473,7 @@ function _wrapWell(w) {
   }));
 }
 function _wrapHouse(h) {
-  if (!h.id) h.id = `house_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!h.id) h.id = `house_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(h, (x) => ({
     id: x.id, type: x.type, originalType: "house",
     x: x.x || 0, y: x.y || 0,
@@ -494,7 +494,7 @@ function _wrapTomb(tb, tombSys) {
   }));
 }
 function _wrapAnimal(a) {
-  if (!a.id) a.id = `animal_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  if (!a.id) a.id = `animal_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   return _getOrCreateWrapper(a, (x) => ({
     type: "ANIMAL", id: x.id,
     x: x.x || 0, y: x.y || 0,
@@ -712,7 +712,7 @@ export function registerWorldObjects() {
  * @returns {string} Unique identifier string
  */
 function generateId() {
-  return "obj_" + Math.random().toString(36).substr(2, 9);
+  return "obj_" + Math.random().toString(36).slice(2, 11);
 }
 
 /**
@@ -1436,6 +1436,14 @@ window.addWorldObject = function(objectData) {
   const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const collisionType = getPlacedBuildingCollisionType(objectData);
 
+  return collisionType;
+}
+
+/* função global útil para adicionar objetos dinâmicos */
+window.addWorldObject = function(objectData) {
+  const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const collisionType = getPlacedBuildingCollisionType(objectData);
+
   const building = {
     // Preserve ANY custom fields from objectData (species, targetAnimals,
     // foodLevel, premiumLevel, waterLevel, etc.). Without this spread,
@@ -1609,6 +1617,61 @@ export function exportWorldState() {
 }
 
 /**
+ * Registers physical collision hitboxes for the static world objects currently
+ * in the world arrays. `registerWorldObjects()` only feeds the item interaction
+ * registry — it does NOT add collision boxes — so a loaded save needs this or
+ * its solid objects (trees, houses, buildings…) would be passable.
+ * Mirrors mapManager.restoreFarmState so the load and map-return paths match.
+ */
+function registerStaticWorldHitboxes() {
+  const add = (id, type, x, y, width, height, ctx) => {
+    try {
+      collisionSystem.addHitbox(id, type, x, y, width, height);
+    } catch (e) {
+      handleWarn("Failed to add static hitbox", ctx, { id, type, err: e });
+    }
+  };
+
+  for (const tree of trees) add(tree.id, "TREE", tree.x, tree.y, tree.width, tree.height, "theWorld:importWorldState:treeHitbox");
+  for (const rock of rocks) add(rock.id, "ROCK", rock.x, rock.y, rock.width, rock.height, "theWorld:importWorldState:rockHitbox");
+  for (const thicket of thickets) add(thicket.id, "THICKET", thicket.x, thicket.y, thicket.width, thicket.height, "theWorld:importWorldState:thicketHitbox");
+
+  for (const house of houses) {
+    // HOUSE_ROOF is the box that actually blocks the player (offset wall).
+    // Register both so the house is solid after a save load, matching
+    // mapManager.restoreFarmState.
+    if (house.type === "HOUSE_WALLS" || house.type === "HOUSE_ROOF") {
+      add(house.id, house.type, house.x, house.y, house.width, house.height, "theWorld:importWorldState:houseHitbox");
+    }
+  }
+
+  for (const b of placedBuildings) add(b.id, getPlacedBuildingCollisionType(b), b.x, b.y, b.width, b.height, "theWorld:importWorldState:buildingHitbox");
+  for (const w of placedWells) add(w.id, "WELL", w.x, w.y, w.width, w.height, "theWorld:importWorldState:wellHitbox");
+}
+
+/**
+ * Re-registers NPC, Milly, house-door and pickup-truck hitboxes after a save
+ * load. `collisionSystem.clear()` wipes these along with the world hitboxes, so
+ * without this NPCs and the house become non-interactive post-load. Mirrors the
+ * farm branch of mapManager.performTransition (npcSystem.js:189, houseSystem,
+ * npcMilly, questSystem). House-door lookup depends on HOUSE_WALLS already being
+ * registered — call this AFTER registerStaticWorldHitboxes().
+ */
+function reregisterFarmEntityHitboxes() {
+  const npcSys = getSystem('npc');
+  if (npcSys?.registerHitboxesForMap) npcSys.registerHitboxesForMap('farm');
+
+  const milly = getSystem('npcMilly');
+  if (milly?.reregisterHitbox) milly.reregisterHitbox();
+
+  const house = getSystem('house');
+  if (house?.reregisterDoorHitbox) house.reregisterDoorHitbox();
+
+  const quests = getSystem('quests');
+  if (quests?.registerPickupHitbox) quests.registerPickupHitbox(true);
+}
+
+/**
  * Imports world state from saved data (save system)
  * Clears all existing world objects and restores from serialized data
  * @param {Object} data - Serialized world state from exportWorldState()
@@ -1653,6 +1716,10 @@ export function importWorldState(data) {
     if (Array.isArray(payload.placedWells)) {
       placedWells.push(...payload.placedWells.map(o => ({ ...o, id: o.id || generateId() })));
     }
+
+    // Rebuild static collision hitboxes for the freshly loaded world.
+    registerStaticWorldHitboxes();
+
     if (Array.isArray(payload.animals)) {
       for (const o of payload.animals) {
         const assetData = assets.animals && assets.animals[o.assetName];
@@ -1737,6 +1804,10 @@ export function importWorldState(data) {
     if (tomb?.restoreState) {
       tomb.restoreState(payload.animalTombs ?? []);
     }
+
+    // Re-register entity hitboxes wiped by collisionSystem.clear() so NPCs and
+    // the house stay interactive after the load.
+    reregisterFarmEntityHitboxes();
   } catch (error) {
     handleError(error, "theWorld:importWorldState");
   }

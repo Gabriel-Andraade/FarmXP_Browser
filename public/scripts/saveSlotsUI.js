@@ -37,6 +37,9 @@ class SaveSlotsUI {
         this.isOpen = false;
         this.mode = 'menu'; // 'menu', 'save', 'load'
         this.onLoadCallback = null;
+        // Cleanup fn for an open _dialog(), so destroy() can tear it down
+        // (otherwise its keydown listener + overlay leak). null when none open.
+        this._activeDialogCleanup = null;
 
         // fix: store named handler so destroy() can remove it
         this._onSaveChanged = () => {
@@ -285,22 +288,22 @@ class SaveSlotsUI {
      * @param {string} action - Ação (create, load, save, rename, delete)
      * @param {number} slotIndex - Índice do slot
      */
-    _handleAction(action, slotIndex) {
+    async _handleAction(action, slotIndex) {
         switch (action) {
             case 'create':
-                this._createSave(slotIndex);
+                await this._createSave(slotIndex);
                 break;
             case 'load':
-                this._loadSave(slotIndex);
+                await this._loadSave(slotIndex);
                 break;
             case 'save':
-                this._overwriteSave(slotIndex);
+                await this._overwriteSave(slotIndex);
                 break;
             case 'rename':
-                this._renameSave(slotIndex);
+                await this._renameSave(slotIndex);
                 break;
             case 'delete':
-                this._deleteSave(slotIndex);
+                await this._deleteSave(slotIndex);
                 break;
         }
     }
@@ -309,13 +312,20 @@ class SaveSlotsUI {
      * Cria um novo save
      * @param {number} slotIndex - Índice do slot
      */
-    _createSave(slotIndex) {
+    async _createSave(slotIndex) {
         const defaultName = t('saveSlots.defaultName', { number: slotIndex + 1 });
-        const name = prompt(t('saveSlots.saveName'), defaultName);
+        const name = await this._dialog({
+            message: t('saveSlots.saveName'),
+            input: true,
+            defaultValue: defaultName,
+        });
         if (name === null) return; // Cancelou
 
+        // Trim so whitespace-only names fall back to the default (mirrors the
+        // rename flow, which already rejects blank names).
+        const normalizedName = (name ?? '').trim();
         const success = saveSystem.createOrOverwriteSlot(slotIndex, {
-            saveName: name || defaultName
+            saveName: normalizedName || defaultName
         });
 
         if (success) {
@@ -397,9 +407,12 @@ class SaveSlotsUI {
      * Sobrescreve um save existente
      * @param {number} slotIndex - Índice do slot
      */
-    _overwriteSave(slotIndex) {
+    async _overwriteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirmed = window.confirm(t('saveSlots.confirmOverwrite', { name: meta?.saveName || 'Save' }));
+        const confirmed = await this._dialog({
+            message: t('saveSlots.confirmOverwrite', { name: meta?.saveName || 'Save' }),
+            danger: true, // overwriting discards the previous save irreversibly
+        });
 
         if (!confirmed) return;
 
@@ -416,9 +429,13 @@ class SaveSlotsUI {
      * Renomeia um save
      * @param {number} slotIndex - Índice do slot
      */
-    _renameSave(slotIndex) {
+    async _renameSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const newName = prompt(t('saveSlots.newName'), meta?.saveName || '');
+        const newName = await this._dialog({
+            message: t('saveSlots.newName'),
+            input: true,
+            defaultValue: meta?.saveName || '',
+        });
 
         if (newName === null) return; // Cancelou
         if (!newName.trim()) {
@@ -439,9 +456,12 @@ class SaveSlotsUI {
      * Deleta um save
      * @param {number} slotIndex - Índice do slot
      */
-    _deleteSave(slotIndex) {
+    async _deleteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
-        const confirmed = window.confirm(t('saveSlots.confirmDelete', { name: meta?.saveName || 'Save' }));
+        const confirmed = await this._dialog({
+            message: t('saveSlots.confirmDelete', { name: meta?.saveName || 'Save' }),
+            danger: true,
+        });
 
         if (!confirmed) return;
 
@@ -452,6 +472,91 @@ class SaveSlotsUI {
         } else {
             this._showMessage(t('saveSlots.deleteError'), 'error');
         }
+    }
+
+    /**
+     * In-DOM dialog replacing native prompt()/confirm(), which throw
+     * "not supported" inside the game's embedded webview. Returns a Promise:
+     *   - input mode  → resolves to the entered string, or null if cancelled
+     *   - confirm mode → resolves to true (confirmed) or false (cancelled)
+     * @param {Object} opts
+     * @param {string} opts.message - Prompt/confirmation text (\n renders as line break)
+     * @param {boolean} [opts.input] - Show a text field (prompt mode)
+     * @param {string} [opts.defaultValue] - Initial value for the text field
+     * @param {boolean} [opts.danger] - Style the confirm button as destructive
+     * @returns {Promise<string|null|boolean>}
+     */
+    _dialog({ message, input = false, defaultValue = '', danger = false }) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'save-dialog-overlay';
+            overlay.setAttribute('role', 'presentation');
+
+            // Unique id so aria-labelledby is correct even if dialogs ever overlap.
+            const msgId = `save-dialog-msg-${Date.now()}`;
+            const box = document.createElement('div');
+            box.className = 'save-dialog';
+            box.setAttribute('role', 'dialog');
+            box.setAttribute('aria-modal', 'true');
+            box.setAttribute('aria-labelledby', msgId);
+
+            const msg = document.createElement('p');
+            msg.id = msgId;
+            msg.className = 'save-dialog-message';
+            msg.textContent = message;
+            box.appendChild(msg);
+
+            let field = null;
+            if (input) {
+                field = document.createElement('input');
+                field.type = 'text';
+                field.className = 'save-dialog-input';
+                field.value = defaultValue;
+                field.maxLength = 30;
+                box.appendChild(field);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'save-dialog-actions';
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'save-btn save-dialog-cancel';
+            cancelBtn.textContent = t('ui.cancel');
+            const okBtn = document.createElement('button');
+            okBtn.className = `save-btn save-dialog-ok${danger ? ' save-dialog-danger' : ''}`;
+            okBtn.textContent = input ? t('ui.ok') : t('ui.confirm');
+            actions.append(cancelBtn, okBtn);
+            box.appendChild(actions);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
+
+            // Settle once: tear down listeners + DOM, then resolve.
+            const settle = (result) => {
+                document.removeEventListener('keydown', onKey);
+                overlay.remove();
+                this._activeDialogCleanup = null;
+                resolve(result);
+            };
+            const confirm = () => settle(input ? field.value : true);
+            const cancel = () => settle(input ? null : false);
+
+            const onKey = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); confirm(); }
+                else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+            };
+            document.addEventListener('keydown', onKey);
+            // Let destroy() abort an open dialog (cancel-equivalent resolution).
+            this._activeDialogCleanup = () => cancel();
+
+            okBtn.addEventListener('click', confirm);
+            cancelBtn.addEventListener('click', cancel);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) cancel(); });
+
+            // Focus after paint so the field/button is ready.
+            requestAnimationFrame(() => {
+                if (field) { field.focus(); field.select(); }
+                else okBtn.focus();
+            });
+        });
     }
 
     /**
@@ -478,6 +583,11 @@ class SaveSlotsUI {
 
     // fix: added destroy() for proper teardown of persistent listeners
     destroy() {
+        // Tear down an open dialog first, else its keydown handler + overlay leak.
+        if (this._activeDialogCleanup) {
+            this._activeDialogCleanup();
+        }
+
         if (this._onSaveChanged) {
             document.removeEventListener('save:changed', this._onSaveChanged);
             this._onSaveChanged = null;

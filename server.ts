@@ -428,6 +428,7 @@ serve({
     //   - Resto: max-age=3600 (1h) — o SW dele lida com cache long-term
     const basename = path.basename(fullPath).toLowerCase();
 
+<<<<<<< feat/165-planting-system
     // Dev hosts (localhost / loopback / private LAN): don't cache JS/CSS, so
     // edits show up without a hard-refresh. Prod (external host) keeps the long
     // cache. Without this, the browser served stale JS for up to 1h.
@@ -438,6 +439,26 @@ serve({
       /^172\.(1[6-9]|2\d|3[01])\./.test(reqHost);
 
     let cacheHeader;
+=======
+    // Hosts de desenvolvimento (localhost / loopback / LAN privada): NÃO
+    // cacheia JS/CSS. Espelha o isDev do register-sw.js. Sem isso, o
+    // max-age=3600 fazia o browser servir JS editado do cache por até 1h —
+    // edições em dev só apareciam com hard-refresh manual. Em prod (host
+    // externo) o cache longo continua valendo, com o Service Worker cuidando
+    // do versionamento via BUILD_HASH.
+    // Lowercase: HTTP hostnames are case-insensitive (RFC 2616), so a client
+    // sending `Host: LocalHost` must still be treated as a dev host.
+    const reqHost = url.hostname.toLowerCase();
+    const isDevHost =
+      reqHost === "localhost" ||
+      reqHost === "127.0.0.1" ||
+      reqHost === "::1" ||
+      /^192\.168\./.test(reqHost) ||
+      /^10\./.test(reqHost) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(reqHost);
+
+    let cacheHeader: string;
+>>>>>>> main
     if (ext === ".html" || basename === "sw.js") {
       cacheHeader = "no-cache, must-revalidate";
     } else if (isDevHost && (ext === ".js" || ext === ".css")) {

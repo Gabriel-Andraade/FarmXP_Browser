@@ -73,10 +73,15 @@ mock.module('../../public/scripts/constants.js', () => ({
   UI: { FONT_SIZES: { KEY_PROMPT: 14, HEALTH_BAR_TEXT: 10 } },
 }));
 
+// Registry of stub systems for getSystem(). Empty by default (so getSystem
+// returns null like before); individual tests populate it to exercise paths
+// like importWorldState's farm-entity hitbox re-registration.
+const mockSystems = {};
+
 // Mock gameState.js - ALL named exports
 mock.module('../../public/scripts/gameState.js', () => ({
   registerSystem: () => {},
-  getSystem: () => null,
+  getSystem: (name) => (name in mockSystems ? mockSystems[name] : null),
   getObject: () => null,
   setObject: () => {},
   setDebugFlag: () => {},
@@ -95,6 +100,8 @@ mock.module('../../public/scripts/logger.js', () => ({
 
 // Import real module after all mocks
 const theWorld = await import('../../public/scripts/theWorld.js');
+// Real collisionSystem singleton — the same instance theWorld registers into.
+const { collisionSystem } = await import('../../public/scripts/collisionSystem.js');
 
 describe('TheWorld (Production Implementation)', () => {
 
@@ -272,6 +279,61 @@ describe('TheWorld (Production Implementation)', () => {
       expect(() => theWorld.importWorldState({})).not.toThrow();
       expect(theWorld.trees).toHaveLength(0);
       expect(theWorld.rocks).toHaveLength(0);
+    });
+
+    // Issue #181: loading a save on top of another left the previous save's
+    // collision hitboxes registered (invisible collisions, ghost animals).
+    describe('collision hitbox crossover (issue #181)', () => {
+      // STATIC_OBJECTS.TREE config (mock): offsetX 16, offsetY 38, 38x40.
+      // Tree at (x,y) -> solid hitbox at (x+16, y+38, 38, 40).
+      const treeSolidRect = (x, y) => [x + 16, y + 38, 38, 40];
+
+      test('does not leak the previous save hitboxes into the loaded world', () => {
+        // Save A: a tree at P.
+        theWorld.importWorldState({
+          trees: [{ id: 'treeA', x: 100, y: 200, width: 64, height: 96, type: 'TREE' }],
+        });
+        expect(collisionSystem.areaCollides(...treeSolidRect(100, 200))).toBe(true);
+        const sizeAfterA = collisionSystem.hitboxes.size;
+
+        // Save B: empty world, nothing at P.
+        theWorld.importWorldState({ trees: [] });
+
+        // The spot where tree A stood is now walkable...
+        expect(collisionSystem.areaCollides(...treeSolidRect(100, 200))).toBe(false);
+        // ...and hitboxes were cleared, not accumulated across loads.
+        expect(collisionSystem.hitboxes.size).toBeLessThanOrEqual(sizeAfterA);
+        expect(collisionSystem.hitboxes.size).toBe(0);
+      });
+
+      test('registers solid hitboxes for the freshly loaded world objects', () => {
+        theWorld.importWorldState({
+          trees: [{ id: 'treeB', x: 300, y: 400, width: 64, height: 96, type: 'TREE' }],
+        });
+        expect(collisionSystem.areaCollides(...treeSolidRect(300, 400))).toBe(true);
+      });
+
+      test('re-registers farm entity hitboxes (NPC/Milly/house-door/pickup) after load', () => {
+        // clear() wipes NPC/door/pickup hitboxes too — importWorldState must
+        // re-register them or NPCs/house become non-interactive after a load.
+        const calls = [];
+        mockSystems.npc = { registerHitboxesForMap: (m) => calls.push(['npc', m]) };
+        mockSystems.npcMilly = { reregisterHitbox: () => calls.push(['milly']) };
+        mockSystems.house = { reregisterDoorHitbox: () => calls.push(['house']) };
+        mockSystems.quests = { registerPickupHitbox: (force) => calls.push(['pickup', force]) };
+        try {
+          theWorld.importWorldState({ trees: [] });
+          expect(calls).toContainEqual(['npc', 'farm']);
+          expect(calls).toContainEqual(['milly']);
+          expect(calls).toContainEqual(['house']);
+          expect(calls).toContainEqual(['pickup', true]);
+        } finally {
+          delete mockSystems.npc;
+          delete mockSystems.npcMilly;
+          delete mockSystems.house;
+          delete mockSystems.quests;
+        }
+      });
     });
   });
 
