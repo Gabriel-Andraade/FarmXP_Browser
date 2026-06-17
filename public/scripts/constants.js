@@ -88,7 +88,8 @@ export const GAME_BALANCE = {
       breaking: { hunger: 1.0, thirst: 1.5, energy: 2.0 },
       building: { hunger: 0.8, thirst: 1.0, energy: 1.5 },
       collecting: { hunger: 0.3, thirst: 0.4, energy: 0.5 },
-      idle: { hunger: 0.05, thirst: 0.1, energy: -0.5 }
+      idle: { hunger: 0.05, thirst: 0.1, energy: -0.5 },
+      planting: { hunger: 0, thirst: 0, energy: 3.0 } // #165: each planting costs 3 energy
     },
 
     FOOD_RESTORATION: {

@@ -427,9 +427,24 @@ serve({
     //     fica preso e o cache de assets nunca atualiza pro player)
     //   - Resto: max-age=3600 (1h) — o SW dele lida com cache long-term
     const basename = path.basename(fullPath).toLowerCase();
-    const cacheHeader = (ext === ".html" || basename === "sw.js")
-      ? "no-cache, must-revalidate"
-      : "public, max-age=3600";
+
+    // Dev hosts (localhost / loopback / private LAN): don't cache JS/CSS, so
+    // edits show up without a hard-refresh. Prod (external host) keeps the long
+    // cache. Without this, the browser served stale JS for up to 1h.
+    const reqHost = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+    const isDevHost =
+      reqHost === "localhost" || reqHost === "127.0.0.1" || reqHost === "::1" ||
+      /^192\.168\./.test(reqHost) || /^10\./.test(reqHost) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(reqHost);
+
+    let cacheHeader;
+    if (ext === ".html" || basename === "sw.js") {
+      cacheHeader = "no-cache, must-revalidate";
+    } else if (isDevHost && (ext === ".js" || ext === ".css")) {
+      cacheHeader = "no-store";
+    } else {
+      cacheHeader = "public, max-age=3600";
+    }
 
     // Pipeline texto: 1) ler bytes  2) minify (se .js)  3) comprimir.
     // Cache aplica nos passos 2 e 3 — primeira request por path paga

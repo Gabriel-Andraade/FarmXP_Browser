@@ -1054,6 +1054,15 @@ function renderInventory() {
       slotEl.appendChild(eqBadge);
     }
 
+    // Issue #165: 💧 on the watering can when it's full of water (filled at the well).
+    if (fullItem.toolType === 'watering_can' && getSystem('wateringCan')?.hasWater?.()) {
+      const waterBadge = document.createElement('span');
+      waterBadge.textContent = '💧';
+      waterBadge.setAttribute('aria-label', 'Cheio de água');
+      waterBadge.style.cssText = 'position:absolute;bottom:2px;left:2px;font-size:14px;pointer-events:none;text-shadow:0 0 3px rgba(0,0,0,0.8);';
+      slotEl.appendChild(waterBadge);
+    }
+
     slotEl.addEventListener('click', () => {
       const prevSelected = shadowRoot.querySelector('.inv-slot.selected');
       if (prevSelected) prevSelected.classList.remove('selected');

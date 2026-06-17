@@ -25,8 +25,10 @@ const WELL_CONFIG = {
   BUCKET_WATER_ID: 42,
   BOTTLE_EMPTY_ID: 40,
   BOTTLE_WATER_ID: 41,
+  WATERING_CAN_ID: 12,
 
   WATER_PER_BOTTLE: 30,
+  WATER_PER_WATERING_CAN: 20,
   THIRST_RESTORE: 15,
 
   MIN_TIME_MINUTES: 1,
@@ -44,6 +46,8 @@ const wellState = {
   isOpen: false,
   isPulling: false,
   waterLevel: 100,
+  pullEndAt: 0,        // timestamp when the current pull finishes
+  pullTimerId: null,   // setInterval id for the pull tick
   wells: {},
 };
 
@@ -71,9 +75,11 @@ export const wellSystem = {
       id = generateId();
     }
 
-    const wellAsset = assets.furniture?.well || null;
-    const width = wellAsset?.width || WELL_CONFIG.WIDTH;
-    const height = wellAsset?.height || WELL_CONFIG.HEIGHT;
+    // Use the canonical config size (matches the build preview), NOT the
+    // asset's natural pixel resolution — wellAsset.width is the full PNG size
+    // (much larger), which made placed wells render gigantic vs. the preview.
+    const width = WELL_CONFIG.WIDTH;
+    const height = WELL_CONFIG.HEIGHT;
 
     const wellObject = {
       id,
@@ -284,6 +290,12 @@ export const wellSystem = {
     btnFillBottle.id = 'btn-fill-bottle';
     btnFillBottle.textContent = t('well.fillBottle');
     transferOpts.appendChild(btnFillBottle);
+    // Issue #165: fill the watering can (charge state in wateringCan.js).
+    const btnFillCan = document.createElement('button');
+    btnFillCan.className = 'well-main-btn';
+    btnFillCan.id = 'btn-fill-can';
+    btnFillCan.textContent = t('well.fillWateringCan');
+    transferOpts.appendChild(btnFillCan);
     col2.append(h3_2, btnDrink, btnTransfer, transferOpts);
 
     // Coluna well
@@ -318,6 +330,7 @@ export const wellSystem = {
       transferOpts.hidden = !transferOpts.hidden;
     });
     btnFillBottle.addEventListener('click', () => this.fillBottle());
+    btnFillCan.addEventListener('click', () => this.fillWateringCan());
 
     wellState.isOpen = true;
     this.updateUI();
@@ -346,39 +359,55 @@ export const wellSystem = {
     }
 
     if (timerEl) timerEl.hidden = !wellState.isPulling;
+
+    // Enquanto o balde está descendo (isPulling), bloqueia coletar/beber e
+    // descer de novo — só dá pra agir quando o balde volta.
+    const pulling = wellState.isPulling;
+    for (const id of ['btn-drink', 'btn-transfer-menu', 'btn-fill-bottle', 'btn-fill-can', 'btn-pull-water']) {
+      const b = document.getElementById(id);
+      if (b) b.disabled = pulling;
+    }
   },
 
   startPullingWater() {
-    if (wellState.isPulling) return;
+    if (wellState.isPulling) return; // já descendo — não reinicia
 
     wellState.isPulling = true;
 
     const minMs = WELL_CONFIG.MIN_TIME_MINUTES * 60000;
     const maxMs = WELL_CONFIG.MAX_TIME_MINUTES * 60000;
     const duration = Math.random() * (maxMs - minMs) + minMs;
+    wellState.pullEndAt = Date.now() + duration;
 
-    const end = Date.now() + duration;
-    const timerEl = document.getElementById("well-timer");
+    // Mostra o timer e desabilita coletar/beber imediatamente.
+    this.updateUI();
 
-    const tick = () => {
-      const left = end - Date.now();
+    // setInterval (não rAF): a contagem corre mesmo com o menu fechado/reaberto
+    // ou aba em segundo plano, e o elemento do timer é re-buscado a cada tick
+    // (não fica preso num timerEl órfão se o menu for recriado). Isso conserta
+    // o "às vezes não começa a contar" (estado/elemento travado).
+    if (wellState.pullTimerId) clearInterval(wellState.pullTimerId);
+    wellState.pullTimerId = setInterval(() => {
+      const left = wellState.pullEndAt - Date.now();
       if (left <= 0) {
+        clearInterval(wellState.pullTimerId);
+        wellState.pullTimerId = null;
         wellState.isPulling = false;
         wellState.waterLevel = 100;
         this.updateUI();
         return;
       }
-
-      const m = Math.floor(left / 60000);
-      const s = Math.floor((left % 60000) / 1000);
-      if (timerEl) timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-      requestAnimationFrame(tick);
-    };
-
-    requestAnimationFrame(tick);
+      const timerEl = document.getElementById("well-timer");
+      if (timerEl) {
+        const m = Math.floor(left / 60000);
+        const s = Math.floor((left % 60000) / 1000);
+        timerEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+      }
+    }, 250);
   },
 
   drinkFromWell() {
+    if (wellState.isPulling) return; // balde descido — não dá pra beber
     if (wellState.waterLevel < 5) {
       handleWarn(t('well.insufficientWater'), "wellSystem:drinkFromWell");
       return;
@@ -395,6 +424,7 @@ export const wellSystem = {
   },
 
   fillBottle() {
+    if (wellState.isPulling) return; // balde descido — não dá pra coletar
     const inv = inventorySystem.getInventory?.();
     if (!inv) return;
 
@@ -421,6 +451,23 @@ export const wellSystem = {
     inventorySystem.addItem(catFound, WELL_CONFIG.BOTTLE_WATER_ID, 1);
 
     wellState.waterLevel -= WELL_CONFIG.WATER_PER_BOTTLE;
+    this.updateUI();
+  },
+
+  fillWateringCan() {
+    if (wellState.isPulling) return; // balde descido — não dá pra coletar
+    const hasCan = (inventorySystem.getItemQuantity?.("tools", WELL_CONFIG.WATERING_CAN_ID) ?? 0) > 0;
+    if (!hasCan) {
+      handleWarn(t('well.noWateringCan'), "wellSystem:fillWateringCan");
+      return;
+    }
+    if (wellState.waterLevel < WELL_CONFIG.WATER_PER_WATERING_CAN) {
+      handleWarn(t('well.insufficientWater'), "wellSystem:fillWateringCan");
+      return;
+    }
+
+    getSystem('wateringCan')?.fill?.();
+    wellState.waterLevel -= WELL_CONFIG.WATER_PER_WATERING_CAN;
     this.updateUI();
   },
 

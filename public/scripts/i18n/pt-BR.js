@@ -183,6 +183,10 @@ export default {
     toolWheel: {
       empty: 'Nenhuma ferramenta no inventário'
     },
+    seedWheel: {
+      none: 'Sem semente',
+      empty: 'Sem sementes no inventário'
+    },
     details: {
       sectionTitle: 'Informações técnicas',
       type: 'Tipo',
@@ -944,6 +948,8 @@ export default {
     drink: 'Beber',
     collect: 'Coletar',
     fillBottle: 'Encher garrafa',
+    fillWateringCan: 'Encher regador',
+    noWateringCan: 'Você precisa de um regador',
     well: 'Poço',
     lowerBucket: 'Descer balde',
     insufficientWater: 'Água insuficiente no poço',
@@ -1096,6 +1102,12 @@ export default {
     wellError: 'erro ao colocar poço',
     wellLoading: 'sistema de poços carregando...',
     placed: 'colocado! ({remaining} restante)',
+    placeError: 'erro ao colocar objeto',
+    worldNotAvailable: 'erro: theWorld.addWorldObject não disponível',
+    variant: 'variante: {name}',
+    notAvailable: 'Função de construção não disponível.',
+    notAvailableAfter: 'Função de construção não disponível após carregar.',
+    buildError: 'Erro ao entrar no modo de construção. Verifique o console.',
     // Novas adições do sistema Q + pickup (cercado)
     emptyHint: 'Modo construção — Q troca item, clique pega cerca',
     pickedUp: 'Pegou cerca (×{qty}) — clique pra colocar',

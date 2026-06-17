@@ -566,6 +566,10 @@ class SaveSystem {
                 this._applyWorldData(data.world);
             }
 
+            // Plantio (#165): SEMPRE aplica — mesmo se o save não tiver dados,
+            // limpa o solo/plantas/regador atuais pra não vazar entre saves.
+            this._applyPlantationData(data.plantation);
+
             // Agora sim restaura o mapa (city snapshota a farm correta acima).
             if (data.currentMap && data.currentMap !== 'farm') {
                 const mapMgr = getSystem('mapManager');
@@ -791,8 +795,19 @@ class SaveSystem {
             achievements: this._getAchievementsData(),
             gameFlags: this._getGameFlags(),
             minimap: this._getMinimapData(),
+            plantation: this._getPlantationData(),
             xp: xp?.getState ? xp.getState() : null,
             currentMap: mapMgr ? mapMgr.getCurrentMapId() : 'farm'
+        };
+    }
+
+    // Issue #165: tilled soil + crops + watering-can charges. Generic over all
+    // crops (each system serializes its own state with relative timers).
+    _getPlantationData() {
+        return {
+            tilled: getSystem('hoeTool')?.serialize?.() ?? [],
+            crops: getSystem('crop')?.serialize?.() ?? [],
+            wateringCanCharges: getSystem('wateringCan')?.serialize?.() ?? 0,
         };
     }
 
@@ -1121,6 +1136,23 @@ class SaveSystem {
             logger.info('🌍 World state restored');
         } catch (error) {
             logger.error('Error restoring world state:', error);
+        }
+    }
+
+    /**
+     * Aplica dados do plantio (#165): solo arado, plantas, cargas do regador.
+     * Cada sistema limpa o estado atual antes de restaurar, então carregar um
+     * save (mesmo sem plantio) NÃO vaza plantação do save anterior.
+     */
+    _applyPlantationData(data) {
+        const p = data || {};
+        try {
+            getSystem('hoeTool')?.restore?.(p.tilled ?? []);
+            getSystem('crop')?.restore?.(p.crops ?? []);
+            getSystem('wateringCan')?.restore?.(p.wateringCanCharges ?? 0);
+            logger.info('🌱 Plantation restored');
+        } catch (error) {
+            logger.error('Error restoring plantation:', error);
         }
     }
 

@@ -321,6 +321,19 @@ async function initializeCriticalSystems() {
     foodTroughSystem = ftModule.foodTroughSystem;
     logger.debug("foodTroughSystem carregado");
 
+    // Hoe tool (Issue #165 planting — step 1): self-registers as 'hoeTool',
+    // draws the tile-aligned cursor when the hoe is equipped.
+    await import("./hoeTool.js");
+    logger.debug("hoeTool carregado");
+
+    // Crop system (Issue #165): planting/growth/harvest. Self-registers 'crop'.
+    await import("./cropSystem.js");
+    logger.debug("cropSystem carregado");
+
+    // Watering can charge state (Issue #165). Self-registers 'wateringCan'.
+    await import("./wateringCan.js");
+    logger.debug("wateringCan carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");
@@ -1602,6 +1615,11 @@ function gameLoop(timestamp) {
 
       updateAnimals();
 
+      // Tilled-soil lifecycle (#165): expire dry/wet plots, rain auto-waters.
+      getSystem('hoeTool')?.update?.();
+      // Crop growth (#165): advance stages.
+      getSystem('crop')?.update?.();
+
       if (currentPlayer && updatePlayer && !sleepBlockedControls) {
         updatePlayer(deltaTime * 1000, keys);
         updatePlayerInteraction(currentPlayer.x, currentPlayer.y, currentPlayer.width, currentPlayer.height);
@@ -1631,6 +1649,16 @@ function gameLoop(timestamp) {
     }
   } catch (e) {
     handleWarn("falha ao desenhar background", "main:gameLoop:drawBackground", e);
+  }
+
+  // Tilled soil + crops (planting #165) — over grass, under world objects.
+  try {
+    if (camera) {
+      getSystem('hoeTool')?.drawTilledSoil?.(ctx, camera);
+      getSystem('crop')?.drawCrops?.(ctx, camera);
+    }
+  } catch (e) {
+    handleWarn("falha ao desenhar solo arado/plantio", "main:gameLoop:tilledSoil", e);
   }
 
   try {
@@ -1683,6 +1711,15 @@ function gameLoop(timestamp) {
       if (getDebugFlag('eatSlots')) {
         ftSys?.drawEatSlots?.(ctx, camera);
       }
+
+      // Hoe / planting / watering tile-cursors (planting #165). Skip in build mode.
+      if (!BuildSystem?.active) {
+        getSystem('hoeTool')?.drawTileCursor?.(ctx, camera);
+        getSystem('crop')?.drawPlantCursor?.(ctx, camera);
+        getSystem('wateringCan')?.drawCursor?.(ctx, camera);
+      }
+      // Crop hover tooltip (name + vitality bar) — independent of build mode.
+      getSystem('crop')?.drawCropTooltip?.(ctx, camera);
     }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);

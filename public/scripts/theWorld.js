@@ -1407,23 +1407,34 @@ function drawThicketFallback(ctx, x, y, width, height) {
   ctx.fill();
 }
 
+/**
+ * Normalizes a placed object's type into its collision-type label. Shared by
+ * addWorldObject (placement) and importWorldState (save/load), so restored
+ * fences/chests/wells/troughs get the exact same collision shape they had
+ * when placed.
+ */
+function getPlacedBuildingCollisionType(objectData) {
+  const raw = (objectData.originalType || objectData.type || "construction").toString().toUpperCase();
+  const lower = raw.toLowerCase();
+  if (lower === "chest") return "CHEST";
+  if (lower === "well") return "WELL";
+  if (lower === "watertroughx") return "WATERTROUGHX";
+  if (lower === "watertroughy") return "WATERTROUGHY";
+  if (lower === "fencex") return "FENCEX";
+  if (lower === "fencey") return "FENCEY";
+  if (lower === "fence") return "FENCE";
+  // Issue #171: food troughs use generic FOODTROUGH for collision. Variant
+  // and species live on the object itself, not in the collision label.
+  if (raw === "FOODTROUGH" || raw === "FOODTROUGHX" || raw === "FOODTROUGHY") return "FOODTROUGH";
+  if (raw === "FURNITURE") return "CONSTRUCTION";
+  if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "FOODTROUGH", "HOUSE_WALLS"].includes(raw)) return "CONSTRUCTION";
+  return raw;
+}
+
 /* função global útil para adicionar objetos dinâmicos */
 window.addWorldObject = function(objectData) {
   const objectId = objectData.id || `building_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  let collisionType = (objectData.originalType || objectData.type || "construction").toString().toUpperCase();
-
-  if (collisionType === "CHEST" || collisionType.toLowerCase() === "chest") collisionType = "CHEST";
-  else if (collisionType === "WELL" || collisionType.toLowerCase() === "well") collisionType = "WELL";
-  else if (collisionType === "WATERTROUGHX" || collisionType.toLowerCase() === "watertroughx") collisionType = "WATERTROUGHX";
-  else if (collisionType === "WATERTROUGHY" || collisionType.toLowerCase() === "watertroughy") collisionType = "WATERTROUGHY";
-  else if (collisionType === "FENCEX" || collisionType.toLowerCase() === "fencex") collisionType = "FENCEX";
-  else if (collisionType === "FENCEY" || collisionType.toLowerCase() === "fencey") collisionType = "FENCEY";
-  else if (collisionType === "FENCE" || collisionType.toLowerCase() === "fence") collisionType = "FENCE";
-  // Issue #171: food troughs use generic FOODTROUGH for collision. Variant
-  // and species live on the object itself, not in the collision label.
-  else if (collisionType === "FOODTROUGH" || collisionType === "FOODTROUGHX" || collisionType === "FOODTROUGHY") collisionType = "FOODTROUGH";
-  else if (collisionType === "FURNITURE") collisionType = "CONSTRUCTION";
-  else if (!["CHEST", "WELL", "CONSTRUCTION", "FENCE", "FENCEX", "FENCEY", "WATERTROUGHX", "WATERTROUGHY", "FOODTROUGH", "HOUSE_WALLS"].includes(collisionType)) collisionType = "CONSTRUCTION";
+  const collisionType = getPlacedBuildingCollisionType(objectData);
 
   const building = {
     // Preserve ANY custom fields from objectData (species, targetAnimals,
@@ -1607,6 +1618,13 @@ export function importWorldState(data) {
   try {
     if (!payload || typeof payload !== "object") return;
 
+    // Remove as hitboxes dos objetos atuais ANTES de zerar os arrays. Sem
+    // isso, os objetos colocados (cerca/baú/poço/cocho) de um save anterior
+    // permaneceriam como colisões-fantasma ao trocar de save (cf. #181).
+    for (const arr of [trees, rocks, thickets, houses, placedBuildings, placedWells]) {
+      for (const o of arr) { if (o?.id) collisionSystem.removeHitbox(o.id); }
+    }
+
     // Reset existing data
     trees.length = 0;
     rocks.length = 0;
@@ -1675,6 +1693,27 @@ export function importWorldState(data) {
     const hosp = getSystem('hospital');
     if (hosp?.restoreState) {
       hosp.restoreState(payload.hospital ?? { entries: [] });
+    }
+
+    // Re-registra as hitboxes de colisão dos objetos recarregados. Antes só
+    // os animais ganhavam hitbox aqui — então cerca, baú, poço e cocho
+    // colocados pelo player ficavam sem colisão após carregar (#165 save/load).
+    const addRestoredHitbox = (id, type, x, y, w, h, obj) => {
+      if (!id) return;
+      try { collisionSystem.addHitbox(id, type, x, y, w, h, obj); }
+      catch (e) { handleWarn("Failed to add hitbox for restored object", "theWorld:importWorldState:hitbox", { id, type, err: e }); }
+    };
+    for (const t of trees)     addRestoredHitbox(t.id, "TREE", t.x, t.y, t.width, t.height);
+    for (const r of rocks)     addRestoredHitbox(r.id, "ROCK", r.x, r.y, r.width, r.height);
+    for (const th of thickets) addRestoredHitbox(th.id, "THICKET", th.x, th.y, th.width, th.height);
+    for (const h of houses) {
+      if (h.type === "HOUSE_WALLS") addRestoredHitbox(h.id, "HOUSE_WALLS", h.x, h.y, h.width, h.height);
+    }
+    for (const b of placedBuildings) {
+      addRestoredHitbox(b.id, getPlacedBuildingCollisionType(b), b.x, b.y, b.width, b.height, b);
+    }
+    for (const w of placedWells) {
+      addRestoredHitbox(w.id, "WELL", w.x, w.y, w.width, w.height, w);
     }
 
     if (payload.seed && typeof worldGenerator.setSeed === "function") {

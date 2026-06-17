@@ -183,6 +183,10 @@ export default {
     toolWheel: {
       empty: 'No hay herramientas en el inventario'
     },
+    seedWheel: {
+      none: 'Sin semilla',
+      empty: 'No hay semillas en el inventario'
+    },
     details: {
       sectionTitle: 'Información técnica',
       type: 'Tipo',
@@ -945,6 +949,8 @@ export default {
     drink: 'Beber',
     collect: 'Recolectar',
     fillBottle: 'Llenar botella',
+    fillWateringCan: 'Llenar regadera',
+    noWateringCan: 'Necesitas una regadera',
     well: 'Pozo',
     lowerBucket: 'Bajar balde',
     insufficientWater: 'Agua insuficiente en el pozo',
