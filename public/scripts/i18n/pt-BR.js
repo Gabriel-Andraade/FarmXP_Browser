@@ -187,6 +187,7 @@ export default {
       none: 'Sem semente',
       empty: 'Sem sementes no inventário'
     },
+    wateringCanFull: 'Cheio de água',
     details: {
       sectionTitle: 'Informações técnicas',
       type: 'Tipo',

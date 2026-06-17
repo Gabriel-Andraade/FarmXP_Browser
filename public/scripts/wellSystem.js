@@ -466,7 +466,12 @@ export const wellSystem = {
       return;
     }
 
-    getSystem('wateringCan')?.fill?.();
+    const canSystem = getSystem('wateringCan');
+    if (!canSystem || typeof canSystem.fill !== 'function') {
+      handleWarn('Watering can system unavailable', 'wellSystem:fillWateringCan');
+      return;
+    }
+    canSystem.fill();
     wellState.waterLevel -= WELL_CONFIG.WATER_PER_WATERING_CAN;
     this.updateUI();
   },

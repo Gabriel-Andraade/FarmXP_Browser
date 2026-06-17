@@ -1058,7 +1058,7 @@ function renderInventory() {
     if (fullItem.toolType === 'watering_can' && getSystem('wateringCan')?.hasWater?.()) {
       const waterBadge = document.createElement('span');
       waterBadge.textContent = '💧';
-      waterBadge.setAttribute('aria-label', 'Cheio de água');
+      waterBadge.setAttribute('aria-label', t('inventory.wateringCanFull'));
       waterBadge.style.cssText = 'position:absolute;bottom:2px;left:2px;font-size:14px;pointer-events:none;text-shadow:0 0 3px rgba(0,0,0,0.8);';
       slotEl.appendChild(waterBadge);
     }

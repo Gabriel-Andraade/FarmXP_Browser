@@ -1621,7 +1621,7 @@ export function importWorldState(data) {
     // Remove as hitboxes dos objetos atuais ANTES de zerar os arrays. Sem
     // isso, os objetos colocados (cerca/baú/poço/cocho) de um save anterior
     // permaneceriam como colisões-fantasma ao trocar de save (cf. #181).
-    for (const arr of [trees, rocks, thickets, houses, placedBuildings, placedWells]) {
+    for (const arr of [trees, rocks, thickets, houses, placedBuildings, placedWells, animals]) {
       for (const o of arr) { if (o?.id) collisionSystem.removeHitbox(o.id); }
     }
 

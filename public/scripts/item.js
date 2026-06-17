@@ -134,14 +134,6 @@ export const items = [
     type: "seed"
   },
   {
-    id: 17,
-    name: "Semente de Cenoura",
-    icon: "assets/icons/carrotSeedIcon.png",
-    price: 12,
-    description: "Pode ser plantada para crescer cenouras",
-    type: "seed"
-  },
-  {
     id: 18,
     name: "Semente de Tomate",
     icon: "🍅",
@@ -456,7 +448,7 @@ export const items = [
   {
     id: 122,
     name: "Semente de Beterraba",
-    icon: "🫜",
+    icon: "🟤",
     price: 6,
     description: "Plante em solo arado para cultivar beterraba",
     type: "seed"
@@ -1145,14 +1137,6 @@ export const items = [
     icon: "assets/icons/wheatIcon.png",
     price: 20,
     description: "Cereal essencial para farinha e feno",
-    type: "crop"
-  },
-  {
-    id: 65,
-    name: "Cenoura",
-    icon: "assets/icons/carrotIcon.png",
-    price: 18,
-    description: "Legume crocante e saudável",
     type: "crop"
   },
   {

@@ -187,6 +187,7 @@ export default {
       none: 'No seed',
       empty: 'No seeds in inventory'
     },
+    wateringCanFull: 'Full of water',
     details: {
       sectionTitle: 'Technical info',
       type: 'Type',

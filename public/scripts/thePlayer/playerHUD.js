@@ -37,19 +37,11 @@ function getKeyForAction(action) {
  * @returns {string} Nome traduzido
  */
 function getItemName(itemId, fallbackName = '') {
-<<<<<<< Updated upstream
     const translatedName = t(`itemNames.${itemId}`);
     if (translatedName === `itemNames.${itemId}`) {
         return fallbackName;
     }
     return translatedName || fallbackName;
-=======
-  const translatedName = t(`itemNames.${itemId}`);
-  if (translatedName === `itemNames.${itemId}`) {
-    return fallbackName;
-  }
-  return translatedName || fallbackName;
->>>>>>> Stashed changes
 }
 
 export class PlayerHUD {
@@ -353,33 +345,16 @@ export class PlayerHUD {
         const thirst = needs.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs.energy ?? this.currentPlayer.energy ?? 100;
 
-<<<<<<< Updated upstream
         this.setHUDValue('hudPlayerHunger', `${hunger}%`);
         this.setHUDValue('hudPlayerThirst', `${thirst}%`);
         this.setHUDValue('hudPlayerEnergy', `${energy}%`);
-=======
-        // fix: Fixed indentation on setHUDValue calls (L148-150)
-        this.setHUDValue('hudPlayerHunger', `${needs.hunger}%`);
-        this.setHUDValue('hudPlayerThirst', `${needs.thirst}%`);
-        this.setHUDValue('hudPlayerEnergy', `${needs.energy}%`);
->>>>>>> Stashed changes
     }
 
     updatePlayerInfo() {
         if (!this.currentPlayer) return;
 
-<<<<<<< Updated upstream
         const playerSystem = getSystem('player');
         const needs = playerSystem?.getNeeds();
-=======
-        this.setHUDValue('hudPlayerName', this.currentPlayer.name || "Aventureiro");
-        this.setHUDValue('hudPlayerLevel', this.currentPlayer.level || "1");
-        this.setHUDValue('hudPlayerXP', `${this.currentPlayer.xp || 0}/${this.currentPlayer.xpMax || 100}`);
-        
-        // fix: Defensive nullish coalescing (??) to handle 0 values safely (L161-167)
-
-        const needs = window.playerSystem?.getNeeds();
->>>>>>> Stashed changes
         const hunger = needs?.hunger ?? this.currentPlayer.hunger ?? 100;
         const thirst = needs?.thirst ?? this.currentPlayer.thirst ?? 100;
         const energy = needs?.energy ?? this.currentPlayer.energy ?? 100;

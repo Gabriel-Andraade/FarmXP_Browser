@@ -157,13 +157,13 @@ const hoeTool = {
         rec.rainSince = null;
     },
 
-    /** Soil state of the tile at (tileX, tileY) world coords, or null if untilled. */
-    getTileState(tileX, tileY) {
-        return this._tilled.get(this._tileKey(tileX, tileY))?.state ?? null;
+    /** Soil state of the tile at the given world coords, or null if untilled. */
+    getTileState(worldX, worldY) {
+        return this._tilled.get(this._tileKey(worldX, worldY))?.state ?? null;
     },
 
-    isTilled(tileX, tileY) {
-        return this._tilled.has(this._tileKey(tileX, tileY));
+    isTilled(worldX, worldY) {
+        return this._tilled.has(this._tileKey(worldX, worldY));
     },
 
     /**

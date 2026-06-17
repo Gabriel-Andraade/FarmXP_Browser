@@ -369,7 +369,7 @@ export const recipes = [
         requiredItems: [
             { itemId: 5, qty: 2 },
             { itemId: 68, qty: 1 },
-            { itemId: 65, qty: 1 }
+            { itemId: 125, qty: 1 } // migrated from orphaned Cenoura (65) to the active one (125)
         ],
         result: { itemId: 72, qty: 1 },
         category: "food",
