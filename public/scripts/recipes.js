@@ -19,6 +19,39 @@
  * @property {string} icon - Emoji/ícone da receita
  */
 export const recipes = [
+    // Issue #165: compact raw harvested hay into animal feed (Feno, id 29).
+    {
+        id: "compact_hay",
+        name: "Compactar Feno",
+        requiredItems: [{ itemId: 109, qty: 3 }],
+        result: { itemId: 29, qty: 1 },
+        category: "animal_food",
+        craftTime: 2,
+        icon: "",
+    },
+    // Issue #165: shred harvested hay into stolons/rhizomes (hay seed, id 107)
+    // for replanting. 1 harvested hay → 3 seeds.
+    {
+        id: "shred_hay",
+        name: "Despedaçar Feno (Estolões)",
+        requiredItems: [{ itemId: 109, qty: 1 }],
+        result: { itemId: 107, qty: 3 },
+        category: "material",
+        craftTime: 2,
+        icon: "",
+    },
+    // Issue #165: compact harvested weed (matinho, 115) into animal feed,
+    // same role as compacted hay (→ Feno, 29).
+    {
+        id: "compact_grass",
+        name: "Compactar Matinho",
+        requiredItems: [{ itemId: 115, qty: 3 }],
+        result: { itemId: 29, qty: 1 },
+        category: "animal_food",
+        craftTime: 2,
+        icon: "",
+    },
+
     /* materiais básicos e processamento */
     {
         id: "wood_scrap",
@@ -336,11 +369,49 @@ export const recipes = [
         requiredItems: [
             { itemId: 5, qty: 2 },
             { itemId: 68, qty: 1 },
-            { itemId: 65, qty: 1 }
+            { itemId: 125, qty: 1 } // migrated from orphaned Cenoura (65) to the active one (125)
         ],
         result: { itemId: 72, qty: 1 },
         category: "food",
         craftTime: 8,
+        icon: ""
+    },
+    // Issue #165: dishes from harvested crops.
+    {
+        id: "country_salad",
+        name: "Salada Campestre",
+        requiredItems: [
+            { itemId: 111, qty: 2 }, // Pepino
+            { itemId: 125, qty: 1 }, // Cenoura
+            { itemId: 123, qty: 1 }  // Beterraba
+        ],
+        result: { itemId: 134, qty: 1 },
+        category: "food",
+        craftTime: 6,
+        icon: ""
+    },
+    {
+        id: "pumpkin_soup",
+        name: "Sopa de Abóbora",
+        requiredItems: [
+            { itemId: 119, qty: 1 }, // Abóbora
+            { itemId: 125, qty: 2 }  // Cenoura
+        ],
+        result: { itemId: 135, qty: 1 },
+        category: "food",
+        craftTime: 10,
+        icon: ""
+    },
+    {
+        id: "tropical_salad",
+        name: "Salada Tropical",
+        requiredItems: [
+            { itemId: 113, qty: 1 }, // Abacaxi
+            { itemId: 127, qty: 2 }  // Uva
+        ],
+        result: { itemId: 136, qty: 1 },
+        category: "food",
+        craftTime: 6,
         icon: ""
     },
 

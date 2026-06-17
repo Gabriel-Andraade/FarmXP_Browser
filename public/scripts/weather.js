@@ -135,6 +135,13 @@ export const WeatherSystem = {
   /** Dia atual do mês */
   day: 1,
 
+  /**
+   * Monotonic in-game minutes since session start (never wraps, includes sleep
+   * skips). Used as the time base for crop growth/watering so they advance with
+   * the in-game clock and jump on sleep. (#165)
+   */
+  totalGameMinutes: 6 * 60,
+
   /** Chaves internas das estações (não traduzidas) */
   seasonKeys: ["spring", "summer", "autumn", "winter"],
   /** Estação atual (chave interna) */
@@ -222,6 +229,11 @@ export const WeatherSystem = {
     _wuiCache = null;
   },
 
+  /** Monotonic in-game minutes since session start (time base for crops, #165). */
+  getGameMinutes() {
+    return this.totalGameMinutes;
+  },
+
   getWeekday() {
     const index = (this.day - 1) % 7;
     const weekdays = t('time.weekdays');
@@ -253,6 +265,7 @@ export const WeatherSystem = {
 
     const oldTime = this.currentTime;
     this.currentTime += deltaTime * this.timeSpeed;
+    this.totalGameMinutes += deltaTime * this.timeSpeed; // monotonic (crops, #165)
 
     if (Math.floor(oldTime) !== Math.floor(this.currentTime)) {
       document.dispatchEvent(
@@ -304,6 +317,9 @@ export const WeatherSystem = {
         this.sleepPhase = "holding";
         this.sleepTimerAcc = 0;
 
+        // Advance the monotonic clock by the skipped in-game minutes (rest of
+        // today + up to 06:00) so crops grow/dry across the sleep (#165).
+        this.totalGameMinutes += (24 * 60 - this.currentTime) + 6 * 60;
         this.currentTime = 6 * 60;
         this.advanceDate();
         this.randomizeWeather();

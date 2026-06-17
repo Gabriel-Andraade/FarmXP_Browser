@@ -6,7 +6,12 @@ import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { getSystem, getDebugFlag } from '../gameState.js';
 import { openToolWheel, closeToolWheel, isToolWheelOpen } from './toolWheel.js';
+<<<<<<< feat/165-planting-system
+import { openSeedWheel, closeSeedWheel, isSeedWheelOpen } from './seedWheel.js';
+import { getItem } from '../itemUtils.js';
+=======
 import { logger } from '../logger.js';
+>>>>>>> main
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -522,6 +527,40 @@ export class PlayerInteractionSystem {
                 return;
             }
 
+            // Issue #165: crop actions (priority order).
+            const cropSys = getSystem('crop');
+            // 1) Scythe equipped + mature crop under cursor → harvest.
+            const eq = getSystem('player')?.getEquippedItem?.();
+            const eqItem = eq ? getItem(eq.id ?? eq) : null;
+            if (eqItem?.toolType === 'scythe' && cropSys?.isMatureAt?.(worldPos.x, worldPos.y)) {
+                cropSys.harvestAt(worldPos.x, worldPos.y);
+                return;
+            }
+            // 1b) Watering can equipped → water the crop (or tilled soil) under
+            // the cursor, spending one charge. Empty cans do nothing (refill at
+            // the well). Always consumes the click (tool-in-hand semantics).
+            if (eqItem?.toolType === 'watering_can') {
+                const can = getSystem('wateringCan');
+                if (can?.hasWater?.()) {
+                    const wateredCrop = cropSys?.waterAt?.(worldPos.x, worldPos.y);
+                    const wateredSoil = !wateredCrop && getSystem('hoeTool')?.waterAt?.(worldPos.x, worldPos.y);
+                    if (wateredCrop || wateredSoil) can.useOne();
+                }
+                return;
+            }
+            // 2) Active seed + tilled, unplanted tile → plant (consumes a seed).
+            if (cropSys?.plantAt?.(worldPos.x, worldPos.y)) {
+                return;
+            }
+
+            // 3) Hoe equipped → till the grass tile under the cursor (the one the
+            // tile-cursor highlights). Short-circuits the generic interaction below.
+            const hoeTool = getSystem('hoeTool');
+            if (hoeTool?.isEquipped?.()) {
+                hoeTool.tillAt(worldPos.x, worldPos.y);
+                return;
+            }
+
             this.handleCanvasClick(worldPos.x, worldPos.y, canvasX, canvasY);
         }, { signal: controlsAbortController.signal });
 
@@ -582,6 +621,9 @@ export class PlayerInteractionSystem {
             wtSys?.updateHover?.(worldPos.x, worldPos.y);
             const ftSys = getSystem('foodTrough');
             ftSys?.updateHover?.(worldPos.x, worldPos.y);
+
+            // Hoe tile-cursor follows the mouse (drawn by the game loop).
+            getSystem('hoeTool')?.updateMouse?.(worldPos.x, worldPos.y);
         }, { signal: controlsAbortController.signal });
     }
 
@@ -1150,6 +1192,45 @@ function setupToolWheelControls() {
     // por acidente quando alt-tab segurando Q).
     window.addEventListener('blur', () => {
         if (isToolWheelOpen()) closeToolWheel(false);
+    }, { signal });
+
+    // ─── Seed wheel: HOLD E to open (Issue #165) ──────────────────────────
+    // E also interacts (tap). The wheel opens only after a short hold, so a
+    // quick interact tap doesn't flash/commit it. On empty ground the interact
+    // fired on keydown is a no-op, so holding E to plant doesn't conflict.
+    let _seedHoldTimer = null;
+    const _clearSeedHold = () => { clearTimeout(_seedHoldTimer); _seedHoldTimer = null; };
+
+    document.addEventListener('keydown', (e) => {
+        if (isSleeping) return;
+        const tgt = e.target;
+        if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
+                 || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
+        if (BuildSystem.active) return;
+        if (!isActionKeyEvent(e, 'interact')) return;
+        if (e.repeat || isSeedWheelOpen()) return;
+
+        const invHost = document.getElementById('inventory-ui-host');
+        const invOpen = invHost?.shadowRoot?.getElementById('inventoryModal')?.classList.contains('open');
+        if (invOpen || document.querySelector('.modal.active')) return;
+
+        // Open only after a short hold → quick tap stays a pure interact.
+        clearTimeout(_seedHoldTimer);
+        _seedHoldTimer = setTimeout(() => { _seedHoldTimer = null; openSeedWheel(); }, 220);
+    }, { signal });
+
+    document.addEventListener('keyup', (e) => {
+        if (!isActionKeyEvent(e, 'interact')) return;
+        _clearSeedHold();
+        if (isSeedWheelOpen()) {
+            e.preventDefault();
+            closeSeedWheel(true);
+        }
+    }, { signal });
+
+    window.addEventListener('blur', () => {
+        _clearSeedHold();
+        if (isSeedWheelOpen()) closeSeedWheel(false);
     }, { signal });
 }
 

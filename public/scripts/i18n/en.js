@@ -183,6 +183,11 @@ export default {
     toolWheel: {
       empty: 'No tools in inventory'
     },
+    seedWheel: {
+      none: 'No seed',
+      empty: 'No seeds in inventory'
+    },
+    wateringCanFull: 'Full of water',
     details: {
       sectionTitle: 'Technical info',
       type: 'Type',
@@ -385,7 +390,7 @@ export default {
     14: 'Axe',
     15: 'Rake',
     16: 'Bucket',
-    17: 'Carrot Seeds',
+    124: 'Carrot Seeds',
     18: 'Tomato Seeds',
     19: 'Potato Seeds',
     20: 'Strawberry Seeds',
@@ -419,7 +424,7 @@ export default {
     62: 'Wool',
     63: 'Corn',
     64: 'Wheat',
-    65: 'Strawberry',
+    125: 'Carrot',
     68: 'Orange',
     69: 'Storage Chest',
     71: 'Roasted Corn',
@@ -944,6 +949,8 @@ export default {
     drink: 'Drink',
     collect: 'Collect',
     fillBottle: 'Fill bottle',
+    fillWateringCan: 'Fill watering can',
+    noWateringCan: 'You need a watering can',
     well: 'Well',
     lowerBucket: 'Lower bucket',
     insufficientWater: 'Insufficient water in the well',

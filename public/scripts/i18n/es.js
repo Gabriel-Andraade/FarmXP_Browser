@@ -183,6 +183,11 @@ export default {
     toolWheel: {
       empty: 'No hay herramientas en el inventario'
     },
+    seedWheel: {
+      none: 'Sin semilla',
+      empty: 'No hay semillas en el inventario'
+    },
+    wateringCanFull: 'Lleno de agua',
     details: {
       sectionTitle: 'Información técnica',
       type: 'Tipo',
@@ -385,7 +390,7 @@ export default {
     14: 'Hacha',
     15: 'Rastrillo',
     16: 'Cubo',
-    17: 'Semillas de Zanahoria',
+    124: 'Semillas de Zanahoria',
     18: 'Semillas de Tomate',
     19: 'Semillas de Papa',
     20: 'Semillas de Fresa',
@@ -419,7 +424,7 @@ export default {
     62: 'Lana',
     63: 'Maíz',
     64: 'Trigo',
-    65: 'Fresa',
+    125: 'Zanahoria',
     68: 'Naranja',
     69: 'Cofre de Almacenamiento',
     71: 'Maíz Asado',
@@ -945,6 +950,8 @@ export default {
     drink: 'Beber',
     collect: 'Recolectar',
     fillBottle: 'Llenar botella',
+    fillWateringCan: 'Llenar regadera',
+    noWateringCan: 'Necesitas una regadera',
     well: 'Pozo',
     lowerBucket: 'Bajar balde',
     insufficientWater: 'Agua insuficiente en el pozo',

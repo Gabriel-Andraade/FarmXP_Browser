@@ -175,7 +175,7 @@ class MerchantSystem {
                 items: [
                     { id: 3, name: 'Semente de Milho', price: 20, category: 'seed', icon: '', quantity: 40 },
                     { id: 4, name: 'Semente de Trigo', price: 15, category: 'seed', icon: '', quantity: 50 },
-                    { id: 17, name: 'Semente de Cenoura', price: 12, category: 'seed', icon: '', quantity: 60 },
+                    { id: 124, name: 'Semente de Cenoura', price: 12, category: 'seed', icon: '', quantity: 60 },
                     { id: 18, name: 'Semente de Tomate', price: 18, category: 'seed', icon: '', quantity: 40 },
                     { id: 19, name: 'Semente de Batata', price: 10, category: 'seed', icon: '', quantity: 70 },
                     { id: 20, name: 'Semente de Morango', price: 25, category: 'seed', icon: '', quantity: 30 },

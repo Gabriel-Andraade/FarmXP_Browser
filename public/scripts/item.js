@@ -134,14 +134,6 @@ export const items = [
     type: "seed"
   },
   {
-    id: 17,
-    name: "Semente de Cenoura",
-    icon: "assets/icons/carrotSeedIcon.png",
-    price: 12,
-    description: "Pode ser plantada para crescer cenouras",
-    type: "seed"
-  },
-  {
     id: 18,
     name: "Semente de Tomate",
     icon: "🍅",
@@ -321,11 +313,268 @@ export const items = [
   {
     id: 29,
     name: "Feno",
-    icon: "assets/icons/hayIcon.png",
+    icon: "assets/icons/hayIcon.webp",
     price: 20,
     description: "Alimento básico para herbívoros (gado, ovelha, porco)",
     type: "animal_food",
     targetAnimals: ["Cow", "Bull", "Calf", "Sheep", "Lamb", "Piglet", "Pig"]
+  },
+  {
+    // Issue #165: hay seed — plant on tilled soil to grow hay (harvest → Feno, id 29).
+    // TODO: dedicated seed icon (reusing hayIcon.png as placeholder for the test).
+    id: 107,
+    name: "Grão de Feno",
+    icon: "assets/icons/hayIcon.webp",
+    price: 8,
+    description: "Plante em solo arado para cultivar feno",
+    type: "seed"
+  },
+  {
+    // Issue #165: raw harvested hay (goes to Resources). Must be compacted via
+    // crafting → Feno (29) before it can feed animals.
+    // TODO: dedicated icon (placeholder hayIcon).
+    id: 109,
+    name: "Feno Colhido",
+    icon: "assets/icons/hayIcon.webp",
+    price: 5,
+    description: "Feno cru — compacte na bancada para virar ração",
+    type: "crop"
+  },
+  // Issue #165: planting batch 1 — cucumber, pineapple, weed, sunflower.
+  // Each crop = a seed (plant on tilled soil) + a harvested crop item
+  // (resource). Emoji icons are placeholders until dedicated icons exist.
+  {
+    id: 110,
+    name: "Semente de Pepino",
+    icon: "🥒",
+    price: 8,
+    description: "Plante em solo arado para cultivar pepino",
+    type: "seed"
+  },
+  {
+    id: 111,
+    name: "Pepino",
+    icon: "assets/icons/cucumberIcon.webp",
+    price: 6,
+    description: "Pepino colhido — refrescante",
+    type: "food",
+    fillUp: { hunger: 12, thirst: 10, energy: 6 }
+  },
+  {
+    id: 112,
+    name: "Muda de Abacaxi",
+    icon: "🍍",
+    price: 10,
+    description: "Plante em solo arado para cultivar abacaxi",
+    type: "seed"
+  },
+  {
+    id: 113,
+    name: "Abacaxi",
+    icon: "assets/icons/pineappleIcon.webp",
+    price: 9,
+    description: "Abacaxi colhido — doce e suculento",
+    type: "food",
+    fillUp: { hunger: 18, thirst: 12, energy: 10 }
+  },
+  {
+    id: 114,
+    name: "Semente de Matinho",
+    icon: "🌿",
+    price: 4,
+    description: "Plante em solo arado para cultivar matinho",
+    type: "seed"
+  },
+  {
+    id: 115,
+    name: "Matinho",
+    icon: "🌿",
+    price: 3,
+    description: "Matinho colhido — compacte na bancada para virar ração",
+    type: "crop"
+  },
+  {
+    id: 116,
+    name: "Semente de Girassol",
+    icon: "🌻",
+    price: 8,
+    description: "Plante em solo arado para cultivar girassol",
+    type: "seed"
+  },
+  {
+    id: 117,
+    name: "Girassol",
+    icon: "🌻",
+    price: 7,
+    description: "Girassol colhido — sementes para petiscar",
+    type: "food",
+    fillUp: { hunger: 6, thirst: 0, energy: 10 }
+  },
+  // Issue #165: planting batch 2 — pumpkin, broccoli, beet, carrot.
+  {
+    id: 118,
+    name: "Semente de Abóbora",
+    icon: "🎃",
+    price: 9,
+    description: "Plante em solo arado para cultivar abóbora",
+    type: "seed"
+  },
+  {
+    id: 119,
+    name: "Abóbora",
+    icon: "assets/icons/pumpkinIcon.webp",
+    price: 8,
+    description: "Abóbora colhida — substanciosa",
+    type: "food",
+    fillUp: { hunger: 22, thirst: 4, energy: 14 }
+  },
+  {
+    id: 120,
+    name: "Semente de Brócolis",
+    icon: "🥦",
+    price: 7,
+    description: "Plante em solo arado para cultivar brócolis",
+    type: "seed"
+  },
+  {
+    id: 121,
+    name: "Brócolis",
+    icon: "assets/icons/broccoliIcon.webp",
+    price: 6,
+    description: "Brócolis colhido — nutritivo",
+    type: "food",
+    fillUp: { hunger: 16, thirst: 3, energy: 12 }
+  },
+  {
+    id: 122,
+    name: "Semente de Beterraba",
+    icon: "🟤",
+    price: 6,
+    description: "Plante em solo arado para cultivar beterraba",
+    type: "seed"
+  },
+  {
+    id: 123,
+    name: "Beterraba",
+    icon: "assets/icons/beetIcon.webp",
+    price: 5,
+    description: "Beterraba colhida",
+    type: "food",
+    fillUp: { hunger: 14, thirst: 4, energy: 8 }
+  },
+  {
+    id: 124,
+    name: "Semente de Cenoura",
+    icon: "🥕",
+    price: 6,
+    description: "Plante em solo arado para cultivar cenoura",
+    type: "seed"
+  },
+  {
+    id: 125,
+    name: "Cenoura",
+    icon: "assets/icons/carrotIcon.webp",
+    price: 5,
+    description: "Cenoura colhida",
+    type: "food",
+    fillUp: { hunger: 12, thirst: 3, energy: 10 }
+  },
+  // Issue #165: planting batch 3 — grape, chili, bell pepper, cauliflower.
+  {
+    id: 126,
+    name: "Semente de Uva",
+    icon: "🍇",
+    price: 10,
+    description: "Plante em solo arado para cultivar uva",
+    type: "seed"
+  },
+  {
+    id: 127,
+    name: "Uva",
+    icon: "assets/icons/grapeIcon.webp",
+    price: 9,
+    description: "Uva colhida — refrescante",
+    type: "food",
+    fillUp: { hunger: 10, thirst: 10, energy: 8 }
+  },
+  {
+    id: 128,
+    name: "Semente de Pimentinha",
+    icon: "🌶️",
+    price: 7,
+    description: "Plante em solo arado para cultivar pimentinha",
+    type: "seed"
+  },
+  {
+    id: 129,
+    name: "Pimentinha",
+    icon: "assets/icons/chiliIcon.webp",
+    price: 6,
+    description: "Pimentinha colhida — picante",
+    type: "food",
+    fillUp: { hunger: 4, thirst: 0, energy: 6 }
+  },
+  {
+    id: 130,
+    name: "Semente de Pimentão",
+    icon: "🫑",
+    price: 8,
+    description: "Plante em solo arado para cultivar pimentão",
+    type: "seed"
+  },
+  {
+    id: 131,
+    name: "Pimentão",
+    icon: "assets/icons/bellPepperIcon.webp",
+    price: 7,
+    description: "Pimentão colhido",
+    type: "food",
+    fillUp: { hunger: 14, thirst: 4, energy: 8 }
+  },
+  {
+    id: 132,
+    name: "Semente de Couve-Flor",
+    icon: "🥬",
+    price: 7,
+    description: "Plante em solo arado para cultivar couve-flor",
+    type: "seed"
+  },
+  {
+    id: 133,
+    name: "Couve-Flor",
+    icon: "assets/icons/cauliflowerIcon.webp",
+    price: 6,
+    description: "Couve-flor colhida — nutritiva",
+    type: "food",
+    fillUp: { hunger: 15, thirst: 3, energy: 10 }
+  },
+  // Issue #165: cooked dishes made from harvested crops (crafting).
+  {
+    id: 134,
+    name: "Salada Campestre",
+    icon: "🥗",
+    price: 28,
+    description: "Pepino, cenoura e beterraba — refeição leve e completa",
+    type: "food",
+    fillUp: { hunger: 32, thirst: 12, energy: 22 }
+  },
+  {
+    id: 135,
+    name: "Sopa de Abóbora",
+    icon: "🍲",
+    price: 32,
+    description: "Abóbora com cenoura — quente e reconfortante",
+    type: "food",
+    fillUp: { hunger: 38, thirst: 18, energy: 26 }
+  },
+  {
+    id: 136,
+    name: "Salada Tropical",
+    icon: "🍹",
+    price: 30,
+    description: "Abacaxi com uva — doce e refrescante",
+    type: "food",
+    fillUp: { hunger: 24, thirst: 26, energy: 18 }
   },
   {
     id: 30,
@@ -888,14 +1137,6 @@ export const items = [
     icon: "assets/icons/wheatIcon.png",
     price: 20,
     description: "Cereal essencial para farinha e feno",
-    type: "crop"
-  },
-  {
-    id: 65,
-    name: "Cenoura",
-    icon: "assets/icons/carrotIcon.png",
-    price: 18,
-    description: "Legume crocante e saudável",
     type: "crop"
   },
   {
