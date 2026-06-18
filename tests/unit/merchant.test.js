@@ -79,7 +79,8 @@ mock.module('../../public/scripts/itemUtils.js', () => ({
   getSellPrice: (id) => {
     const item = mockItems.find(i => i.id === id);
     return item ? Math.floor(item.price * 0.5) : 0;
-  }
+  },
+  setItemIcon: () => {} // merchant.js imports this for DOM rendering; no-op in tests
 }));
 
 // Mock i18n
@@ -219,6 +220,32 @@ describe('MerchantSystem (Production Implementation)', () => {
           expect(item.quantity).toBeDefined();
         });
       });
+    });
+  });
+
+  // Issue #202: stock must decrement on purchase and only refill on a new day.
+  describe('stock (#202)', () => {
+    test('each item snapshots its starting stock as initialQuantity', () => {
+      merchantSystem.merchants.forEach(merchant => {
+        merchant.items.forEach(item => {
+          expect(item.initialQuantity).toBe(item.quantity);
+        });
+      });
+    });
+
+    test('restockDaily refills a depleted item back to its initial stock', () => {
+      const item = merchantSystem.merchants[0].items[0];
+      const initial = item.initialQuantity;
+      item.quantity = 0; // simulate sold out during the day
+      merchantSystem.restockDaily();
+      expect(item.quantity).toBe(initial);
+    });
+
+    test('restockDaily does not exceed the initial stock', () => {
+      const item = merchantSystem.merchants[0].items[0];
+      item.quantity = item.initialQuantity - 1; // partially sold
+      merchantSystem.restockDaily();
+      expect(item.quantity).toBe(item.initialQuantity);
     });
   });
 

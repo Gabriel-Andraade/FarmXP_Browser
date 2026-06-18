@@ -195,6 +195,27 @@ class MerchantSystem {
                 ]
             }
         ];
+
+        // Issue #202: snapshot each item's starting stock so the daily restock
+        // can refill it. Purchases decrement quantity in place (persisting
+        // through the in-game day); restockDaily() resets it on dayChanged.
+        for (const merchant of this.merchants) {
+            for (const item of merchant.items) item.initialQuantity = item.quantity;
+        }
+    }
+
+    // Issue #202: refill every merchant's stock back to its starting amount.
+    // Called once per in-game day (dayChanged).
+    restockDaily() {
+        for (const merchant of this.merchants) {
+            for (const item of merchant.items) {
+                if (typeof item.initialQuantity === 'number') item.quantity = item.initialQuantity;
+            }
+        }
+        const commerceModal = document.getElementById('commerceModal');
+        if (this.currentMerchant && commerceModal?.classList.contains('active')) {
+            this.renderMerchantItems();
+        }
     }
 
     // configura listeners do sistema de comércio
@@ -224,6 +245,9 @@ class MerchantSystem {
                 this.updateMerchantsListStatus();
             }
         }, { signal });
+
+        // Issue #202: refill merchant stock once per in-game day.
+        document.addEventListener('dayChanged', () => this.restockDaily(), { signal });
 
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal-close') ||
@@ -777,7 +801,10 @@ class MerchantSystem {
         grid.replaceChildren();
         for (const item of merchantItems) {
             const hex = document.createElement('div');
-            hex.className = `mch-merchant-hexagon ${this.selectedMerchantItem === item.id ? 'mch-item-selected' : ''}`;
+            // Issue #202: sold-out items (stock hit 0) render greyed out until
+            // the daily restock.
+            const soldOut = (item.quantity ?? 0) <= 0;
+            hex.className = `mch-merchant-hexagon${this.selectedMerchantItem === item.id ? ' mch-item-selected' : ''}${soldOut ? ' mch-out-of-stock' : ''}`;
             hex.dataset.itemId = item.id;
             const iconDiv = document.createElement('div');
             iconDiv.className = 'mch-hexagon-icon';
@@ -1212,6 +1239,10 @@ class MerchantSystem {
                     } else {
                         logger.error("Erro: método spend() não encontrado no currencyManager");
                     }
+
+                    // Issue #202: decrement merchant stock so the purchase actually
+                    // reduces availability and persists until the daily restock.
+                    merchantItem.quantity -= this.tradeQuantity;
 
                     this.showMessage(t('trading.purchaseSuccess', { value: totalValue }), 'success');
                     this.updateBalances();

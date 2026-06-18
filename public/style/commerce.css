@@ -673,6 +673,15 @@
     box-shadow: 0 8px 25px rgba(201, 164, 99, 0.6);
 }
 
+/* Issue #202: item sold out for the day — greyed out and non-interactive
+   until the daily restock. */
+.mch-merchant-hexagon.mch-out-of-stock {
+    opacity: 0.45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .mch-merchant-hexagon-price {
     position: absolute;
     bottom: -5px;
