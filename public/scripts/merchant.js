@@ -214,7 +214,9 @@ class MerchantSystem {
         }
         const commerceModal = document.getElementById('commerceModal');
         if (this.currentMerchant && commerceModal?.classList.contains('active')) {
-            this.renderMerchantItems();
+            // Full re-render so the quantity controls / trade button reflect the
+            // refreshed stock (not just the item tiles).
+            this.renderCommerceModal();
         }
     }
 

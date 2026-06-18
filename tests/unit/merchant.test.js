@@ -243,7 +243,7 @@ describe('MerchantSystem (Production Implementation)', () => {
 
     test('restockDaily does not exceed the initial stock', () => {
       const item = merchantSystem.merchants[0].items[0];
-      item.quantity = item.initialQuantity - 1; // partially sold
+      item.quantity = item.initialQuantity + 5; // simulate overfilled stock
       merchantSystem.restockDaily();
       expect(item.quantity).toBe(item.initialQuantity);
     });
