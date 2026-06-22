@@ -24,7 +24,7 @@ import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } fro
 const PROFESSION_BUY_BONUS = {
     thomas: { resources: 0.40, tools: 0.40, construction: 0.40 }, // materials seller
     laila:  { food: 0.40 },                                       // cook
-    rico:   { seeds: 0.40, animal_food: 0.40 },                   // livestock / farming
+    rico:   { seeds: 0.40, animal_food: 0.40, tools: 0.40 },      // livestock / farming
 };
 
 // Issue #200: fraction shaved off the sell price for items outside the
