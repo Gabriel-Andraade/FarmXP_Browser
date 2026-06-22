@@ -16,6 +16,22 @@ import { registerSystem, getSystem } from "./gameState.js";
 import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } from './validation.js';
 
 /**
+ * Issue #200: per-(merchant × inventory category) sell modifier. Selling an
+ * item whose category matches a merchant's profession pays this fraction MORE;
+ * anything outside their specialty pays OUT_OF_SPECIALTY_PENALTY less. Keyed by
+ * merchant id → inventory category → bonus fraction, so it's fully tunable.
+ */
+const PROFESSION_BUY_BONUS = {
+    thomas: { resources: 0.40, tools: 0.40, construction: 0.40 }, // materials seller
+    laila:  { food: 0.40 },                                       // cook
+    rico:   { seeds: 0.40, animal_food: 0.40, tools: 0.40 },      // livestock / farming
+};
+
+// Issue #200: fraction shaved off the sell price for items outside the
+// merchant's specialty (e.g. selling seeds to the cook).
+const OUT_OF_SPECIALTY_PENALTY = 0.20;
+
+/**
  * Sistema de comércio com mercadores NPC
  * Gerencia lista de mercadores, inventários, transações de compra/venda e UI
  * @class MerchantSystem
@@ -1005,7 +1021,7 @@ class MerchantSystem {
         if (item) {
             const originalItem = getItem(itemId);
             if (originalItem) {
-                this.tradeValue = Math.floor(originalItem.price * 0.5);
+                this.tradeValue = this.sellUnitPrice(itemId); // includes profession bonus (#200)
                 this.updateTradeValue();
                 this.renderTradeButton();
                 this.showMessage(t('trading.selected', {
@@ -1129,12 +1145,42 @@ class MerchantSystem {
         }
     }
 
+    // Issue #200: sell price modifier for an item sold to the CURRENT merchant:
+    // a positive bonus within the merchant's specialty, a negative penalty
+    // outside it.
+    professionModifier(itemId) {
+        const merchantId = this.currentMerchant?.id;
+        const item = getItem(itemId);
+        if (!merchantId || !item) return 0;
+        const category = mapTypeToCategory(item.type);
+        const bonus = PROFESSION_BUY_BONUS[merchantId]?.[category];
+        return bonus ?? -OUT_OF_SPECIALTY_PENALTY;
+    }
+
+    // Issue #200: unit sell price to the current merchant, including the
+    // profession modifier. Single source of truth for both display and the
+    // actual transaction, so they always match. Floored at 1 so the penalty
+    // never drives a sale to $0.
+    sellUnitPrice(itemId) {
+        return Math.max(1, Math.floor(getSellPrice(itemId) * (1 + this.professionModifier(itemId))));
+    }
+
+    // Issue #202: when the player sells an item the current merchant already
+    // stocks, it goes back onto the merchant's shelf. Returns true if the
+    // stock changed (item not stocked → no-op).
+    returnStockToMerchant(itemId, qty) {
+        const stockItem = this.currentMerchant?.items?.find(i => i.id === itemId);
+        if (!stockItem || !(qty > 0)) return false;
+        stockItem.quantity += qty;
+        return true;
+    }
+
     calculateExpectedPrice() {
         if (this.tradeMode === 'sell') {
             if (!this.selectedPlayerItem) return null;
             const itemData = getItem(this.selectedPlayerItem);
             if (!itemData) return null;
-            return getSellPrice(this.selectedPlayerItem);
+            return this.sellUnitPrice(this.selectedPlayerItem);
         } else {
             if (!this.selectedMerchantItem) return null;
             const merchantItem = this.getMerchantItems().find(i => i.id === this.selectedMerchantItem);
@@ -1184,7 +1230,14 @@ class MerchantSystem {
                     } else {
                         logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
-                    
+
+                    // Issue #202: selling back an item the merchant stocks returns
+                    // it to their shelf (buy all apples → sell some back → they have
+                    // apples again).
+                    if (this.returnStockToMerchant(this.selectedPlayerItem, this.tradeQuantity)) {
+                        this.renderMerchantItems();
+                    }
+
                     this.showMessage(t('trading.saleSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
                     this.renderPlayerItems();

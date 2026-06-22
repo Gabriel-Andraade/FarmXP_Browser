@@ -137,6 +137,10 @@ const { WeatherSystem } = await import('../../public/scripts/weather.js');
 // Import REAL MerchantSystem from production code
 const { merchantSystem } = await import('../../public/scripts/merchant.js');
 
+// Base sell price helper (mocked above) so pricing tests assert relative
+// behavior instead of brittle absolute values.
+const { getSellPrice } = await import('../../public/scripts/itemUtils.js');
+
 describe('MerchantSystem (Production Implementation)', () => {
 
   beforeEach(() => {
@@ -246,6 +250,69 @@ describe('MerchantSystem (Production Implementation)', () => {
       item.quantity = item.initialQuantity + 5; // simulate overfilled stock
       merchantSystem.restockDaily();
       expect(item.quantity).toBe(item.initialQuantity);
+    });
+
+    test('selling back a stocked item returns it to the merchant shelf', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[0];
+      const item = merchantSystem.currentMerchant.items[0];
+      item.quantity = 0; // bought out
+      const changed = merchantSystem.returnStockToMerchant(item.id, 3);
+      expect(changed).toBe(true);
+      expect(item.quantity).toBe(3);
+    });
+
+    test('selling an item the merchant does not stock is a no-op', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[0];
+      const stockedIds = new Set(merchantSystem.currentMerchant.items.map(i => i.id));
+      let foreignId = 99999;
+      while (stockedIds.has(foreignId)) foreignId++;
+      expect(merchantSystem.returnStockToMerchant(foreignId, 5)).toBe(false);
+    });
+  });
+
+  // Issue #200: selling pays a bonus when the item matches the merchant's
+  // profession and a penalty when it falls outside their specialty.
+  describe('profession pricing (#200)', () => {
+    // Resolve by stable id so the tests don't break if merchant order changes.
+    const thomas = merchantSystem.merchants.find(m => m.id === 'thomas'); // materials
+    const lara = merchantSystem.merchants.find(m => m.id === 'laila');    // cook
+    const WOOD = 1;  // type 'resource'
+    const APPLE = 5; // type 'food'
+
+    test('professionModifier is a positive bonus within the merchant specialty', () => {
+      merchantSystem.currentMerchant = thomas;
+      expect(merchantSystem.professionModifier(WOOD)).toBeGreaterThan(0); // resources
+    });
+
+    test('professionModifier is a penalty outside the specialty', () => {
+      merchantSystem.currentMerchant = lara;
+      expect(merchantSystem.professionModifier(WOOD)).toBeLessThan(0); // resources is not food
+    });
+
+    test('sellUnitPrice adds a bonus over the base price within specialty', () => {
+      merchantSystem.currentMerchant = thomas;
+      expect(merchantSystem.sellUnitPrice(WOOD)).toBeGreaterThan(getSellPrice(WOOD));
+    });
+
+    test('sellUnitPrice applies a penalty under the base price outside specialty', () => {
+      merchantSystem.currentMerchant = lara;
+      expect(merchantSystem.sellUnitPrice(WOOD)).toBeLessThan(getSellPrice(WOOD));
+    });
+
+    test('the same item sells for different prices at different merchants', () => {
+      merchantSystem.currentMerchant = thomas;
+      const atThomas = merchantSystem.sellUnitPrice(WOOD); // resources → bonus
+      merchantSystem.currentMerchant = lara;
+      const atLara = merchantSystem.sellUnitPrice(WOOD);   // not food → penalty
+      expect(atThomas).toBeGreaterThan(atLara);
+    });
+
+    test('food sells with a bonus to the cook but a penalty to the materials seller', () => {
+      merchantSystem.currentMerchant = lara;
+      const atLara = merchantSystem.sellUnitPrice(APPLE);   // food → bonus
+      merchantSystem.currentMerchant = thomas;
+      const atThomas = merchantSystem.sellUnitPrice(APPLE); // food not in materials → penalty
+      expect(atLara).toBeGreaterThan(atThomas);
     });
   });
 
