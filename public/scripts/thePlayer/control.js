@@ -6,12 +6,9 @@ import { MOVEMENT, RANGES, MOBILE, HITBOX_CONFIGS } from '../constants.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { getSystem, getDebugFlag } from '../gameState.js';
 import { openToolWheel, closeToolWheel, isToolWheelOpen } from './toolWheel.js';
-<<<<<<< feat/165-planting-system
 import { openSeedWheel, closeSeedWheel, isSeedWheelOpen } from './seedWheel.js';
 import { getItem } from '../itemUtils.js';
-=======
 import { logger } from '../logger.js';
->>>>>>> main
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();

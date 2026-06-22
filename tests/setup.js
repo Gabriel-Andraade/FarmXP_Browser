@@ -75,6 +75,14 @@ const mockElement = (tag = "div") => {
       this.childNodes = this.childNodes.filter(c => c !== child);
       return child;
     },
+    replaceChildren(...nodes) {
+      this.children = [];
+      this.childNodes = [];
+      for (const node of nodes) this.appendChild(node);
+    },
+    append(...nodes) {
+      for (const node of nodes) this.appendChild(node);
+    },
     remove() {},
 
     classList: {
