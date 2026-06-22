@@ -278,6 +278,11 @@ export const WeatherSystem = {
     if (this.currentTime >= 24 * 60) {
       this.currentTime -= 24 * 60;
       this.advanceDate();
+      // Fire dayChanged on the natural midnight rollover too (same pattern as
+      // the sleep transition and skipMinutes). Without it, day-driven systems
+      // (merchant restock #202 / daily offer rotation #203) only refreshed when
+      // the player slept or fast-travelled, never at 00:00 in normal play.
+      document.dispatchEvent(new CustomEvent("dayChanged", { detail: { day: this.day } }));
     }
 
     this.updateAmbientLight();

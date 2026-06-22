@@ -161,7 +161,21 @@ describe('MerchantSystem (Production Implementation)', () => {
     merchantSystem.currentMerchantCategory = 'all';
     merchantSystem.tradeValue = 0;
     merchantSystem.tradeQuantity = 1;
+
+    // Issue #203: drop any per-test offer override (restores the prototype
+    // method) and clear the cached daily offer between tests.
+    delete merchantSystem.getDailyOffer;
+    merchantSystem._offerDay = null;
+    merchantSystem._dailyOffers.clear();
   });
+
+  // Issue #203: pin today's offer to the full catalog so buy-mechanics tests
+  // can target a specific item regardless of the daily rotation. The override
+  // is removed by the beforeEach above.
+  function offerFullCatalog() {
+    merchantSystem.getDailyOffer = (m) =>
+      new Set((m ?? merchantSystem.currentMerchant).items.map(i => i.id));
+  }
 
   describe('initialization', () => {
     test('should initialize with empty merchant state', () => {
@@ -316,6 +330,59 @@ describe('MerchantSystem (Production Implementation)', () => {
     });
   });
 
+  // Issue #203: each merchant offers a limited, seeded-random subset of its
+  // catalog that rotates every in-game day.
+  describe('daily rotating offer (#203)', () => {
+    const thomas = merchantSystem.merchants.find(m => m.id === 'thomas'); // 13 items
+    const rico = merchantSystem.merchants.find(m => m.id === 'rico');     // 18 items
+
+    test('offers at most 6 items even when the catalog is larger', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      expect(merchantSystem.getMerchantItems().length).toBeLessThanOrEqual(6);
+    });
+
+    test('the offer is a non-empty subset of the merchant catalog', () => {
+      merchantSystem.currentMerchant = rico;
+      WeatherSystem.day = 3;
+      const catalogIds = new Set(rico.items.map(i => i.id));
+      const items = merchantSystem.getMerchantItems();
+      expect(items.length).toBeGreaterThan(0);
+      items.forEach(it => expect(catalogIds.has(it.id)).toBe(true));
+    });
+
+    test('the same day always yields the same offer (save/load safe)', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 5;
+      const first = merchantSystem.getMerchantItems().map(i => i.id).sort();
+      WeatherSystem.day = 9; // move to another day and back
+      merchantSystem.getMerchantItems();
+      WeatherSystem.day = 5;
+      const again = merchantSystem.getMerchantItems().map(i => i.id).sort();
+      expect(again).toEqual(first);
+    });
+
+    test('the offer rotates across days', () => {
+      merchantSystem.currentMerchant = thomas;
+      const perDay = [];
+      for (let d = 1; d <= 5; d++) {
+        WeatherSystem.day = d;
+        perDay.push(merchantSystem.getMerchantItems().map(i => i.id).sort().join(','));
+      }
+      // Not identical every single day.
+      expect(new Set(perDay).size).toBeGreaterThan(1);
+    });
+
+    test('merchant categories reflect only the day\'s offer', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      const offerCategories = new Set(merchantSystem.getMerchantItems().map(i => i.category));
+      merchantSystem.getMerchantCategories().forEach(cat => {
+        if (cat !== 'all') expect(offerCategories.has(cat)).toBe(true);
+      });
+    });
+  });
+
   describe('getCurrentDayIndex', () => {
     test('should return 0 for day 1 (Monday)', () => {
       WeatherSystem.day = 1;
@@ -453,6 +520,7 @@ describe('MerchantSystem (Production Implementation)', () => {
 
     test('should extract unique categories from Thomas items', () => {
       merchantSystem.currentMerchant = merchantSystem.merchants[0]; // Thomas
+      offerFullCatalog(); // #203: see every category, not just today's offer
       const categories = merchantSystem.getMerchantCategories();
       expect(categories).toContain('resource');
       expect(categories).toContain('tool');
@@ -460,6 +528,7 @@ describe('MerchantSystem (Production Implementation)', () => {
 
     test('should extract unique categories from Rico items', () => {
       merchantSystem.currentMerchant = merchantSystem.merchants[2]; // Rico
+      offerFullCatalog(); // #203: see every category, not just today's offer
       const categories = merchantSystem.getMerchantCategories();
       expect(categories).toContain('seed');
       expect(categories).toContain('animal_food');
@@ -468,9 +537,10 @@ describe('MerchantSystem (Production Implementation)', () => {
   });
 
   describe('getMerchantItems', () => {
-    test('should return all items when category is "all"', () => {
+    test('should return the full catalog for "all" when offer is unrotated', () => {
       merchantSystem.currentMerchant = merchantSystem.merchants[0]; // Thomas
       merchantSystem.currentMerchantCategory = 'all';
+      offerFullCatalog(); // #203: bypass rotation to assert the base behavior
 
       const items = merchantSystem.getMerchantItems();
       expect(items.length).toBe(merchantSystem.merchants[0].items.length);
@@ -479,8 +549,10 @@ describe('MerchantSystem (Production Implementation)', () => {
     test('should filter by category', () => {
       merchantSystem.currentMerchant = merchantSystem.merchants[0]; // Thomas
       merchantSystem.currentMerchantCategory = 'tool';
+      offerFullCatalog(); // #203: ensure tools are on offer for this assertion
 
       const items = merchantSystem.getMerchantItems();
+      expect(items.length).toBeGreaterThan(0);
       items.forEach(item => {
         expect(item.category).toBe('tool');
       });
@@ -516,6 +588,7 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.tradeMode = 'buy';
       merchantSystem.currentMerchant = merchantSystem.merchants[0];
       merchantSystem.currentMerchantCategory = 'all';
+      offerFullCatalog(); // #203: ensure the target item is on offer
       // Thomas has Prego with quantity 100
       merchantSystem.selectedMerchantItem = 34; // Prego
 
@@ -527,6 +600,7 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.tradeMode = 'buy';
       merchantSystem.currentMerchant = merchantSystem.merchants[0];
       merchantSystem.currentMerchantCategory = 'all';
+      offerFullCatalog(); // #203: ensure the target item is on offer
       merchantSystem.selectedMerchantItem = 13; // Picareta, quantity 5
 
       const maxQty = merchantSystem.getMaxQuantity();
@@ -550,6 +624,7 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.tradeMode = 'buy';
       merchantSystem.currentMerchant = merchantSystem.merchants[0];
       merchantSystem.currentMerchantCategory = 'all';
+      offerFullCatalog(); // #203: ensure the target item is on offer
       merchantSystem.selectedMerchantItem = 13; // Picareta, quantity 5
       merchantSystem.tradeQuantity = 5;
 
@@ -602,6 +677,7 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.tradeMode = 'buy';
       merchantSystem.currentMerchant = merchantSystem.merchants[0]; // Thomas
       merchantSystem.currentMerchantCategory = 'all';
+      offerFullCatalog(); // #203: ensure the target item is on offer
       merchantSystem.selectedMerchantItem = 9; // Madeira Bruta, price 15
 
       const price = merchantSystem.calculateExpectedPrice();

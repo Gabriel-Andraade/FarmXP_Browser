@@ -31,6 +31,10 @@ const PROFESSION_BUY_BONUS = {
 // merchant's specialty (e.g. selling seeds to the cook).
 const OUT_OF_SPECIALTY_PENALTY = 0.20;
 
+// Issue #203: how many catalog items each merchant offers per in-game day.
+// The offer is a seeded random subset that rotates every day.
+const DAILY_OFFER_SIZE = 6;
+
 /**
  * Sistema de comércio com mercadores NPC
  * Gerencia lista de mercadores, inventários, transações de compra/venda e UI
@@ -51,6 +55,12 @@ class MerchantSystem {
         this.listenersSetup = false;
         this.merchantOpenCheckInterval = 5;
         this._merchantCheckAcc = 0;
+
+        // Issue #203: cache of each merchant's rotating offer for the current
+        // in-game day. Recomputed deterministically when the day changes, so it
+        // survives save/load without being persisted.
+        this._offerDay = null;
+        this._dailyOffers = new Map(); // merchantId -> Set<itemId>
 
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
@@ -220,7 +230,9 @@ class MerchantSystem {
         }
     }
 
-    // Issue #202: refill every merchant's stock back to its starting amount.
+    // Issue #202/#203: on a new in-game day refill every merchant's stock back
+    // to its starting amount; the rotating daily offer (#203) is recomputed
+    // lazily by getDailyOffer keyed on the day, so it refreshes automatically.
     // Called once per in-game day (dayChanged).
     restockDaily() {
         for (const merchant of this.merchants) {
@@ -230,8 +242,10 @@ class MerchantSystem {
         }
         const commerceModal = document.getElementById('commerceModal');
         if (this.currentMerchant && commerceModal?.classList.contains('active')) {
-            // Full re-render so the quantity controls / trade button reflect the
-            // refreshed stock (not just the item tiles).
+            // The selected item may have rotated out of today's offer — drop the
+            // stale selection, then full re-render so the quantity controls /
+            // trade button reflect the refreshed stock and offer.
+            this.clearSelections();
             this.renderCommerceModal();
         }
     }
@@ -579,7 +593,11 @@ class MerchantSystem {
 
             const itemsDiv = document.createElement('div');
             itemsDiv.className = 'mch-merchant-card-items';
-            for (const item of merchant.items.slice(0, 3)) {
+            // Issue #203: preview the first items of TODAY's rotating offer, not
+            // the full catalog, so the card matches what's actually for sale.
+            const offer = this.getDailyOffer(merchant);
+            const previewItems = merchant.items.filter(it => offer.has(it.id));
+            for (const item of previewItems.slice(0, 3)) {
                 const tag = document.createElement('span');
                 tag.className = 'mch-merchant-item-tag';
                 tag.textContent = this.getItemName(item.id, item.name);
@@ -844,13 +862,60 @@ class MerchantSystem {
         return ['all', 'tools', 'seeds', 'food', 'animal_food', 'construction', 'resources'];
     }
 
-    // categorias do mercador
+    // categorias do mercador (apenas as presentes na oferta do dia)
     getMerchantCategories() {
         const categories = new Set(['all']);
+        const offer = this.getDailyOffer(this.currentMerchant);
         this.currentMerchant.items.forEach(item => {
-            categories.add(item.category);
+            if (offer.has(item.id)) categories.add(item.category);
         });
         return Array.from(categories);
+    }
+
+    // Issue #203: deterministic per-day PRNG seeded by (merchantId, day).
+    // Math.random isn't reproducible, so we seed a mulberry32 generator — the
+    // same day always yields the same shuffle, which is what makes the offer
+    // survive a reload without saving it.
+    _offerRandom(merchantId, day) {
+        let h = (2166136261 ^ day) >>> 0;
+        for (let i = 0; i < merchantId.length; i++) {
+            h = Math.imul(h ^ merchantId.charCodeAt(i), 16777619);
+        }
+        return function () {
+            h = (h + 0x6D2B79F5) | 0;
+            let t = Math.imul(h ^ (h >>> 15), 1 | h);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    // Issue #203: today's rotating subset of a merchant's catalog — a seeded
+    // random pick of up to DAILY_OFFER_SIZE non-experimental items.
+    computeDailyOffer(merchant, day) {
+        const pool = merchant.items.filter(mi => !getItem(mi.id)?.experimental);
+        const rand = this._offerRandom(merchant.id, day);
+        // Seeded Fisher–Yates, then take the first N.
+        for (let i = pool.length - 1; i > 0; i--) {
+            const j = Math.floor(rand() * (i + 1));
+            [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        return new Set(pool.slice(0, DAILY_OFFER_SIZE).map(it => it.id));
+    }
+
+    // Issue #203: cached daily offer for a merchant, keyed on the in-game day.
+    // Recomputes (deterministically) whenever the day advances.
+    getDailyOffer(merchant) {
+        const day = WeatherSystem?.day ?? 1;
+        if (this._offerDay !== day) {
+            this._offerDay = day;
+            this._dailyOffers.clear();
+        }
+        let offer = this._dailyOffers.get(merchant.id);
+        if (!offer) {
+            offer = this.computeDailyOffer(merchant, day);
+            this._dailyOffers.set(merchant.id, offer);
+        }
+        return offer;
     }
 
     // obtém itens do jogador a partir do storage selecionado
@@ -910,6 +975,9 @@ class MerchantSystem {
         // the game (no use, no consume), so letting players buy them would
         // be misleading. When a feature unlocks them, drop the flag.
         merchantItems = merchantItems.filter(mi => !getItem(mi.id)?.experimental);
+        // Issue #203: only the items in today's rotating offer are for sale.
+        const offer = this.getDailyOffer(this.currentMerchant);
+        merchantItems = merchantItems.filter(mi => offer.has(mi.id));
         if (this.currentMerchantCategory !== 'all') {
             merchantItems = merchantItems.filter(item => item.category === this.currentMerchantCategory);
         }
