@@ -247,6 +247,68 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.restockDaily();
       expect(item.quantity).toBe(item.initialQuantity);
     });
+
+    test('selling back a stocked item returns it to the merchant shelf', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[0];
+      const item = merchantSystem.currentMerchant.items[0];
+      item.quantity = 0; // bought out
+      const changed = merchantSystem.returnStockToMerchant(item.id, 3);
+      expect(changed).toBe(true);
+      expect(item.quantity).toBe(3);
+    });
+
+    test('selling an item the merchant does not stock is a no-op', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[0];
+      const stockedIds = new Set(merchantSystem.currentMerchant.items.map(i => i.id));
+      let foreignId = 99999;
+      while (stockedIds.has(foreignId)) foreignId++;
+      expect(merchantSystem.returnStockToMerchant(foreignId, 5)).toBe(false);
+    });
+  });
+
+  // Issue #200: selling pays a bonus when the item matches the merchant's
+  // profession and a penalty when it falls outside their specialty.
+  describe('profession pricing (#200)', () => {
+    const THOMAS = 0; // materials (resources/tools/construction)
+    const LARA = 1;   // cook (food)
+
+    test('professionModifier is a positive bonus within the merchant specialty', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[THOMAS];
+      expect(merchantSystem.professionModifier(1)).toBeGreaterThan(0); // Wood = resources
+    });
+
+    test('professionModifier is a penalty outside the specialty', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[LARA];
+      expect(merchantSystem.professionModifier(1)).toBeLessThan(0); // Wood (resources) is not food
+    });
+
+    test('sellUnitPrice adds the bonus within specialty', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[THOMAS];
+      // Wood base sell price = floor(10 * 0.5) = 5; +40% → floor(7) = 7
+      expect(merchantSystem.sellUnitPrice(1)).toBe(7);
+    });
+
+    test('sellUnitPrice applies the penalty outside specialty', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[LARA];
+      // Wood base sell price = 5; −20% → floor(4) = 4
+      expect(merchantSystem.sellUnitPrice(1)).toBe(4);
+    });
+
+    test('the same item sells for different prices at different merchants', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[THOMAS];
+      const atThomas = merchantSystem.sellUnitPrice(1); // resources → bonus
+      merchantSystem.currentMerchant = merchantSystem.merchants[LARA];
+      const atLara = merchantSystem.sellUnitPrice(1);   // not food → base
+      expect(atThomas).toBeGreaterThan(atLara);
+    });
+
+    test('food sells with a bonus to the cook but not the materials seller', () => {
+      merchantSystem.currentMerchant = merchantSystem.merchants[LARA];
+      const atLara = merchantSystem.sellUnitPrice(5);   // Apple = food → bonus
+      merchantSystem.currentMerchant = merchantSystem.merchants[THOMAS];
+      const atThomas = merchantSystem.sellUnitPrice(5); // food not in materials → base
+      expect(atLara).toBeGreaterThan(atThomas);
+    });
   });
 
   describe('getCurrentDayIndex', () => {
