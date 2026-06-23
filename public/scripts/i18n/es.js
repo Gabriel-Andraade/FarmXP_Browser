@@ -264,6 +264,8 @@ export default {
     inventoryFull: 'Inventario lleno o error al añadir artículo.',
     purchaseSuccess: '¡Compra realizada! -{value}',
     saleSuccess: '¡Venta realizada! +{value}',
+    merchantFund: 'Caja: ${amount}',
+    merchantNoFunds: 'El comerciante solo tiene ${amount} hoy.',
     confirm: 'Confirmar',
     open: 'Abierto',
     closed: 'Cerrado',

@@ -167,6 +167,10 @@ describe('MerchantSystem (Production Implementation)', () => {
     delete merchantSystem.getDailyOffer;
     merchantSystem._offerDay = null;
     merchantSystem._dailyOffers.clear();
+
+    // Issue #201: reset the daily-cash ledger between tests.
+    merchantSystem._fundDay = null;
+    merchantSystem._spentToday.clear();
   });
 
   // Issue #203: pin today's offer to the full catalog so buy-mechanics tests
@@ -380,6 +384,110 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.getMerchantCategories().forEach(cat => {
         if (cat !== 'all') expect(offerCategories.has(cat)).toBe(true);
       });
+    });
+  });
+
+  // Issue #201: each merchant has a finite daily cash fund that varies per day,
+  // debits on a sale, blocks when depleted, and resets on a new day.
+  describe('merchant daily fund (#201)', () => {
+    const thomas = merchantSystem.merchants.find(m => m.id === 'thomas');
+
+    test('dailyFund is deterministic per day and varies across days', () => {
+      expect(merchantSystem.dailyFund(thomas, 1)).toBe(merchantSystem.dailyFund(thomas, 1));
+      const funds = [1, 2, 3, 4, 5].map(d => merchantSystem.dailyFund(thomas, d));
+      funds.forEach(v => expect(v).toBeGreaterThan(0));
+      expect(new Set(funds).size).toBeGreaterThan(1);
+    });
+
+    test('a fresh day starts with the full fund available', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 1));
+    });
+
+    test('a sale debits the remaining fund', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      const before = merchantSystem.getRemainingFund(thomas);
+      merchantSystem._debitFund(thomas, 100);
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(before - 100);
+    });
+
+    test('the fund never goes negative', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      merchantSystem._debitFund(thomas, merchantSystem.dailyFund(thomas, 1) + 5000);
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(0);
+    });
+
+    test('the fund resets when the day changes', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      merchantSystem._debitFund(thomas, 200);
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 1) - 200);
+      WeatherSystem.day = 2;
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 2));
+    });
+
+    test('buying from the merchant credits the fund above the daily base', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      const before = merchantSystem.getRemainingFund(thomas);
+      merchantSystem._creditFund(thomas, 150);
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(before + 150);
+    });
+
+    test('buys and sells net out in the same daily ledger', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      const base = merchantSystem.dailyFund(thomas, 1);
+      merchantSystem._creditFund(thomas, 150); // bought $150
+      merchantSystem._debitFund(thomas, 200);  // sold $200
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(base + 150 - 200);
+    });
+
+    test('processSell blocks a sale that exceeds the remaining fund', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      merchantSystem.selectedPlayerItem = 1; // Wood
+      merchantSystem.tradeQuantity = 1;
+      let removed = false;
+      mockSystems.inventory = {
+        getInventory: () => ({ resources: { items: [{ id: 1, name: 'Wood', quantity: 1, type: 'resource' }] } }),
+        removeItem: () => { removed = true; return true; }
+      };
+      const money = mockCurrencyManager._money;
+      merchantSystem.processSell(merchantSystem.getRemainingFund(thomas) + 1000);
+      expect(removed).toBe(false);                 // sale never went through
+      expect(mockCurrencyManager._money).toBe(money); // player not paid
+    });
+
+    test('serialize/restore preserves today\'s spend (no save-scum refill)', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 3;
+      merchantSystem._debitFund(thomas, 150);
+      const snapshot = merchantSystem.serialize();
+
+      // Simulate a reload: wipe in-memory ledger, then restore.
+      merchantSystem._spentToday.clear();
+      merchantSystem._fundDay = null;
+      merchantSystem.restore(snapshot);
+
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 3) - 150);
+    });
+
+    test('restore from a different day drops the stale ledger', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 3;
+      merchantSystem._debitFund(thomas, 150);
+      const snapshot = merchantSystem.serialize();
+
+      merchantSystem._spentToday.clear();
+      merchantSystem._fundDay = null;
+      WeatherSystem.day = 4; // loaded into a different day
+      merchantSystem.restore(snapshot);
+
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 4));
     });
   });
 
