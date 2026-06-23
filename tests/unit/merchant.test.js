@@ -476,6 +476,14 @@ describe('MerchantSystem (Production Implementation)', () => {
       expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 3) - 150);
     });
 
+    test('restore with no saved data clears a stale in-session ledger', () => {
+      merchantSystem.currentMerchant = thomas;
+      WeatherSystem.day = 1;
+      merchantSystem._debitFund(thomas, 200); // leftover from a previously loaded slot
+      merchantSystem.restore(undefined);       // loading a save that predates #201
+      expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 1));
+    });
+
     test('restore from a different day drops the stale ledger', () => {
       merchantSystem.currentMerchant = thomas;
       WeatherSystem.day = 3;

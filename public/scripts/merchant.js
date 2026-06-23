@@ -996,11 +996,14 @@ class MerchantSystem {
     }
 
     restore(data) {
-        if (!data || typeof data !== 'object') return;
-        this._spentToday = new Map(Object.entries(data.spentToday || {}));
-        // Keep the ledger only if it belongs to the restored day; otherwise the
-        // next _syncFundDay() clears it (fresh fund for a different day).
-        this._fundDay = data.fundDay ?? null;
+        // Always reset to a clean ledger, even when the save predates #201 (no
+        // merchant field, data === undefined). Early-returning would leave a
+        // stale in-session ledger from a previously loaded slot, skewing the
+        // remaining fund. Keep the spend only if it belongs to the restored day;
+        // otherwise the next _syncFundDay() clears it (fresh fund for a new day).
+        const state = (data && typeof data === 'object') ? data : {};
+        this._spentToday = new Map(Object.entries(state.spentToday || {}));
+        this._fundDay = state.fundDay ?? null;
     }
 
     // obtém itens do jogador a partir do storage selecionado
