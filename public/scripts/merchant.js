@@ -35,6 +35,18 @@ const OUT_OF_SPECIALTY_PENALTY = 0.20;
 // The offer is a seeded random subset that rotates every day.
 const DAILY_OFFER_SIZE = 6;
 
+// Issue #201: each merchant's baseline daily cash. The fund for a given day is
+// this base times a seeded daily factor, so it varies day to day but is fully
+// reproducible (survives reload). Tunable per merchant.
+const MERCHANT_FUND_BASE = {
+    thomas: 900,
+    laila:  700,
+    rico:   1100,
+};
+const DEFAULT_FUND_BASE = 800;        // fallback for a merchant without an entry
+const FUND_FACTOR_MIN = 0.7;          // daily fund = base × factor in [MIN, MAX]
+const FUND_FACTOR_MAX = 1.3;
+
 /**
  * Sistema de comércio com mercadores NPC
  * Gerencia lista de mercadores, inventários, transações de compra/venda e UI
@@ -61,6 +73,14 @@ class MerchantSystem {
         // survives save/load without being persisted.
         this._offerDay = null;
         this._dailyOffers = new Map(); // merchantId -> Set<itemId>
+
+        // Issue #201: today's net cash flow per merchant — what they paid the
+        // player (sells) minus what the player paid them (buys). Keyed by the
+        // in-game day so it resets when the day advances. This is the one piece
+        // persisted (serialize/restore) so a reload can't refill a depleted
+        // fund; the daily fund itself is recomputed deterministically.
+        this._fundDay = null;
+        this._spentToday = new Map(); // merchantId -> net paid out today (buys credit it)
 
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
@@ -722,6 +742,7 @@ class MerchantSystem {
     // renderiza o modal de comércio
     renderCommerceModal() {
         this.updateCommerceBalance();
+        this.updateMerchantFund(); // #201
         this.renderMerchantInfo();
         this.renderPlayerCategories();
         this.renderMerchantCategories();
@@ -737,6 +758,16 @@ class MerchantSystem {
         const balanceElement = document.getElementById('commerceBalance');
         if (balanceElement) {
             balanceElement.textContent = currencyManager.getMoney();
+        }
+    }
+
+    // Issue #201: show how much cash the current merchant has left to spend today.
+    updateMerchantFund() {
+        const el = document.getElementById('merchantFund');
+        if (el && this.currentMerchant) {
+            el.textContent = t('trading.merchantFund', {
+                amount: this.getRemainingFund(this.currentMerchant)
+            });
         }
     }
 
@@ -916,6 +947,63 @@ class MerchantSystem {
             this._dailyOffers.set(merchant.id, offer);
         }
         return offer;
+    }
+
+    // Issue #201: deterministic cash a merchant brings on a given day — base
+    // times a seeded daily factor. Uses an RNG stream salted differently from
+    // the #203 offer so the fund and the offer don't correlate.
+    dailyFund(merchant, day) {
+        const base = MERCHANT_FUND_BASE[merchant.id] ?? DEFAULT_FUND_BASE;
+        const rand = this._offerRandom(merchant.id + ':fund', day);
+        const factor = FUND_FACTOR_MIN + rand() * (FUND_FACTOR_MAX - FUND_FACTOR_MIN);
+        return Math.round(base * factor);
+    }
+
+    // Issue #201: clear the spent-today ledger when the in-game day advances.
+    _syncFundDay() {
+        const day = WeatherSystem?.day ?? 1;
+        if (this._fundDay !== day) {
+            this._fundDay = day;
+            this._spentToday.clear();
+        }
+    }
+
+    // Issue #201: cash the merchant still has to pay the player today.
+    getRemainingFund(merchant) {
+        this._syncFundDay();
+        const spent = this._spentToday.get(merchant.id) ?? 0;
+        return Math.max(0, this.dailyFund(merchant, this._fundDay) - spent);
+    }
+
+    // Issue #201: record a payout against today's fund (selling to the merchant).
+    _debitFund(merchant, amount) {
+        this._syncFundDay();
+        this._spentToday.set(merchant.id, (this._spentToday.get(merchant.id) ?? 0) + amount);
+    }
+
+    // Issue #201: money the player spends buying flows into the merchant's till,
+    // raising today's available fund. Modelled as a negative debit so the daily
+    // ledger stays a single running net (payouts minus takings).
+    _creditFund(merchant, amount) {
+        this._debitFund(merchant, -amount);
+    }
+
+    // Issue #201: persist only today's payout ledger — the daily fund itself is
+    // recomputed deterministically from the day, so it never needs saving.
+    serialize() {
+        this._syncFundDay();
+        return { fundDay: this._fundDay, spentToday: Object.fromEntries(this._spentToday) };
+    }
+
+    restore(data) {
+        // Always reset to a clean ledger, even when the save predates #201 (no
+        // merchant field, data === undefined). Early-returning would leave a
+        // stale in-session ledger from a previously loaded slot, skewing the
+        // remaining fund. Keep the spend only if it belongs to the restored day;
+        // otherwise the next _syncFundDay() clears it (fresh fund for a new day).
+        const state = (data && typeof data === 'object') ? data : {};
+        this._spentToday = new Map(Object.entries(state.spentToday || {}));
+        this._fundDay = state.fundDay ?? null;
     }
 
     // obtém itens do jogador a partir do storage selecionado
@@ -1288,6 +1376,14 @@ class MerchantSystem {
             return;
         }
 
+        // Issue #201: the merchant pays out of a finite daily fund. Block the
+        // sale (and show what's left) if it would exceed today's remaining cash.
+        const remainingFund = this.getRemainingFund(this.currentMerchant);
+        if (totalValue > remainingFund) {
+            this.showMessage(t('trading.merchantNoFunds', { amount: remainingFund }), 'error');
+            return;
+        }
+
         if (this.playerStorage === 'inventory') {
             if (inventorySystem && inventorySystem.removeItem) {
                 if (inventorySystem.removeItem(this.selectedPlayerItem, this.tradeQuantity)) {
@@ -1299,6 +1395,9 @@ class MerchantSystem {
                         logger.error("Erro: método earn() não encontrado no currencyManager");
                     }
 
+                    // Issue #201: debit the merchant's daily fund by what it paid.
+                    this._debitFund(this.currentMerchant, totalValue);
+
                     // Issue #202: selling back an item the merchant stocks returns
                     // it to their shelf (buy all apples → sell some back → they have
                     // apples again).
@@ -1308,6 +1407,7 @@ class MerchantSystem {
 
                     this.showMessage(t('trading.saleSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
+                    this.updateMerchantFund(); // #201: reflect the debited fund
                     this.renderPlayerItems();
                     this.clearSelections();
                 } else {
@@ -1367,8 +1467,14 @@ class MerchantSystem {
                     // reduces availability and persists until the daily restock.
                     merchantItem.quantity -= this.tradeQuantity;
 
+                    // Issue #201: money the player pays goes into the merchant's
+                    // till, so buying raises today's fund (and what they can pay
+                    // you back when you sell).
+                    this._creditFund(this.currentMerchant, totalValue);
+
                     this.showMessage(t('trading.purchaseSuccess', { value: totalValue }), 'success');
                     this.updateBalances();
+                    this.updateMerchantFund(); // #201: reflect the credited fund
                     this.renderPlayerItems();
                     this.renderMerchantItems();
                     this.clearSelections();

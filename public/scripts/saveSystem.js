@@ -601,6 +601,10 @@ class SaveSystem {
                 this._applyWeatherData(data.weather);
             }
 
+            // Issue #201: restore the merchant daily-cash ledger AFTER weather so
+            // the in-game day is already set (the ledger is keyed by day).
+            getSystem('merchant')?.restore?.(data.merchant);
+
             // Aplicar flags do jogo (pickup_repaired, etc.)
             if (data.gameFlags) {
                 this._applyGameFlags(data.gameFlags);
@@ -809,6 +813,8 @@ class SaveSystem {
             gameFlags: this._getGameFlags(),
             minimap: this._getMinimapData(),
             plantation: this._getPlantationData(),
+            // Issue #201: merchant daily-cash ledger (spent-today per merchant).
+            merchant: getSystem('merchant')?.serialize?.() ?? null,
             xp: xp?.getState ? xp.getState() : null,
             currentMap: mapMgr ? mapMgr.getCurrentMapId() : 'farm'
         };

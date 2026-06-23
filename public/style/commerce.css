@@ -673,6 +673,14 @@
     box-shadow: 0 8px 25px rgba(201, 164, 99, 0.6);
 }
 
+/* Issue #201: merchant's remaining daily cash, shown in the header. */
+.mch-merchant-fund {
+    margin-top: 2px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: #c9a463;
+}
+
 /* Issue #202: item sold out for the day — greyed out and non-interactive
    until the daily restock. */
 .mch-merchant-hexagon.mch-out-of-stock {
