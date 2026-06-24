@@ -219,14 +219,25 @@ class MerchantSystem {
                     closeTime: 19 * 60
                 },
                 items: [
-                    { id: 3, name: 'Semente de Milho', price: 20, category: 'seed', icon: '', quantity: 40 },
-                    { id: 4, name: 'Semente de Trigo', price: 15, category: 'seed', icon: '', quantity: 50 },
-                    { id: 124, name: 'Semente de Cenoura', price: 12, category: 'seed', icon: '', quantity: 60 },
-                    { id: 18, name: 'Semente de Tomate', price: 18, category: 'seed', icon: '', quantity: 40 },
-                    { id: 19, name: 'Semente de Batata', price: 10, category: 'seed', icon: '', quantity: 70 },
-                    { id: 20, name: 'Semente de Morango', price: 25, category: 'seed', icon: '', quantity: 30 },
-                    { id: 21, name: 'Semente de Flores', price: 8, category: 'seed', icon: '', quantity: 100 },
-                    { id: 53, name: 'Semente de Árvore', price: 50, category: 'seed', icon: '', quantity: 20 },
+                    // Issue #215: only seeds with a working CROPS config are sold,
+                    // so every purchasable seed can actually be planted. Priced by
+                    // growth cycle (fast/cheap → slow/premium). The old seeds with
+                    // no crop (corn 3, wheat 4, tomato 18, potato 19, strawberry 20,
+                    // flowers 21, tree 53) were removed; re-add them when their
+                    // crops are implemented.
+                    { id: 114, name: 'Semente de Matinho',   price: 5,  category: 'seed', icon: '', quantity: 60 }, // 2d
+                    { id: 107, name: 'Grão de Feno',         price: 8,  category: 'seed', icon: '', quantity: 50 }, // 4d
+                    { id: 122, name: 'Semente de Beterraba', price: 10, category: 'seed', icon: '', quantity: 50 }, // 5d
+                    { id: 110, name: 'Semente de Pepino',    price: 12, category: 'seed', icon: '', quantity: 45 }, // 6d
+                    { id: 124, name: 'Semente de Cenoura',   price: 12, category: 'seed', icon: '', quantity: 60 }, // 7d
+                    { id: 116, name: 'Semente de Girassol',  price: 13, category: 'seed', icon: '', quantity: 40 }, // 8d
+                    { id: 120, name: 'Semente de Brócolis',  price: 13, category: 'seed', icon: '', quantity: 40 }, // 8d
+                    { id: 132, name: 'Semente de Couve-Flor', price: 14, category: 'seed', icon: '', quantity: 40 }, // 8d
+                    { id: 128, name: 'Semente de Pimentinha', price: 16, category: 'seed', icon: '', quantity: 35 }, // 9d
+                    { id: 130, name: 'Semente de Pimentão',  price: 18, category: 'seed', icon: '', quantity: 35 }, // 10d
+                    { id: 118, name: 'Semente de Abóbora',   price: 22, category: 'seed', icon: '', quantity: 25 }, // 12d
+                    { id: 112, name: 'Muda de Abacaxi',      price: 30, category: 'seed', icon: '', quantity: 20 }, // 15d
+                    { id: 126, name: 'Semente de Uva',       price: 30, category: 'seed', icon: '', quantity: 20 }, // 20d
                     { id: 7, name: 'Ração para Galinha', price: 30, category: 'animal_food', icon: '', quantity: 20 },
                     { id: 8, name: 'Ração para Ovelha', price: 40, category: 'animal_food', icon: '', quantity: 20 },
                     { id: 29, name: 'Feno', price: 20, category: 'animal_food', icon: '', quantity: 50 },

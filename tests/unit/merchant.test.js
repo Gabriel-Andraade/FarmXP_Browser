@@ -338,7 +338,7 @@ describe('MerchantSystem (Production Implementation)', () => {
   // catalog that rotates every in-game day.
   describe('daily rotating offer (#203)', () => {
     const thomas = merchantSystem.merchants.find(m => m.id === 'thomas'); // 13 items
-    const rico = merchantSystem.merchants.find(m => m.id === 'rico');     // 18 items
+    const rico = merchantSystem.merchants.find(m => m.id === 'rico');     // 23 items
 
     test('offers at most 6 items even when the catalog is larger', () => {
       merchantSystem.currentMerchant = thomas;
@@ -496,6 +496,31 @@ describe('MerchantSystem (Production Implementation)', () => {
       merchantSystem.restore(snapshot);
 
       expect(merchantSystem.getRemainingFund(thomas)).toBe(merchantSystem.dailyFund(thomas, 4));
+    });
+  });
+
+  // Issue #215: Rico sells exactly the seeds that have a working crop config,
+  // so every purchasable seed can be planted (and no dead seeds linger).
+  describe('seed shop (#215)', () => {
+    const rico = merchantSystem.merchants.find(m => m.id === 'rico');
+    // Seed ids with a CROPS config (kept in sync with cropSystem.js).
+    const PLANTABLE_SEEDS = [107, 110, 112, 114, 116, 118, 120, 122, 124, 126, 128, 130, 132];
+    // Old seeds with no crop config — must no longer be on sale.
+    const DEAD_SEEDS = [3, 4, 18, 19, 20, 21, 53];
+
+    test('Rico sells every plantable seed', () => {
+      const sold = new Set(rico.items.filter(i => i.category === 'seed').map(i => i.id));
+      PLANTABLE_SEEDS.forEach(id => expect(sold.has(id)).toBe(true));
+    });
+
+    test('Rico no longer sells non-plantable seeds', () => {
+      const sold = new Set(rico.items.map(i => i.id));
+      DEAD_SEEDS.forEach(id => expect(sold.has(id)).toBe(false));
+    });
+
+    test('every seed Rico sells is plantable', () => {
+      const soldSeeds = rico.items.filter(i => i.category === 'seed').map(i => i.id);
+      soldSeeds.forEach(id => expect(PLANTABLE_SEEDS).toContain(id));
     });
   });
 
