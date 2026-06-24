@@ -33,6 +33,12 @@ const WATER_DECAY_MIN = DAY_MIN; // grace ~1 in-game day at 0 water before withe
 // Single-unit crops get a "luck" bonus: 51% chance the harvest yields 2 (#165).
 const LUCK_DOUBLE_CHANCE = 0.51;
 
+// Issue #216: XP rewards for farming. Harvest XP scales with the crop's growth
+// cycle (longer cycle = rarer/more valuable → more XP); planting grants a small
+// fraction. Both are overridable per crop via cfg.harvestXp / cfg.plantXp.
+const XP_PER_GROWTH_DAY = 1.5; // harvest XP = round(growthDays × this)
+const PLANT_XP_FACTOR = 0.25;  // plant XP   = round(growthDays × this)
+
 /** Current in-game time in minutes (monotonic; jumps on sleep). */
 function _gameNow() {
     const w = getSystem('weather') || (typeof window !== 'undefined' ? window.WeatherSystem : null);
@@ -71,6 +77,15 @@ function _rollYield(spec) {
     }
     if (spec === 1) return Math.random() < LUCK_DOUBLE_CHANCE ? 2 : 1;
     return spec ?? 1;
+}
+
+/** Issue #216: XP for harvesting a crop (scaled by cycle, per-crop overridable). */
+function _harvestXp(cfg) {
+    return cfg.harvestXp ?? Math.max(1, Math.round((cfg.growthDays || 1) * XP_PER_GROWTH_DAY));
+}
+/** Issue #216: smaller XP for planting a seed. */
+function _plantXp(cfg) {
+    return cfg.plantXp ?? Math.max(1, Math.round((cfg.growthDays || 1) * PLANT_XP_FACTOR));
 }
 
 // seedId → crop config. Frame rects measured from the sprite's alpha.
@@ -323,6 +338,7 @@ const cropSystem = {
         this._crops.set(key, rec);
         inventorySystem.removeItem?.(seed.id, 1);
         getSystem('player')?.consumeNeeds?.('planting'); // #165: planting costs energy
+        getSystem('xp')?.grantXP?.(_plantXp(cfg), `crop_plant_${seed.id}`); // #216
         return true;
     },
 
@@ -425,6 +441,7 @@ const cropSystem = {
         c.harvested = true;
         c.stageMin = _regrowStageMin(cfg);
         c.regrowAt = _gameNow() + c.stageMin;
+        getSystem('xp')?.grantXP?.(_harvestXp(cfg), `crop_harvest_${c.seedId}`); // #216
         return true;
     },
 
