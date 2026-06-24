@@ -339,6 +339,10 @@ const cropSystem = {
         inventorySystem.removeItem?.(seed.id, 1);
         getSystem('player')?.consumeNeeds?.('planting'); // #165: planting costs energy
         getSystem('xp')?.grantXP?.(_plantXp(cfg), `crop_plant_${seed.id}`); // #216
+        // #218: notify achievements (plant goals). seedId lets per-crop goals key off it.
+        if (typeof document !== 'undefined') {
+            document.dispatchEvent(new CustomEvent('cropPlanted', { detail: { seedId: seed.id } }));
+        }
         return true;
     },
 
@@ -347,6 +351,16 @@ const cropSystem = {
         rec.water = 100;
         rec.waterDropAt = now + _waterStepMin(CROPS[rec.seedId]);
         rec.decayAt = null;
+    },
+
+    /**
+     * True if a crop currently occupies the tile at the given world point. Used
+     * by the hoe so tilled soil isn't reverted to grass while a plant is still
+     * growing on it (withered crops are removed, so they free the soil).
+     */
+    hasCropAt(worldX, worldY) {
+        const { x, y } = this._snap(worldX, worldY);
+        return this._crops.has(this._key(x, y));
     },
 
     /**
@@ -442,6 +456,12 @@ const cropSystem = {
         c.stageMin = _regrowStageMin(cfg);
         c.regrowAt = _gameNow() + c.stageMin;
         getSystem('xp')?.grantXP?.(_harvestXp(cfg), `crop_harvest_${c.seedId}`); // #216
+        // #218: notify achievements (harvest goals). seedId/harvestItem for per-crop goals.
+        if (typeof document !== 'undefined') {
+            document.dispatchEvent(new CustomEvent('cropHarvested', {
+                detail: { seedId: c.seedId, harvestItem: cfg.harvestItem }
+            }));
+        }
         return true;
     },
 

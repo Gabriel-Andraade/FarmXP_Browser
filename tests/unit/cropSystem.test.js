@@ -95,3 +95,53 @@ describe('crop XP rewards (#216)', () => {
     expect(grape.harvestXp).toBeGreaterThan(weed.harvestXp);
   });
 });
+
+// Issue #218: planting/harvesting dispatch events the achievement tracker uses.
+describe('crop achievement events (#218)', () => {
+  test('planting dispatches cropPlanted with the seedId', () => {
+    activeSeedId = 114;
+    inv.qty[114] = 5;
+    weather._t = 0;
+    cropSystem._crops.clear();
+
+    let evt = null;
+    const handler = (e) => { evt = e.detail; };
+    document.addEventListener('cropPlanted', handler);
+    cropSystem.plantAt(0, 0);
+    document.removeEventListener('cropPlanted', handler);
+
+    expect(evt).toBeTruthy();
+    expect(evt.seedId).toBe(114);
+  });
+
+  test('harvesting dispatches cropHarvested with the seedId', () => {
+    activeSeedId = 114;
+    inv.qty[114] = 5;
+    weather._t = 0;
+    cropSystem._crops.clear();
+    cropSystem.plantAt(0, 0);
+    [...cropSystem._crops.values()][0].stage = 2;
+
+    let evt = null;
+    const handler = (e) => { evt = e.detail; };
+    document.addEventListener('cropHarvested', handler);
+    cropSystem.harvestAt(0, 0);
+    document.removeEventListener('cropHarvested', handler);
+
+    expect(evt).toBeTruthy();
+    expect(evt.seedId).toBe(114);
+  });
+});
+
+// Bug fix: hasCropAt lets the hoe keep soil tilled while a crop grows on it.
+describe('hasCropAt', () => {
+  test('reports a crop on its tile and nothing on an empty one', () => {
+    activeSeedId = 114;
+    inv.qty[114] = 5;
+    weather._t = 0;
+    cropSystem._crops.clear();
+    cropSystem.plantAt(0, 0);
+    expect(cropSystem.hasCropAt(0, 0)).toBe(true);
+    expect(cropSystem.hasCropAt(999, 999)).toBe(false);
+  });
+});
