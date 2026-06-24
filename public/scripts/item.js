@@ -336,7 +336,7 @@ export const items = [
     id: 109,
     name: "Feno Colhido",
     icon: "assets/icons/hayIcon.webp",
-    price: 5,
+    price: 8,
     description: "Feno cru — compacte na bancada para virar ração",
     type: "crop"
   },
@@ -355,7 +355,7 @@ export const items = [
     id: 111,
     name: "Pepino",
     icon: "assets/icons/cucumberIcon.webp",
-    price: 6,
+    price: 7,
     description: "Pepino colhido — refrescante",
     type: "food",
     fillUp: { hunger: 12, thirst: 10, energy: 6 }
@@ -372,7 +372,7 @@ export const items = [
     id: 113,
     name: "Abacaxi",
     icon: "assets/icons/pineappleIcon.webp",
-    price: 9,
+    price: 28,
     description: "Abacaxi colhido — doce e suculento",
     type: "food",
     fillUp: { hunger: 18, thirst: 12, energy: 10 }
@@ -389,7 +389,7 @@ export const items = [
     id: 115,
     name: "Matinho",
     icon: "🌿",
-    price: 3,
+    price: 5,
     description: "Matinho colhido — compacte na bancada para virar ração",
     type: "crop"
   },
@@ -405,7 +405,7 @@ export const items = [
     id: 117,
     name: "Girassol",
     icon: "🌻",
-    price: 7,
+    price: 14,
     description: "Girassol colhido — sementes para petiscar",
     type: "food",
     fillUp: { hunger: 6, thirst: 0, energy: 10 }
@@ -423,7 +423,7 @@ export const items = [
     id: 119,
     name: "Abóbora",
     icon: "assets/icons/pumpkinIcon.webp",
-    price: 8,
+    price: 21,
     description: "Abóbora colhida — substanciosa",
     type: "food",
     fillUp: { hunger: 22, thirst: 4, energy: 14 }
@@ -440,7 +440,7 @@ export const items = [
     id: 121,
     name: "Brócolis",
     icon: "assets/icons/broccoliIcon.webp",
-    price: 6,
+    price: 12,
     description: "Brócolis colhido — nutritivo",
     type: "food",
     fillUp: { hunger: 16, thirst: 3, energy: 12 }
@@ -457,7 +457,7 @@ export const items = [
     id: 123,
     name: "Beterraba",
     icon: "assets/icons/beetIcon.webp",
-    price: 5,
+    price: 10,
     description: "Beterraba colhida",
     type: "food",
     fillUp: { hunger: 14, thirst: 4, energy: 8 }
@@ -474,7 +474,7 @@ export const items = [
     id: 125,
     name: "Cenoura",
     icon: "assets/icons/carrotIcon.webp",
-    price: 5,
+    price: 12,
     description: "Cenoura colhida",
     type: "food",
     fillUp: { hunger: 12, thirst: 3, energy: 10 }
@@ -492,7 +492,7 @@ export const items = [
     id: 127,
     name: "Uva",
     icon: "assets/icons/grapeIcon.webp",
-    price: 9,
+    price: 13,
     description: "Uva colhida — refrescante",
     type: "food",
     fillUp: { hunger: 10, thirst: 10, energy: 8 }
@@ -526,7 +526,7 @@ export const items = [
     id: 131,
     name: "Pimentão",
     icon: "assets/icons/bellPepperIcon.webp",
-    price: 7,
+    price: 14,
     description: "Pimentão colhido",
     type: "food",
     fillUp: { hunger: 14, thirst: 4, energy: 8 }
@@ -543,7 +543,7 @@ export const items = [
     id: 133,
     name: "Couve-Flor",
     icon: "assets/icons/cauliflowerIcon.webp",
-    price: 6,
+    price: 14,
     description: "Couve-flor colhida — nutritiva",
     type: "food",
     fillUp: { hunger: 15, thirst: 3, energy: 10 }
