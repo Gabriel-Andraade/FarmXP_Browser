@@ -216,6 +216,11 @@ const hoeTool = {
         const raining = _isRaining();
         for (const [key, rec] of this._tilled) {
             if (now >= rec.expiresAt) {
+                // Bug fix: don't revert tilled soil to grass while a crop is
+                // still growing on it — only expire empty plots. Keys here are
+                // already snapped "x,y" world coords, matching cropSystem.
+                const [tx, ty] = key.split(',').map(Number);
+                if (getSystem('crop')?.hasCropAt?.(tx, ty)) continue;
                 this._tilled.delete(key); // revert to grass
                 continue;
             }
