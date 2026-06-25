@@ -40,10 +40,13 @@ mock.module('../../public/scripts/validation.js', () => ({
   validateTradeInput: () => ({ valid: true }),
 }));
 
-// Mock gameState.js - ALL named exports
+// Mock gameState.js - ALL named exports.
+// testSystems is mutable so individual tests can inject a storage/hud mock
+// (defaults to empty → getSystem returns null, unchanged for other tests).
+const testSystems = {};
 mock.module('../../public/scripts/gameState.js', () => ({
   registerSystem: () => {},
-  getSystem: () => null,
+  getSystem: (name) => testSystems[name] ?? null,
   getObject: () => null,
   setObject: () => {},
   setDebugFlag: () => {},
@@ -144,6 +147,51 @@ describe('InventorySystem (Production Implementation)', () => {
     // Use the REAL InventorySystem implementation
     inventory = new InventorySystem();
     inventory.clear();
+    // Reset any injected systems between tests.
+    delete testSystems.storage;
+    delete testSystems.hud;
+  });
+
+  // Full inventory routes newly acquired items to the warehouse instead of
+  // losing them; only fails when the warehouse is also full.
+  describe('acquireItem (overflow to warehouse)', () => {
+    test('adds to the inventory when there is room (no warehouse touch)', () => {
+      let storageCalled = false;
+      testSystems.storage = { addItem: () => { storageCalled = true; return true; } };
+      const ok = inventory.acquireItem(1, 5); // Wood
+      expect(ok).toBe(true);
+      expect(inventory.getItemQuantity(1)).toBe(5);
+      expect(storageCalled).toBe(false);
+    });
+
+    test('routes to the warehouse (with a notice) when the inventory is full', () => {
+      let storedId = null, storedQty = null, notice = null;
+      testSystems.storage = { addItem: (id, qty) => { storedId = id; storedQty = qty; return true; } };
+      testSystems.hud = { showMessage: (m) => { notice = m; } };
+      inventory.addItem = () => false; // simulate a full inventory
+
+      const ok = inventory.acquireItem(1, 3);
+      expect(ok).toBe(true);
+      expect(storedId).toBe(1);
+      expect(storedQty).toBe(3);
+      expect(notice).toBe('inventory.fullSentToWarehouse');
+    });
+
+    test('fails (and warns) only when inventory AND warehouse are full', () => {
+      let notice = null;
+      testSystems.storage = { addItem: () => false };
+      testSystems.hud = { showMessage: (m) => { notice = m; } };
+      inventory.addItem = () => false;
+
+      const ok = inventory.acquireItem(1, 1);
+      expect(ok).toBe(false);
+      expect(notice).toBe('inventory.bothFull');
+    });
+
+    test('fails when inventory is full and there is no warehouse', () => {
+      inventory.addItem = () => false; // no storage injected → getSystem returns null
+      expect(inventory.acquireItem(1, 1)).toBe(false);
+    });
   });
 
   describe('initialization', () => {

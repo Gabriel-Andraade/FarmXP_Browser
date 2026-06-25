@@ -273,6 +273,28 @@ export class InventorySystem {
         return true;
     }
 
+    /**
+     * Acquire a newly obtained item: put it in the inventory, and if the
+     * inventory category is full, route it to the warehouse instead so it's
+     * never lost. Shows a notice when it goes to the warehouse (or when both
+     * are full). Use this for collecting/buying; plain addItem() is still used
+     * where overflow-to-warehouse is undesirable (e.g. warehouse withdraw).
+     * @returns {boolean} true if the item landed in the inventory OR warehouse.
+     */
+    acquireItem(itemId, quantity = 1) {
+        if (this.addItem(itemId, quantity)) return true;
+
+        const storage = getSystem('storage');
+        const name = getItem(itemId)?.name || '';
+        if (storage?.addItem && storage.addItem(itemId, quantity)) {
+            getSystem('hud')?.showMessage?.(t('inventory.fullSentToWarehouse', { name }));
+            return true;
+        }
+
+        getSystem('hud')?.showMessage?.(t('inventory.bothFull', { name }));
+        return false;
+    }
+
     autoMapCategoryByItemType(itemType) {
         // Usar mapeamento centralizado em vez de replicado
         return mapTypeToCategory(itemType);

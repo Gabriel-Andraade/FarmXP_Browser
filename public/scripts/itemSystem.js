@@ -367,8 +367,10 @@ export class ItemSystem {
       continue;
     }
 
-    inventorySystem.addItem(drop.id, qty);
-    collected.push({ id: drop.id, quantity: qty });
+    // #NNN: overflow to the warehouse when the inventory is full (don't drop it).
+    if (inventorySystem.acquireItem(drop.id, qty)) {
+      collected.push({ id: drop.id, quantity: qty });
+    }
   } catch (err) {
     const dropId = drop?.id ?? "unknown";
     handleError(err, "itemSystem:collectDrops:individualItem", `dropId=${dropId}`);

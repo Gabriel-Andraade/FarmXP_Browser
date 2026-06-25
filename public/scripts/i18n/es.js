@@ -168,6 +168,8 @@ export default {
     empty: 'Nada aquí...',
     emptySubtext: 'Esta categoría está vacía',
     full: '¡Inventario lleno!',
+    fullSentToWarehouse: 'Inventario lleno — {name} fue al almacén.',
+    bothFull: 'Inventario y almacén llenos — {name} no cupo.',
     noDescription: 'Sin descripción disponible.',
     categories: {
       tools: 'Herramientas',

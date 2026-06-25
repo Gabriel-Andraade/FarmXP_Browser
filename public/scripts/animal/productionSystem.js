@@ -203,13 +203,15 @@ class ProductionSystem {
     }
 
     const inv = getSystem('inventory');
-    if (!inv || typeof inv.addItem !== 'function') {
+    if (!inv || typeof inv.acquireItem !== 'function') {
       this._setFx(animal, t('animal.production.noInventory'), false);
       return { ok: false, reason: 'no_inventory' };
     }
 
     const itemId = animal._pendingProduct;
-    const added = inv.addItem(itemId, 1);
+    // #NNN: full inventory routes the product to the warehouse (acquireItem
+    // shows the notice); only fails when the warehouse is also full.
+    const added = inv.acquireItem(itemId, 1);
     if (!added) {
       this._setFx(animal, t('animal.production.inventoryFull'), false);
       return { ok: false, reason: 'inventory_full' };

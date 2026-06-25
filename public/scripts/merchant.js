@@ -1463,9 +1463,10 @@ class MerchantSystem {
         }
 
         if (this.playerStorage === 'inventory') {
-            if (inventorySystem && inventorySystem.addItem) {
-                // Tentar adicionar ao inventário (usando apenas ID e quantidade para mapeamento automático)
-                if (inventorySystem.addItem(this.selectedMerchantItem, this.tradeQuantity)) {
+            if (inventorySystem && inventorySystem.acquireItem) {
+                // #NNN: a full inventory routes the purchase to the warehouse
+                // instead of blocking the buy (acquireItem shows the notice).
+                if (inventorySystem.acquireItem(this.selectedMerchantItem, this.tradeQuantity)) {
 
                     // Deduz o valor da compra do dinheiro do jogador
                     if (typeof currencyManager.spend === 'function') {
