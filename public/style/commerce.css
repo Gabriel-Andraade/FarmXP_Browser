@@ -142,15 +142,19 @@
 }
 
 /* ===== PAINEL DO JOGADOR NO COMÉRCIO ===== */
-.mch-merchant-commerce-system .mch-player-panel {
+/* Match the real HTML class (.mch-commerce-player-panel). It was previously
+   targeting .mch-player-panel, which the element doesn't use, so the panel got
+   no flex-column/overflow styling and grew with its content while the merchant
+   panel stayed contained — the "huge vs short" imbalance. Mirrors
+   .mch-merchant-panel so both columns size and scroll identically. */
+.mch-merchant-commerce-system .mch-commerce-player-panel {
     background: linear-gradient(135deg, rgba(43, 26, 12, 0.9) 0%, rgba(59, 38, 18, 0.8) 100%);
     border-right: 2px solid #8b5a2b;
     display: flex;
     flex-direction: column;
     border-radius: 0 0 0 17px;
     overflow: hidden;
-    height: auto !important;
-    flex: 1;
+    min-height: 0;
 }
 
 /* ===== TELA DO JOGADOR (ESQUERDA) ===== */
@@ -192,29 +196,38 @@
     transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Header separator so the player column reads like the merchant header. */
+.mch-player-panel-header {
+    border-bottom: 2px solid #c9a463;
+    background: rgba(46, 28, 15, 0.95);
+    flex-shrink: 0;
+}
+
 /* ===== Storage toggle buttons ===== */
+/* Side by side (was stacked vertically, which made the header tall and threw
+   off the player/merchant balance). */
 .mch-storage-toggle-buttons {
     display: flex;
     gap: 10px;
-    margin-bottom: 15px;
-    padding: 0 20px;
-    padding-top: 15px;
+    margin-bottom: 10px;
+    padding: 12px 14px 0;
     flex-wrap: nowrap;
-    flex-direction: column-reverse;
-    align-content: center;
+    flex-direction: row;
 }
 
 .mch-storage-toggle-btn {
     background: rgba(90, 58, 31, 0.8);
     border: 2px solid #8b5a2b;
-    border-radius: 25px;
-    padding: 10px 20px;
+    border-radius: 20px;
+    padding: 7px 12px;
     color: #f5e9d3;
     cursor: pointer;
     transition: all 0.3s ease;
     font-weight: bold;
+    font-size: 12px;
     flex: 1;
     text-align: center;
+    white-space: nowrap;
 }
 
 .mch-storage-toggle-btn:hover {
@@ -234,8 +247,9 @@
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 10px 20px;
-    margin-bottom: 10px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .mch-player-category-btn {
@@ -260,25 +274,30 @@
 }
 
 /* ===== Grade Quadrada do Jogador ===== */
+/* Both item grids share one responsive layout so the player and merchant
+   columns read the same: auto-filled tiles, top-aligned, scrolling when full. */
 .mch-player-items-grid {
-    flex: auto;
-    padding: 20px;
-    display: flex;
-    gap: 15px;
+    flex: 1;
+    min-height: 0;
+    padding: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    grid-auto-rows: 84px;
+    gap: 10px;
+    align-content: start;
     overflow-y: auto;
     position: relative;
     margin: 0;
     box-sizing: border-box;
-    min-height: 200px; 
-    flex-wrap: wrap;
 }
 
 .mch-hexagon-slot {
     position: relative;
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: 84px;
+    box-sizing: border-box;
     background: linear-gradient(135deg, #8b5a2b, #6b4513);
-    border-radius: 15px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -306,43 +325,54 @@
 }
 
 .mch-hexagon-icon {
-    font-size: 32px;
-    margin-bottom: 5px;
+    font-size: 26px;
+    margin-bottom: 3px;
+    line-height: 1;
     filter: drop-shadow(2px 2px 3px rgba(0,0,0,0.5));
 }
 
 .mch-hexagon-icon img {
-    width: 36px;
-    height: 36px;
+    width: 30px;
+    height: 30px;
     object-fit: contain;
     display: block;
 }
 
+/* Image icons come from the sprite atlas as a <span class="icon-atlas"> sized
+   at the icon's natural pixel size (≈55–90px), which overflows the tile. zoom
+   scales the whole sprite (box + background) down to match the emoji icons.
+   (Chromium webview supports zoom; the atlas can't be resized via width/height
+   without breaking its background-position.) */
+.mch-hexagon-icon .icon-atlas {
+    zoom: 0.42;
+}
+
 .mch-hexagon-name {
     color: #f5e9d3;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: bold;
     text-align: center;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-    max-width: 80px;
+    max-width: 90%;
     overflow: hidden;
     text-overflow: ellipsis;
-    line-height: 1.2;
+    white-space: nowrap;
+    line-height: 1.15;
 }
 
 .mch-hexagon-quantity {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: -4px;
+    right: -4px;
     background: linear-gradient(135deg, #4ecca3, #3da58a);
     color: #2e1c0f;
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
@@ -537,6 +567,7 @@
     flex-direction: column;
     border-radius: 0 0 17px 0;
     overflow: hidden;
+    min-height: 0;
 }
 
 /* ===== Header do Mercador ===== */
@@ -612,9 +643,10 @@
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding: 15px 20px;
+    padding: 10px 14px;
     background: rgba(35, 22, 10, 0.8);
     border-bottom: 1px solid #8b5a2b;
+    flex-shrink: 0;
 }
 
 .mch-merchant-category-btn {
@@ -641,22 +673,25 @@
 /* ===== Grade do Mercador - QUADRADA ===== */
 .mch-merchant-items-grid {
     flex: 1;
-    padding: 20px;
+    min-height: 0;
+    padding: 14px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+    grid-auto-rows: 84px;
+    gap: 10px;
+    align-content: start;
     overflow-y: auto;
     margin: 0;
     box-sizing: border-box;
-    min-height: 200px;
 }
 
 .mch-merchant-hexagon {
     position: relative;
-    width: 100px;
-    height: 100px;
+    width: 100%;
+    height: 84px;
+    box-sizing: border-box;
     background: linear-gradient(135deg, #8b5a2b, #6b4513);
-    border-radius: 15px;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -692,12 +727,12 @@
 
 .mch-merchant-hexagon-price {
     position: absolute;
-    bottom: -5px;
+    bottom: -6px;
     background: linear-gradient(135deg, #4ecca3, #3da58a);
     color: #2e1c0f;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 10px;
     font-weight: bold;
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
@@ -951,7 +986,7 @@
     to { transform: translateX(0); opacity: 1; }
 }
 
-.mch-merchant-commerce-system .mch-player-panel { animation: slideInFromLeft 0.6s ease-out; }
+.mch-merchant-commerce-system .mch-commerce-player-panel { animation: slideInFromLeft 0.6s ease-out; }
 .mch-merchant-commerce-system .mch-merchant-panel { animation: slideInFromRight 0.6s ease-out; }
 
 /* ===== ESTADOS ESPECIAIS ===== */
