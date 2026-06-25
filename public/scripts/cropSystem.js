@@ -447,9 +447,10 @@ const cropSystem = {
         if (!c || c.harvested) return false;
         const cfg = CROPS[c.seedId];
         if (c.stage < cfg.matureStage) return false;
-        inventorySystem.addItem?.(cfg.harvestItem, _rollYield(cfg.harvestYield));
+        // #NNN: full inventory routes the harvest to the warehouse, never lost.
+        inventorySystem.acquireItem?.(cfg.harvestItem, _rollYield(cfg.harvestYield));
         // Extra drop (e.g. sunflower returns seeds for replanting).
-        if (cfg.bonusItem) inventorySystem.addItem?.(cfg.bonusItem.itemId, _rollYield(cfg.bonusItem.yield));
+        if (cfg.bonusItem) inventorySystem.acquireItem?.(cfg.bonusItem.itemId, _rollYield(cfg.bonusItem.yield));
         // Leaves the twig (harvestedFrame) and regrows on the (faster) regrow
         // cadence: twig phase = one regrow step, then back through the stages.
         c.harvested = true;
