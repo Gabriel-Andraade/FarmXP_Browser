@@ -182,27 +182,31 @@ export const waterTroughSystem = {
   },
 
   /**
-   * Consome 1 balde com água (id 42) → enche o cocho + devolve balde
-   * vazio (id 16). Se não tiver balde com água, mostra aviso.
+   * Pours water from the bucket's volume into the trough (#NNN). Requires a
+   * bucket (item 16) with water; transfers min(bucket, trough room) and drains
+   * the bucket by that amount. (Old model consumed a full-bucket item 42 which
+   * had no fill path — this replaces it.)
    */
   depositBucketWater(waterTroughId) {
     const wt = findTrough(waterTroughId);
     if (!wt) return false;
 
-    const bucketQty = inventorySystem.getItemQuantity(WATER_TROUGH_CONFIG.BUCKET_WATER_ID);
-    if (bucketQty <= 0) {
+    const bucket = getSystem('bucket');
+    const hasBucket = inventorySystem.getItemQuantity(WATER_TROUGH_CONFIG.BUCKET_EMPTY_ID) > 0;
+    if (!hasBucket || !bucket?.hasWater?.()) {
       _showTroughToast(t('waterTrough.needBucket') || 'Precisa de um balde com água');
       return false;
     }
 
-    const removed = inventorySystem.removeItem(WATER_TROUGH_CONFIG.BUCKET_WATER_ID, 1);
-    if (!removed) {
-      _showTroughToast(t('waterTrough.needBucket') || 'Precisa de um balde com água');
+    const room = WATER_TROUGH_CONFIG.MAX_WATER_LEVEL - (wt.waterLevel || 0);
+    const amount = Math.min(bucket.getLevel(), room);
+    if (amount <= 0) {
+      _showTroughToast(t('waterTrough.alreadyFull') || 'Cocho cheio');
       return false;
     }
 
-    this.addWater(waterTroughId, WATER_TROUGH_CONFIG.WATER_PER_BUCKET);
-    inventorySystem.addItem(WATER_TROUGH_CONFIG.BUCKET_EMPTY_ID, 1);
+    const drained = bucket.drain(amount);
+    this.addWater(waterTroughId, drained);
 
     _showTroughToast(t('waterTrough.filled') || 'Cocho abastecido');
 
@@ -269,6 +273,19 @@ export const waterTroughSystem = {
     ctx.moveTo(cx, cy - half);
     ctx.lineTo(cx, cy + half);
     ctx.stroke();
+
+    // Fill level under the marker so hovering shows how full the trough is.
+    const pct = Math.round(((wt.waterLevel || 0) / WATER_TROUGH_CONFIG.MAX_WATER_LEVEL) * 100);
+    const label = `💧 ${pct}%`;
+    const ly = cy + half + 4 * zoom;
+    ctx.font = `bold ${Math.round(12 * zoom)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = Math.max(2, 3 * zoom);
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(label, cx, ly);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, cx, ly);
 
     ctx.restore();
   },

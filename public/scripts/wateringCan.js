@@ -11,32 +11,55 @@ import { getSystem, registerSystem } from './gameState.js';
 import { getItem } from './itemUtils.js';
 import { TILE_SIZE } from './worldConstants.js';
 
-const CAPACITY = 5; // crops/tiles watered per fill
+const CAPACITY = 100; // water as a 0..100% volume (was 5 discrete charges)
 
 const wateringCan = {
-    _charges: 0,
+    _level: 0,
     capacity: CAPACITY,
 
-    getCharges() { return this._charges; },
-    hasWater() { return this._charges > 0; },
+    /** Current fill, 0..100. */
+    getLevel() { return this._level; },
+    // Back-compat alias (fillLevel.js / older callers read getCharges()/capacity).
+    getCharges() { return this._level; },
+    hasWater() { return this._level > 0; },
 
-    /** Fill to capacity (called by the well). */
-    fill() { this._charges = this.capacity; },
+    /** Fill to capacity (legacy full-fill, e.g. the well's default button). */
+    fill() { this._level = CAPACITY; },
 
-    /** Spend one charge. @returns {boolean} true if there was water to spend. */
-    useOne() {
-        if (this._charges <= 0) return false;
-        this._charges -= 1;
+    /**
+     * Fill up toward a target percent (for the well's choose-amount slider).
+     * Never lowers the level. @returns {number} percent actually added.
+     */
+    fillTo(targetPercent) {
+        const target = Math.max(0, Math.min(CAPACITY, Number(targetPercent) || 0));
+        if (target <= this._level) return 0;
+        const added = target - this._level;
+        this._level = target;
+        return added;
+    },
+
+    /**
+     * Spend `amount` percent of water (per-crop cost). Drains to 0 if the cost
+     * exceeds what's left (a near-empty can still gives one last watering).
+     * @returns {boolean} true if there was any water to spend.
+     */
+    useAmount(amount) {
+        if (this._level <= 0) return false;
+        this._level = Math.max(0, this._level - (Number(amount) || 0));
         return true;
     },
 
-    /** Save: current charge count. */
-    serialize() { return this._charges; },
+    /** Save: current level (0..100). */
+    serialize() { return this._level; },
 
-    /** Load: restore charges (clamped to capacity). */
-    restore(charges) {
-        this._charges = (typeof charges === 'number' && charges > 0)
-            ? Math.min(Math.floor(charges), this.capacity)
+    /**
+     * Load: restore level, clamped to 0..capacity. Pre-volume saves stored a
+     * 0..5 charge count; those load as a near-empty can (≤5%) — harmless, the
+     * player just refills. Not worth a migration given the tiny window.
+     */
+    restore(value) {
+        this._level = (typeof value === 'number' && value > 0)
+            ? Math.min(Math.round(value), CAPACITY)
             : 0;
     },
 

@@ -145,3 +145,36 @@ describe('hasCropAt', () => {
     expect(cropSystem.hasCropAt(999, 999)).toBe(false);
   });
 });
+
+// Per-crop watering-can cost: thirsty crops drain the can more.
+describe('getWaterCostAt', () => {
+  const plantAndCost = (seedId) => {
+    activeSeedId = seedId;
+    inv.qty[seedId] = 5;
+    weather._t = 0;
+    cropSystem._crops.clear();
+    cropSystem.plantAt(0, 0);
+    return cropSystem.getWaterCostAt(0, 0);
+  };
+
+  test('thirsty crops cost more than hardy ones (grape > carrot)', () => {
+    expect(plantAndCost(126)).toBeGreaterThan(plantAndCost(124)); // 0.5d vs 2d
+  });
+
+  test('every crop cost stays within 1..12%', () => {
+    for (const id of [126, 110, 124, 118]) {
+      const c = plantAndCost(id);
+      expect(c).toBeGreaterThanOrEqual(1);
+      expect(c).toBeLessThanOrEqual(12);
+    }
+  });
+
+  test('a noWater crop (matinho) costs nothing', () => {
+    expect(plantAndCost(114)).toBe(0);
+  });
+
+  test('an empty tile costs 0', () => {
+    cropSystem._crops.clear();
+    expect(cropSystem.getWaterCostAt(0, 0)).toBe(0);
+  });
+});

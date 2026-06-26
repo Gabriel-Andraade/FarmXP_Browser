@@ -539,9 +539,17 @@ export class PlayerInteractionSystem {
             if (eqItem?.toolType === 'watering_can') {
                 const can = getSystem('wateringCan');
                 if (can?.hasWater?.()) {
+                    // Per-crop water cost (#NNN): thirsty crops drain the can more;
+                    // tilled soil uses a small flat cost.
+                    const SOIL_WATER_COST = 4;
                     const wateredCrop = cropSys?.waterAt?.(worldPos.x, worldPos.y);
-                    const wateredSoil = !wateredCrop && getSystem('hoeTool')?.waterAt?.(worldPos.x, worldPos.y);
-                    if (wateredCrop || wateredSoil) can.useOne();
+                    if (wateredCrop) {
+                        // `?? 0` (not `|| 1`) so noWater crops keep their 0 cost
+                        // instead of being charged 1%.
+                        can.useAmount(cropSys.getWaterCostAt?.(worldPos.x, worldPos.y) ?? 0);
+                    } else if (getSystem('hoeTool')?.waterAt?.(worldPos.x, worldPos.y)) {
+                        can.useAmount(SOIL_WATER_COST);
+                    }
                 }
                 return;
             }

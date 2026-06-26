@@ -296,6 +296,27 @@ export const wellSystem = {
     btnFillCan.id = 'btn-fill-can';
     btnFillCan.textContent = t('well.fillWateringCan');
     transferOpts.appendChild(btnFillCan);
+    // Fill the bucket (volume) — uses the same target slider as the can.
+    const btnFillBucket = document.createElement('button');
+    btnFillBucket.className = 'well-main-btn';
+    btnFillBucket.id = 'btn-fill-bucket';
+    btnFillBucket.textContent = t('well.fillBucket');
+    transferOpts.appendChild(btnFillBucket);
+    // Choose how full to fill the can/bucket (conserves well water). Default 100%.
+    const fillCanRow = document.createElement('div');
+    fillCanRow.className = 'well-fill-can-row';
+    fillCanRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:6px;';
+    const canSlider = document.createElement('input');
+    canSlider.type = 'range';
+    canSlider.id = 'fill-can-slider';
+    canSlider.min = '0'; canSlider.max = '100'; canSlider.step = '5'; canSlider.value = '100';
+    canSlider.style.flex = '1';
+    const canSliderVal = document.createElement('span');
+    canSliderVal.id = 'fill-can-slider-val';
+    canSliderVal.textContent = '100%';
+    canSlider.addEventListener('input', () => { canSliderVal.textContent = `${canSlider.value}%`; });
+    fillCanRow.append(canSlider, canSliderVal);
+    transferOpts.appendChild(fillCanRow);
     col2.append(h3_2, btnDrink, btnTransfer, transferOpts);
 
     // Coluna well
@@ -331,6 +352,7 @@ export const wellSystem = {
     });
     btnFillBottle.addEventListener('click', () => this.fillBottle());
     btnFillCan.addEventListener('click', () => this.fillWateringCan());
+    btnFillBucket.addEventListener('click', () => this.fillBucket());
 
     wellState.isOpen = true;
     this.updateUI();
@@ -461,18 +483,63 @@ export const wellSystem = {
       handleWarn(t('well.noWateringCan'), "wellSystem:fillWateringCan");
       return;
     }
-    if (wellState.waterLevel < WELL_CONFIG.WATER_PER_WATERING_CAN) {
+    const canSystem = getSystem('wateringCan');
+    if (!canSystem || typeof canSystem.fillTo !== 'function') {
+      handleWarn('Watering can system unavailable', 'wellSystem:fillWateringCan');
+      return;
+    }
+
+    // Fill up to the slider target (default 100%). The well drains in proportion
+    // to the water actually added, and the fill is capped by what's left.
+    const slider = document.getElementById('fill-can-slider');
+    const target = slider ? Number(slider.value) : 100;
+    const current = canSystem.getLevel?.() ?? 0;
+    const want = Math.max(0, target - current);
+    if (want <= 0) return; // already at/above the chosen level
+
+    const perPct = WELL_CONFIG.WATER_PER_WATERING_CAN / 100; // well units per 1% of can
+    const affordablePct = perPct > 0 ? Math.floor(wellState.waterLevel / perPct) : want;
+    const addPct = Math.min(want, affordablePct);
+    if (addPct <= 0) {
       handleWarn(t('well.insufficientWater'), "wellSystem:fillWateringCan");
       return;
     }
 
-    const canSystem = getSystem('wateringCan');
-    if (!canSystem || typeof canSystem.fill !== 'function') {
-      handleWarn('Watering can system unavailable', 'wellSystem:fillWateringCan');
+    const added = canSystem.fillTo(current + addPct);
+    wellState.waterLevel = Math.max(0, wellState.waterLevel - added * perPct);
+    this.updateUI();
+  },
+
+  // Fill the bucket to the slider target, mirroring fillWateringCan().
+  fillBucket() {
+    if (wellState.isPulling) return;
+    const hasBucket = (inventorySystem.getItemQuantity?.("tools", WELL_CONFIG.BUCKET_EMPTY_ID) ?? 0) > 0;
+    if (!hasBucket) {
+      handleWarn(t('well.noBucket'), "wellSystem:fillBucket");
       return;
     }
-    canSystem.fill();
-    wellState.waterLevel -= WELL_CONFIG.WATER_PER_WATERING_CAN;
+    const bucket = getSystem('bucket');
+    if (!bucket || typeof bucket.fillTo !== 'function') {
+      handleWarn('Bucket system unavailable', 'wellSystem:fillBucket');
+      return;
+    }
+
+    const slider = document.getElementById('fill-can-slider');
+    const target = slider ? Number(slider.value) : 100;
+    const current = bucket.getLevel?.() ?? 0;
+    const want = Math.max(0, target - current);
+    if (want <= 0) return;
+
+    const perPct = WELL_CONFIG.WATER_PER_WATERING_CAN / 100; // same cost basis as the can
+    const affordablePct = perPct > 0 ? Math.floor(wellState.waterLevel / perPct) : want;
+    const addPct = Math.min(want, affordablePct);
+    if (addPct <= 0) {
+      handleWarn(t('well.insufficientWater'), "wellSystem:fillBucket");
+      return;
+    }
+
+    const added = bucket.fillTo(current + addPct);
+    wellState.waterLevel = Math.max(0, wellState.waterLevel - added * perPct);
     this.updateUI();
   },
 

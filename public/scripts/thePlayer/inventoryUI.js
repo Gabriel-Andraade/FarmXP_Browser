@@ -4,6 +4,7 @@ import { getItem } from "../itemUtils.js";
 import { t } from '../i18n/i18n.js';
 import { INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getSystem } from "../gameState.js";
+import { getItemFillLevel } from "../fillLevel.js";
 
 // ---------- CSS ISOLADO COM SHADOW DOM ----------
 const createInventoryUI = () => {
@@ -1130,6 +1131,10 @@ function _showTooltip(item, qty, evt) {
     if (parts.length) rows.push([t('inventory.details.restores'), parts.join(' · ')]);
   }
   if (item.foodValue != null) rows.push([t('inventory.details.foodValue'), String(item.foodValue)]);
+
+  // Container fill level (bucket / watering can) so the hover card shows it.
+  const fill = getItemFillLevel(item.id);
+  if (fill) rows.push([t('inventory.details.level'), `${fill.percent}%`]);
 
   if (rows.length) {
     const meta = document.createElement('div');
