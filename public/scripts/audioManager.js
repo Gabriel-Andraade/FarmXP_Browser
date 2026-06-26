@@ -35,6 +35,7 @@ const SFX_FILES = {
   stone_hit: 'stone_hit.mp3',
   thick_hit: 'thick_hit.mp3',
   to_plow: 'to_plow.mp3',
+  watering: 'watering.mp3',
   bull_bellow: 'bull_bellow.mp3',
   // Per-species ambient animal sounds.
   cow_Moo: 'cow_Moo.mp3',

@@ -2097,15 +2097,14 @@ export class AnimalEntity {
         if (sfxKey) {
             const now = performance.now();
             if (now - this._lastSfxTime >= this._sfxCooldownMs && Math.random() < 0.25) {
-                const audio = getSystem('audio');
-                if (audio && audio.playSfx3D) {
-                    const played = audio.playSfx3D(sfxKey, this.x, this.y, { category: 'animal' });
-                    if (played) {
-                        this._lastSfxTime = now;
-                        this._sfxCooldownMs = 20000 + Math.random() * 20000;
-                        if (this.assetName === 'Bull') this._maybeBullBellowInjury();
-                    }
-                }
+                // The vocalize/bellow "event" fires on the cooldown schedule.
+                // Advance the cooldown and run gameplay side effects (the bull's
+                // bellow injury) regardless of whether the SFX emits — audio may
+                // be blocked/unavailable, and gameplay must not depend on it.
+                this._lastSfxTime = now;
+                this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                getSystem('audio')?.playSfx3D?.(sfxKey, this.x, this.y, { category: 'animal' });
+                if (this.assetName === 'Bull') this._maybeBullBellowInjury();
             }
         }
     }
