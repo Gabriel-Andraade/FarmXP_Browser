@@ -13,6 +13,7 @@ import { storageSystem } from './storageSystem.js';
 import { camera, CAMERA_ZOOM } from './thePlayer/cameraSystem.js';
 import { WeatherSystem } from './weather.js';
 import { getItem, setItemIcon } from './itemUtils.js';
+import { searchTokens, matchesSearch } from './searchMatch.js';
 import { craftingSystem } from './craftingSystem.js';
 import { t } from './i18n/i18n.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
@@ -458,7 +459,24 @@ export class HouseSystem {
         closeFooterBtn.textContent = t('ui.close');
         storageFooter.appendChild(closeFooterBtn);
 
-        storageContent.append(storageHeader, tabsDiv, statsDiv, categoriesDiv, contentDiv, storageFooter);
+        // Search (lupa): filters the visible items by name. Lives outside
+        // #storageContent so it keeps focus across grid re-renders.
+        const searchDiv = document.createElement('div');
+        searchDiv.className = 'storage-search';
+        const searchInput = document.createElement('input');
+        searchInput.type = 'search';
+        searchInput.className = 'storage-search-input';
+        searchInput.placeholder = `🔍 ${t('storage.search')}`;
+        searchInput.value = this.storageSearch || '';
+        searchInput.addEventListener('input', () => {
+            this.storageSearch = searchInput.value;
+            const cat = modal.querySelector('.storage-category-btn.active')?.dataset.category || 'tools';
+            const tab = modal.querySelector('.storage-tab.active')?.dataset.tab || 'withdraw';
+            this.renderStorageCategory(cat, tab);
+        });
+        searchDiv.appendChild(searchInput);
+
+        storageContent.append(storageHeader, tabsDiv, statsDiv, categoriesDiv, searchDiv, contentDiv, storageFooter);
         modal.appendChild(storageContent);
 
         document.body.appendChild(modal);
@@ -472,6 +490,21 @@ export class HouseSystem {
         modal.addEventListener('click', (e) => {
             if (e.target === modal) this.closeStorageModal();
         });
+
+        // Keep keystrokes typed into the warehouse's fields (search, quantity)
+        // from leaking to the game's global key handlers (move, open inventory/
+        // map, close, etc.). Those listen on document in the bubble phase, so
+        // stopping propagation here (an ancestor) before it reaches document is
+        // enough — covers the search box and every quantity input.
+        const stopFieldKeys = (e) => {
+            const tg = e.target;
+            if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) {
+                e.stopPropagation();
+            }
+        };
+        modal.addEventListener('keydown', stopFieldKeys);
+        modal.addEventListener('keyup', stopFieldKeys);
+        modal.addEventListener('keypress', stopFieldKeys);
 
         modal.querySelectorAll('.storage-tab').forEach(tab => {
             tab.addEventListener('click', () => {
@@ -556,8 +589,8 @@ export class HouseSystem {
         grid.id = 'storageGrid';
         content.append(catInfo, grid);
 
-        // Se estiver no modo deposit, busca itens do inventário, senão, do storage
-        const list = (mode === 'deposit')
+        // Current category's items (used for the value + the no-search view).
+        const currentList = (mode === 'deposit')
             ? this._getInventoryStacksForStorageCategory(categoryKey)
             : (() => {
                 const acc = new Map();
@@ -572,17 +605,36 @@ export class HouseSystem {
                 }));
             })();
 
-        if (!list.length) {
+        // Per-category value — always reflects the current category/tab.
+        const catValue = currentList.reduce((sum, s) => sum + (getItem(s.itemId)?.price || 0) * (s.quantity || 0), 0);
+        const valueSpan = document.createElement('span');
+        valueSpan.textContent = `${t('storage.value')}: ${catValue}`;
+        catStats.appendChild(valueSpan);
+
+        // Search (lupa): word-prefix, accent/case-insensitive. When there's a
+        // query, surface matches across ALL categories (so an item sitting in
+        // another category isn't hidden); otherwise show the current category.
+        const tokens = searchTokens(this.storageSearch);
+        let filtered;
+        if (tokens.length) {
+            const all = (mode === 'deposit') ? this._allInventoryStacks() : this._allStorageStacks();
+            filtered = all.filter(s => matchesSearch(getItem(s.itemId)?.name || '', tokens));
+            catH3.textContent = t('storage.searchResults');
+        } else {
+            filtered = currentList;
+        }
+
+        if (!filtered.length) {
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'empty-storage';
-            emptyDiv.textContent = t('storage.emptyCategory');
+            emptyDiv.textContent = tokens.length ? t('storage.noResults') : t('storage.emptyCategory');
             grid.appendChild(emptyDiv);
             return;
         }
 
         const getKey = (itemId, sourceCat) => `${mode}:${categoryKey}:${sourceCat || 'null'}:${itemId}`;
 
-        for (const s of list) {
+        for (const s of filtered) {
             const data = getItem(s.itemId);
             const icon = data?.icon || '';
             const name = data?.name || `item ${s.itemId}`;
@@ -616,18 +668,30 @@ export class HouseSystem {
             nameDiv.className = 'item-name';
             nameDiv.textContent = name;
 
+            // Batch presets (5/10/100/All) + a manual field. setQty clamps to
+            // the available amount; the manual field allows typing over the max
+            // and clamps on commit/action (e.g. 7 → 6).
             const qtyControls = document.createElement('div');
             qtyControls.className = 'qty-controls';
-            const minusBtn = document.createElement('button');
-            minusBtn.className = 'qty-btn qty-minus';
-            minusBtn.textContent = '-';
-            const qtyValue = document.createElement('div');
-            qtyValue.className = 'qty-value';
-            qtyValue.textContent = selected;
-            const plusBtn = document.createElement('button');
-            plusBtn.className = 'qty-btn qty-plus';
-            plusBtn.textContent = '+';
-            qtyControls.append(minusBtn, qtyValue, plusBtn);
+            for (const preset of ['5', '10', '100']) {
+                const b = document.createElement('button');
+                b.className = 'qty-btn qty-preset';
+                b.dataset.preset = preset;
+                b.textContent = preset;
+                qtyControls.appendChild(b);
+            }
+            const allBtn = document.createElement('button');
+            allBtn.className = 'qty-btn qty-preset qty-all';
+            allBtn.dataset.preset = 'all';
+            allBtn.textContent = t('storage.all');
+            qtyControls.appendChild(allBtn);
+            const qtyInput = document.createElement('input');
+            qtyInput.type = 'number';
+            qtyInput.className = 'qty-input';
+            qtyInput.min = '1';
+            qtyInput.max = String(qty);
+            qtyInput.value = String(selected);
+            qtyControls.appendChild(qtyInput);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'item-actions';
@@ -648,46 +712,50 @@ export class HouseSystem {
             
             if (!itemId || !key) return;
 
+            const inputEl = slot.querySelector('.qty-input');
+
+            // Set + clamp the selection, reflecting it in the field and button.
             const setQty = (v) => {
-                const clamped = Math.max(1, Math.min(v, max));
+                const clamped = Math.max(1, Math.min(Math.floor(Number(v) || 1), max));
                 this.storageQtySelection.set(key, clamped);
-
-                const val = slot.querySelector('.qty-value');
-                if (val) val.textContent = String(clamped);
-
+                if (inputEl) inputEl.value = String(clamped);
                 const actionBtn = slot.querySelector('.deposit-btn, .withdraw-btn');
                 if (actionBtn) actionBtn.textContent = mode === 'deposit'
                     ? t('storage.depositBtn', { qty: clamped })
                     : t('storage.withdrawBtn', { qty: clamped });
             };
 
-            const minus = slot.querySelector('.qty-minus');
-            const plus = slot.querySelector('.qty-plus');
             const action = slot.querySelector('.deposit-btn, .withdraw-btn');
 
-            const current = this.storageQtySelection.get(key) || 1;
-            setQty(current);
+            setQty(this.storageQtySelection.get(key) || 1);
 
-            if (minus) minus.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const v = (this.storageQtySelection.get(key) || 1) - 1;
-                setQty(v);
+            // Batch presets: 5 / 10 / 100 / All (clamped to what's available).
+            slot.querySelectorAll('.qty-preset').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    setQty(btn.dataset.preset === 'all' ? max : Number(btn.dataset.preset));
+                });
             });
 
-            if (plus) plus.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                const v = (this.storageQtySelection.get(key) || 1) + 1;
-                setQty(v);
-            });
+            // Manual field: allow typing freely (even over max); clamp on blur.
+            if (inputEl) {
+                inputEl.addEventListener('input', () => {
+                    const raw = Math.max(1, Math.floor(Number(inputEl.value) || 1));
+                    this.storageQtySelection.set(key, raw);
+                });
+                inputEl.addEventListener('change', () => setQty(inputEl.value));
+            }
 
             if (action) action.addEventListener('click', (e) => {
                 // CORREÇÃO: Evita propagação múltipla do clique
                 e.preventDefault();
                 e.stopImmediatePropagation();
 
-                const amount = this.storageQtySelection.get(key) || 1;
+                // Clamp on action (typed 7 with 6 available → 6, reflected back).
+                const amount = Math.max(1, Math.min(Math.floor(Number(inputEl?.value) || (this.storageQtySelection.get(key) || 1)), max));
+                if (inputEl) inputEl.value = String(amount);
+                this.storageQtySelection.set(key, amount);
 
                 if (mode === 'deposit') {
                     const invCategory = sourceCat !== '' ? sourceCat : null;
@@ -697,19 +765,49 @@ export class HouseSystem {
                         storageSystem.depositFromInventory(itemId, amount);
                     }
                 } else {
-                    storageSystem.withdrawToInventory(categoryKey, itemId, amount);
+                    // Use the item's own storage category (cross-category search
+                    // can show items from categories other than the active tab).
+                    const storageCat = sourceCat !== '' ? sourceCat : categoryKey;
+                    storageSystem.withdrawToInventory(storageCat, itemId, amount);
                 }
 
                 const currentTab = document.querySelector('.storage-tab.active')?.dataset.tab || mode;
                 const currentCategory = document.querySelector('.storage-category-btn.active')?.dataset.category || categoryKey;
 
+                // Preserve scroll position: the re-render rebuilds the grid, which
+                // otherwise jumps the list back to the top after each transfer.
+                const savedScroll = document.getElementById('storageContent')?.scrollTop ?? 0;
+
                 // Pequeno delay para garantir que o inventário atualizou antes de renderizar
                 setTimeout(() => {
                     this.renderStorageStats();
                     this.renderStorageCategory(currentCategory, currentTab);
+                    const sc = document.getElementById('storageContent');
+                    if (sc) sc.scrollTop = savedScroll;
                 }, 50);
             });
         });
+    }
+
+    // All warehouse items across every category (for cross-category search).
+    _allStorageStacks() {
+        const out = [];
+        for (const catKey of Object.keys(storageSystem.categories || {})) {
+            const stacksRaw = Array.isArray(storageSystem.storage?.[catKey]) ? storageSystem.storage[catKey] : [];
+            const acc = new Map();
+            for (const s of stacksRaw) acc.set(s.itemId, (acc.get(s.itemId) || 0) + (s.quantity || 0));
+            for (const [itemId, quantity] of acc) out.push({ itemId, quantity, sourceCategory: catKey });
+        }
+        return out;
+    }
+
+    // All inventory items mapped to their storage category (cross-category search).
+    _allInventoryStacks() {
+        const out = [];
+        for (const catKey of Object.keys(storageSystem.categories || {})) {
+            out.push(...this._getInventoryStacksForStorageCategory(catKey));
+        }
+        return out;
     }
 
     _getInventoryStacksForStorageCategory(storageCategoryKey) {
@@ -722,18 +820,18 @@ export class HouseSystem {
         // Extrai tudo do inventário numa lista unificada
         const stacks = this._extractInventoryStacks(inv);
 
-        return stacks
-            .filter(s => {
-                const data = getItem(s.itemId);
-                if (!data) return false;
-                // Filtra apenas itens que pertencem a esta categoria do armazém (ex: Tools)
-                return allowedTypes.includes(data.type);
-            })
-            .map(s => ({
-                itemId: s.itemId,
-                quantity: s.quantity,
-                sourceCategory: s.category // Importante: mantém a categoria original do inventário se houver
-            }));
+        // Group by itemId (sum across stacks) so one slot represents the whole
+        // amount — otherwise a 99/99/2 split would cap each deposit at one stack
+        // and you couldn't deposit, say, 200 at once.
+        const acc = new Map();
+        for (const s of stacks) {
+            const data = getItem(s.itemId);
+            if (!data || !allowedTypes.includes(data.type)) continue;
+            const prev = acc.get(s.itemId);
+            if (prev) prev.quantity += s.quantity;
+            else acc.set(s.itemId, { itemId: s.itemId, quantity: s.quantity, sourceCategory: s.category });
+        }
+        return Array.from(acc.values());
     }
 
     _extractInventoryStacks(inv) {

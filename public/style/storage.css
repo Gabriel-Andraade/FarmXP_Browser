@@ -203,16 +203,17 @@
 /* ===== STORAGE GRID ===== */
 .storage-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 12px;
     padding: 5px;
+    align-content: start;
 }
 
 .storage-slot {
     background: linear-gradient(135deg, rgba(46, 28, 15, 0.9) 0%, rgba(90, 58, 31, 0.8) 100%);
     border: 2px solid #8b5a2b;
     border-radius: 12px;
-    padding: 15px;
+    padding: 10px;
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
@@ -261,6 +262,13 @@
     height: 32px;
     object-fit: contain;
     display: block;
+}
+
+/* Atlas sprites render at their natural pixel size (~55–90px), dwarfing the
+   emoji icons. zoom scales the whole sprite down to match (same fix as the
+   merchant grid). */
+.item-icon .icon-atlas {
+    zoom: 0.42;
 }
 
 .storage-slot:hover .item-icon {
@@ -509,3 +517,37 @@
   font-weight:bold;
   color:#f5e9d3;
 }
+
+/* Batch presets (5/10/100/All) + manual field + search (lupa). Sized to fit
+   one line in a ~190px slot so each slot stays short (≥2 rows visible). */
+.qty-controls{ flex-wrap: nowrap; gap: 4px; margin-bottom: 6px; }
+.qty-preset{
+  width: auto;
+  min-width: 24px;
+  height: 26px;
+  padding: 0 5px;
+  font-size: 11px;
+}
+.qty-input{
+  width: 42px;
+  height: 26px;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid #8b5a2b;
+  background: rgba(46, 28, 15, 0.6);
+  color: #f5e9d3;
+  font-weight: bold;
+  font-size: 12px;
+}
+.storage-search{ padding: 8px 12px; }
+.storage-search-input{
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid #8b5a2b;
+  background: rgba(46, 28, 15, 0.6);
+  color: #f5e9d3;
+  font-size: 14px;
+}
+.storage-search-input::placeholder{ color: rgba(245, 233, 211, 0.5); }
