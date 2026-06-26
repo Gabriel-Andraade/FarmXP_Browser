@@ -15,6 +15,42 @@ import { items } from '../item.js';
 import { animals } from '../theWorld.js';
 import { assets } from '../assetManager.js';
 
+// Ambient SFX per species (assetName → audioManager key). Played on a cooldown
+// while idling. Turkey has no sound asset yet, so it's omitted (no-op).
+const ANIMAL_SFX = {
+  Bull: 'bull_bellow',
+  Cow: 'cow_Moo',
+  Calf: 'calf_sound',
+  Sheep: 'sheep_sound',
+  Lamb: 'lamb_sound',
+  Pig: 'pig_grunt',
+  Piglet: 'piglet_sound',
+  Chicken: 'chicken_sound',
+  Chick: 'chick_sound',
+  Rooster: 'rooster_sound',
+};
+
+// Rooster morning crow: plays once per in-game morning — when the player wakes
+// (sleepEnded) or when the clock naturally reaches 06:01 — at a rooster's
+// position. No rooster in the world → no crow.
+let _lastCrowDay = -1;
+function _playMorningCrow() {
+  const day = getSystem('weather')?.day ?? 0;
+  if (day === _lastCrowDay) return; // already crowed this morning
+  const audio = getSystem('audio');
+  if (!audio?.playSfx3D) return;
+  const rooster = Array.isArray(animals) ? animals.find(a => a && a.assetName === 'Rooster') : null;
+  if (!rooster) return;
+  _lastCrowDay = day;
+  audio.playSfx3D('rooster_sound_morning', rooster.x, rooster.y, { category: 'animal' });
+}
+if (typeof document !== 'undefined') {
+  document.addEventListener('sleepEnded', _playMorningCrow);
+  document.addEventListener('timeChanged', (e) => {
+    if (Math.floor(e.detail?.time ?? -1) === 361) _playMorningCrow(); // 06:01
+  });
+}
+
 // weatherSystem expõe `day`; dayNightSystem expõe `dayCount` — aceitar ambos
 // e padronizar o lookup pra updateStats e applyMedicine não divergirem.
 function getCurrentDay() {
@@ -2057,18 +2093,18 @@ export class AnimalEntity {
             this.stateDuration = Math.random() * (IDLE_STATE_MAX_MS - IDLE_STATE_MIN_MS) + IDLE_STATE_MIN_MS;
         }
 
-        if (this.assetName === 'Bull') {
+        const sfxKey = ANIMAL_SFX[this.assetName];
+        if (sfxKey) {
             const now = performance.now();
             if (now - this._lastSfxTime >= this._sfxCooldownMs && Math.random() < 0.25) {
-                const audio = getSystem('audio');
-                if (audio && audio.playSfx3D) {
-                    const played = audio.playSfx3D('bull_bellow', this.x, this.y, { category: 'animal' });
-                    if (played) {
-                        this._lastSfxTime = now;
-                        this._sfxCooldownMs = 20000 + Math.random() * 20000;
-                        this._maybeBullBellowInjury();
-                    }
-                }
+                // The vocalize/bellow "event" fires on the cooldown schedule.
+                // Advance the cooldown and run gameplay side effects (the bull's
+                // bellow injury) regardless of whether the SFX emits — audio may
+                // be blocked/unavailable, and gameplay must not depend on it.
+                this._lastSfxTime = now;
+                this._sfxCooldownMs = 20000 + Math.random() * 20000;
+                getSystem('audio')?.playSfx3D?.(sfxKey, this.x, this.y, { category: 'animal' });
+                if (this.assetName === 'Bull') this._maybeBullBellowInjury();
             }
         }
     }

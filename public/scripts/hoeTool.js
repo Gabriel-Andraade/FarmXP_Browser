@@ -131,12 +131,16 @@ const hoeTool = {
     /** Tills the tile under the world point → fresh DRY soil. Re-till refreshes. */
     tillAt(worldX, worldY) {
         const { x, y } = this._snap(worldX, worldY);
+        const key = this._tileKey(x, y);
+        const wasNew = !this._tilled.has(key);
         const now = _gameNow();
-        this._tilled.set(this._tileKey(x, y), {
+        this._tilled.set(key, {
             state: SOIL_STATE.DRY,
             expiresAt: now + TILLED_DRY_MIN,
             rainSince: null,
         });
+        // Plow sound only on a fresh till (not when re-hoeing an existing plot).
+        if (wasNew) getSystem('audio')?.playSfx3D?.('to_plow', x, y, { category: 'ambient' });
     },
 
     /**
