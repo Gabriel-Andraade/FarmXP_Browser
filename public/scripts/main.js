@@ -334,6 +334,10 @@ async function initializeCriticalSystems() {
     await import("./wateringCan.js");
     logger.debug("wateringCan carregado");
 
+    // Fill-% label that follows the cursor for equipped bucket/watering can.
+    await import("./equippedFillCursor.js");
+    logger.debug("equippedFillCursor carregado");
+
     return true;
   } catch (error) {
     handleError(error, "main:initializeCriticalSystems", "falha ao inicializar sistemas críticos");

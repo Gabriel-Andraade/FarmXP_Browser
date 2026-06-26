@@ -356,6 +356,20 @@ export const foodTroughSystem = {
     ctx.lineTo(cx, cy + half);
     ctx.stroke();
 
+    // Fill level under the marker (basic feed; premium shown when present).
+    const foodPct = Math.round(((ft.foodLevel || 0) / FOOD_TROUGH_CONFIG.MAX_FOOD_LEVEL) * 100);
+    const premPct = Math.round(((ft.premiumLevel || 0) / FOOD_TROUGH_CONFIG.MAX_PREMIUM_LEVEL) * 100);
+    const label = premPct > 0 ? `🌾 ${foodPct}%  ⭐ ${premPct}%` : `🌾 ${foodPct}%`;
+    const ly = cy + half + 4 * zoom;
+    ctx.font = `bold ${Math.round(12 * zoom)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = Math.max(2, 3 * zoom);
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(label, cx, ly);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, cx, ly);
+
     ctx.restore();
   },
 

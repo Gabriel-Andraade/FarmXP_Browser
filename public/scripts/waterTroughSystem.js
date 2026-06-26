@@ -270,6 +270,19 @@ export const waterTroughSystem = {
     ctx.lineTo(cx, cy + half);
     ctx.stroke();
 
+    // Fill level under the marker so hovering shows how full the trough is.
+    const pct = Math.round(((wt.waterLevel || 0) / WATER_TROUGH_CONFIG.MAX_WATER_LEVEL) * 100);
+    const label = `💧 ${pct}%`;
+    const ly = cy + half + 4 * zoom;
+    ctx.font = `bold ${Math.round(12 * zoom)}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.lineWidth = Math.max(2, 3 * zoom);
+    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+    ctx.strokeText(label, cx, ly);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(label, cx, ly);
+
     ctx.restore();
   },
 

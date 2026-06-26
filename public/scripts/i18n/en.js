@@ -206,6 +206,7 @@ export default {
       energy: 'Energy',
       acceptedBy: 'Accepted by',
       foodValue: 'Food value',
+      level: 'Level',
       treats: 'Treats',
       cureMode: 'Cure',
       instant: 'Instant',

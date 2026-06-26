@@ -206,6 +206,7 @@ export default {
       energy: 'Energía',
       acceptedBy: 'Aceptado por',
       foodValue: 'Valor nutritivo',
+      level: 'Nivel',
       treats: 'Trata',
       cureMode: 'Cura',
       instant: 'Inmediata',
