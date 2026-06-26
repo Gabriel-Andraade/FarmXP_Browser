@@ -393,6 +393,7 @@ export class InventorySystem {
             document.dispatchEvent(new Event('unequipItemRequest'));
         }
 
+        this._markSaveDirty();
         this.scheduleUIUpdate();
         return true;
     }
