@@ -1009,6 +1009,8 @@ export default {
     fillBottle: 'Fill bottle',
     fillWateringCan: 'Fill watering can',
     noWateringCan: 'You need a watering can',
+    fillBucket: 'Fill bucket',
+    noBucket: 'You need a bucket',
     well: 'Well',
     lowerBucket: 'Lower bucket',
     insufficientWater: 'Insufficient water in the well',

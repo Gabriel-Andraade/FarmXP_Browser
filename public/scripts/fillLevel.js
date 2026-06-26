@@ -31,9 +31,16 @@ export function getItemFillLevel(itemId) {
     return { percent: Math.round((current / max) * 100), current, max, icon: '💧' };
   }
 
-  // Bucket: full vs empty (separate item ids).
+  // Bucket: 0..100% water volume (bucketSystem).
+  if (item.toolType === 'bucket' || itemId === BUCKET_EMPTY_ID) {
+    const b = getSystem('bucket');
+    if (!b) return null;
+    const max = b.capacity || 100;
+    const current = b.getLevel?.() ?? 0;
+    return { percent: Math.round((current / max) * 100), current, max, icon: '💧' };
+  }
+  // Legacy full-bucket item (no longer produced, kept harmless).
   if (itemId === BUCKET_WATER_ID) return { percent: 100, icon: '💧' };
-  if (itemId === BUCKET_EMPTY_ID) return { percent: 0, icon: '💧' };
 
   return null;
 }

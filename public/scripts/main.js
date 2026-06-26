@@ -334,6 +334,10 @@ async function initializeCriticalSystems() {
     await import("./wateringCan.js");
     logger.debug("wateringCan carregado");
 
+    // Bucket water volume. Self-registers 'bucket'.
+    await import("./bucketSystem.js");
+    logger.debug("bucketSystem carregado");
+
     // Fill-% label that follows the cursor for equipped bucket/watering can.
     await import("./equippedFillCursor.js");
     logger.debug("equippedFillCursor carregado");

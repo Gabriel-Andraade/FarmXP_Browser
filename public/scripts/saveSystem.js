@@ -827,6 +827,7 @@ class SaveSystem {
             tilled: getSystem('hoeTool')?.serialize?.() ?? [],
             crops: getSystem('crop')?.serialize?.() ?? [],
             wateringCanCharges: getSystem('wateringCan')?.serialize?.() ?? 0,
+            bucketLevel: getSystem('bucket')?.serialize?.() ?? 0,
         };
     }
 
@@ -1174,6 +1175,7 @@ class SaveSystem {
             getSystem('hoeTool')?.restore?.(p.tilled ?? []);
             getSystem('crop')?.restore?.(p.crops ?? []);
             getSystem('wateringCan')?.restore?.(p.wateringCanCharges ?? 0);
+            getSystem('bucket')?.restore?.(p.bucketLevel ?? 0);
             logger.info('🌱 Plantation restored');
         } catch (error) {
             logger.error('Error restoring plantation:', error);

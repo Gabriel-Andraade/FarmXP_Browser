@@ -2,7 +2,11 @@ import { describe, test, expect, mock } from 'bun:test';
 import '../setup.js';
 
 let charges = 3;
-const systems = { wateringCan: { capacity: 5, getCharges: () => charges } };
+let bucketLevel = 0;
+const systems = {
+  wateringCan: { capacity: 5, getCharges: () => charges },
+  bucket: { capacity: 100, getLevel: () => bucketLevel },
+};
 mock.module('../../public/scripts/gameState.js', () => ({
   getSystem: (n) => systems[n] || null,
   registerSystem: () => {},
@@ -10,7 +14,7 @@ mock.module('../../public/scripts/gameState.js', () => ({
 
 const items = {
   12: { id: 12, name: 'Watering Can', type: 'tool', toolType: 'watering_can' },
-  16: { id: 16, name: 'Bucket', type: 'tool' },
+  16: { id: 16, name: 'Bucket', type: 'tool', toolType: 'bucket' },
   42: { id: 42, name: 'Water Bucket', type: 'resource' },
   9:  { id: 9,  name: 'Wood', type: 'resource' },
 };
@@ -30,9 +34,13 @@ describe('getItemFillLevel', () => {
     expect(getItemFillLevel(12).percent).toBe(0);
   });
 
-  test('full bucket is 100%, empty bucket is 0%', () => {
-    expect(getItemFillLevel(42).percent).toBe(100);
+  test('bucket reports its water volume percentage', () => {
+    bucketLevel = 0;
     expect(getItemFillLevel(16).percent).toBe(0);
+    bucketLevel = 50;
+    expect(getItemFillLevel(16).percent).toBe(50);
+    bucketLevel = 100;
+    expect(getItemFillLevel(16).percent).toBe(100);
   });
 
   test('a non-container item has no level', () => {

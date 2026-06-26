@@ -66,6 +66,16 @@ function _waterStepMin(cfg) {
 }
 
 /**
+ * Watering-can cost (%) to water a crop once: thirstier crops (lower waterDays)
+ * cost more, clamped to 1..12%. noWater crops cost nothing.
+ * e.g. grape 0.5d → 12, cucumber 1d → 6, carrot 2d → 3.
+ */
+function _waterCost(cfg) {
+    if (!cfg || cfg.noWater || !cfg.waterDays) return 0;
+    return Math.max(1, Math.min(12, Math.round(6 / cfg.waterDays)));
+}
+
+/**
  * Rolls a harvest quantity. A range [min,max] → random int in range; the
  * number 1 (single-unit crop) → the luck bonus (51% chance of 2); any other
  * fixed number → itself.
@@ -373,6 +383,14 @@ const cropSystem = {
         if (!c || c.harvested) return false;
         this._water(c, _gameNow());
         return true;
+    },
+
+    /** Watering-can % cost for the crop at a tile (0 if none / noWater crop). */
+    getWaterCostAt(worldX, worldY) {
+        const { x, y } = this._snap(worldX, worldY);
+        const c = this._crops.get(this._key(x, y));
+        if (!c || c.harvested) return 0;
+        return _waterCost(CROPS[c.seedId]);
     },
 
     /**

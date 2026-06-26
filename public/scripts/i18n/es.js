@@ -1010,6 +1010,8 @@ export default {
     fillBottle: 'Llenar botella',
     fillWateringCan: 'Llenar regadera',
     noWateringCan: 'Necesitas una regadera',
+    fillBucket: 'Llenar balde',
+    noBucket: 'Necesitas un balde',
     well: 'Pozo',
     lowerBucket: 'Bajar balde',
     insufficientWater: 'Agua insuficiente en el pozo',

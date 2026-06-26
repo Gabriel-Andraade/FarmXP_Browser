@@ -19,7 +19,14 @@ import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { t } from './i18n/i18n.js';
 
 const OVERLAY_ID = 'water-trough-panel';
-const BUCKET_WATER_ID = 42;
+const BUCKET_WATER_ID = 42; // legacy full-bucket item (no longer used)
+const BUCKET_EMPTY_ID = 16; // the bucket tool; its water lives in bucketSystem
+
+// #NNN: the player can fill a trough when they hold a bucket (16) that has water.
+function _hasWaterBucket() {
+  return inventorySystem.getItemQuantity(BUCKET_EMPTY_ID) > 0
+    && !!getSystem('bucket')?.hasWater?.();
+}
 
 let _activeTroughId = null;
 let _abortController = null;
@@ -110,9 +117,8 @@ export function openWaterTroughPanel(waterTrough) {
     barFill.style.width = `${pct}%`;
     barOuter.dataset.full = pct >= 100 ? '1' : '0';
 
-    const bucketQty = inventorySystem.getItemQuantity(BUCKET_WATER_ID);
     const isFull = pct >= 100;
-    const noBucket = bucketQty <= 0;
+    const noBucket = !_hasWaterBucket();
 
     addBtn.disabled = isFull || noBucket;
     if (isFull) {
@@ -131,7 +137,7 @@ export function openWaterTroughPanel(waterTrough) {
     if (ok) {
       setToast(t('waterTrough.filled') || 'Cocho abastecido', 'success');
     } else {
-      const noBucket = inventorySystem.getItemQuantity(BUCKET_WATER_ID) <= 0;
+      const noBucket = !_hasWaterBucket();
       setToast(
         noBucket
           ? (t('waterTrough.needBucket') || 'Precisa de um balde com água')
