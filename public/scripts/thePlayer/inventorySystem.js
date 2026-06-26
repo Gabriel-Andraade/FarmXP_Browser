@@ -358,22 +358,27 @@ export class InventorySystem {
         if (!this.categories[category]) return false;
 
         const categoryData = this.categories[category];
-        const itemIndex = categoryData.items.findIndex(item => item.id === id);
 
-        if (itemIndex === -1) return false;
+        // An item can occupy several stacks (e.g. 200 fences = 99+99+2). Sum
+        // across ALL of them and drain across stacks — not just the first, which
+        // capped removals (and thus deposits/sells) at one stack's worth.
+        const available = categoryData.items.reduce(
+            (sum, it) => (it.id === id ? sum + (it.quantity || 0) : sum), 0);
 
-        const item = categoryData.items[itemIndex];
-
-        // ✅ Validação crítica: quantidade suficiente?
-        if (item.quantity < qty) {
-            logger.warn(` Quantidade insuficiente: tem ${item.quantity}, tentou remover ${qty}`);
+        if (available <= 0) return false;
+        if (available < qty) {
+            logger.warn(` Quantidade insuficiente: tem ${available}, tentou remover ${qty}`);
             return false;
         }
 
-        if (item.quantity > qty) {
-            item.quantity -= qty;
-        } else {
-            categoryData.items.splice(itemIndex, 1);
+        let remaining = qty;
+        for (let i = categoryData.items.length - 1; i >= 0 && remaining > 0; i--) {
+            const it = categoryData.items[i];
+            if (it.id !== id) continue;
+            const take = Math.min(it.quantity, remaining);
+            it.quantity -= take;
+            remaining -= take;
+            if (it.quantity <= 0) categoryData.items.splice(i, 1);
         }
 
         // Issue #166 polish: quando o item equipado é removido programaticamente
@@ -388,6 +393,7 @@ export class InventorySystem {
             document.dispatchEvent(new Event('unequipItemRequest'));
         }
 
+        this._markSaveDirty();
         this.scheduleUIUpdate();
         return true;
     }
@@ -468,15 +474,15 @@ export class InventorySystem {
             const id = categoryOrId;
             let total = 0;
             for (const catData of Object.values(this.categories)) {
-                const item = catData.items.find(i => i.id === id);
-                if (item) total += item.quantity;
+                for (const item of catData.items) if (item.id === id) total += item.quantity;
             }
             return total;
         }
 
         if (!this.categories[categoryOrId]) return 0;
-        const item = this.categories[categoryOrId].items.find(i => i.id === itemId);
-        return item ? item.quantity : 0;
+        // Sum across all stacks of the item (an item can occupy several).
+        return this.categories[categoryOrId].items.reduce(
+            (sum, i) => (i.id === itemId ? sum + (i.quantity || 0) : sum), 0);
     }
 
     /**

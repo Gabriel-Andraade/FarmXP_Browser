@@ -154,6 +154,34 @@ describe('InventorySystem (Production Implementation)', () => {
 
   // Full inventory routes newly acquired items to the warehouse instead of
   // losing them; only fails when the warehouse is also full.
+  // An item can occupy several stacks (e.g. 200 with a 99 stack limit). Quantity
+  // queries and removals must span all of them, not just the first.
+  describe('multi-stack quantity and removal', () => {
+    test('getItemQuantity sums across every stack of the item', () => {
+      inventory.addItem(1, 200); // Wood → 99 + 99 + 2 (stackLimit 99)
+      expect(inventory.getItemQuantity('resources', 1)).toBe(200);
+      expect(inventory.getItemQuantity(1)).toBe(200);
+    });
+
+    test('removeItem drains across multiple stacks', () => {
+      inventory.addItem(1, 200);
+      expect(inventory.removeItem('resources', 1, 150)).toBe(true);
+      expect(inventory.getItemQuantity('resources', 1)).toBe(50);
+    });
+
+    test('removeItem removes the full amount across stacks', () => {
+      inventory.addItem(1, 200);
+      expect(inventory.removeItem('resources', 1, 200)).toBe(true);
+      expect(inventory.getItemQuantity('resources', 1)).toBe(0);
+    });
+
+    test('removeItem fails when the summed total is insufficient', () => {
+      inventory.addItem(1, 50);
+      expect(inventory.removeItem('resources', 1, 200)).toBe(false);
+      expect(inventory.getItemQuantity('resources', 1)).toBe(50);
+    });
+  });
+
   describe('acquireItem (overflow to warehouse)', () => {
     test('adds to the inventory when there is room (no warehouse touch)', () => {
       let storageCalled = false;
