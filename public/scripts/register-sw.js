@@ -27,7 +27,13 @@
   // are untouched by the reload.
   function showUpdatePrompt(worker) {
     if (!worker) return;
-    if (document.getElementById('sw-update-banner')) return; // already showing
+    // Banner already up: just point it at the newest waiting worker. A second
+    // update supersedes the first, so the click must target the current one.
+    var existing = document.getElementById('sw-update-banner');
+    if (existing) {
+      existing._swWorker = worker;
+      return;
+    }
 
     var lang = 'en';
     try { lang = localStorage.getItem('farmxp_language') || 'en'; } catch (e) {}
@@ -42,6 +48,7 @@
     banner.id = 'sw-update-banner';
     banner.className = 'sw-update-banner';
     banner.setAttribute('role', 'status');
+    banner._swWorker = worker;
 
     var msg = document.createElement('span');
     msg.className = 'sw-update-msg';
@@ -52,8 +59,9 @@
     reloadBtn.textContent = s.reload;
     reloadBtn.addEventListener('click', function () {
       reloadBtn.disabled = true;
-      // Tells the waiting SW to take over → controllerchange → reload.
-      worker.postMessage('SKIP_WAITING');
+      // Read the live reference so a later update (which superseded `worker`)
+      // is the one that takes over → controllerchange → reload.
+      banner._swWorker.postMessage('SKIP_WAITING');
     });
 
     var laterBtn = document.createElement('button');

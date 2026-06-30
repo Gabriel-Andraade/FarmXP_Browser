@@ -22,7 +22,7 @@
     border-radius: 12px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
     color: #f5e9d3;
-    font-family: 'Roboto', system-ui, sans-serif;
+    font-family: Roboto, system-ui, sans-serif;
     font-size: 0.95rem;
     animation: sw-update-in 0.3s ease;
 }
