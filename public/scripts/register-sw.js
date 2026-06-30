@@ -11,7 +11,8 @@
  * o auto-bump do CACHE_VERSION no server.ts vê cada save de arquivo como
  * "nova build", o que dispararia controllerchange + reload de aba a cada
  * salvada — chato durante desenvolvimento. Em prod (deploy real), boot
- * novo = hash novo = SW atualiza + tab reload uma única vez.
+ * novo = hash novo = o SW novo fica em "waiting" e mostra um prompt
+ * "nova versão disponível"; o jogador escolhe quando recarregar (#225).
  *
  * Dev local também DESREGISTRA qualquer SW que tenha sobrado de um teste
  * anterior (ex: contribuinte testou prod local e deixou SW ativo).
@@ -19,6 +20,50 @@
 
 (function () {
   if (!('serviceWorker' in navigator)) return;
+
+  // In-page "update available" prompt (#225). Self-contained so it works
+  // regardless of the game's module state. The player decides when to reload,
+  // so an update pushed mid-session never interrupts play; localStorage saves
+  // are untouched by the reload.
+  function showUpdatePrompt(worker) {
+    if (!worker) return;
+    if (document.getElementById('sw-update-banner')) return; // already showing
+
+    var lang = 'en';
+    try { lang = localStorage.getItem('farmxp_language') || 'en'; } catch (e) {}
+    var STRINGS = {
+      'pt-BR': { msg: 'Nova versão disponível.', reload: 'Atualizar', later: 'Depois' },
+      'en':    { msg: 'A new version is available.', reload: 'Reload', later: 'Later' },
+      'es':    { msg: 'Hay una nueva versión disponible.', reload: 'Actualizar', later: 'Después' },
+    };
+    var s = STRINGS[lang] || STRINGS.en;
+
+    var banner = document.createElement('div');
+    banner.id = 'sw-update-banner';
+    banner.className = 'sw-update-banner';
+    banner.setAttribute('role', 'status');
+
+    var msg = document.createElement('span');
+    msg.className = 'sw-update-msg';
+    msg.textContent = s.msg;
+
+    var reloadBtn = document.createElement('button');
+    reloadBtn.className = 'sw-update-btn sw-update-reload';
+    reloadBtn.textContent = s.reload;
+    reloadBtn.addEventListener('click', function () {
+      reloadBtn.disabled = true;
+      // Tells the waiting SW to take over → controllerchange → reload.
+      worker.postMessage('SKIP_WAITING');
+    });
+
+    var laterBtn = document.createElement('button');
+    laterBtn.className = 'sw-update-btn sw-update-later';
+    laterBtn.textContent = s.later;
+    laterBtn.addEventListener('click', function () { banner.remove(); });
+
+    banner.append(msg, reloadBtn, laterBtn);
+    document.body.appendChild(banner);
+  }
 
   // location.hostname returns "[::1]" (with brackets) for IPv6 loopback;
   // strip them so the "::1" check below matches.
@@ -77,24 +122,21 @@
     }
 
     navigator.serviceWorker.register('/sw.js').then(function (reg) {
-      // Ativa imediatamente um SW que já estava esperando (de uma sessão
-      // anterior, por exemplo). Sem isso, ficaria preso até que TODAS as
-      // abas do jogo fechassem.
+      // Um SW já esperando (update de uma sessão anterior): mostra o prompt
+      // em vez de ativar sozinho — quem decide recarregar é o jogador.
       if (reg.waiting) {
-        reg.waiting.postMessage('SKIP_WAITING');
+        showUpdatePrompt(reg.waiting);
       }
 
-      // Detecta deploy NOVO acontecendo durante esta sessão: o browser
-      // dispara `updatefound` quando começa a baixar uma nova versão do
-      // sw.js. Esperamos ele virar `installed` e mandamos SKIP_WAITING
-      // pra ele tomar controle. Senão, o player nunca pega o update
-      // sem fechar todas as abas.
+      // Deploy NOVO durante esta sessão: o browser dispara `updatefound` ao
+      // baixar uma versão nova do sw.js. Quando ela vira `installed` (e já há
+      // um controller = é update, não primeira instalação), avisa o jogador.
       reg.addEventListener('updatefound', function () {
         var newWorker = reg.installing;
         if (!newWorker) return;
         newWorker.addEventListener('statechange', function () {
           if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            newWorker.postMessage('SKIP_WAITING');
+            showUpdatePrompt(newWorker);
           }
         });
       });
@@ -105,8 +147,8 @@
       // player numa sessão longa (ex: teste de horas via ngrok) só pegaria a
       // atualização ao recarregar na mão. Com ele, `reg.update()` força a
       // re-busca do sw.js; se o BUILD_HASH mudou (= server reiniciado com novo
-      // código), o fluxo updatefound→SKIP_WAITING→controllerchange recarrega a
-      // aba UMA vez na versão nova. Saves ficam no localStorage e persistem.
+      // código), o fluxo updatefound→prompt→(jogador aceita)→SKIP_WAITING→
+      // controllerchange recarrega a aba na versão nova. Saves persistem.
       setInterval(function () {
         reg.update().catch(function () {});
       }, 60000);

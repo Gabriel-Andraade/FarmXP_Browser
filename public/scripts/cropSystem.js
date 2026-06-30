@@ -1,7 +1,7 @@
 /**
  * @file cropSystem.js - Crop planting / growth / harvest (Issue #165).
  * @description Plant a seed on tilled soil → it grows through stages → harvest
- * with the scythe for the crop item. Hay (feno) is the first crop/test.
+ * with the scythe for the crop item. Hay (Feno) is the first crop/test.
  *
  * Integrates with: hoeTool (tilled tiles), seedWheel (active seed),
  * inventorySystem (consume seed / add crop). Updated + drawn by the game loop.
@@ -124,7 +124,7 @@ const CROPS = {
         regrowDays: 2,
     },
     // Issue #165 batch 1. Frame rects measured from each sheet's alpha; all use
-    // the feno convention: [0] planted, [1] growing, [2] grown (harvestable),
+    // the Feno convention: [0] planted, [1] growing, [2] grown (harvestable),
     // [3] post-harvest twig.
     110: { // Pepino
         name: 'Pepino',

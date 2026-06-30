@@ -326,7 +326,7 @@ export const items = [
     name: "Grão de Feno",
     icon: "assets/icons/hayIcon.webp",
     price: 8,
-    description: "Plante em solo arado para cultivar feno",
+    description: "Plante em solo arado para cultivar Feno",
     type: "seed"
   },
   {
@@ -1136,7 +1136,7 @@ export const items = [
     name: "Trigo",
     icon: "assets/icons/wheatIcon.png",
     price: 20,
-    description: "Cereal essencial para farinha e feno",
+    description: "Cereal essencial para farinha e Feno",
     type: "crop"
   },
   {
