@@ -1116,6 +1116,7 @@ export default {
     importAllConfirm: 'Substituir TODOS os slots por este backup?',
     importChooseSlot: 'Importar em qual slot? (1-3)',
     importBadSlot: 'Slot inválido — escolha 1, 2 ou 3.',
+    importNoSlot: 'Nenhum slot vazio — exclua um save antes.',
     importOverwrite: 'O slot {number} não está vazio. Sobrescrever?',
     emptyNameError: 'Nome não pode ser vazio',
     renameSuccess: 'Save renomeado!',

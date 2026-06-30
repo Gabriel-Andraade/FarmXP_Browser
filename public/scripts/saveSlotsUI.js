@@ -430,7 +430,16 @@ class SaveSlotsUI {
             if (raw === null) return;
             const n = parseInt(raw, 10);
             if (!(n >= 1 && n <= 3)) { this._showMessage(t('saveSlots.importBadSlot'), 'error'); return; }
-            res = saveSystem.importData(text, { targetSlot: n - 1 });
+            const targetSlot = n - 1;
+            // Mirror the per-slot path: confirm before clobbering an occupied slot.
+            if (!saveSystem.isSlotEmpty(targetSlot)) {
+                const ok = await this._dialog({
+                    message: t('saveSlots.importOverwrite', { number: n }),
+                    success: true,
+                });
+                if (!ok) return;
+            }
+            res = saveSystem.importData(text, { targetSlot });
         }
 
         if (res?.ok) {

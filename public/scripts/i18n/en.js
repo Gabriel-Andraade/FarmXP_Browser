@@ -1116,6 +1116,7 @@ export default {
     importAllConfirm: 'Replace ALL save slots with this backup?',
     importChooseSlot: 'Import into which slot? (1-3)',
     importBadSlot: 'Invalid slot — choose 1, 2 or 3.',
+    importNoSlot: 'No empty slot — delete a save first.',
     importOverwrite: 'Slot {number} is not empty. Overwrite it?',
     emptyNameError: 'Name cannot be empty',
     renameSuccess: 'Save renamed!',

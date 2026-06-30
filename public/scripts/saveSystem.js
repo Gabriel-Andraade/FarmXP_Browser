@@ -283,8 +283,12 @@ class SaveSystem {
                 return this._cachedRoot;
             }
             const parsed = JSON.parse(raw);
-            if (!parsed.slots || !Array.isArray(parsed.slots)) {
-                parsed.slots = Array(MAX_SLOTS).fill(null);
+            // #226: JSON válido mas com shape errado ({}, {"slots":"bad"}, null)
+            // → tenta o backup ANTES de cair em slots vazios, pra não perder
+            // saves recuperáveis.
+            if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.slots)) {
+                this._cachedRoot = this._tryReadBackup() || { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+                return this._cachedRoot;
             }
             // Garantir que sempre tenha 3 slots
             while (parsed.slots.length < MAX_SLOTS) {
@@ -378,7 +382,11 @@ class SaveSystem {
     /** A slot payload is valid if null, or {meta, data} not from a newer build. */
     _validateSlotPayload(slot) {
         if (slot === null) return { ok: true };
-        if (typeof slot !== 'object' || typeof slot.data !== 'object' || typeof slot.meta !== 'object') {
+        // typeof null === 'object', então sem o guard de null um payload
+        // assinado tipo { meta: null, data: null } passava e crashava depois
+        // em slot.data._dataVersion / slot.meta.slotIndex.
+        const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+        if (!isObject(slot) || !isObject(slot.data) || !isObject(slot.meta)) {
             return { ok: false, reason: 'bad_shape' };
         }
         if ((Number(slot.data._dataVersion) || 0) > SAVE_DATA_VERSION) {
@@ -403,17 +411,34 @@ class SaveSystem {
             return { ok: false, reason: 'not_a_save' };
         }
 
+        // Rejeita envelopes de um build mais novo ANTES de mexer em qualquer
+        // slot — um export futuro pode omitir o _dataVersion por slot, então a
+        // versão do envelope é o único sinal confiável.
+        const envSaveVersion = Number(parsed.saveVersion);
+        const envDataVersion = Number(parsed.dataVersion);
+        if (
+            (Number.isFinite(envSaveVersion) && envSaveVersion > SAVE_VERSION) ||
+            (Number.isFinite(envDataVersion) && envDataVersion > SAVE_DATA_VERSION)
+        ) {
+            return { ok: false, reason: 'newer_version' };
+        }
+
         if (parsed.kind === 'all' && Array.isArray(parsed.slots)) {
             for (const slot of parsed.slots) {
                 const v = this._validateSlotPayload(slot);
                 if (!v.ok) return v;
             }
+            // Persiste o retorno de migrateSaveData (loadSlot também atribui) —
+            // se a migração devolver um objeto novo, descartá-lo deixaria saves
+            // antigos sem migrar.
             const slots = parsed.slots.slice(0, MAX_SLOTS).map((s) => {
-                if (s && s.data) migrateSaveData(s.data);
-                return s ?? null;
+                if (!s) return null;
+                return { ...s, data: migrateSaveData(s.data) };
             });
             while (slots.length < MAX_SLOTS) slots.push(null);
-            this._writeRoot({ version: SAVE_VERSION, slots });
+            if (!this._writeRoot({ version: SAVE_VERSION, slots })) {
+                return { ok: false, reason: 'write_failed' };
+            }
             this._dispatchEvent('save:changed', { action: 'import', kind: 'all' });
             return { ok: true, kind: 'all' };
         }
@@ -425,11 +450,13 @@ class SaveSystem {
             }
             const v = this._validateSlotPayload(parsed.slot);
             if (!v.ok) return v;
-            migrateSaveData(parsed.slot.data);
+            parsed.slot.data = migrateSaveData(parsed.slot.data);
             parsed.slot.meta.slotIndex = target;
             const root = this._readRoot();
             root.slots[target] = parsed.slot;
-            this._writeRoot(root);
+            if (!this._writeRoot(root)) {
+                return { ok: false, reason: 'write_failed' };
+            }
             this._dispatchEvent('save:changed', { action: 'import', kind: 'slot', slotIndex: target });
             return { ok: true, kind: 'slot', slotIndex: target };
         }

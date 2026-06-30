@@ -1033,6 +1033,27 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(saveSystem.importData(future, { targetSlot: 0 }).reason).toBe('newer_version');
     });
 
+    test('rejects a signed payload with null meta/data instead of throwing', () => {
+      const corrupt = JSON.stringify({
+        signature: 'farmingXP-save', kind: 'slot',
+        slot: { meta: null, data: null },
+      });
+      // typeof null === 'object' used to slip through and crash later.
+      expect(() => saveSystem.importData(corrupt, { targetSlot: 0 })).not.toThrow();
+      expect(saveSystem.importData(corrupt, { targetSlot: 0 }).reason).toBe('bad_shape');
+    });
+
+    test('rejects envelopes from a newer build via top-level versions', () => {
+      const futureSave = JSON.stringify({
+        signature: 'farmingXP-save', saveVersion: 999, kind: 'all', slots: [],
+      });
+      expect(saveSystem.importData(futureSave).reason).toBe('newer_version');
+      const futureData = JSON.stringify({
+        signature: 'farmingXP-save', dataVersion: 999, kind: 'all', slots: [],
+      });
+      expect(saveSystem.importData(futureData).reason).toBe('newer_version');
+    });
+
     test('single-slot import requires a target slot', () => {
       saveSystem.createOrOverwriteSlot(0, { saveName: 'X' });
       expect(saveSystem.importData(saveSystem.exportSlot(0)).reason).toBe('no_target');

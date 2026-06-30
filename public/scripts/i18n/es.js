@@ -1117,6 +1117,7 @@ export default {
     importAllConfirm: '¿Reemplazar TODAS las ranuras con este respaldo?',
     importChooseSlot: '¿Importar en qué ranura? (1-3)',
     importBadSlot: 'Ranura inválida — elige 1, 2 o 3.',
+    importNoSlot: 'No hay ranura libre — elimina un guardado primero.',
     importOverwrite: 'La ranura {number} no está vacía. ¿Sobrescribir?',
     emptyNameError: 'El nombre no puede estar vacío',
     renameSuccess: '¡Guardado renombrado!',

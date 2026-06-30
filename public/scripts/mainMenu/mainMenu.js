@@ -654,7 +654,12 @@ export class MainMenu {
         } else {
           const slots = saveSystem.listSlots();
           const firstEmpty = slots.findIndex((s) => s === null);
-          res = saveSystem.importData(text, { targetSlot: firstEmpty < 0 ? 0 : firstEmpty });
+          if (firstEmpty < 0) {
+            // All slots full — don't silently overwrite slot 0.
+            this._showToast(t('saveSlots.importNoSlot'));
+            return;
+          }
+          res = saveSystem.importData(text, { targetSlot: firstEmpty });
         }
 
         if (!res?.ok) {
