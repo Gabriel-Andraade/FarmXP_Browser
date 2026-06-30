@@ -192,9 +192,12 @@ export class MainMenu {
     sub.className = 'mm-submenu';
 
     const options = [
-      { id: 'newGame',  text: t('mainMenu.newGame'),  icon: '\uD83C\uDF31' },
-      { id: 'loadGame', text: t('mainMenu.loadGame'), icon: '\uD83D\uDCC2' },
+      { id: 'newGame',    text: t('mainMenu.newGame'),    icon: '\uD83C\uDF31' },
+      { id: 'loadGame',   text: t('mainMenu.loadGame'),   icon: '\uD83D\uDCC2' },
+      { id: 'importGame', text: t('mainMenu.importGame'), icon: '\uD83D\uDCE5' },
     ];
+    // #226: keep the play options for index-based keyboard navigation.
+    this._playOptions = options;
 
     options.forEach((opt, idx) => {
       const card = document.createElement('div');
@@ -617,7 +620,59 @@ export class MainMenu {
       document.dispatchEvent(new CustomEvent('mainMenu:newGame'));
     } else if (id === 'loadGame') {
       this._loadGame();
+    } else if (id === 'importGame') {
+      this._importGame();
     }
+  }
+
+  /**
+   * #226: pick a save file (JSON only), import it, and drop the player straight
+   * into the Load Game screen with the imported save present. A single-slot
+   * export goes into the first empty slot; a full backup replaces all slots.
+   */
+  _importGame() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    // The OS dialog opens pre-filtered to .json so the player isn't shown every
+    // file on disk.
+    input.accept = '.json,application/json';
+    input.style.display = 'none';
+
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) { input.remove(); return; }
+      try {
+        const text = await file.text();
+        const { saveSystem } = await import('../saveSystem.js');
+
+        let kind;
+        try { kind = JSON.parse(text)?.kind; } catch (_) { /* importData reports it */ }
+
+        let res;
+        if (kind === 'all') {
+          res = saveSystem.importData(text);
+        } else {
+          const slots = saveSystem.listSlots();
+          const firstEmpty = slots.findIndex((s) => s === null);
+          res = saveSystem.importData(text, { targetSlot: firstEmpty < 0 ? 0 : firstEmpty });
+        }
+
+        if (!res?.ok) {
+          this._showToast(t('saveSlots.importError'));
+          return;
+        }
+        this._showToast(t('saveSlots.importSuccess'));
+        this._loadGame(); // imported save is now present in the Load screen
+      } catch (err) {
+        this._showToast(t('saveSlots.importError'));
+        logger.error('MainMenu:importGame', err);
+      } finally {
+        input.remove();
+      }
+    });
+
+    document.body.appendChild(input);
+    input.click();
   }
 
   async _loadGame() {
@@ -663,7 +718,7 @@ export class MainMenu {
       if (this.currentState === MenuState.SETTINGS || this.currentState === MenuState.ACHIEVEMENTS || this.currentState === MenuState.GALLERY) return;
 
       const isMain = this.currentState === MenuState.MAIN;
-      const maxIndex = isMain ? this._mainOptions.length - 1 : 1;
+      const maxIndex = isMain ? this._mainOptions.length - 1 : (this._playOptions?.length ?? 2) - 1;
 
       if (e.key === 'ArrowDown') {
         this.selectedIndex = (this.selectedIndex + 1) % (maxIndex + 1);
@@ -678,7 +733,7 @@ export class MainMenu {
           const opt = this._mainOptions[this.selectedIndex];
           if (opt) this._handleMain(opt.id);
         } else {
-          this._handlePlay(this.selectedIndex === 0 ? 'newGame' : 'loadGame');
+          this._handlePlay(this._playOptions?.[this.selectedIndex]?.id || 'newGame');
         }
         e.preventDefault();
       }

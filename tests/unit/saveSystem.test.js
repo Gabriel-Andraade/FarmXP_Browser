@@ -993,4 +993,63 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(meta.totalPlayTimeMs).toBe(0); // Fresh slot
     });
   });
+
+  describe('export / import (#226)', () => {
+    test('exportSlot is null for an empty slot, signed JSON for a filled one', () => {
+      expect(saveSystem.exportSlot(0)).toBeNull();
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'A' });
+      const parsed = JSON.parse(saveSystem.exportSlot(0));
+      expect(parsed.signature).toBe('farmingXP-save');
+      expect(parsed.kind).toBe('slot');
+      expect(parsed.slot.meta.saveName).toBe('A');
+    });
+
+    test('round-trips a slot into a different slot', () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Origin' });
+      const res = saveSystem.importData(saveSystem.exportSlot(0), { targetSlot: 2 });
+      expect(res.ok).toBe(true);
+      expect(saveSystem.getSlotMeta(2).saveName).toBe('Origin');
+    });
+
+    test('exportAll round-trips every slot after a wipe', () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'S0' });
+      saveSystem.createOrOverwriteSlot(1, { saveName: 'S1' });
+      const json = saveSystem.exportAll();
+      globalThis.localStorage.clear();
+      saveSystem._clearCache();
+      expect(saveSystem.importData(json).ok).toBe(true);
+      expect(saveSystem.getSlotMeta(0).saveName).toBe('S0');
+      expect(saveSystem.getSlotMeta(1).saveName).toBe('S1');
+      expect(saveSystem.isSlotEmpty(2)).toBe(true);
+    });
+
+    test('rejects invalid JSON, non-save payloads and newer-version data', () => {
+      expect(saveSystem.importData('{bad').reason).toBe('invalid_json');
+      expect(saveSystem.importData(JSON.stringify({ foo: 1 })).reason).toBe('not_a_save');
+      const future = JSON.stringify({
+        signature: 'farmingXP-save', kind: 'slot',
+        slot: { meta: { slotIndex: 0 }, data: { _dataVersion: 999 } },
+      });
+      expect(saveSystem.importData(future, { targetSlot: 0 }).reason).toBe('newer_version');
+    });
+
+    test('single-slot import requires a target slot', () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'X' });
+      expect(saveSystem.importData(saveSystem.exportSlot(0)).reason).toBe('no_target');
+    });
+  });
+
+  describe('backup mirror (#226)', () => {
+    test('mirrors the root to a backup key on save', () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Mirror' });
+      expect(globalThis.localStorage.getItem('farmxp_saves_backup')).toBeTruthy();
+    });
+
+    test('recovers from the backup when the primary key is lost', () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Recover' });
+      globalThis.localStorage.removeItem('farmxp_saves_v1'); // primary gone, backup survives
+      saveSystem._clearCache();
+      expect(saveSystem.getSlotMeta(0)?.saveName).toBe('Recover');
+    });
+  });
 });

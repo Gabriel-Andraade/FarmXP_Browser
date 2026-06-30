@@ -160,6 +160,32 @@
     flex: 1;
 }
 
+/* ===== FOOTER DO MODAL (export all / import — backup completo) ===== */
+.save-modal-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 2px solid var(--save-border-brown);
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.save-modal-footer .save-btn {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+}
+
+.save-btn-import:hover {
+    border-color: #4ecca3;
+    background: rgba(78, 204, 163, 0.18);
+}
+
+.save-btn-export-all:hover {
+    border-color: var(--save-border-gold);
+    background: rgba(201, 164, 99, 0.18);
+}
+
 /* ===== GRID DE SLOTS ===== */
 .save-slots-grid {
     display: grid;
@@ -283,10 +309,37 @@
 /* ===== AÇÕES DO SLOT ===== */
 .save-slot-actions {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    gap: 10px;
     padding-top: 12px;
     border-top: 1px solid var(--save-border-brown);
+}
+
+/* Ação principal (Play / Save) — lado a lado, ocupando a largura. */
+.save-actions-primary {
+    display: flex;
+    gap: 8px;
+}
+
+/* Ações secundárias (renomear/exportar/importar/excluir) — grade 2x2 com
+   tamanhos iguais, pra não ficarem apertadas nem quebrar a linha torto. */
+.save-actions-secondary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.save-actions-secondary .save-btn {
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 0.8rem;
+}
+
+/* Slot vazio: o Import fica direto nas ações (sem grade) — full width e
+   centralizado pra alinhar com o "Create Save" acima dele. */
+.save-slot-actions > .save-btn-import-slot {
+    width: 100%;
+    justify-content: center;
 }
 
 /* ===== BOTÕES ===== */
@@ -347,11 +400,15 @@
     background: linear-gradient(135deg, #d9b46f, #c9a463);
 }
 
-.save-btn-rename,
-.save-btn-delete {
-    padding: 8px;
-    min-width: 36px;
-    justify-content: center;
+/* Acentos de hover pra dar identidade às ações secundárias. */
+.save-btn-export:hover {
+    border-color: var(--save-border-gold);
+    background: rgba(201, 164, 99, 0.18);
+}
+
+.save-btn-import-slot:hover {
+    border-color: #4ecca3;
+    background: rgba(78, 204, 163, 0.18);
 }
 
 .save-btn-delete:hover {
@@ -472,6 +529,18 @@
     background: linear-gradient(135deg, #ff6655, #e74c3c);
 }
 
+/* Confirmação não-destrutiva (ex.: importar) — ciano, igual ao Play/ACTIVE. */
+.save-dialog-success {
+    background: var(--save-accent-success);
+    border-color: #3da58a;
+    color: #fff;
+}
+
+.save-dialog-success:hover {
+    background: linear-gradient(135deg, #5fd9b3, #4ecca3);
+    border-color: #4ecca3;
+}
+
 /* ===== RESPONSIVO ===== */
 @media (max-width: 768px) {
     .save-slots-grid {
@@ -510,19 +579,8 @@
 }
 
 @media (max-width: 480px) {
-    .save-slot-actions {
+    .save-actions-primary {
         flex-direction: column;
-    }
-
-    .save-btn-load,
-    .save-btn-save {
-        flex: none;
-        width: 100%;
-    }
-
-    .save-slot-actions > .save-btn-rename,
-    .save-slot-actions > .save-btn-delete {
-        flex: 1;
     }
 
     .save-meta-row {

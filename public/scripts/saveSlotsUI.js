@@ -77,7 +77,25 @@ class SaveSlotsUI {
         const gridDiv = document.createElement('div');
         gridDiv.className = 'save-slots-grid';
         bodyDiv.appendChild(gridDiv);
-        container.append(headerDiv, bodyDiv);
+
+        // #226: footer with full-backup actions (export all + import).
+        const footerDiv = document.createElement('div');
+        footerDiv.className = 'save-modal-footer';
+        const exportAllBtn = document.createElement('button');
+        exportAllBtn.className = 'save-btn save-btn-export-all';
+        exportAllBtn.textContent = `📦 ${t('saveSlots.exportAll')}`;
+        const importBtn = document.createElement('button');
+        importBtn.className = 'save-btn save-btn-import';
+        importBtn.textContent = `📥 ${t('saveSlots.import')}`;
+        // One hidden file input reused for every import (per-slot and global).
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json,application/json';
+        fileInput.style.display = 'none';
+        footerDiv.append(exportAllBtn, importBtn, fileInput);
+        this._importFileInput = fileInput;
+
+        container.append(headerDiv, bodyDiv, footerDiv);
         this.modal.appendChild(container);
 
         // Eventos
@@ -85,6 +103,9 @@ class SaveSlotsUI {
         this.modal.addEventListener('click', (e) => {
             if (e.target === this.modal) this.close();
         });
+        exportAllBtn.addEventListener('click', () => this._exportAll());
+        importBtn.addEventListener('click', () => this._triggerImport(null));
+        fileInput.addEventListener('change', (e) => this._onImportFile(e));
 
         document.body.appendChild(this.modal);
     }
@@ -189,6 +210,13 @@ class SaveSlotsUI {
                 createBtn.dataset.slot = index;
                 createBtn.textContent = `✨ ${t('saveSlots.createSave')}`;
                 actions.appendChild(createBtn);
+                // #226: import a save file straight into this empty slot.
+                const importBtn = document.createElement('button');
+                importBtn.className = 'save-btn save-btn-import-slot';
+                importBtn.dataset.action = 'import';
+                importBtn.dataset.slot = index;
+                importBtn.textContent = `📥 ${t('saveSlots.import')}`;
+                actions.appendChild(importBtn);
             }
 
             card.append(header, emptyContent, actions);
@@ -237,13 +265,17 @@ class SaveSlotsUI {
 
         const actions = document.createElement('div');
         actions.className = 'save-slot-actions';
+
+        // Primary actions (Play / Save) — the main thing you do with a slot.
+        const primaryRow = document.createElement('div');
+        primaryRow.className = 'save-actions-primary';
         if (this.mode !== 'save') {
             const loadBtn = document.createElement('button');
             loadBtn.className = 'save-btn save-btn-load';
             loadBtn.dataset.action = 'load';
             loadBtn.dataset.slot = index;
             loadBtn.textContent = `▶️ ${t('saveSlots.play')}`;
-            actions.appendChild(loadBtn);
+            primaryRow.appendChild(loadBtn);
         }
         if (this.mode !== 'load') {
             const saveBtn = document.createElement('button');
@@ -251,20 +283,30 @@ class SaveSlotsUI {
             saveBtn.dataset.action = 'save';
             saveBtn.dataset.slot = index;
             saveBtn.textContent = `💾 ${t('saveSlots.save')}`;
-            actions.appendChild(saveBtn);
+            primaryRow.appendChild(saveBtn);
         }
-        const renameBtn = document.createElement('button');
-        renameBtn.className = 'save-btn save-btn-rename';
-        renameBtn.dataset.action = 'rename';
-        renameBtn.dataset.slot = index;
-        renameBtn.textContent = '✏️';
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'save-btn save-btn-delete';
-        deleteBtn.dataset.action = 'delete';
-        deleteBtn.dataset.slot = index;
-        deleteBtn.textContent = '🗑️';
-        actions.append(renameBtn, deleteBtn);
 
+        // Secondary actions — labelled (icon + word) so export/import read
+        // clearly instead of bare arrows.
+        const secondaryRow = document.createElement('div');
+        secondaryRow.className = 'save-actions-secondary';
+        const secondaryButtons = [
+            { action: 'rename', cls: 'save-btn-rename', icon: '✏️', label: t('saveSlots.rename') },
+            { action: 'export', cls: 'save-btn-export', icon: '📤', label: t('saveSlots.export') },
+            { action: 'import', cls: 'save-btn-import-slot', icon: '📥', label: t('saveSlots.import') },
+            { action: 'delete', cls: 'save-btn-delete', icon: '🗑️', label: t('saveSlots.delete') },
+        ];
+        for (const b of secondaryButtons) {
+            const btn = document.createElement('button');
+            btn.className = `save-btn ${b.cls}`;
+            btn.dataset.action = b.action;
+            btn.dataset.slot = index;
+            btn.title = b.label;
+            btn.textContent = `${b.icon} ${b.label}`;
+            secondaryRow.appendChild(btn);
+        }
+
+        actions.append(primaryRow, secondaryRow);
         card.append(header, metaDiv, actions);
         return card;
     }
@@ -305,6 +347,97 @@ class SaveSlotsUI {
             case 'delete':
                 await this._deleteSave(slotIndex);
                 break;
+            case 'export':
+                this._exportSlot(slotIndex);
+                break;
+            case 'import':
+                this._triggerImport(slotIndex);
+                break;
+        }
+    }
+
+    // ───────────────── Export / Import (#226) ─────────────────
+
+    /** Download a JSON string as a file. */
+    _downloadJson(filename, json) {
+        try {
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (e) {
+            logger.error('Export failed:', e);
+            this._showMessage(t('saveSlots.exportError'), 'error');
+        }
+    }
+
+    _exportSlot(slotIndex) {
+        const json = saveSystem.exportSlot(slotIndex);
+        if (!json) { this._showMessage(t('saveSlots.exportEmpty'), 'error'); return; }
+        this._downloadJson(`farmingxp-slot${slotIndex + 1}.json`, json);
+        this._showMessage(t('saveSlots.exportSuccess'), 'success');
+    }
+
+    _exportAll() {
+        this._downloadJson('farmingxp-saves.json', saveSystem.exportAll());
+        this._showMessage(t('saveSlots.exportSuccess'), 'success');
+    }
+
+    /** Open the file picker; remembers the target slot (null = global import). */
+    _triggerImport(slotIndex) {
+        this._pendingImportSlot = (typeof slotIndex === 'number') ? slotIndex : null;
+        if (!this._importFileInput) return;
+        this._importFileInput.value = '';
+        this._importFileInput.click();
+    }
+
+    async _onImportFile(e) {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        let text;
+        try { text = await file.text(); }
+        catch (_) { this._showMessage(t('saveSlots.importError'), 'error'); return; }
+        await this._applyImport(text, this._pendingImportSlot);
+    }
+
+    async _applyImport(text, slotIndex) {
+        let kind;
+        try { kind = JSON.parse(text)?.kind; } catch (_) { /* importData reports the error */ }
+
+        let res;
+        if (slotIndex != null) {
+            // Per-slot import accepts a single-slot file only.
+            if (kind === 'all') { this._showMessage(t('saveSlots.importUseAll'), 'error'); return; }
+            if (!saveSystem.isSlotEmpty(slotIndex)) {
+                const ok = await this._dialog({
+                    message: t('saveSlots.importOverwrite', { number: slotIndex + 1 }),
+                    success: true,
+                });
+                if (!ok) return;
+            }
+            res = saveSystem.importData(text, { targetSlot: slotIndex });
+        } else if (kind === 'all') {
+            const ok = await this._dialog({ message: t('saveSlots.importAllConfirm'), success: true });
+            if (!ok) return;
+            res = saveSystem.importData(text);
+        } else {
+            // Single-slot file via the global button → ask which slot (1-3).
+            const raw = await this._dialog({ message: t('saveSlots.importChooseSlot'), input: true, defaultValue: '1' });
+            if (raw === null) return;
+            const n = parseInt(raw, 10);
+            if (!(n >= 1 && n <= 3)) { this._showMessage(t('saveSlots.importBadSlot'), 'error'); return; }
+            res = saveSystem.importData(text, { targetSlot: n - 1 });
+        }
+
+        if (res?.ok) {
+            this._showMessage(t('saveSlots.importSuccess'), 'success');
+            this.render();
+        } else {
+            this._showMessage(`${t('saveSlots.importError')}${res?.reason ? ` (${res.reason})` : ''}`, 'error');
         }
     }
 
@@ -486,7 +619,7 @@ class SaveSlotsUI {
      * @param {boolean} [opts.danger] - Style the confirm button as destructive
      * @returns {Promise<string|null|boolean>}
      */
-    _dialog({ message, input = false, defaultValue = '', danger = false }) {
+    _dialog({ message, input = false, defaultValue = '', danger = false, success = false }) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.className = 'save-dialog-overlay';
@@ -522,7 +655,8 @@ class SaveSlotsUI {
             cancelBtn.className = 'save-btn save-dialog-cancel';
             cancelBtn.textContent = t('ui.cancel');
             const okBtn = document.createElement('button');
-            okBtn.className = `save-btn save-dialog-ok${danger ? ' save-dialog-danger' : ''}`;
+            const okVariant = danger ? ' save-dialog-danger' : (success ? ' save-dialog-success' : '');
+            okBtn.className = `save-btn save-dialog-ok${okVariant}`;
             okBtn.textContent = input ? t('ui.ok') : t('ui.confirm');
             actions.append(cancelBtn, okBtn);
             box.appendChild(actions);

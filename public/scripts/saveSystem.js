@@ -11,8 +11,11 @@ import { safeDispatch } from './safeDispatch.js';
 import { exportWorldState, importWorldState } from './theWorld.js';
 
 const ROOT_KEY = 'farmxp_saves_v1';
+const BACKUP_KEY = 'farmxp_saves_backup'; // #226: last-good mirror of ROOT_KEY
 const ACTIVE_SLOT_KEY = 'farmxp_active_slot';
 const MAX_SLOTS = 3;
+// #226: signature for exported save files, so import can validate the payload.
+const EXPORT_SIGNATURE = 'farmingXP-save';
 const SAVE_VERSION = 1;
 const AUTO_SAVE_INTERVAL_MS = 60000;
 
@@ -275,7 +278,8 @@ class SaveSystem {
         try {
             const raw = localStorage.getItem(ROOT_KEY);
             if (!raw) {
-                this._cachedRoot = { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+                // #226: primary missing → try the backup mirror before giving up.
+                this._cachedRoot = this._tryReadBackup() || { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
                 return this._cachedRoot;
             }
             const parsed = JSON.parse(raw);
@@ -290,8 +294,24 @@ class SaveSystem {
             return this._cachedRoot;
         } catch (error) {
             logger.error('Error reading saves:', error);
-            this._cachedRoot = { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
+            // #226: primary corrupt → recover from the backup mirror if possible.
+            this._cachedRoot = this._tryReadBackup() || { version: SAVE_VERSION, slots: Array(MAX_SLOTS).fill(null) };
             return this._cachedRoot;
+        }
+    }
+
+    /** #226: read the backup mirror; returns a valid root or null. */
+    _tryReadBackup() {
+        try {
+            const raw = localStorage.getItem(BACKUP_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.slots)) return null;
+            while (parsed.slots.length < MAX_SLOTS) parsed.slots.push(null);
+            logger.warn('[SaveSystem] Recovered saves from backup mirror');
+            return parsed;
+        } catch (_) {
+            return null;
         }
     }
 
@@ -301,8 +321,12 @@ class SaveSystem {
      */
     _writeRoot(root) {
         try {
-            localStorage.setItem(ROOT_KEY, JSON.stringify(root));
+            const json = JSON.stringify(root);
+            localStorage.setItem(ROOT_KEY, json);
             this._cachedRoot = root; // Atualizar cache
+            // #226: mirror the last good root to a backup key, so a corrupted or
+            // accidentally-cleared primary key can still be recovered.
+            try { localStorage.setItem(BACKUP_KEY, json); } catch (_) { /* quota etc */ }
             return true;
         } catch (error) {
             logger.error('Error writing saves:', error);
@@ -324,6 +348,93 @@ class SaveSystem {
      */
     listSlots() {
         return [...this._readRoot().slots];
+    }
+
+    // ───────────────── Export / Import (#226) ─────────────────
+
+    /** Wrap a payload in the export envelope (signature + versions). */
+    _exportEnvelope(extra) {
+        return JSON.stringify({
+            signature: EXPORT_SIGNATURE,
+            saveVersion: SAVE_VERSION,
+            dataVersion: SAVE_DATA_VERSION,
+            exportedAt: new Date().toISOString(),
+            ...extra,
+        }, null, 2);
+    }
+
+    /** Export one slot as a JSON string, or null if the slot is empty. */
+    exportSlot(slotIndex) {
+        const slot = this._readRoot().slots[slotIndex];
+        if (!slot) return null;
+        return this._exportEnvelope({ kind: 'slot', slotIndex, slot });
+    }
+
+    /** Export every slot as a single JSON string. */
+    exportAll() {
+        return this._exportEnvelope({ kind: 'all', slots: this._readRoot().slots });
+    }
+
+    /** A slot payload is valid if null, or {meta, data} not from a newer build. */
+    _validateSlotPayload(slot) {
+        if (slot === null) return { ok: true };
+        if (typeof slot !== 'object' || typeof slot.data !== 'object' || typeof slot.meta !== 'object') {
+            return { ok: false, reason: 'bad_shape' };
+        }
+        if ((Number(slot.data._dataVersion) || 0) > SAVE_DATA_VERSION) {
+            return { ok: false, reason: 'newer_version' };
+        }
+        return { ok: true };
+    }
+
+    /**
+     * Import a previously exported save. Validates the envelope + payload and
+     * migrates older data; rejects corrupt or newer-than-supported payloads.
+     * @param {string} json - the exported JSON string.
+     * @param {{ targetSlot?: number }} opts - required slot for a 'slot' export.
+     * @returns {{ ok: boolean, reason?: string, kind?: string, slotIndex?: number }}
+     */
+    importData(json, opts = {}) {
+        let parsed;
+        try { parsed = JSON.parse(json); }
+        catch (_) { return { ok: false, reason: 'invalid_json' }; }
+
+        if (!parsed || parsed.signature !== EXPORT_SIGNATURE) {
+            return { ok: false, reason: 'not_a_save' };
+        }
+
+        if (parsed.kind === 'all' && Array.isArray(parsed.slots)) {
+            for (const slot of parsed.slots) {
+                const v = this._validateSlotPayload(slot);
+                if (!v.ok) return v;
+            }
+            const slots = parsed.slots.slice(0, MAX_SLOTS).map((s) => {
+                if (s && s.data) migrateSaveData(s.data);
+                return s ?? null;
+            });
+            while (slots.length < MAX_SLOTS) slots.push(null);
+            this._writeRoot({ version: SAVE_VERSION, slots });
+            this._dispatchEvent('save:changed', { action: 'import', kind: 'all' });
+            return { ok: true, kind: 'all' };
+        }
+
+        if (parsed.kind === 'slot' && parsed.slot) {
+            const target = opts.targetSlot;
+            if (!Number.isInteger(target) || target < 0 || target >= MAX_SLOTS) {
+                return { ok: false, reason: 'no_target' };
+            }
+            const v = this._validateSlotPayload(parsed.slot);
+            if (!v.ok) return v;
+            migrateSaveData(parsed.slot.data);
+            parsed.slot.meta.slotIndex = target;
+            const root = this._readRoot();
+            root.slots[target] = parsed.slot;
+            this._writeRoot(root);
+            this._dispatchEvent('save:changed', { action: 'import', kind: 'slot', slotIndex: target });
+            return { ok: true, kind: 'slot', slotIndex: target };
+        }
+
+        return { ok: false, reason: 'unknown_kind' };
     }
 
     /**
