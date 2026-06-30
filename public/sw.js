@@ -32,10 +32,11 @@ const PRECACHE_URLS = [
 ];
 
 self.addEventListener('install', (event) => {
+  // No skipWaiting() here on purpose: an updated SW must stay in "waiting"
+  // until the player accepts the in-page update prompt (register-sw.js sends
+  // SKIP_WAITING). A first install (no existing SW) still activates right away.
   event.waitUntil(
-    caches.open(HTML_CACHE)
-      .then((cache) => cache.addAll(PRECACHE_URLS))
-      .then(() => self.skipWaiting())
+    caches.open(HTML_CACHE).then((cache) => cache.addAll(PRECACHE_URLS))
   );
 });
 

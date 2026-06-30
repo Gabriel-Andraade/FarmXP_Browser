@@ -1,0 +1,88 @@
+/**
+ * @file update-prompt.css - Banner "nova versão disponível" (#225).
+ * @description Mostrado por register-sw.js quando uma build nova está pronta
+ * e esperando. Estilo autocontido (sem depender das variáveis de tema) pra
+ * renderizar mesmo independente dos módulos do jogo. Paleta espelha o tema
+ * madeira/dourado; botão "atualizar" em ciano (igual Play/confirmar).
+ */
+
+.sw-update-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    max-width: 92vw;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #3b2612, #2c1e12);
+    border: 2px solid #c9a463;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    color: #f5e9d3;
+    font-family: Roboto, system-ui, sans-serif;
+    font-size: 0.95rem;
+    animation: sw-update-in 0.3s ease;
+}
+
+/* Só opacidade pra não brigar com o translateX(-50%) de centralização. */
+@keyframes sw-update-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.sw-update-msg {
+    font-weight: 500;
+}
+
+.sw-update-btn {
+    padding: 8px 14px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.1s ease, border-color 0.2s ease;
+}
+
+.sw-update-btn:active {
+    transform: scale(0.96);
+}
+
+.sw-update-reload {
+    background: linear-gradient(135deg, #4ecca3, #3da58a);
+    border-color: #3da58a;
+    color: #08231c;
+}
+
+.sw-update-reload:hover {
+    filter: brightness(1.08);
+}
+
+.sw-update-reload:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.sw-update-later {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: #5a3b1f;
+    color: #f5e9d3;
+}
+
+.sw-update-later:hover {
+    border-color: #c9a463;
+}
+
+@media (max-width: 480px) {
+    .sw-update-banner {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        transform: none;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
