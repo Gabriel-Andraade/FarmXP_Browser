@@ -181,7 +181,6 @@ export class CraftingSystem {
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
       craftBtn.disabled = true;
-       // fix: innerHTML → DOM API
        craftBtn.replaceChildren();
        const spinner = document.createElement('i');
        spinner.className = 'fas fa-spinner fa-spin';
@@ -204,7 +203,6 @@ export class CraftingSystem {
 
       if (craftBtn) {
         craftBtn.disabled = false;
-        // fix: innerHTML → DOM API
         craftBtn.replaceChildren();
         const hammerIcon = document.createElement('i');
         hammerIcon.className = 'fas fa-hammer';
@@ -220,7 +218,6 @@ export class CraftingSystem {
     if (craftBtn) {
       this._setManagedTimeout(() => {
         craftBtn.disabled = false;
-        // fix: innerHTML → DOM API
         craftBtn.replaceChildren();
         const hammerIcon = document.createElement('i');
         hammerIcon.className = 'fas fa-hammer';
@@ -274,7 +271,6 @@ export class CraftingSystem {
    * Cria os elementos HTML da interface de crafting
    * @returns {void}
    */
-  // fix: innerHTML → DOM API
   createCraftingUI() {
     const existingPanel = document.querySelector(".crf-panel");
     const existingOverlay = document.querySelector(".crf-overlay");
@@ -358,7 +354,6 @@ export class CraftingSystem {
 
     const uniqueCats = ["all", ...new Set(recipes.map((r) => r.category))];
 
-    // fix: innerHTML → DOM API
     catBox.replaceChildren();
     for (const cat of uniqueCats) {
       const isActive = this.activeCategory === cat;
@@ -392,7 +387,6 @@ export class CraftingSystem {
         ? recipes
         : recipes.filter((r) => r.category === this.activeCategory);
 
-    // fix: innerHTML → DOM API
     list.replaceChildren();
 
     filtered.forEach((recipe) => {
@@ -477,7 +471,6 @@ export class CraftingSystem {
       return;
     }
 
-    // fix: innerHTML → DOM API
     const message = document.createElement("div");
     message.className = `crf-feedback ${type === "success" ? "crf-success" : "crf-error"}`;
     const msgIcon = document.createElement('i');

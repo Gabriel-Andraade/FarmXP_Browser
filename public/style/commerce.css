@@ -157,45 +157,6 @@
     min-height: 0;
 }
 
-/* ===== TELA DO JOGADOR (ESQUERDA) ===== */
-.mch-comerce-player-panel {
-    height: 70px;
-    background: linear-gradient(135deg, rgba(43, 26, 12, 0.9) 0%, rgba(59, 38, 18, 0.8) 100%);
-    border-right: 2px solid #8b5a2b;
-    flex-direction: column;
-    position: relative;
-    border-radius: 0 0 0 17px;
-    transition: all 0.3s ease;
-    overflow: hidden;
-    cursor: pointer;
-}
-
-.mch-comerce.mch-player-panel-header {
-    padding: 20px;
-    border-bottom: 2px solid #c9a463;
-    background: rgba(46, 28, 15, 0.95);
-}
-
-/* ===== PLAYER PANEL ANIMADO (TOP RIGHT) NO COMÉRCIO ===== */
-.mch-comerce.mch-player-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 270px;
-    background: linear-gradient(135deg, rgba(43, 26, 12, 0.97) 0%, rgba(59, 38, 18, 0.93) 100%);
-    border-bottom-left-radius: 17px;
-    border-left: 2px solid #8b5a2b;
-    border-bottom: 2px solid #8b5a2b;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    z-index: 101;
-    overflow: hidden;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    height: 82px;
-    transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /* Header separator so the player column reads like the merchant header. */
 .mch-player-panel-header {
     border-bottom: 2px solid #c9a463;

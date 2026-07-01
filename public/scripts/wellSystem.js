@@ -22,7 +22,6 @@ import { t } from "./i18n/i18n.js";
 const WELL_CONFIG = {
   ITEM_ID_IN_HAND: 93,
   BUCKET_EMPTY_ID: 16,
-  BUCKET_WATER_ID: 42,
   BOTTLE_EMPTY_ID: 40,
   BOTTLE_WATER_ID: 41,
   WATERING_CAN_ID: 12,
@@ -144,10 +143,8 @@ export const wellSystem = {
       delete wellState.wells[id];
     }
 
-    // fix: Proper indentation and error handling for hitbox removal (L148-152)
     try {
       if (typeof collisionSystem?.removeHitbox === "function") {
-        // fix: Correctly indented hitbox removal inside if block (L151)
         collisionSystem.removeHitbox(id);
       }
       collisionSystem?.interactionHitboxes?.delete(id);
@@ -162,7 +159,6 @@ export const wellSystem = {
       handleWarn("falha ao marcar mundo como alterado", "wellSystem:removeWell:markWorldChanged", { id, err });
     }
 
-    // fix: Restored wellRemoved event dispatch with error handling (L154-158)
     try {
       document.dispatchEvent(new CustomEvent("wellRemoved", { detail: { id } }));
     } catch (err) {
@@ -236,7 +232,6 @@ export const wellSystem = {
       return;
     }
 
-    // fix: innerHTML → DOM API
     const overlay = document.createElement("div");
     overlay.id = "well-overlay";
     overlay.classList.add("active");

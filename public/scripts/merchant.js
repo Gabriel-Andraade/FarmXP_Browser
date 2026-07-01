@@ -580,7 +580,6 @@ class MerchantSystem {
         const grid = document.getElementById('merchantsGrid');
         if (!grid) return;
 
-        // fix: innerHTML → DOM API
         grid.replaceChildren();
         for (const merchant of this.merchants) {
             const isOpen = this.isMerchantOpen(merchant);
@@ -666,7 +665,6 @@ class MerchantSystem {
                 const isOpen = this.isMerchantOpen(merchant);
 
                 statusEl.className = `mch-merchant-status ${isOpen ? 'open' : 'closed'}`;
-                // fix: innerHTML → DOM API
                 const strong = document.createElement('strong');
                 strong.textContent = status;
                 statusEl.replaceChildren(strong);
@@ -801,7 +799,6 @@ class MerchantSystem {
         if (!container) return;
 
         const categories = this.getPlayerCategories();
-        // fix: innerHTML → DOM API
         container.replaceChildren();
         for (const cat of categories) {
             const btn = document.createElement('button');
@@ -818,7 +815,6 @@ class MerchantSystem {
         if (!container) return;
 
         const categories = this.getMerchantCategories();
-        // fix: innerHTML → DOM API
         container.replaceChildren();
         for (const cat of categories) {
             const btn = document.createElement('button');
@@ -836,7 +832,6 @@ class MerchantSystem {
 
         const items = this.getPlayerItems();
 
-        // fix: innerHTML → DOM API
         grid.replaceChildren();
 
         if (items.length === 0) {
@@ -875,7 +870,6 @@ class MerchantSystem {
         if (!grid) return;
 
         const merchantItems = this.getMerchantItems();
-        // fix: innerHTML → DOM API
         grid.replaceChildren();
         for (const item of merchantItems) {
             const hex = document.createElement('div');
@@ -1153,7 +1147,6 @@ class MerchantSystem {
 
         tradeButton.className = `mch-trade-button ${this.tradeMode}`;
         tradeButton.id = 'tradeButton';
-        // fix: innerHTML → DOM API
         const textSpan = document.createElement('span');
         textSpan.className = 'mch-trade-button-text';
         textSpan.textContent = `${this.tradeMode === 'sell' ? t('trading.sell').toUpperCase() : t('trading.buy').toUpperCase()} x${this.tradeQuantity}`;

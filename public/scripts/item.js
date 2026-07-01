@@ -888,29 +888,7 @@ export const items = [
     type: "animal_food",
     targetAnimals: ["Chick", "Chicken", "Rooster", "Turkey"]
   },
-  /* Issue #170: Cat feed (101) and dog feed (102) are reserved.
-     No "Cat" or "Dog" species exist on the farm yet — when they arrive,
-     uncomment below + populate `targetAnimals`. Kept as a roadmap
-     breadcrumb instead of deleting outright. */
-  // {
-  //   id: 101,
-  //   name: "ração para felinos",
-  //   icon: "assets/icons/catFeedIcon.png",
-  //   price: 30,
-  //   description: "Ração especializada para gatos domésticos",
-  //   type: "animal_food",
-  //   targetAnimals: ["Cat"]
-  // },
-  // {
-  //   id: 102,
-  //   name: "ração para cachorros",
-  //   icon: "assets/icons/dogFeedIcon.png",
-  //   price: 30,
-  //   description: "Ração especializada para cães domésticos",
-  //   type: "animal_food",
-  //   targetAnimals: ["Dog"]
-  // },
-  // ==================================================================================
+  // Issue #170: ids 101/102 reserved for cat/dog feed once those species exist.
 
   // ==================================================================================
   // 🔧 MATERIAIS PROCESSADOS
@@ -1311,14 +1289,6 @@ export const items = [
     icon: "🍶",
     price: 5,
     description: "Para armazenar líquidos",
-    type: "resource"
-  },
-  {
-    id: 42,
-    name: "balde com água",
-    icon: "assets/icons/waterBucketIcon.png",
-    price: 15,
-    description: "Balde cheio de água",
     type: "resource"
   },
 

@@ -19,8 +19,6 @@ const wateringCan = {
 
     /** Current fill, 0..100. */
     getLevel() { return this._level; },
-    // Back-compat alias (fillLevel.js / older callers read getCharges()/capacity).
-    getCharges() { return this._level; },
     hasWater() { return this._level > 0; },
 
     /** Fill to capacity (legacy full-fill, e.g. the well's default button). */

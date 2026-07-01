@@ -4,7 +4,7 @@ import '../setup.js';
 let charges = 3;
 let bucketLevel = 0;
 const systems = {
-  wateringCan: { capacity: 5, getCharges: () => charges },
+  wateringCan: { capacity: 5, getLevel: () => charges },
   bucket: { capacity: 100, getLevel: () => bucketLevel },
 };
 mock.module('../../public/scripts/gameState.js', () => ({
@@ -15,7 +15,6 @@ mock.module('../../public/scripts/gameState.js', () => ({
 const items = {
   12: { id: 12, name: 'Watering Can', type: 'tool', toolType: 'watering_can' },
   16: { id: 16, name: 'Bucket', type: 'tool', toolType: 'bucket' },
-  42: { id: 42, name: 'Water Bucket', type: 'resource' },
   9:  { id: 9,  name: 'Wood', type: 'resource' },
 };
 mock.module('../../public/scripts/itemUtils.js', () => ({

@@ -123,7 +123,6 @@ export class PlayerHUD {
         const oldTopBar = document.querySelector('.top-bar');
         if (oldTopBar) oldTopBar.remove();
 
-        // fix: insertAdjacentHTML → DOM API
         const playerPanel = document.createElement('div');
         playerPanel.className = 'player-panel';
         playerPanel.id = 'playerPanel';
@@ -427,7 +426,6 @@ export class PlayerHUD {
         if (equippedElement) {
             if (item) {
                 const itemName = getItemName(item.id, item.name);
-                // fix: innerHTML → DOM API
                 equippedElement.replaceChildren();
                 const wrapper = document.createElement('div');
                 wrapper.className = 'equipped-item-wrapper';

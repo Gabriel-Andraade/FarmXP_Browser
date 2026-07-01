@@ -484,7 +484,6 @@ export default {
     136: 'Tropical Salad',
     // Misc items previously untranslated (materials, decorations, feed, quest)
     41: 'Water Bottle',
-    42: 'Water Bucket',
     44: 'Flower Pot',
     45: 'Oil Lamp',
     46: 'Garden Bench',

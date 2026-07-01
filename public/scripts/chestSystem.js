@@ -172,7 +172,6 @@ export const chestSystem = {
         panel.className = 'cht-panel';
         panel.id = 'cht-panel';
         
-        // fix: innerHTML → DOM API
         const chtHeader = document.createElement('div');
         chtHeader.className = 'cht-header';
         const chtH2 = document.createElement('h2');
@@ -302,7 +301,6 @@ export const chestSystem = {
         const container = document.getElementById('cht-categories');
         if (!container) return;
         
-        // fix: innerHTML → DOM API
         container.replaceChildren();
         this.categories.forEach(category => {
             const itemCount = chest.storage[category]?.items?.length || 0;
@@ -339,7 +337,6 @@ export const chestSystem = {
             totalItems += chest.storage[category]?.items?.length || 0;
         });
         
-        // fix: innerHTML → DOM API
         container.replaceChildren();
 
         if (totalItems === 0) {
@@ -391,7 +388,6 @@ export const chestSystem = {
         const container = document.getElementById('cht-player-inventory');
         if (!container) return;
         
-        // fix: innerHTML → DOM API
         if (!inventorySystem) {
             const unavailable = document.createElement('div');
             unavailable.className = 'cht-unavailable';
@@ -780,7 +776,6 @@ export const chestSystem = {
      */
     removeChest(chestId) {
         if (this.chests[chestId]) {
-            // fix: Using correct removeWorldObject function instead of objectDestroyed (L1059-1062)
             // Remover do mundo visual
             // Note: window.removeWorldObject is the correct function for removal
             // theWorld.objectDestroyed has different cleanup behavior

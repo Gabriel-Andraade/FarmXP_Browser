@@ -484,7 +484,6 @@ export default {
     136: 'Ensalada Tropical',
     // Ítems varios antes sin traducir (materiales, decoraciones, alimento, quest)
     41: 'Botella de Agua',
-    42: 'Cubo de Agua',
     44: 'Maceta',
     45: 'Candil',
     46: 'Banco de Jardín',

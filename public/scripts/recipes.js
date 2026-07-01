@@ -258,8 +258,7 @@ export const recipes = [
             // to avoid confusing two functionally identical fasteners. Screw
             // is marked experimental in item.js for possible future
             // differentiation (e.g. durability tier).
-            { itemId: 34, qty: 12 },
-            { itemId: 42, qty: 2 }
+            { itemId: 34, qty: 12 }
         ],
         result: { itemId: 103, qty: 1 },
         category: "construction",

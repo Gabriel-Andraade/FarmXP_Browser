@@ -498,7 +498,6 @@ function rerenderKeybindsList() {
   const list = document.getElementById('keybinds-list');
   if (!list) return;
 
-  // fix: innerHTML → DOM API
   list.replaceChildren();
 
   for (const meta of ACTION_META) {

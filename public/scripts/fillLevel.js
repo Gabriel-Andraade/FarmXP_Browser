@@ -8,10 +8,9 @@
 import { getSystem } from './gameState.js';
 import { getItem } from './itemUtils.js';
 
-// Bucket is modelled as two item ids (empty tool ↔ full resource), so its
-// level is binary; the watering can holds a 0..capacity charge count.
+// The bucket (item 16) is a 0..100% volume tank; the watering can holds a
+// 0..capacity charge count.
 const BUCKET_EMPTY_ID = 16;
-const BUCKET_WATER_ID = 42;
 
 /**
  * Fill level for a container item, or null when the item has no level.
@@ -27,7 +26,7 @@ export function getItemFillLevel(itemId) {
     const wc = getSystem('wateringCan');
     if (!wc) return null;
     const max = wc.capacity || 1;
-    const current = wc.getCharges?.() ?? 0;
+    const current = wc.getLevel?.() ?? 0;
     return { percent: Math.round((current / max) * 100), current, max, icon: '💧' };
   }
 
@@ -39,8 +38,6 @@ export function getItemFillLevel(itemId) {
     const current = b.getLevel?.() ?? 0;
     return { percent: Math.round((current / max) * 100), current, max, icon: '💧' };
   }
-  // Legacy full-bucket item (no longer produced, kept harmless).
-  if (itemId === BUCKET_WATER_ID) return { percent: 100, icon: '💧' };
 
   return null;
 }
