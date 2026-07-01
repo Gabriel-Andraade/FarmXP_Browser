@@ -20,6 +20,18 @@ import { registerSystem, getObject, getSystem } from './gameState.js';
 import { logger } from './logger.js';
 
 /**
+ * Sum stack quantities by itemId. Single source of truth for the warehouse's
+ * "collapse N stacks of the same item into one total" logic.
+ * @param {Array<{itemId:number, quantity:number}>} stacks
+ * @returns {Map<number, number>} itemId → total quantity
+ */
+function sumStacksByItem(stacks) {
+    const acc = new Map();
+    for (const s of stacks) acc.set(s.itemId, (acc.get(s.itemId) || 0) + (s.quantity || 0));
+    return acc;
+}
+
+/**
  * Sistema de interação com a casa do jogador
  * Gerencia menu da casa, armazenamento e funcionalidades domésticas
  * @class HouseSystem
@@ -592,18 +604,11 @@ export class HouseSystem {
         // Current category's items (used for the value + the no-search view).
         const currentList = (mode === 'deposit')
             ? this._getInventoryStacksForStorageCategory(categoryKey)
-            : (() => {
-                const acc = new Map();
-                for (const s of stacksRaw) {
-                    const prev = acc.get(s.itemId) || 0;
-                    acc.set(s.itemId, prev + (s.quantity || 0));
-                }
-                return Array.from(acc.entries()).map(([itemId, quantity]) => ({
-                    itemId,
-                    quantity,
-                    sourceCategory: categoryKey // Para withdraw, a categoria é a do storage
-                }));
-            })();
+            : Array.from(sumStacksByItem(stacksRaw).entries()).map(([itemId, quantity]) => ({
+                itemId,
+                quantity,
+                sourceCategory: categoryKey // Para withdraw, a categoria é a do storage
+            }));
 
         // Per-category value — always reflects the current category/tab.
         const catValue = currentList.reduce((sum, s) => sum + (getItem(s.itemId)?.price || 0) * (s.quantity || 0), 0);
@@ -794,9 +799,7 @@ export class HouseSystem {
         const out = [];
         for (const catKey of Object.keys(storageSystem.categories || {})) {
             const stacksRaw = Array.isArray(storageSystem.storage?.[catKey]) ? storageSystem.storage[catKey] : [];
-            const acc = new Map();
-            for (const s of stacksRaw) acc.set(s.itemId, (acc.get(s.itemId) || 0) + (s.quantity || 0));
-            for (const [itemId, quantity] of acc) out.push({ itemId, quantity, sourceCategory: catKey });
+            for (const [itemId, quantity] of sumStacksByItem(stacksRaw)) out.push({ itemId, quantity, sourceCategory: catKey });
         }
         return out;
     }
