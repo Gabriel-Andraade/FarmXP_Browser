@@ -1,40 +1,23 @@
 /**
- * @file wateringCan.js - Watering can charge state (Issue #165).
- * @description The watering can (item 12) is always empty until filled at the
- * well. Rather than swapping item ids (janky for an equipped tool), the fill
- * lives here as a charge counter: fill at the well → CAPACITY charges; each
- * watering of a crop/soil spends one; at 0 it's empty again.
+ * @file wateringCan.js - Watering can water state (Issue #165).
+ * @description The watering can (item 12) is empty until filled at the well.
+ * Its 0..100% volume + fill/drain/save come from the shared fluid container
+ * (fluidContainer.js); this module adds the tool-specific bits (per-crop
+ * spend via useAmount, equip check, tile cursor).
  * @module WateringCan
  */
 
 import { getSystem, registerSystem } from './gameState.js';
 import { getItem } from './itemUtils.js';
 import { TILE_SIZE } from './worldConstants.js';
-
-const CAPACITY = 100; // water as a 0..100% volume (was 5 discrete charges)
+import { createFluidContainer } from './fluidContainer.js';
 
 const wateringCan = {
-    _level: 0,
-    capacity: CAPACITY,
+    // Shared 0..100% volume (fill/drain/save) — same tank as the bucket.
+    ...createFluidContainer(100),
 
-    /** Current fill, 0..100. */
-    getLevel() { return this._level; },
-    hasWater() { return this._level > 0; },
-
-    /** Fill to capacity (legacy full-fill, e.g. the well's default button). */
-    fill() { this._level = CAPACITY; },
-
-    /**
-     * Fill up toward a target percent (for the well's choose-amount slider).
-     * Never lowers the level. @returns {number} percent actually added.
-     */
-    fillTo(targetPercent) {
-        const target = Math.max(0, Math.min(CAPACITY, Number(targetPercent) || 0));
-        if (target <= this._level) return 0;
-        const added = target - this._level;
-        this._level = target;
-        return added;
-    },
+    // Back-compat alias (fillLevel.js / older callers read getCharges()).
+    getCharges() { return this._level; },
 
     /**
      * Spend `amount` percent of water (per-crop cost). Drains to 0 if the cost
@@ -43,22 +26,8 @@ const wateringCan = {
      */
     useAmount(amount) {
         if (this._level <= 0) return false;
-        this._level = Math.max(0, this._level - (Number(amount) || 0));
+        this.drain(amount);
         return true;
-    },
-
-    /** Save: current level (0..100). */
-    serialize() { return this._level; },
-
-    /**
-     * Load: restore level, clamped to 0..capacity. Pre-volume saves stored a
-     * 0..5 charge count; those load as a near-empty can (≤5%) — harmless, the
-     * player just refills. Not worth a migration given the tiny window.
-     */
-    restore(value) {
-        this._level = (typeof value === 'number' && value > 0)
-            ? Math.min(Math.round(value), CAPACITY)
-            : 0;
     },
 
     /** True when the equipped tool is a watering can. */

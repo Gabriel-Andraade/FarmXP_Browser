@@ -7,42 +7,11 @@
  */
 
 import { registerSystem } from './gameState.js';
+import { createFluidContainer } from './fluidContainer.js';
 
-const CAPACITY = 100;
-
-const bucketSystem = {
-  _level: 0,
-  capacity: CAPACITY,
-
-  getLevel() { return this._level; },
-  hasWater() { return this._level > 0; },
-
-  /** Fill to capacity (legacy full-fill). */
-  fill() { this._level = CAPACITY; },
-
-  /** Fill up toward a target percent; never lowers. @returns {number} added. */
-  fillTo(targetPercent) {
-    const target = Math.max(0, Math.min(CAPACITY, Number(targetPercent) || 0));
-    if (target <= this._level) return 0;
-    const added = target - this._level;
-    this._level = target;
-    return added;
-  },
-
-  /** Drain up to `amount`. @returns {number} amount actually drained. */
-  drain(amount) {
-    const take = Math.max(0, Math.min(this._level, Number(amount) || 0));
-    this._level -= take;
-    return take;
-  },
-
-  serialize() { return this._level; },
-  restore(value) {
-    this._level = (typeof value === 'number' && value > 0)
-      ? Math.min(Math.round(value), CAPACITY)
-      : 0;
-  },
-};
+// The bucket is a plain fluid container (level filled at the well, poured into
+// water troughs) — no tool-specific behavior, so it uses the shared base as-is.
+const bucketSystem = createFluidContainer(100);
 
 registerSystem('bucket', bucketSystem);
 
