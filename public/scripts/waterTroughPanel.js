@@ -3,8 +3,8 @@
  *
  * Aberto ao clicar no "+" sobre o cocho. Mostra:
  *   - Nível atual de água (barra + texto)
- *   - Botão "Adicionar água" → consome 1 balde com água (id 42) e devolve
- *     balde vazio (id 16), via `waterTroughSystem.depositBucketWater`.
+ *   - Botão "Adicionar água" → despeja a água do balde (id 16) no cocho,
+ *     via `waterTroughSystem.depositBucketWater`.
  *
  * Estilo: classes `wtp-*` em `water-trough-panel.css` — mesma linguagem
  * visual de `enclosure-animal-panel.css` (marrom + dourado + Georgia).
@@ -17,10 +17,9 @@
 import { getSystem } from './gameState.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { t } from './i18n/i18n.js';
+import { BUCKET_EMPTY_ID } from './waterTroughSystem.js'; // fonte única do id do balde
 
 const OVERLAY_ID = 'water-trough-panel';
-const BUCKET_WATER_ID = 42; // legacy full-bucket item (no longer used)
-const BUCKET_EMPTY_ID = 16; // the bucket tool; its water lives in bucketSystem
 
 // #NNN: the player can fill a trough when they hold a bucket (16) that has water.
 function _hasWaterBucket() {

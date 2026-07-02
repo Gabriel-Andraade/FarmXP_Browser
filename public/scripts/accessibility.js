@@ -416,7 +416,6 @@ class AccessibilityManager {
     // But this at least gives the user a way to "shift" colors globally without rewriting art.
     if (document.getElementById('cvd-filters')) return;
 
-    // fix: innerHTML → DOM API (createElementNS)
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     svg.setAttribute('id', 'cvd-filters');
     svg.setAttribute('aria-hidden', 'true');

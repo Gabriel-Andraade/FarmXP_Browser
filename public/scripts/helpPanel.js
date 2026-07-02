@@ -419,7 +419,6 @@ function ensurePanel() {
   ensureHeaderStructure();
   const body = ensureBodyStructure();
 
-  // fix: innerHTML → DOM API
   body.replaceChildren();
   buildSections(body);
 
@@ -472,7 +471,6 @@ function buildSections(bodyEl) {
   }
 }
 
-// fix: innerHTML → DOM API
 function setKeysInto(keysEl, codes) {
   keysEl.replaceChildren();
 

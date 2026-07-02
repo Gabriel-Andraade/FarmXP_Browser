@@ -33,7 +33,6 @@ class LoadingScreenManager {
         // Evita duplicatas
         if (document.getElementById("ldg-initial-screen")) return;
 
-        // fix: innerHTML → DOM API
         const loadingScreen = document.createElement("div");
         loadingScreen.id = "ldg-initial-screen";
 
@@ -104,7 +103,6 @@ class LoadingScreenManager {
     showSleepLoading(durationSeconds = 5) {
         if (this.sleepScreen) this.hideSleepLoading();
 
-        // fix: innerHTML → DOM API
         this.sleepScreen = document.createElement("div");
         this.sleepScreen.id = "ldg-sleep-screen";
 

@@ -34,7 +34,6 @@ export class CharacterSelection {
         this.bindEvents();
     }
 
-    // fix: innerHTML → DOM API
     createUI() {
         this.container = document.createElement('div');
         this.container.className = 'chs-character-selection';

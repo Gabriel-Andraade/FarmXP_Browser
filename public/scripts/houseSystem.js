@@ -133,7 +133,6 @@ export class HouseSystem {
     showDoorHint() {
         this.hideDoorHint();
 
-        // fix: innerHTML → DOM API
         const hint = document.createElement('div');
         hint.className = 'door-hint active';
         const hintContent = document.createElement('div');
@@ -267,7 +266,6 @@ export class HouseSystem {
         this.createHouseMenu();
     }
 
-    // fix: innerHTML → DOM API
     createHouseMenu() {
         // Remove old modal if any (without resetting isMenuOpen)
         const oldModal = document.querySelector('.hse-house-modal');
@@ -432,7 +430,6 @@ export class HouseSystem {
         }
     }
 
-    // fix: innerHTML → DOM API
     showStorageModal() {
         this.closeHouseMenu();
 
@@ -570,7 +567,6 @@ export class HouseSystem {
             ? storageSystem.getStorageInfo()
             : { totalItems: 0, totalValue: 0 };
 
-        // fix: innerHTML → DOM API
         el.replaceChildren();
         const statRow = document.createElement('div');
         statRow.className = 'stat-row';
@@ -604,7 +600,6 @@ export class HouseSystem {
         const usedStacks = stacksRaw.length;
         const title = category?.name || categoryKey;
 
-        // fix: innerHTML → DOM API
         content.replaceChildren();
         const catInfo = document.createElement('div');
         catInfo.className = 'category-info';

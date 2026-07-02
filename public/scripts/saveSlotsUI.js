@@ -53,7 +53,6 @@ class SaveSlotsUI {
     /**
      * Cria a estrutura do modal se não existir
      */
-    // fix: innerHTML → DOM API
     _ensureModal() {
         if (this.modal) return;
 
@@ -157,7 +156,6 @@ class SaveSlotsUI {
         const grid = this.modal.querySelector('.save-slots-grid');
         const slots = saveSystem.listSlots();
 
-        // fix: innerHTML → DOM API
         grid.replaceChildren();
         slots.forEach((slot, index) => {
             grid.appendChild(this._renderSlotCard(slot, index));

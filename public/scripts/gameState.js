@@ -42,7 +42,6 @@ export function registerSystem(systemName, systemInstance) {
   if (getDebugFlag('debug')) {
     logger.debug(`✅ Registered system: ${systemName}`);
   }
-  // fix: Event-driven registration instead of polling (L40) - dispatch event for systems waiting on registration
   safeDispatch(document, new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
   return systemInstance;
 }
@@ -107,12 +106,10 @@ export function getDebugFlag(flag) {
  * @param {string} flag - Flag name
  * @param {boolean} value - Flag value
  */
-// fix: Added deprecation warnings for unknown flags (L104-106)
 export function setGameFlag(flag, value) {
   if (Object.prototype.hasOwnProperty.call(gameState.flags, flag)) {
     gameState.flags[flag] = value;
   } else {
-    // fix: Warn if unknown flag is attempted - detects missing flag definitions (L105-106)
     logger.warn(`⚠️ Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
   }
 }
@@ -205,10 +202,8 @@ export function installLegacyGlobals() {
   const warnedSystemKeys = new Set();
 
   for (const [windowKey, systemKey] of Object.entries(legacySystemMappings)) {
-    // fix: Added deprecation warnings on first access (L185-188)
     Object.defineProperty(window, windowKey, {
       get() {
-        // fix: Warn on first use of deprecated window.* globals when debug is enabled (L187-189)
         if (getDebugFlag('debug') && !warnedSystemKeys.has(windowKey)) {
           logger.warn(`⚠️ Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
           warnedSystemKeys.add(windowKey);

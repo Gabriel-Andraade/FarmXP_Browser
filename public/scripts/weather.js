@@ -25,7 +25,6 @@ function ensureWeatherUIPanel() {
     _wuiCache = null; // invalidar cache ao recriar painel
     el = document.createElement("div");
     el.id = WEATHER_UI_ID;
-    // fix: innerHTML → DOM API
     const timeDiv = document.createElement('div');
     timeDiv.className = 'wui-time';
     timeDiv.dataset.role = 'time';

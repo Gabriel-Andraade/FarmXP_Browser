@@ -703,7 +703,6 @@ const createInventoryUI = () => {
   sheet.replaceSync(css);
   shadow.adoptedStyleSheets = [sheet];
 
-  // fix: innerHTML → DOM API (estrutura via createElement)
   const overlay = document.createElement('div');
   overlay.className = 'inv-overlay';
   overlay.id = 'inventoryModal';
@@ -936,7 +935,6 @@ export function closeInventoryModal() {
 function renderTabs() {
   if (!tabsEl) return;
   
-  // fix: innerHTML → DOM API
   tabsEl.replaceChildren();
   const categories = Object.keys(inventorySystem.categories || {});
 
@@ -981,7 +979,6 @@ function renderInventory() {
   if (!contentEl) return;
 
   _hideTooltip();
-  // fix: innerHTML → DOM API
   contentEl.replaceChildren();
 
   const categoryData = inventorySystem.categories?.[activeCategory];
@@ -1355,7 +1352,6 @@ function updateDetailsPanel(item, qty) {
   if (techDiv) _renderItemTechSection(techDiv, item);
 
   const actionsDiv = shadowRoot.getElementById('detailActions');
-  // fix: innerHTML → DOM API
   actionsDiv.replaceChildren();
 
   // 1. EQUIPAR (Ferramentas) ou LER (Contrato)

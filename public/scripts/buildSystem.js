@@ -98,7 +98,6 @@ export const BuildSystem = {
       if (!this._helpPanelEl) {
         const panel = document.createElement('div');
         panel.id = this._helpPanelId;
-        // fix: innerHTML → DOM API
         const header = document.createElement('div');
         header.className = 'bhp-header';
         const title = document.createElement('div');
@@ -1018,7 +1017,6 @@ export const BuildSystem = {
         this.removeDebugOverlay();
         this.debugElement = document.createElement('div');
         this.debugElement.id = 'buildSystem-debug';
-        // fix: innerHTML → DOM API (estilos via build.css)
         const infoDiv = document.createElement('div');
         infoDiv.id = 'bs-info';
         const msgDiv = document.createElement('div');
@@ -1030,7 +1028,6 @@ export const BuildSystem = {
     updateDebugInfo() {
         if (!this.debugElement) return;
         const pos = this.getSnapPosition();
-        // fix: innerHTML → textContent
         this.debugElement.querySelector('#bs-info').textContent =
             `item: ${this.selectedItem?.name} | pos: [${Math.round(pos.x)}, ${Math.round(pos.y)}] | alinhamento: x(${this.currentSubPosX}) y(${this.currentSubPosY})`;
     },

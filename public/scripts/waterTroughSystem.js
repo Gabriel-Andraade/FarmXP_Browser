@@ -4,8 +4,8 @@
  * vive em `placedBuildings` (theWorld.js), criado pelo buildSystem — este
  * módulo só lê/escreve nesse registro para depositar água.
  *
- * Fluxo de depósito: jogador aperta E perto do cocho com um balde com água
- * (item 42) no inventário → cocho enche, balde vira balde vazio (item 16).
+ * Fluxo de depósito: jogador aperta E perto do cocho com um balde (item 16)
+ * que tenha água → despeja o volume do balde no cocho (via bucketSystem).
  *
  * @module WaterTroughSystem
  */
@@ -19,10 +19,13 @@ import { t } from "./i18n/i18n.js";
 import { drawTroughHoverMarker, troughCenter as _troughCenter } from "./troughMarker.js";
 import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
+// Balde vazio (tool). Fonte única — o waterTroughPanel importa daqui em vez
+// de redefinir o mesmo id.
+export const BUCKET_EMPTY_ID = 16;
+
 const WATER_TROUGH_CONFIG = {
   ITEM_ID_IN_HAND: 103,
-  BUCKET_WATER_ID: 42,        // Balde cheio de água (resource)
-  BUCKET_EMPTY_ID: 16,        // Balde vazio (tool)
+  BUCKET_EMPTY_ID,
   MAX_WATER_LEVEL: 100,
   WATER_PER_BUCKET: 100,      // 1 balde enche o cocho por completo
 };
@@ -152,7 +155,7 @@ export const waterTroughSystem = {
 
   /**
    * Reação ao E do jogador. Se o cocho está cheio, só dá feedback; senão
-   * tenta depositar usando o balde com água (id 42) do inventário.
+   * tenta depositar usando a água do balde (item 16) do inventário.
    */
   openWaterTroughMenu(waterTroughId) {
     const wt = findTrough(waterTroughId);
@@ -172,8 +175,8 @@ export const waterTroughSystem = {
   /**
    * Pours water from the bucket's volume into the trough (#NNN). Requires a
    * bucket (item 16) with water; transfers min(bucket, trough room) and drains
-   * the bucket by that amount. (Old model consumed a full-bucket item 42 which
-   * had no fill path — this replaces it.)
+   * the bucket by that amount. (Replaces the old full-bucket item model, which
+   * had no fill path.)
    */
   depositBucketWater(waterTroughId) {
     const wt = findTrough(waterTroughId);

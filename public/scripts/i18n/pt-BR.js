@@ -484,7 +484,6 @@ export default {
     136: 'Salada Tropical',
     // Itens diversos sem tradução prévia (materiais, decorações, rações, quest)
     41: 'Garrafa com Água',
-    42: 'Balde com Água',
     44: 'Vaso de Flores',
     45: 'Lampião',
     46: 'Banco de Jardim',
