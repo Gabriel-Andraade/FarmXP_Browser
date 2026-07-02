@@ -7,6 +7,8 @@ import { i18n, t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 import { a11y } from './accessibility.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from './keybindDefaults.js';
+import { qualityMode } from './qualityMode.js';
+import { showReloadPrompt } from './reloadPrompt.js';
 
 /* ─────────────────────────────────────────────
  * Keybinds (Remap)
@@ -297,6 +299,118 @@ function ensureAudioSection() {
   } else {
     configContent.appendChild(section);
   }
+
+  try { translateDOM(); } catch {}
+}
+
+/**
+ * Performance/quality section: a single select (Auto/High/Medium/Low) wired to
+ * qualityMode.setPreference (persists + toggles the auto-downgrade probe).
+ */
+function ensureQualitySection() {
+  const configModal = document.getElementById('configModal');
+  if (!configModal) return;
+
+  const configContent =
+    document.getElementById('config-content') ||
+    configModal.querySelector('#config-content') ||
+    configModal;
+
+  if (document.getElementById('quality-section')) return;
+
+  const section = document.createElement('div');
+  section.className = 'config-section';
+  section.id = 'quality-section';
+
+  const h3 = document.createElement('h3');
+  h3.setAttribute('data-i18n', 'settings.quality.title');
+  h3.textContent = safeT('settings.quality.title', 'Desempenho');
+  section.appendChild(h3);
+
+  const option = document.createElement('div');
+  option.className = 'config-option';
+
+  const left = document.createElement('div');
+  const label = document.createElement('div');
+  label.className = 'config-label';
+  label.setAttribute('data-i18n', 'settings.quality.level');
+  label.textContent = safeT('settings.quality.level', 'Qualidade gráfica');
+  const hint = document.createElement('div');
+  hint.className = 'config-hint';
+  hint.setAttribute('data-i18n', 'settings.quality.hint');
+  hint.textContent = safeT('settings.quality.hint', 'Menos partículas/efeitos em hardware fraco. "Auto" detecta sozinho.');
+  left.appendChild(label);
+  left.appendChild(hint);
+
+  const right = document.createElement('div');
+  const select = document.createElement('select');
+  select.id = 'qualitySelect';
+  select.className = 'config-select';
+  select.setAttribute('aria-label', safeT('settings.quality.level', 'Qualidade gráfica'));
+
+  const OPTIONS = [
+    { value: 'auto', i18n: 'settings.quality.auto', fallback: 'Auto' },
+    { value: 'high', i18n: 'settings.quality.high', fallback: 'Alto' },
+    { value: 'medium', i18n: 'settings.quality.medium', fallback: 'Médio' },
+    { value: 'low', i18n: 'settings.quality.low', fallback: 'Baixo' },
+  ];
+  for (const opt of OPTIONS) {
+    const el = document.createElement('option');
+    el.value = opt.value;
+    el.setAttribute('data-i18n', opt.i18n);
+    el.textContent = safeT(opt.i18n, opt.fallback);
+    select.appendChild(el);
+  }
+  select.value = qualityMode.pref;
+
+  select.addEventListener('change', () => {
+    qualityMode.setPreference(select.value);
+    showReloadPrompt();
+  });
+
+  right.appendChild(select);
+  option.appendChild(left);
+  option.appendChild(right);
+  section.appendChild(option);
+
+  // "Limitar FPS a 30" — toggle independente do nível, pro jogador comum.
+  const fpsOption = document.createElement('div');
+  fpsOption.className = 'config-option';
+  const fpsLeft = document.createElement('div');
+  const fpsLabel = document.createElement('label');
+  fpsLabel.htmlFor = 'qualityCapFps';
+  fpsLabel.className = 'config-label';
+  fpsLabel.setAttribute('data-i18n', 'settings.quality.capFps');
+  fpsLabel.textContent = safeT('settings.quality.capFps', 'Limitar a 30 FPS');
+  const fpsHint = document.createElement('div');
+  fpsHint.className = 'config-hint';
+  fpsHint.setAttribute('data-i18n', 'settings.quality.capFpsHint');
+  fpsHint.textContent = safeT('settings.quality.capFpsHint', 'Economiza CPU/bateria; movimento menos fluido.');
+  fpsLeft.appendChild(fpsLabel);
+  fpsLeft.appendChild(fpsHint);
+  const fpsRight = document.createElement('div');
+  const fpsToggle = document.createElement('input');
+  fpsToggle.type = 'checkbox';
+  fpsToggle.id = 'qualityCapFps';
+  fpsToggle.checked = qualityMode.capFps;
+  fpsToggle.addEventListener('change', () => {
+    qualityMode.setCapFps(fpsToggle.checked);
+    showReloadPrompt();
+  });
+  fpsRight.appendChild(fpsToggle);
+  fpsOption.appendChild(fpsLeft);
+  fpsOption.appendChild(fpsRight);
+  section.appendChild(fpsOption);
+
+  // Mantém os controles em sincronia se a preferência mudar em outro lugar
+  // (menu principal, auto-downgrade). Não dispara reload prompt aqui — só
+  // reflete o estado.
+  qualityMode.onChange(() => {
+    select.value = qualityMode.pref;
+    fpsToggle.checked = qualityMode.capFps;
+  });
+
+  configContent.appendChild(section);
 
   try { translateDOM(); } catch {}
 }
@@ -779,6 +893,9 @@ export function initSettingsUI() {
   // monta seção de áudio
   ensureAudioSection();
 
+  // monta seção de desempenho/qualidade
+  ensureQualitySection();
+
   // monta a opção + modal de remap
   ensureKeybindsMenuOption();
   ensureKeybindsModal();
@@ -847,6 +964,7 @@ function initConfigModalFocusTrap() {
           a11y.trapFocus(configModal);
           // quando abrir o config, garante que as seções existem
           ensureAudioSection();
+          ensureQualitySection();
           ensureKeybindsMenuOption();
         } else {
           a11y.releaseFocus(configModal);

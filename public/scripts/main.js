@@ -17,6 +17,7 @@ import { registerSystem, setObject, getObject, getSystem, checkGameFlag, getDebu
 import { getSortedWorldObjects, GAME_WIDTH, GAME_HEIGHT, drawBackground, initializeWorld, drawBuildPreview, addAnimal, updateAnimals} from "./theWorld.js";
 import { CharacterSelection } from "./thePlayer/characterSelection.js";
 import { MainMenu } from "./mainMenu/mainMenu.js";
+import { qualityMode, deviceScale } from "./qualityMode.js";
 import { assets } from "./assetManager.js";
 // loadImages is now called dynamically inside playerSystem.loadCharacterModule
 import { keys, setupControls, playerInteractionSystem, updatePlayerInteraction } from "./thePlayer/control.js";
@@ -180,6 +181,7 @@ let currentPlayer = null;
 let updatePlayer = null;
 let gameInitialized = false;
 let lastTime = 0;
+let _lastFrameAt = 0; // timestamp of the last RENDERED frame (for the FPS cap)
 let fps = 0;
 let frameCount = 0;
 let lastFpsUpdate = 0;
@@ -210,7 +212,9 @@ let preSleepInteractionState = null;
 function resizeCanvasToDisplaySize() {
   if (!canvas || !ctx) return;
 
-  const dpr = window.devicePixelRatio || 1;
+  // deviceScale() = DPR × renderScale do nível de qualidade — no low o backing
+  // store é menor (menos pixels) enquanto o CSS mantém o tamanho de exibição.
+  const dpr = deviceScale();
   canvas.width = Math.round(INTERNAL_WIDTH * dpr);
   canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -953,23 +957,14 @@ async function startFullGameLoad() {
       handleWarn("falha ao carregar NPC/dialogue core", "main:startFullGameLoad:npcCore", e);
     }
 
-    // NPCs individuais — NÃO bloqueiam o boot. Player só interage com
-    // eles ao caminhar até. Cada NPC carrega UM POR VEZ em
+    // NPCs individuais — NÃO bloqueiam o boot. Cada um carrega UM POR VEZ em
     // requestIdleCallback (browser só dispara quando ocioso, entre frames).
-    // ANTES: Promise.all paralelo → 10 módulos parsing simultâneo → CPU
-    // spike → game loop dropava de 60→20fps. AGORA: ~1 NPC por idle
-    // callback, game loop fica fluido enquanto carrega.
+    // #227: na fazenda só a Milly é necessária (o gato Madalena da quest dela
+    // vive aqui). Os NPCs de city carregam sob demanda ao entrar no city
+    // (npcSystem.loadCityNpcs, disparado pelo mapManager) — tira 9 parses de
+    // módulo do boot na fazenda.
     const npcModulesToLoad = [
-      './npcs/npcBartolomeu.js',
       './npcs/npcMilly.js',
-      './npcs/npcJuan.js',
-      './npcs/npcBru.js',
-      './npcs/npcCouple.js',
-      './npcs/npcJeremy.js',
-      './npcs/family/npcJohn.js',
-      './npcs/family/npcLucas.js',
-      './npcs/family/npcIsabela.js',
-      './npcs/family/npcMolly.js',
     ];
     const scheduleNextNpc = () => {
       const mod = npcModulesToLoad.shift();
@@ -1403,8 +1398,8 @@ _onMain(document,"DOMContentLoaded", async () => {
     document.body.appendChild(canvas);
   }
 
-  // Configurar canvas
-  const dpr = window.devicePixelRatio || 1;
+  // Configurar canvas — deviceScale() = DPR × renderScale (menor no low).
+  const dpr = deviceScale();
   canvas.width = Math.round(INTERNAL_WIDTH * dpr);
   canvas.height = Math.round(INTERNAL_HEIGHT * dpr);
   ctx = canvas.getContext("2d", { alpha: false });
@@ -1416,6 +1411,11 @@ _onMain(document,"DOMContentLoaded", async () => {
   }
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  // Re-render at the new resolution when quality changes (low↔high adjusts
+  // renderScale). Keeps the backing store + ctx transform consistent so
+  // coordinate math stays aligned even before a reload.
+  qualityMode.onChange(() => resizeCanvasToDisplaySize());
 
   // Aplica otimizações específicas para dispositivos móveis
   if (IS_MOBILE) {
@@ -1588,6 +1588,17 @@ function gameLoop(timestamp) {
     requestAnimationFrame(gameLoop);
     return;
   }
+
+  // FPS cap (quality 'low' → 30fps): skip frames arriving faster than the
+  // target interval to give weak CPUs headroom. The -2ms tolerance makes a
+  // 60Hz display land reliably on ~30fps (not 20). lastTime is left untouched
+  // on skipped frames so the processed frame still gets the full delta.
+  const fpsCap = qualityMode.fpsCap;
+  if (fpsCap < 60 && timestamp - _lastFrameAt < (1000 / fpsCap) - 2) {
+    requestAnimationFrame(gameLoop);
+    return;
+  }
+  _lastFrameAt = timestamp;
 
   const deltaTime = (timestamp - lastTime) / 1000;
   lastTime = timestamp;

@@ -9,6 +9,7 @@ import { openToolWheel, closeToolWheel, isToolWheelOpen } from './toolWheel.js';
 import { openSeedWheel, closeSeedWheel, isSeedWheelOpen } from './seedWheel.js';
 import { getItem } from '../itemUtils.js';
 import { logger } from '../logger.js';
+import { deviceScale } from '../qualityMode.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
@@ -293,7 +294,7 @@ export class TouchMoveSystem {
 
             const rect = this.canvas.getBoundingClientRect();
             // Bug fix: dividir por DPR (ver comment no setupMouseInteraction).
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = deviceScale();
             const scaleX = this.canvas.width / rect.width / dpr;
             const scaleY = this.canvas.height / rect.height / dpr;
 
@@ -377,13 +378,13 @@ export class PlayerInteractionSystem {
         }
 
         const cfg = PLAYER_INTERACTION_CONFIG;
-        this.interactionRange = {
-            x: playerX + (playerWidth * cfg.offsetX),
-            y: playerY + (playerHeight * cfg.offsetY),
-            width: playerWidth * cfg.widthRatio,
-            height: playerWidth * cfg.heightRatio,
-            type: 'PLAYER_INTERACTION_ZONE'
-        };
+        // Reuse the range object across frames (mutate in place) — this runs
+        // every frame; a fresh object each time was needless GC churn.
+        const range = this.interactionRange || (this.interactionRange = { type: 'PLAYER_INTERACTION_ZONE' });
+        range.x = playerX + (playerWidth * cfg.offsetX);
+        range.y = playerY + (playerHeight * cfg.offsetY);
+        range.width = playerWidth * cfg.widthRatio;
+        range.height = playerWidth * cfg.heightRatio;
 
         collisionSystem.updatePlayerInteractionRange(this.interactionRange);
         this.checkNearbyObjects();
@@ -468,7 +469,7 @@ export class PlayerInteractionSystem {
             // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
             // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
             // ponto clicado (clique perto do animal abria painel longe).
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = deviceScale();
             const scaleX = canvas.width / rect.width / dpr;
             const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;
@@ -587,7 +588,7 @@ export class PlayerInteractionSystem {
             // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
             // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
             // ponto clicado (clique perto do animal abria painel longe).
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = deviceScale();
             const scaleX = canvas.width / rect.width / dpr;
             const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;
@@ -609,7 +610,7 @@ export class PlayerInteractionSystem {
             // camera.screenToWorld espera coords INTERNAL. Sem o /dpr,
             // em HiDPI / fullscreen as hitboxes ficavam dpr× longe do
             // ponto clicado (clique perto do animal abria painel longe).
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = deviceScale();
             const scaleX = canvas.width / rect.width / dpr;
             const scaleY = canvas.height / rect.height / dpr;
             const canvasX = (ev.clientX - rect.left) * scaleX;

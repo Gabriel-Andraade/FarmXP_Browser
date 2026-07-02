@@ -11,6 +11,8 @@ import { logger } from '../logger.js';
 import { t, i18n } from '../i18n/i18n.js';
 import { registerSystem } from '../gameState.js';
 import { a11y } from '../accessibility.js';
+import { qualityMode } from '../qualityMode.js';
+import { showReloadPrompt } from '../reloadPrompt.js';
 
 const MenuState = {
   MAIN: 'main',
@@ -247,6 +249,12 @@ export class MainMenu {
       this._buildAudioRows()
     ));
 
+    // ── Performance / Quality ──
+    panel.appendChild(this._createSettingsSection(
+      t('settings.quality.title'),
+      this._buildQualityRows()
+    ));
+
     // ── Accessibility ──
     panel.appendChild(this._createSettingsSection(
       t('settings.accessibility'),
@@ -312,6 +320,54 @@ export class MainMenu {
 
     row.append(label, select);
     wrap.appendChild(row);
+    return wrap;
+  }
+
+  // ── Quality / performance rows ──
+
+  _buildQualityRows() {
+    const wrap = document.createElement('div');
+    wrap.className = 'mm-cfg-rows';
+
+    // Nível de qualidade (Auto/Alto/Médio/Baixo) — lê a pref atual do
+    // qualityMode, então fica em sincronia com a config in-game.
+    const row = document.createElement('div');
+    row.className = 'mm-cfg-row';
+    const label = document.createElement('span');
+    label.className = 'mm-cfg-label';
+    label.textContent = t('settings.quality.level');
+    const select = document.createElement('select');
+    select.className = 'mm-cfg-select';
+    [
+      { value: 'auto', label: t('settings.quality.auto') },
+      { value: 'high', label: t('settings.quality.high') },
+      { value: 'medium', label: t('settings.quality.medium') },
+      { value: 'low', label: t('settings.quality.low') },
+    ].forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      if (qualityMode.pref === o.value) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      qualityMode.setPreference(select.value);
+      showReloadPrompt();
+    });
+    row.append(label, select);
+    wrap.appendChild(row);
+
+    // Limitar FPS a 30 (toggle independente do nível). Reusa _buildToggleRow
+    // (label acessível <label>) igual aos toggles de acessibilidade.
+    wrap.appendChild(this._buildToggleRow(
+      t('settings.quality.capFps'),
+      qualityMode.capFps,
+      (checked) => {
+        qualityMode.setCapFps(checked);
+        showReloadPrompt();
+      }
+    ));
+
     return wrap;
   }
 
