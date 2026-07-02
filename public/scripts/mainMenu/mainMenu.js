@@ -357,22 +357,16 @@ export class MainMenu {
     row.append(label, select);
     wrap.appendChild(row);
 
-    // Limitar FPS a 30 (toggle independente do nível).
-    const fpsRow = document.createElement('div');
-    fpsRow.className = 'mm-cfg-row';
-    const fpsLabel = document.createElement('span');
-    fpsLabel.className = 'mm-cfg-label';
-    fpsLabel.textContent = t('settings.quality.capFps');
-    const fpsToggle = document.createElement('input');
-    fpsToggle.type = 'checkbox';
-    fpsToggle.className = 'mm-cfg-checkbox';
-    fpsToggle.checked = qualityMode.capFps;
-    fpsToggle.addEventListener('change', () => {
-      qualityMode.setCapFps(fpsToggle.checked);
-      showReloadPrompt();
-    });
-    fpsRow.append(fpsLabel, fpsToggle);
-    wrap.appendChild(fpsRow);
+    // Limitar FPS a 30 (toggle independente do nível). Reusa _buildToggleRow
+    // (label acessível <label>) igual aos toggles de acessibilidade.
+    wrap.appendChild(this._buildToggleRow(
+      t('settings.quality.capFps'),
+      qualityMode.capFps,
+      (checked) => {
+        qualityMode.setCapFps(checked);
+        showReloadPrompt();
+      }
+    ));
 
     return wrap;
   }

@@ -52,18 +52,20 @@ function _readPref() {
 /** Score de hardware → nível inicial no modo 'auto'. */
 function _detectLevel() {
     let score = 100;
+    // navigator pode não existir em SSR / import de teste.
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
 
-    const cores = navigator.hardwareConcurrency || 4;
+    const cores = nav.hardwareConcurrency || 4;
     if (cores <= 2) score -= 40;
     else if (cores <= 4) score -= 15;
 
-    const mem = navigator.deviceMemory || 4;
+    const mem = nav.deviceMemory || 4;
     if (mem <= 2) score -= 30;
     else if (mem <= 4) score -= 10;
 
-    try { if (navigator.connection?.saveData) score -= 20; } catch { /* no NetInfo */ }
+    try { if (nav.connection?.saveData) score -= 20; } catch { /* no NetInfo */ }
     try {
-        const eff = navigator.connection?.effectiveType;
+        const eff = nav.connection?.effectiveType;
         if (eff === '2g' || eff === 'slow-2g') score -= 15;
     } catch { /* no NetInfo */ }
 
@@ -130,15 +132,16 @@ export const qualityMode = {
         return (this.level === 'low' || this._capFps) ? 30 : 60;
     },
 
-    /** Liga/desliga o limite manual de FPS (persistido). Dispara onChange. */
+    /**
+     * Liga/desliga o limite manual de FPS (persistido). NÃO dispara onChange —
+     * o game loop lê fpsCap a cada frame, e o nível/renderScale/partículas não
+     * mudam. Evita resize de canvas + reset de partículas à toa.
+     */
     setCapFps(on) {
         const val = !!on;
         if (val === this._capFps) return;
         this._capFps = val;
         try { localStorage.setItem(STORAGE_KEY_FPS, val ? '1' : '0'); } catch { /* storage bloqueado */ }
-        for (const fn of _listeners) {
-            try { fn(this.level); } catch { /* isola listeners */ }
-        }
     },
 
     /**
@@ -209,8 +212,10 @@ function _startProbe() {
             if (dt < 100) { frameSum += dt; frameCount++; }
             if (frameCount >= 60) {
                 const avg = frameSum / frameCount;
-                if (avg > 32 && qualityMode.level === 'high') qualityMode.setLevel('medium');
-                else if (avg > 50 && qualityMode.level === 'medium') qualityMode.setLevel('low');
+                // Severo (>50ms) cai direto pra low, mesmo vindo de high — senão
+                // um device muito lento pararia em medium (o probe é one-shot).
+                if (avg > 50 && qualityMode.level !== 'low') qualityMode.setLevel('low');
+                else if (avg > 32 && qualityMode.level === 'high') qualityMode.setLevel('medium');
                 return; // para de medir
             }
         }

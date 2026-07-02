@@ -220,6 +220,18 @@ export function checkPortalInteraction(playerX, playerY, playerW, playerH) {
  * (travelMap) para o jogador escolher o destino. A transição real só
  * acontece quando o callback do mapa é disparado.
  */
+/**
+ * #227: entra no city do lado dos NPCs — carrega os NPCs de city sob demanda
+ * (idempotente) e re-registra as hitboxes. Compartilhado pelo portal e pelo
+ * save-load pra os dois não divergirem.
+ */
+async function _enterCityNpcs() {
+    const npcSys = getSystem('npc');
+    if (!npcSys) return;
+    await npcSys.loadCityNpcs?.();
+    npcSys.registerHitboxesForMap('city');
+}
+
 export async function triggerPortalTransition() {
     const portal = getPortalForMap(currentMapId);
     if (!portal || isTransitioning) return;
@@ -289,13 +301,9 @@ async function _executePortalTransition(portal) {
             await city.ensureCityRendererReady();
             city.cityHouseSystem.registerHouseHitboxes();
             await city.cityObstaclesSystem.registerObstacles();
-            // Re-register NPC hitboxes (cleared by collisionSystem.clear())
-            const npcSys = getSystem('npc');
-            if (npcSys) {
-                // #227: NPCs de city carregam sob demanda na primeira entrada.
-                await npcSys.loadCityNpcs?.();
-                npcSys.registerHitboxesForMap('city');
-            }
+            // Re-register NPC hitboxes (cleared by collisionSystem.clear());
+            // carrega os NPCs de city sob demanda na primeira entrada.
+            await _enterCityNpcs();
         } else {
             // Leaving city — clear city-only objects and hitboxes.
             // City modules are already loaded if we got here.
@@ -547,12 +555,8 @@ async function restoreMap(mapId) {
         city.cityHouseSystem.registerHouseHitboxes();
         await city.cityObstaclesSystem.registerObstacles();
 
-        const npcSys = getSystem('npc');
-        if (npcSys) {
-            // #227: carrega os NPCs de city sob demanda (save-load direto no city).
-            await npcSys.loadCityNpcs?.();
-            npcSys.registerHitboxesForMap('city');
-        }
+        // #227: carrega os NPCs de city sob demanda (save-load direto no city).
+        await _enterCityNpcs();
 
         registerPortalHitbox();
         markWorldChanged();

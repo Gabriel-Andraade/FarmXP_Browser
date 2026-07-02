@@ -562,6 +562,7 @@ function stopNpcHotReload() {
 // eager no boot — o gato Madalena da quest dela vive na fazenda. Isso tira 9
 // parses de módulo do boot na fazenda, onde nenhum desses NPCs aparece.
 let _cityNpcsLoaded = false;
+let _cityNpcsLoadPromise = null;
 const CITY_NPC_MODULES = [
     './npcBartolomeu.js',
     './npcJuan.js',
@@ -583,11 +584,25 @@ const CITY_NPC_MODULES = [
  */
 async function loadCityNpcs() {
     if (_cityNpcsLoaded) return;
-    _cityNpcsLoaded = true;
-    await Promise.all(CITY_NPC_MODULES.map(m =>
-        import(m).catch(e => logger.warn(`[NpcSystem] Falha ao carregar NPC de city: ${m}`, e))
-    ));
-    getSystem('save')?.reapplyGameFlags?.();
+    // Coalesce chamadas concorrentes na MESMA promise em voo, e só marca
+    // "carregado" se TODOS os imports deram certo — assim uma falha (rede
+    // instável, o cenário do público-alvo) pode ser retentada na próxima entrada.
+    if (_cityNpcsLoadPromise) return _cityNpcsLoadPromise;
+    _cityNpcsLoadPromise = (async () => {
+        const results = await Promise.allSettled(CITY_NPC_MODULES.map(m => import(m)));
+        results.forEach((r, i) => {
+            if (r.status === 'rejected') {
+                logger.warn(`[NpcSystem] Falha ao carregar NPC de city: ${CITY_NPC_MODULES[i]}`, r.reason);
+            }
+        });
+        if (results.every(r => r.status === 'fulfilled')) _cityNpcsLoaded = true;
+        getSystem('save')?.reapplyGameFlags?.();
+    })();
+    try {
+        await _cityNpcsLoadPromise;
+    } finally {
+        _cityNpcsLoadPromise = null;
+    }
 }
 
 const npcAPI = {

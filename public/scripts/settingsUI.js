@@ -377,7 +377,8 @@ function ensureQualitySection() {
   const fpsOption = document.createElement('div');
   fpsOption.className = 'config-option';
   const fpsLeft = document.createElement('div');
-  const fpsLabel = document.createElement('div');
+  const fpsLabel = document.createElement('label');
+  fpsLabel.htmlFor = 'qualityCapFps';
   fpsLabel.className = 'config-label';
   fpsLabel.setAttribute('data-i18n', 'settings.quality.capFps');
   fpsLabel.textContent = safeT('settings.quality.capFps', 'Limitar a 30 FPS');

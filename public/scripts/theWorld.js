@@ -161,12 +161,12 @@ const _frameSeen = new Set();
 const _playerWrapper = {
   type: "PLAYER", id: "player", x: 0, y: 0, width: 0, height: 0,
   _p: null,
-  draw(ctx) { this._p?.draw(ctx); },
+  draw(ctx, ...args) { this._p?.draw(ctx, ...args); },
 };
 const _portalWrapper = {
   type: "PORTAL", id: "map_portal", x: 0, y: 99999, width: 0, height: 0,
   _mgr: null,
-  draw(ctx) { this._mgr?.drawPortal(ctx); },
+  draw(ctx, ...args) { this._mgr?.drawPortal(ctx, ...args); },
 };
 
 /**

@@ -353,6 +353,16 @@ export class StorageSystem {
     const itemData = getItem(itemId);
     if (!itemData) return false;
 
+    // removeItem NÃO é atômico: se qty > disponível, ele drena os stacks
+    // existentes antes de retornar false — perdendo o que foi drenado. Confere
+    // a disponibilidade nesta categoria ANTES de remover.
+    const availableInCategory = (this.storage[storageCategory] || [])
+      .reduce((sum, s) => (s.itemId === itemId ? sum + (s.quantity || 0) : sum), 0);
+    if (availableInCategory < qty) {
+      this.showMessage(t('storage.insufficientQuantity'));
+      return false;
+    }
+
     // Contagem ANTES pra confirmar depois quanto realmente entrou (a soma é
     // por todas as categorias/stacks).
     const before = inventory.getItemQuantity(itemId);
