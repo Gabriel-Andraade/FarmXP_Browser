@@ -17,9 +17,9 @@
 import { getSystem } from './gameState.js';
 import { inventorySystem } from './thePlayer/inventorySystem.js';
 import { t } from './i18n/i18n.js';
+import { BUCKET_EMPTY_ID } from './waterTroughSystem.js'; // fonte única do id do balde
 
 const OVERLAY_ID = 'water-trough-panel';
-const BUCKET_EMPTY_ID = 16; // the bucket tool; its water lives in bucketSystem
 
 // #NNN: the player can fill a trough when they hold a bucket (16) that has water.
 function _hasWaterBucket() {

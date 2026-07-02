@@ -18,9 +18,13 @@ import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
 import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
+// Balde vazio (tool). Fonte única — o waterTroughPanel importa daqui em vez
+// de redefinir o mesmo id.
+export const BUCKET_EMPTY_ID = 16;
+
 const WATER_TROUGH_CONFIG = {
   ITEM_ID_IN_HAND: 103,
-  BUCKET_EMPTY_ID: 16,        // Balde vazio (tool)
+  BUCKET_EMPTY_ID,
   MAX_WATER_LEVEL: 100,
   WATER_PER_BUCKET: 100,      // 1 balde enche o cocho por completo
 };
