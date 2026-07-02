@@ -57,17 +57,12 @@ export async function initMinimap() {
 export function updateMinimap(currentPlayer) {
   if (!minimapSystem || !currentPlayer) return;
 
-  const worldArrays = {
-    trees,
-    rocks,
-    thickets,
-    houses,
-    placedBuildings,
-    placedWells,
-  };
-
   if (minimapUI?.isVisible) {
-    minimapSystem.update(currentPlayer.x, currentPlayer.y, worldArrays);
+    // worldArrays só é usado no render; monta apenas quando o minimap está
+    // visível (evita o objeto por frame quando está oculto).
+    minimapSystem.update(currentPlayer.x, currentPlayer.y, {
+      trees, rocks, thickets, houses, placedBuildings, placedWells,
+    });
   } else {
     minimapSystem.updateExploration(currentPlayer.x, currentPlayer.y);
   }

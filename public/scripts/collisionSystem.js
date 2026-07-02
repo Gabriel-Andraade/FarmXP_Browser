@@ -53,12 +53,23 @@ class SpatialGrid {
     }
 
     query(x, y, w, h) {
-        const cellKeys = this._getCells(x, y, w, h);
+        // Iterate cells inline (no intermediate keys array). Returns a FRESH Set
+        // because some callers (queryPhysicalCandidates → animalAI) hold the
+        // result across other same-grid queries — a shared/reused Set would be
+        // corrupted mid-use (collision glitches). Runs several times/frame while
+        // moving, so skipping the keys-array allocation still trims churn.
+        const cs = this.cellSize;
+        const minCX = Math.floor(x / cs);
+        const minCY = Math.floor(y / cs);
+        const maxCX = Math.floor((x + w) / cs);
+        const maxCY = Math.floor((y + h) / cs);
         const result = new Set();
-        for (const k of cellKeys) {
-            const cell = this.cells.get(k);
-            if (cell) {
-                for (const id of cell) result.add(id);
+        for (let cx = minCX; cx <= maxCX; cx++) {
+            for (let cy = minCY; cy <= maxCY; cy++) {
+                const cell = this.cells.get(this._key(cx, cy));
+                if (cell) {
+                    for (const id of cell) result.add(id);
+                }
             }
         }
         return result;

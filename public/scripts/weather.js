@@ -9,7 +9,7 @@ import { camera } from "./thePlayer/cameraSystem.js";
 import { showSleepLoading, hideSleepLoading, blockInteractions, unblockInteractions } from "./loadingScreen.js";
 import { t } from './i18n/i18n.js';
 import { getSystem } from './gameState.js';
-import { qualityMode } from './qualityMode.js';
+import { qualityMode, deviceScale } from './qualityMode.js';
 
 const WEATHER_UI_ID = "weather-ui-panel";
 
@@ -212,6 +212,12 @@ export const WeatherSystem = {
       document.addEventListener("languageChanged", () => {
         updateWeatherUIPanelContent();
       }, { signal });
+
+      // Quality changed (player toggled it or auto-downgrade fired) → rebuild
+      // the active particles at the new count immediately, don't wait for the
+      // next weather shift. Store the unsub so re-init/destroy don't leak it.
+      if (this._qualityUnsub) this._qualityUnsub();
+      this._qualityUnsub = qualityMode.onChange(() => this.refreshParticles());
     }
   },
 
@@ -219,6 +225,11 @@ export const WeatherSystem = {
     if (this._abortController) {
       this._abortController.abort();
       this._abortController = null;
+    }
+
+    if (this._qualityUnsub) {
+      this._qualityUnsub();
+      this._qualityUnsub = null;
     }
 
     if (typeof document === "undefined") return;
@@ -296,14 +307,19 @@ export const WeatherSystem = {
 
     this.lastParticleUpdate += deltaTime;
     if (this.lastParticleUpdate > 0.016) {
-      const steps = Math.floor(this.lastParticleUpdate / 0.016);
+      const rawSteps = Math.floor(this.lastParticleUpdate / 0.016);
+      // Cap sub-steps por nível de qualidade. Roda no máximo `maxSteps`, mas
+      // DRENA o acumulador inteiro (descarta o excesso) — sem isso, o frame
+      // seguinte "recuperaria" e o teto não teria efeito. Resultado: no low as
+      // partículas seguem o ritmo do frame (mais lentas, porém baratas).
+      const steps = Math.min(rawSteps, qualityMode.maxParticleSteps);
       for (let i = 0; i < steps; i++) {
         this.updateRainParticles();
         this.updateFogLayers();
         this.updateSnowParticles();
         this.updateLightningFlashes(0.016);
       }
-      this.lastParticleUpdate -= steps * 0.016;
+      this.lastParticleUpdate -= rawSteps * 0.016;
     }
 
     if (this.weatherType === "storm" && Math.random() < 0.008) {
@@ -475,6 +491,20 @@ export const WeatherSystem = {
       else this.weatherType = "fog";
     }
 
+    this.refreshParticles();
+
+    updateWeatherUIPanelContent();
+
+    document.dispatchEvent(new CustomEvent('weatherChanged', {
+      detail: { type: this.weatherType }
+    }));
+  },
+
+  /**
+   * Limpa e regenera as partículas pro clima atual. Chamado ao trocar de
+   * clima e quando o nível de qualidade muda (particleMult novo → recontagem).
+   */
+  refreshParticles() {
     this.rainParticles = [];
     this.fogLayers = [];
     this.snowParticles = [];
@@ -483,12 +513,6 @@ export const WeatherSystem = {
     if (this.weatherType === "rain" || this.weatherType === "storm") this.generateRainParticles();
     if (this.weatherType === "fog") this.generateFogLayers();
     if (this.weatherType === "blizzard") this.generateSnowParticles();
-
-    updateWeatherUIPanelContent();
-
-    document.dispatchEvent(new CustomEvent('weatherChanged', {
-      detail: { type: this.weatherType }
-    }));
   },
 
   generateRainParticles() {
@@ -644,11 +668,11 @@ export const WeatherSystem = {
 export function drawWeatherEffects(ctx, player, canvas) {
   if (!player) return;
 
-  // Canvas backing buffer is INTERNAL_WIDTH/HEIGHT * dpr, but ctx has a
-  // setTransform(dpr, dpr) applied — so all drawing here must use logical
-  // (pre-DPR) units, otherwise overlays render at dpr² size and only the
-  // top-left quadrant of the canvas is covered.
-  const dpr = (typeof window !== "undefined" && window.devicePixelRatio) || 1;
+  // Canvas backing buffer is INTERNAL_WIDTH/HEIGHT * deviceScale, and ctx has a
+  // matching setTransform applied — so all drawing here must use logical
+  // (pre-scale) units. deviceScale() (DPR × renderScale) must match the value
+  // used to size the canvas, or overlays cover the wrong region.
+  const dpr = deviceScale();
   const width = canvas.width / dpr;
   const height = canvas.height / dpr;
 

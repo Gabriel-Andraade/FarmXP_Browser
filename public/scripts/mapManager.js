@@ -291,7 +291,11 @@ async function _executePortalTransition(portal) {
             await city.cityObstaclesSystem.registerObstacles();
             // Re-register NPC hitboxes (cleared by collisionSystem.clear())
             const npcSys = getSystem('npc');
-            if (npcSys) npcSys.registerHitboxesForMap('city');
+            if (npcSys) {
+                // #227: NPCs de city carregam sob demanda na primeira entrada.
+                await npcSys.loadCityNpcs?.();
+                npcSys.registerHitboxesForMap('city');
+            }
         } else {
             // Leaving city — clear city-only objects and hitboxes.
             // City modules are already loaded if we got here.
@@ -544,7 +548,11 @@ async function restoreMap(mapId) {
         await city.cityObstaclesSystem.registerObstacles();
 
         const npcSys = getSystem('npc');
-        if (npcSys) npcSys.registerHitboxesForMap('city');
+        if (npcSys) {
+            // #227: carrega os NPCs de city sob demanda (save-load direto no city).
+            await npcSys.loadCityNpcs?.();
+            npcSys.registerHitboxesForMap('city');
+        }
 
         registerPortalHitbox();
         markWorldChanged();

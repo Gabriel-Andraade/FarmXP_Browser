@@ -980,17 +980,22 @@ class SaveSystem {
         const molly = getSystem('npcMolly');
         const tutorials = getSystem('tutorialQuests');
         const fuel = getSystem('fuel');
+        // #227 lazy-load: se um NPC (de city) ainda não foi carregado, preserva
+        // o estado do último save aplicado em vez do default — senão salvar na
+        // fazenda (antes de visitar o city) apagaria o progresso das quests.
+        const cached = this._appliedGameFlags || {};
+        const npcState = (npc, key, dflt) => (npc ? npc.getQuestState() : (cached[key] ?? dflt));
         return {
             pickup_repaired: questSys ? questSys.isQuestCompleted('fix_pickup') : false,
             battery: questSys ? questSys.getBatteryState() : null,
             fuel_percent: typeof fuel?.getFuel === 'function' ? fuel.getFuel() : null,
-            bartolomeu_quest: bartolomeu ? bartolomeu.getQuestState() : 'intro',
-            milly_quest: milly ? milly.getQuestState() : 'idle',
-            bru_quest: bru ? bru.getQuestState() : { dialogue: 'idle' },
-            john_quest: john ? john.getQuestState() : { dialogue: 'idle', milkQuest: 'idle' },
-            lucas_quest: lucas ? lucas.getQuestState() : { secretQuest: 'idle' },
-            isabela_quest: isabela ? isabela.getQuestState() : { hasNoticed: false },
-            molly_quest: molly ? molly.getQuestState() : { dialogue: 'idle' },
+            bartolomeu_quest: npcState(bartolomeu, 'bartolomeu_quest', 'intro'),
+            milly_quest: npcState(milly, 'milly_quest', 'idle'),
+            bru_quest: npcState(bru, 'bru_quest', { dialogue: 'idle' }),
+            john_quest: npcState(john, 'john_quest', { dialogue: 'idle', milkQuest: 'idle' }),
+            lucas_quest: npcState(lucas, 'lucas_quest', { secretQuest: 'idle' }),
+            isabela_quest: npcState(isabela, 'isabela_quest', { hasNoticed: false }),
+            molly_quest: npcState(molly, 'molly_quest', { dialogue: 'idle' }),
             tutorial_quests: tutorials ? tutorials.getQuestState() : null,
         };
     }
@@ -1369,8 +1374,20 @@ class SaveSystem {
         logger.info('[SaveSystem] Achievements progress restored');
     }
 
+    /**
+     * Re-aplica os gameFlags do último save. Chamado quando os NPCs de city
+     * são carregados sob demanda (#227) — no load, os NPCs ainda não existiam,
+     * então o setQuestState foi ignorado; aqui empurramos o estado neles.
+     */
+    reapplyGameFlags() {
+        if (this._appliedGameFlags) this._applyGameFlags(this._appliedGameFlags);
+    }
+
     _applyGameFlags(flags) {
         if (!flags) return;
+        // Cacheado pro _getGameFlags (fallback quando o NPC não está carregado)
+        // e pro reapplyGameFlags (quando os NPCs de city carregarem depois).
+        this._appliedGameFlags = flags;
         const questSys = getSystem('quests');
         if (questSys) {
             if (flags.pickup_repaired) {

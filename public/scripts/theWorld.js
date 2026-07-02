@@ -149,6 +149,26 @@ function _getOrCreateWrapper(original, factory) {
   return w;
 }
 
+// Per-frame render list + dedup Set are REUSED across frames (not reallocated)
+// to cut GC churn — the drops it caused were only felt while moving (a dropped
+// frame judders visibly when the world is scrolling). The list is consumed
+// synchronously by the caller; do NOT hold the returned reference across frames.
+const _frameList = [];
+const _frameSeen = new Set();
+
+// Stable player/portal wrappers (avoid a fresh object + closure every frame).
+// They read the current player/mapManager off their own fields.
+const _playerWrapper = {
+  type: "PLAYER", id: "player", x: 0, y: 0, width: 0, height: 0,
+  _p: null,
+  draw(ctx) { this._p?.draw(ctx); },
+};
+const _portalWrapper = {
+  type: "PORTAL", id: "map_portal", x: 0, y: 99999, width: 0, height: 0,
+  _mgr: null,
+  draw(ctx) { this._mgr?.drawPortal(ctx); },
+};
+
 /**
  * Invalidates the static-objects sorted cache. Called when objects are
  * added/removed/destroyed. Does NOT fire on player movement — the cache
@@ -541,7 +561,8 @@ function rebuildStaticCache() {
 export function getSortedWorldObjects(player) {
   if (!staticCacheValid) rebuildStaticCache();
 
-  const out = [];
+  const out = _frameList;
+  out.length = 0;
 
   const vxMin = camera.x - CULLING_BUFFER;
   const vyMin = camera.y - CULLING_BUFFER;
@@ -555,7 +576,8 @@ export function getSortedWorldObjects(player) {
   const minCY = Math.floor(vyMin / RENDER_CELL_SIZE);
   const maxCX = Math.floor(vxMax / RENDER_CELL_SIZE);
   const maxCY = Math.floor(vyMax / RENDER_CELL_SIZE);
-  const seen = new Set();
+  const seen = _frameSeen;
+  seen.clear();
   for (let cx = minCX; cx <= maxCX; cx++) {
     for (let cy = minCY; cy <= maxCY; cy++) {
       const cell = _renderGrid.get(_rgKey(cx, cy));
@@ -586,14 +608,14 @@ export function getSortedWorldObjects(player) {
     out.push(_wrapAnimal(a));
   }
 
-  // 3. Player
+  // 3. Player (reused wrapper — position refreshed each frame)
   if (player) {
-    out.push({
-      type: "PLAYER", id: "player",
-      x: player.x, y: player.y,
-      width: player.width, height: player.height,
-      draw: (ctx) => player.draw(ctx),
-    });
+    _playerWrapper._p = player;
+    _playerWrapper.x = player.x;
+    _playerWrapper.y = player.y;
+    _playerWrapper.width = player.width;
+    _playerWrapper.height = player.height;
+    out.push(_playerWrapper);
   }
 
   // 4. City objects (rare — only in city map)
@@ -620,13 +642,10 @@ export function getSortedWorldObjects(player) {
     for (let i = 0; i < catObjs.length; i++) out.push(catObjs[i]);
   }
 
-  // 7. Portal (high Y forces it on top of everything)
+  // 7. Portal (high Y forces it on top of everything) — reused wrapper
   if (mgr) {
-    out.push({
-      type: "PORTAL", id: "map_portal",
-      x: 0, y: 99999, width: 0, height: 0,
-      draw: (ctx) => mgr.drawPortal(ctx),
-    });
+    _portalWrapper._mgr = mgr;
+    out.push(_portalWrapper);
   }
 
   // Final Y-sort. Input is small (~50-150 items even on a packed farm)

@@ -353,22 +353,33 @@ export class StorageSystem {
     const itemData = getItem(itemId);
     if (!itemData) return false;
 
+    // Contagem ANTES pra confirmar depois quanto realmente entrou (a soma é
+    // por todas as categorias/stacks).
+    const before = inventory.getItemQuantity(itemId);
+
     const removed = this.removeItem(storageCategory, itemId, qty);
     if (!removed) {
       this.showMessage(t('storage.itemNotFound'));
       return false;
     }
 
-    const added = inventory.addItem(itemId, qty);
-    if (added) {
+    inventory.addItem(itemId, qty);
+
+    // Safety-net (#bateria): NÃO confia no retorno do addItem — confere pela
+    // contagem real quanto entrou. Se addItem retornar true sem adicionar tudo
+    // (ou nada), o que sobrou seria removido do armazém e PERDIDO. Aqui
+    // devolvemos ao armazém exatamente a diferença que não coube.
+    const landed = Math.max(0, inventory.getItemQuantity(itemId) - before);
+
+    if (landed >= qty) {
       this.showMessage(t('storage.withdrawn', { qty, name: getItemName(itemId, itemData.name) }));
       return true;
     }
 
-    // rollback
-    this._addToCategory(storageCategory, itemId, qty);
+    const missing = qty - landed;
+    if (missing > 0) this._addToCategory(storageCategory, itemId, missing);
     this.showMessage(t('storage.inventoryFull'));
-    return false;
+    return landed > 0; // true se pelo menos parte saiu
   }
 
   /**

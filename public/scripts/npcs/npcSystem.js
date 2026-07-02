@@ -558,6 +558,38 @@ function stopNpcHotReload() {
     }
 }
 
+// #227: NPCs de city carregam SOB DEMANDA (ao entrar no city). Só a Milly é
+// eager no boot — o gato Madalena da quest dela vive na fazenda. Isso tira 9
+// parses de módulo do boot na fazenda, onde nenhum desses NPCs aparece.
+let _cityNpcsLoaded = false;
+const CITY_NPC_MODULES = [
+    './npcBartolomeu.js',
+    './npcJuan.js',
+    './npcBru.js',
+    './npcCouple.js',
+    './npcJeremy.js',
+    './family/npcJohn.js',
+    './family/npcLucas.js',
+    './family/npcIsabela.js',
+    './family/npcMolly.js',
+];
+
+/**
+ * Carrega os módulos de NPC de city (idempotente). Chamado ao entrar no city
+ * (portal ou save-load, via mapManager). Depois de carregar, re-aplica os
+ * gameFlags do save — no load os NPCs ainda não existiam, então o
+ * setQuestState foi ignorado; aqui os quest-states são restaurados.
+ * @returns {Promise<void>}
+ */
+async function loadCityNpcs() {
+    if (_cityNpcsLoaded) return;
+    _cityNpcsLoaded = true;
+    await Promise.all(CITY_NPC_MODULES.map(m =>
+        import(m).catch(e => logger.warn(`[NpcSystem] Falha ao carregar NPC de city: ${m}`, e))
+    ));
+    getSystem('save')?.reapplyGameFlags?.();
+}
+
 const npcAPI = {
     addNpc,
     removeNpc,
@@ -567,6 +599,7 @@ const npcAPI = {
     registerHitboxesForMap,
     updateSprite,
     updateNpc,
+    loadCityNpcs,
     startNpcHotReload,
     stopNpcHotReload,
 };
