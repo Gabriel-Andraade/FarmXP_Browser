@@ -20,6 +20,40 @@ import { registerSystem, getObject, getSystem } from './gameState.js';
 import { logger } from './logger.js';
 
 /**
+ * Sum stack quantities by itemId. Single source of truth for the warehouse's
+ * "collapse N stacks of the same item into one total" logic.
+ * @param {Array<{itemId:number, quantity:number}>} stacks
+ * @returns {Map<number, number>} itemId → total quantity
+ */
+function sumStacksByItem(stacks) {
+    const acc = new Map();
+    for (const s of stacks) acc.set(s.itemId, (acc.get(s.itemId) || 0) + (s.quantity || 0));
+    return acc;
+}
+
+/**
+ * Merge stacks by a key, summing `quantity` into the first entry seen for each
+ * key. Shared "collapse duplicate stacks into visual entries" logic — the entry
+ * shape and grouping key vary per call (`sumStacksByItem` is the simpler
+ * itemId→total-quantity variant that returns a Map instead).
+ * @param {Array<{quantity:number}>} stacks
+ * @param {(s:object)=>*} keyOf - grouping key per stack
+ * @param {(s:object)=>{quantity:number}} makeEntry - the first-seen entry (its
+ *   `quantity` is then mutated as duplicates merge in)
+ * @returns {Array<object>} merged entries
+ */
+function mergeStacks(stacks, keyOf, makeEntry) {
+    const acc = new Map();
+    for (const s of stacks) {
+        const k = keyOf(s);
+        const prev = acc.get(k);
+        if (prev) prev.quantity += s.quantity;
+        else acc.set(k, makeEntry(s));
+    }
+    return Array.from(acc.values());
+}
+
+/**
  * Sistema de interação com a casa do jogador
  * Gerencia menu da casa, armazenamento e funcionalidades domésticas
  * @class HouseSystem
@@ -592,18 +626,11 @@ export class HouseSystem {
         // Current category's items (used for the value + the no-search view).
         const currentList = (mode === 'deposit')
             ? this._getInventoryStacksForStorageCategory(categoryKey)
-            : (() => {
-                const acc = new Map();
-                for (const s of stacksRaw) {
-                    const prev = acc.get(s.itemId) || 0;
-                    acc.set(s.itemId, prev + (s.quantity || 0));
-                }
-                return Array.from(acc.entries()).map(([itemId, quantity]) => ({
-                    itemId,
-                    quantity,
-                    sourceCategory: categoryKey // Para withdraw, a categoria é a do storage
-                }));
-            })();
+            : Array.from(sumStacksByItem(stacksRaw).entries()).map(([itemId, quantity]) => ({
+                itemId,
+                quantity,
+                sourceCategory: categoryKey // Para withdraw, a categoria é a do storage
+            }));
 
         // Per-category value — always reflects the current category/tab.
         const catValue = currentList.reduce((sum, s) => sum + (getItem(s.itemId)?.price || 0) * (s.quantity || 0), 0);
@@ -794,9 +821,7 @@ export class HouseSystem {
         const out = [];
         for (const catKey of Object.keys(storageSystem.categories || {})) {
             const stacksRaw = Array.isArray(storageSystem.storage?.[catKey]) ? storageSystem.storage[catKey] : [];
-            const acc = new Map();
-            for (const s of stacksRaw) acc.set(s.itemId, (acc.get(s.itemId) || 0) + (s.quantity || 0));
-            for (const [itemId, quantity] of acc) out.push({ itemId, quantity, sourceCategory: catKey });
+            for (const [itemId, quantity] of sumStacksByItem(stacksRaw)) out.push({ itemId, quantity, sourceCategory: catKey });
         }
         return out;
     }
@@ -817,21 +842,19 @@ export class HouseSystem {
         const category = storageSystem.categories?.[storageCategoryKey];
         const allowedTypes = category?.itemTypes || [];
 
-        // Extrai tudo do inventário numa lista unificada
-        const stacks = this._extractInventoryStacks(inv);
-
-        // Group by itemId (sum across stacks) so one slot represents the whole
-        // amount — otherwise a 99/99/2 split would cap each deposit at one stack
-        // and you couldn't deposit, say, 200 at once.
-        const acc = new Map();
-        for (const s of stacks) {
+        // Extrai tudo do inventário, filtra pelos tipos aceitos por esta
+        // categoria de storage, e agrupa por itemId (sum across stacks) — assim
+        // um slot representa o total (senão um split 99/99/2 limitaria o depósito
+        // a um stack). sourceCategory vem do primeiro stack de cada item.
+        const stacks = this._extractInventoryStacks(inv).filter(s => {
             const data = getItem(s.itemId);
-            if (!data || !allowedTypes.includes(data.type)) continue;
-            const prev = acc.get(s.itemId);
-            if (prev) prev.quantity += s.quantity;
-            else acc.set(s.itemId, { itemId: s.itemId, quantity: s.quantity, sourceCategory: s.category });
-        }
-        return Array.from(acc.values());
+            return data && allowedTypes.includes(data.type);
+        });
+        return mergeStacks(
+            stacks,
+            s => s.itemId,
+            s => ({ itemId: s.itemId, quantity: s.quantity, sourceCategory: s.category }),
+        );
     }
 
     _extractInventoryStacks(inv) {
@@ -885,16 +908,9 @@ export class HouseSystem {
             }
         }
 
-        // Mescla itens duplicados (ex: 2 stacks de madeira viram 1 entrada visual)
-        const merged = new Map();
-        for (const s of out) {
-            const k = `${s.category}:${s.itemId}`;
-            const prev = merged.get(k);
-            if (prev) prev.quantity += s.quantity;
-            else merged.set(k, { ...s });
-        }
-
-        return Array.from(merged.values());
+        // Mescla itens duplicados (ex: 2 stacks de madeira viram 1 entrada
+        // visual), preservando categoria + itemId como chave composta.
+        return mergeStacks(out, s => `${s.category}:${s.itemId}`, s => ({ ...s }));
     }
 
     _guessInventoryCategory(itemType) {

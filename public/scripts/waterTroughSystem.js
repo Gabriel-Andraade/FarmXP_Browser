@@ -16,6 +16,7 @@ import { registerSystem, getSystem, getDebugFlag } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
+import { drawTroughHoverMarker, troughCenter as _troughCenter } from "./troughMarker.js";
 import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
 const WATER_TROUGH_CONFIG = {
@@ -26,11 +27,9 @@ const WATER_TROUGH_CONFIG = {
   WATER_PER_BUCKET: 100,      // 1 balde enche o cocho por completo
 };
 
-// Marker "+" desenhado em cima do cocho quando o mouse passa por ele.
-// Mesmo tamanho/cor do marker do cercado pra consistência visual.
-const MARKER_SIZE = 22;
-const MARKER_RADIUS = 18;   // raio de hit-test (em coords de mundo)
-const MARKER_COLOR = '#b8860b';
+// Raio de hit-test do marker "+" (em coords de mundo). O desenho do marker
+// vive em troughMarker.js (compartilhado com o cocho de comida).
+const MARKER_RADIUS = 18;
 
 /**
  * Slots de "posição pra beber" — 3 hitboxes por cocho, uma por
@@ -85,17 +84,6 @@ function _troughAtWorldPoint(wx, wy) {
     }
   }
   return null;
-}
-
-function _troughCenter(wt) {
-  // O "+" fica um pouco abaixo do centro geométrico — o sprite do cocho
-  // tem peso visual mais embaixo (a água/borda lateral), então o centro
-  // exato fica visualmente "alto demais". 65% da altura faz o "+" cair
-  // na zona da água.
-  return {
-    cx: wt.x + (wt.width || 0) / 2,
-    cy: wt.y + (wt.height || 0) * 0.65,
-  };
 }
 
 // Toast simples reaproveitando o estilo do xp-toast (já injeta o CSS dele
@@ -246,48 +234,8 @@ export const waterTroughSystem = {
     const wt = findTrough(_hoveredId);
     if (!wt) { _hoveredId = null; return; }
 
-    const { cx: wxC, cy: wyC } = _troughCenter(wt);
-    const screen = camera.worldToScreen(wxC, wyC);
-    const zoom = camera.zoom || 1;
-    const size = MARKER_SIZE * zoom;
-    const half = size / 2;
-    const stroke = Math.max(2, Math.round(3 * zoom));
-    const cx = Math.round(screen.x);
-    const cy = Math.round(screen.y);
-
-    ctx.save();
-    ctx.lineCap = 'round';
-
-    ctx.fillStyle = 'rgba(255, 230, 180, 0.55)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, half + 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = MARKER_COLOR;
-    ctx.lineWidth = stroke;
-    ctx.beginPath();
-    ctx.moveTo(cx - half, cy);
-    ctx.lineTo(cx + half, cy);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - half);
-    ctx.lineTo(cx, cy + half);
-    ctx.stroke();
-
-    // Fill level under the marker so hovering shows how full the trough is.
     const pct = Math.round(((wt.waterLevel || 0) / WATER_TROUGH_CONFIG.MAX_WATER_LEVEL) * 100);
-    const label = `💧 ${pct}%`;
-    const ly = cy + half + 4 * zoom;
-    ctx.font = `bold ${Math.round(12 * zoom)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.lineWidth = Math.max(2, 3 * zoom);
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.strokeText(label, cx, ly);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(label, cx, ly);
-
-    ctx.restore();
+    drawTroughHoverMarker(ctx, camera, wt, `💧 ${pct}%`);
   },
 
   // Nível atual / máximo. Útil pra UI consultar sem mexer no `waterLevel` cru.

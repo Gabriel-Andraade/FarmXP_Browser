@@ -18,6 +18,7 @@ import { registerSystem, getSystem, getDebugFlag } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
+import { drawTroughHoverMarker, troughCenter as _troughCenter } from "./troughMarker.js";
 import { getItem } from "./itemUtils.js";
 import { createSlotRegistry, slotWorldRects, troughStandPosition } from "./animal/troughSlots.js";
 
@@ -45,9 +46,6 @@ const ANIMAL_TO_SPECIES = {
 // This way any new animal_food added to item.js works automatically with
 // no list maintenance.
 
-// Marker "+" drawn over trough on hover — same style as water trough.
-const MARKER_SIZE = 22;
-const MARKER_COLOR = '#b8860b';
 
 // Eat slots — 3 per trough, keyed by full variant so each species can be
 // tuned independently (cattle sprite weight differs from bird/pork). X
@@ -128,14 +126,6 @@ function _troughAtWorldPoint(wx, wy) {
     }
   }
   return null;
-}
-
-function _troughCenter(ft) {
-  // "+" is placed 65% down the trough (visual weight of food is lower)
-  return {
-    cx: ft.x + (ft.width || 0) / 2,
-    cy: ft.y + (ft.height || 0) * 0.65,
-  };
 }
 
 function _isPremiumFeed(itemData) {
@@ -328,49 +318,10 @@ export const foodTroughSystem = {
     const ft = _findTrough(_hoveredId);
     if (!ft) { _hoveredId = null; return; }
 
-    const { cx: wxC, cy: wyC } = _troughCenter(ft);
-    const screen = camera.worldToScreen(wxC, wyC);
-    const zoom = camera.zoom || 1;
-    const size = MARKER_SIZE * zoom;
-    const half = size / 2;
-    const stroke = Math.max(2, Math.round(3 * zoom));
-    const cx = Math.round(screen.x);
-    const cy = Math.round(screen.y);
-
-    ctx.save();
-    ctx.lineCap = 'round';
-
-    ctx.fillStyle = 'rgba(255, 230, 180, 0.55)';
-    ctx.beginPath();
-    ctx.arc(cx, cy, half + 4, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = MARKER_COLOR;
-    ctx.lineWidth = stroke;
-    ctx.beginPath();
-    ctx.moveTo(cx - half, cy);
-    ctx.lineTo(cx + half, cy);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy - half);
-    ctx.lineTo(cx, cy + half);
-    ctx.stroke();
-
-    // Fill level under the marker (basic feed; premium shown when present).
     const foodPct = Math.round(((ft.foodLevel || 0) / FOOD_TROUGH_CONFIG.MAX_FOOD_LEVEL) * 100);
     const premPct = Math.round(((ft.premiumLevel || 0) / FOOD_TROUGH_CONFIG.MAX_PREMIUM_LEVEL) * 100);
     const label = premPct > 0 ? `🌾 ${foodPct}%  ⭐ ${premPct}%` : `🌾 ${foodPct}%`;
-    const ly = cy + half + 4 * zoom;
-    ctx.font = `bold ${Math.round(12 * zoom)}px monospace`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.lineWidth = Math.max(2, 3 * zoom);
-    ctx.strokeStyle = 'rgba(0,0,0,0.85)';
-    ctx.strokeText(label, cx, ly);
-    ctx.fillStyle = '#fff';
-    ctx.fillText(label, cx, ly);
-
-    ctx.restore();
+    drawTroughHoverMarker(ctx, camera, ft, label);
   },
 
   // Get current / max food level.
