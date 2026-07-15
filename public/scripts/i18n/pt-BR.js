@@ -1015,7 +1015,21 @@ export default {
     storedAll: '{count} itens guardados no baú',
     organized: 'Baú organizado!',
     notFound: 'Baú não encontrado!',
-    categoryFull: 'Categoria {category} cheia no baú!'
+    categoryFull: 'Categoria {category} cheia no baú!',
+    search: 'Buscar...',
+    noResults: 'Nenhum item corresponde à busca',
+    all: 'Tudo',
+    takeBtn: 'pegar ({qty})',
+    storeBtn: 'guardar ({qty})',
+    tookQty: '{qty}x {name} retirado(s) do baú',
+    storedQty: '{qty}x {name} guardado(s) no baú',
+    categories: {
+      tools: 'Ferramentas',
+      construction: 'Construção',
+      animals: 'Animais',
+      food: 'Comida',
+      resources: 'Recursos'
+    }
   },
 
   // Well System

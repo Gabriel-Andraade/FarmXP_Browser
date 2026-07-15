@@ -1341,6 +1341,9 @@ _onMain(document,"mainMenu:newGame", () => {
   // Reseta exploração do minimap pelo mesmo motivo.
   const minimap = getSystem('minimap');
   if (minimap?.resetExploration) minimap.resetExploration();
+  // Reseta baús — senão baús de um save carregado antes vazam pro novo jogo.
+  const chest = getSystem('chest');
+  if (chest?.resetChests) chest.resetChests();
   const selection = new CharacterSelection();
   selection.show();
 });

@@ -1015,7 +1015,21 @@ export default {
     storedAll: '{count} items stored in chest',
     organized: 'Chest organized!',
     notFound: 'Chest not found!',
-    categoryFull: '{category} category full in chest!'
+    categoryFull: '{category} category full in chest!',
+    search: 'Search...',
+    noResults: 'No items match your search',
+    all: 'All',
+    takeBtn: 'take ({qty})',
+    storeBtn: 'store ({qty})',
+    tookQty: '{qty}x {name} taken from chest',
+    storedQty: '{qty}x {name} stored in chest',
+    categories: {
+      tools: 'Tools',
+      construction: 'Construction',
+      animals: 'Animals',
+      food: 'Food',
+      resources: 'Resources'
+    }
   },
 
   // Well System
