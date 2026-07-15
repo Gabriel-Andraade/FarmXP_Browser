@@ -729,10 +729,9 @@ class SaveSystem {
                 }
             }
 
-            // Aplicar baús
-            if (data.chests) {
-                this._applyChestsData(data.chests);
-            }
+            // Aplicar baús: SEMPRE chama (mesmo sem dados) pra resetar baús que
+            // possam ter vazado de outro slot/sessão antes de restaurar os deste.
+            this._applyChestsData(data.chests);
 
             // Aplicar clima/tempo
             if (data.weather) {
@@ -1122,9 +1121,12 @@ class SaveSystem {
         for (const [chestId, chest] of Object.entries(chestSystem.chests || {})) {
             chestsData[chestId] = {
                 id: chest.id,
+                name: chest.name,
                 x: chest.x,
                 y: chest.y,
-                contents: chest.contents || {}
+                width: chest.width,
+                height: chest.height,
+                storage: chest.storage || {}
             };
         }
 
@@ -1338,38 +1340,18 @@ class SaveSystem {
      */
     _applyChestsData(data) {
         const chestSystem = getSystem('chest');
-        if (!chestSystem || !data) return;
+        if (!chestSystem) return;
 
-        // Restaurar baús
-        for (const [chestId, chestData] of Object.entries(data)) {
-            // Verificar se o baú já existe no sistema
-            if (!chestSystem.chests[chestId]) {
-                // Criar o baú no sistema se não existir
-                // Usar o método addChest se disponível, caso contrário criar manualmente
-                if (typeof chestSystem.addChest === 'function') {
-                    chestSystem.addChest(chestId, {
-                        id: chestId,
-                        x: chestData.x,
-                        y: chestData.y,
-                        contents: {}
-                    });
-                } else {
-                    // Fallback: criar manualmente
-                    chestSystem.chests[chestId] = {
-                        id: chestId,
-                        x: chestData.x,
-                        y: chestData.y,
-                        contents: {}
-                    };
-                }
-                logger.debug(`[SaveSystem] Chest ${chestId} created during restoration`);
-            }
-            
-            // Restaurar os conteúdos
-            chestSystem.chests[chestId].contents = chestData.contents || {};
+        // SEMPRE reseta os baús atuais primeiro (mundo + memória), mesmo que o
+        // save não tenha nenhum — senão baús de outro slot/sessão vazam pra cá.
+        if (typeof chestSystem.resetChests === 'function') chestSystem.resetChests();
+
+        const chests = (data && typeof data === 'object') ? data : {};
+        for (const chestData of Object.values(chests)) {
+            if (typeof chestSystem.restoreChest === 'function') chestSystem.restoreChest(chestData);
         }
-        
-        logger.info(`[SaveSystem] ${Object.keys(data).length} chests restored`);
+
+        logger.info(`[SaveSystem] ${Object.keys(chests).length} chests restored`);
     }
 
     /**

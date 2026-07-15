@@ -1015,7 +1015,28 @@ export default {
     storedAll: '{count} items stored in chest',
     organized: 'Chest organized!',
     notFound: 'Chest not found!',
-    categoryFull: '{category} category full in chest!'
+    categoryFull: '{category} category full in chest!',
+    search: 'Search...',
+    noResults: 'No items match your search',
+    all: 'All',
+    takeBtn: 'take ({qty})',
+    storeBtn: 'store ({qty})',
+    tookQty: '{qty}x {name} taken from chest',
+    storedQty: '{qty}x {name} stored in chest',
+    searchChestAria: 'Search chest storage',
+    searchInvAria: 'Search your inventory',
+    qtyAria: 'Quantity of {name}',
+    takeAria: 'Take {qty} of {name}',
+    storeAria: 'Store {qty} of {name}',
+    presetAria: 'Set quantity {qty} for {name}',
+    allAria: 'Select all of {name}',
+    categories: {
+      tools: 'Tools',
+      construction: 'Construction',
+      animals: 'Animals',
+      food: 'Food',
+      resources: 'Resources'
+    }
   },
 
   // Well System

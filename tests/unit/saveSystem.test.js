@@ -766,14 +766,18 @@ describe('SaveSystem (Production Implementation)', () => {
     test('should collect chest data from registered system', () => {
       mockSystems.chest = {
         chests: {
-          'chest_1': { id: 'chest_1', x: 100, y: 200, contents: { 1: 5 } }
+          'chest_1': {
+            id: 'chest_1', name: 'Baú', x: 100, y: 200, width: 31, height: 31,
+            storage: { tools: { items: [{ id: 1, quantity: 5 }], limit: 5 } }
+          }
         }
       };
 
       const data = saveSystem._gatherGameData();
       expect(data.chests.chest_1).toBeDefined();
       expect(data.chests.chest_1.x).toBe(100);
-      expect(data.chests.chest_1.contents[1]).toBe(5);
+      expect(data.chests.chest_1.storage.tools.items[0].id).toBe(1);
+      expect(data.chests.chest_1.storage.tools.items[0].quantity).toBe(5);
     });
   });
 
@@ -926,18 +930,39 @@ describe('SaveSystem (Production Implementation)', () => {
     });
 
     test('should apply chest data to existing chest system', async () => {
-      mockSystems.chest = { chests: {} };
+      // Mock espelha o contrato real: resetChests limpa, restoreChest recria.
+      mockSystems.chest = {
+        chests: {},
+        resetChests() { this.chests = {}; },
+        restoreChest(d) { this.chests[d.id] = { id: d.id, x: d.x, y: d.y, storage: d.storage || {} }; }
+      };
 
       await saveSystem.applySaveData({
         data: {
           chests: {
-            'chest_1': { id: 'chest_1', x: 100, y: 200, contents: { 1: 5 } }
+            'chest_1': {
+              id: 'chest_1', x: 100, y: 200,
+              storage: { tools: { items: [{ id: 1, quantity: 5 }], limit: 5 } }
+            }
           }
         }
       });
 
       expect(mockSystems.chest.chests['chest_1']).toBeDefined();
-      expect(mockSystems.chest.chests['chest_1'].contents[1]).toBe(5);
+      expect(mockSystems.chest.chests['chest_1'].storage.tools.items[0].quantity).toBe(5);
+    });
+
+    test('should reset leaked chests when save has none', async () => {
+      // Baú "vazado" de outro slot deve ser removido mesmo sem data.chests.
+      mockSystems.chest = {
+        chests: { leaked: { id: 'leaked', x: 0, y: 0, storage: {} } },
+        resetChests() { this.chests = {}; },
+        restoreChest(d) { this.chests[d.id] = { id: d.id, storage: d.storage || {} }; }
+      };
+
+      await saveSystem.applySaveData({ data: {} });
+
+      expect(mockSystems.chest.chests.leaked).toBeUndefined();
     });
   });
 

@@ -6,6 +6,7 @@ import { TILE_SIZE } from './worldConstants.js';
 import { registerSystem, getObject } from './gameState.js';
 import { t } from './i18n/i18n.js';
 import { setItemIcon } from './itemUtils.js';
+import { searchTokens, matchesSearch } from './searchMatch.js';
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -17,6 +18,12 @@ export const chestSystem = {
     currentChest: null,
     categories: ['tools', 'construction', 'animals', 'food', 'resources'],
     slotsPerCategory: 5,
+    // UI state (paridade com o warehouse): categoria ativa do baú, buscas por
+    // painel e a quantidade selecionada por item (chave `chest:<id>` / `inv:<id>`).
+    activeChestCategory: 'tools',
+    chestSearch: '',
+    invSearch: '',
+    qtySelection: new Map(),
     
     /**
      * Inicializa o sistema de baús
@@ -25,7 +32,8 @@ export const chestSystem = {
      */
     init() {
         this.injectStyles();
-        this.loadChests();
+        // Baús são persistidos POR SLOT via saveSystem (getChestsData/applyChestsData),
+        // não numa chave global — senão vazam entre saves/personagens (bug #181-like).
         registerSystem('chest', this);
         logger.info('📦 Sistema de baús inicializado');
         return this;
@@ -160,7 +168,13 @@ export const chestSystem = {
     createChestUI(chest) {
         // Remover UI existente
         this.closeChestUI();
-        
+
+        // Estado da UI zerado a cada abertura (categoria ativa, buscas, seleção).
+        this.activeChestCategory = this.categories[0];
+        this.chestSearch = '';
+        this.invSearch = '';
+        this.qtySelection.clear();
+
         // Criar overlay
         const overlay = document.createElement('div');
         overlay.className = 'cht-overlay';
@@ -191,23 +205,31 @@ export const chestSystem = {
         const leftTitle = document.createElement('div');
         leftTitle.className = 'cht-side-title';
         leftTitle.textContent = `📦 ${t('chest.storage')}`;
+        const chestSearch = this._makeSearchInput('cht-search-chest', t('chest.searchChestAria'), (v) => {
+            this.chestSearch = v;
+            this.renderChestItems(chest.id);
+        });
         const categoriesDiv = document.createElement('div');
         categoriesDiv.className = 'cht-categories';
         categoriesDiv.id = 'cht-categories';
         const slotsDiv = document.createElement('div');
         slotsDiv.className = 'cht-slots';
         slotsDiv.id = 'cht-slots';
-        leftSide.append(leftTitle, categoriesDiv, slotsDiv);
+        leftSide.append(leftTitle, chestSearch, categoriesDiv, slotsDiv);
 
         const rightSide = document.createElement('div');
         rightSide.className = 'cht-side';
         const rightTitle = document.createElement('div');
         rightTitle.className = 'cht-side-title';
         rightTitle.textContent = `🎒 ${t('chest.inventory')}`;
+        const invSearch = this._makeSearchInput('cht-search-inv', t('chest.searchInvAria'), (v) => {
+            this.invSearch = v;
+            this.renderPlayerInventory(chest.id);
+        });
         const playerInv = document.createElement('div');
         playerInv.className = 'cht-player-inventory';
         playerInv.id = 'cht-player-inventory';
-        rightSide.append(rightTitle, playerInv);
+        rightSide.append(rightTitle, invSearch, playerInv);
 
         chtContent.append(leftSide, rightSide);
 
@@ -241,6 +263,17 @@ export const chestSystem = {
         // Adicionar event listeners
         chtCloseBtn.addEventListener('click', () => this.closeChestUI());
         overlay.addEventListener('click', () => this.closeChestUI());
+
+        // Impede que teclas digitadas nos campos (busca, quantidade) vazem pros
+        // handlers globais do jogo (mover, abrir menus, fechar). Eles escutam no
+        // document na fase de bubbling, então parar aqui (ancestral) basta.
+        const stopFieldKeys = (e) => {
+            const tg = e.target;
+            if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) e.stopPropagation();
+        };
+        panel.addEventListener('keydown', stopFieldKeys);
+        panel.addEventListener('keyup', stopFieldKeys);
+        panel.addEventListener('keypress', stopFieldKeys);
 
         takeAllBtn.addEventListener('click', () => this.takeAllItems(chest.id));
         storeAllBtn.addEventListener('click', () => this.storeAllItems(chest.id));
@@ -303,21 +336,22 @@ export const chestSystem = {
         
         container.replaceChildren();
         this.categories.forEach(category => {
-            const itemCount = chest.storage[category]?.items?.length || 0;
+            const used = chest.storage[category]?.items?.length || 0;
+            const max = chest.storage[category]?.limit || this.slotsPerCategory;
             const btn = document.createElement('button');
             btn.className = 'cht-category-btn';
             btn.dataset.category = category;
-            btn.textContent = `${this.getCategoryIcon(category)} ${category} (${itemCount})`;
+            if (category === this.activeChestCategory) btn.classList.add('active');
+            // Readout por categoria: ícone + nome localizado + slots usados/máx.
+            btn.textContent = `${this.getCategoryIcon(category)} ${this._categoryName(category)} (${used}/${max})`;
             btn.addEventListener('click', () => {
-                container.querySelectorAll('.cht-category-btn').forEach(b => { b.classList.remove('active'); });
+                this.activeChestCategory = category;
+                container.querySelectorAll('.cht-category-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+                this.renderChestItems(chestId);
             });
             container.appendChild(btn);
         });
-        
-        // Ativar primeira categoria
-        const firstBtn = container.querySelector('.cht-category-btn');
-        if (firstBtn) firstBtn.classList.add('active');
     },
     
     /**
@@ -330,51 +364,56 @@ export const chestSystem = {
         const chest = this.chests[chestId];
         const container = document.getElementById('cht-slots');
         if (!chest || !container) return;
-        
-        // Contar total de itens
-        let totalItems = 0;
-        this.categories.forEach(category => {
-            totalItems += chest.storage[category]?.items?.length || 0;
-        });
-        
+
         container.replaceChildren();
 
-        if (totalItems === 0) {
+        // Com busca ativa, varre TODAS as categorias (item guardado noutra
+        // categoria não fica escondido); senão, mostra só a categoria ativa.
+        const tokens = searchTokens(this.chestSearch);
+        const searching = tokens.length > 0;
+        const cats = searching ? this.categories : [this.activeChestCategory];
+
+        const rows = [];
+        for (const category of cats) {
+            const items = chest.storage[category]?.items || [];
+            for (const item of items) {
+                if (searching && !matchesSearch(item.name || '', tokens)) continue;
+                rows.push({ item, category });
+            }
+        }
+
+        if (!rows.length) {
             const emptyMsg = document.createElement('div');
             emptyMsg.classList.add('cht-empty-state');
-            emptyMsg.textContent = `📦 ${t('chest.empty')}`;
+            emptyMsg.textContent = searching ? `🔍 ${t('chest.noResults')}` : `📦 ${t('chest.empty')}`;
             container.appendChild(emptyMsg);
-        } else {
-            this.categories.forEach(category => {
-                const items = chest.storage[category]?.items || [];
-                items.forEach(item => {
-                    const slot = document.createElement('div');
-                    slot.className = 'cht-slot';
-                    slot.dataset.itemId = item.id;
-                    slot.dataset.category = category;
-                    const iconDiv = document.createElement('div');
-                    iconDiv.className = 'cht-item-icon';
-                    setItemIcon(iconDiv, item.icon || '📦', item.name);
-                    const nameDiv = document.createElement('div');
-                    nameDiv.className = 'cht-item-name';
-                    nameDiv.textContent = item.name;
-                    const qtyDiv = document.createElement('div');
-                    qtyDiv.className = 'cht-item-quantity';
-                    qtyDiv.textContent = item.quantity;
-                    slot.append(iconDiv, nameDiv, qtyDiv);
-                    slot.addEventListener('click', () => {
-                        this.takeItemFromChest(chestId, item.id, category);
-                    });
-                    container.appendChild(slot);
-                });
-            });
+            return;
+        }
 
-            const emptySlots = (this.categories.length * this.slotsPerCategory) - totalItems;
-            for (let i = 0; i < emptySlots; i++) {
-                const emptySlot = document.createElement('div');
-                emptySlot.className = 'cht-slot empty';
-                container.appendChild(emptySlot);
-            }
+        for (const { item, category } of rows) {
+            const max = item.quantity || 0;
+            const key = `chest:${category}:${item.id}`;
+            const slot = document.createElement('div');
+            slot.className = 'cht-slot';
+            slot.dataset.itemId = item.id;
+            slot.dataset.category = category;
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'cht-item-icon';
+            setItemIcon(iconDiv, item.icon || '📦', item.name);
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'cht-item-name';
+            nameDiv.textContent = item.name;
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'cht-item-quantity';
+            qtyDiv.textContent = `${max}x`;
+            slot.append(iconDiv, nameDiv, qtyDiv);
+
+            const controls = this._makeQtyControls(key, max, 'take', item.name, (amount) => {
+                this.takeItemFromChest(chestId, item.id, category, amount);
+            });
+            slot.appendChild(controls);
+            container.appendChild(slot);
         }
     },
     
@@ -398,38 +437,160 @@ export const chestSystem = {
 
         const inventory = inventorySystem.getInventory();
         container.replaceChildren();
-        let itemCount = 0;
 
+        const tokens = searchTokens(this.invSearch);
+        const searching = tokens.length > 0;
+
+        const rows = [];
         Object.entries(inventory).forEach(([category, data]) => {
-            data.items.forEach(item => {
-                itemCount++;
-                const itemEl = document.createElement('div');
-                itemEl.className = 'cht-inventory-item';
-                itemEl.dataset.itemId = item.id;
-                itemEl.dataset.category = category;
-                const iconDiv = document.createElement('div');
-                iconDiv.className = 'cht-item-icon';
-                setItemIcon(iconDiv, item.icon || '🎒', item.name);
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'cht-item-name';
-                nameDiv.textContent = item.name;
-                const qtyDiv = document.createElement('div');
-                qtyDiv.className = 'cht-item-quantity';
-                qtyDiv.textContent = item.quantity;
-                itemEl.append(iconDiv, nameDiv, qtyDiv);
-                itemEl.addEventListener('click', () => {
-                    this.storeItemInChest(chestId, item.id, category);
-                });
-                container.appendChild(itemEl);
+            (data.items || []).forEach(item => {
+                if (searching && !matchesSearch(item.name || '', tokens)) return;
+                rows.push({ item, category });
             });
         });
 
-        if (itemCount === 0) {
+        if (!rows.length) {
             const emptyMsg = document.createElement('div');
             emptyMsg.classList.add('cht-empty-state');
-            emptyMsg.textContent = `🎒 ${t('inventory.empty')}`;
+            emptyMsg.textContent = searching ? `🔍 ${t('chest.noResults')}` : `🎒 ${t('inventory.empty')}`;
             container.appendChild(emptyMsg);
+            return;
         }
+
+        for (const { item, category } of rows) {
+            const max = item.quantity || 0;
+            const key = `inv:${item.id}`;
+            const itemEl = document.createElement('div');
+            itemEl.className = 'cht-inventory-item';
+            itemEl.dataset.itemId = item.id;
+            itemEl.dataset.category = category;
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'cht-item-icon';
+            setItemIcon(iconDiv, item.icon || '🎒', item.name);
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'cht-item-name';
+            nameDiv.textContent = item.name;
+            const qtyDiv = document.createElement('div');
+            qtyDiv.className = 'cht-item-quantity';
+            qtyDiv.textContent = `${max}x`;
+            itemEl.append(iconDiv, nameDiv, qtyDiv);
+
+            const controls = this._makeQtyControls(key, max, 'store', item.name, (amount) => {
+                this.storeItemInChest(chestId, item.id, category, amount);
+            });
+            itemEl.appendChild(controls);
+            container.appendChild(itemEl);
+        }
+    },
+
+    /**
+     * Cria um input de busca (lupa) padrão para os painéis do baú.
+     * @param {string} id - id do elemento input
+     * @param {(value:string)=>void} onInput - callback com o valor digitado
+     * @returns {HTMLElement} wrapper contendo o input
+     */
+    _makeSearchInput(id, ariaLabel, onInput) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cht-search';
+        const input = document.createElement('input');
+        input.type = 'search';
+        input.id = id;
+        input.className = 'cht-search-input';
+        input.placeholder = `🔍 ${t('chest.search')}`;
+        input.setAttribute('aria-label', ariaLabel);
+        input.addEventListener('input', () => onInput(input.value));
+        wrap.appendChild(input);
+        return wrap;
+    },
+
+    /**
+     * Monta os controles de quantidade em lote (presets 5/10/100/All + campo
+     * manual + botão de ação), espelhando o warehouse. `max` limita a seleção;
+     * o campo aceita digitar acima do máximo e é fixado (clamp) na ação.
+     * @param {string} key - chave da seleção persistida em qtySelection
+     * @param {number} max - quantidade máxima disponível
+     * @param {'take'|'store'} action - rótulo/tradução do botão de ação
+     * @param {(amount:number)=>void} onAction - executa a transferência
+     * @returns {HTMLElement} wrapper com controles + botão
+     */
+    _makeQtyControls(key, max, action, itemName, onAction) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cht-qty-controls';
+        // Agrupa os controles sob o nome do item (contexto p/ leitor de tela).
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', itemName);
+
+        const saved = this.qtySelection.get(key) || 1;
+        const selected = Math.max(1, Math.min(saved, Math.max(1, max)));
+
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'cht-qty-input';
+        input.min = '1';
+        input.max = String(max);
+        input.value = String(selected);
+        input.setAttribute('aria-label', t('chest.qtyAria', { name: itemName }));
+
+        const actionBtn = document.createElement('button');
+        actionBtn.className = `cht-qty-action ${action === 'take' ? 'take' : 'store'}`;
+        const btnKey = action === 'take' ? 'chest.takeBtn' : 'chest.storeBtn';
+        const ariaKey = action === 'take' ? 'chest.takeAria' : 'chest.storeAria';
+        const setBtnText = (q) => {
+            actionBtn.textContent = t(btnKey, { qty: q });
+            // aria nomeia o item (o texto visível só traz a quantidade).
+            actionBtn.setAttribute('aria-label', t(ariaKey, { qty: q, name: itemName }));
+        };
+
+        // Fixa (clamp) a seleção e reflete no campo + botão.
+        const setQty = (v) => {
+            const clamped = Math.max(1, Math.min(Math.floor(Number(v) || 1), Math.max(1, max)));
+            this.qtySelection.set(key, clamped);
+            input.value = String(clamped);
+            setBtnText(clamped);
+        };
+
+        const presets = document.createElement('div');
+        presets.className = 'cht-qty-presets';
+        for (const p of ['5', '10', '100']) {
+            const b = document.createElement('button');
+            b.className = 'cht-qty-btn';
+            b.textContent = p;
+            b.setAttribute('aria-label', t('chest.presetAria', { qty: p, name: itemName }));
+            b.addEventListener('click', (e) => { e.stopPropagation(); setQty(Number(p)); });
+            presets.appendChild(b);
+        }
+        const allBtn = document.createElement('button');
+        allBtn.className = 'cht-qty-btn cht-qty-all';
+        allBtn.textContent = t('chest.all');
+        allBtn.setAttribute('aria-label', t('chest.allAria', { name: itemName }));
+        allBtn.addEventListener('click', (e) => { e.stopPropagation(); setQty(max); });
+        presets.appendChild(allBtn);
+
+        // Campo manual: digita livre (mesmo acima do máx); fixa no change.
+        input.addEventListener('input', () => {
+            this.qtySelection.set(key, Math.max(1, Math.floor(Number(input.value) || 1)));
+        });
+        input.addEventListener('change', () => setQty(input.value));
+
+        actionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const amount = Math.max(1, Math.min(
+                Math.floor(Number(input.value) || (this.qtySelection.get(key) || 1)),
+                Math.max(1, max),
+            ));
+            this.qtySelection.set(key, amount);
+            onAction(amount);
+        });
+
+        setBtnText(selected);
+
+        const actions = document.createElement('div');
+        actions.className = 'cht-qty-row';
+        actions.append(input, actionBtn);
+
+        wrap.append(presets, actions);
+        return wrap;
     },
     
     /**
@@ -440,42 +601,46 @@ export const chestSystem = {
      * @param {string} fromCategory - Categoria de origem do item no inventário
      * @returns {void}
      */
-    storeItemInChest(chestId, itemId, fromCategory) {
+    storeItemInChest(chestId, itemId, fromCategory, amount = 1) {
         const chest = this.chests[chestId];
-        if (!chest) return;
-        
-        // Obter dados do item
-        const itemData = inventorySystem?.findItemData(itemId);
+        if (!chest || !inventorySystem) return;
+
+        const itemData = inventorySystem.findItemData(itemId);
         if (!itemData) return;
-        
-        // Determinar categoria no baú
+
         const toCategory = this.autoMapCategory(itemData.type || fromCategory);
-        
-        // Verificar se há espaço na categoria
-        if (chest.storage[toCategory].items.length >= this.slotsPerCategory) {
-            this.showMessage(`❌ ${t('chest.categoryFull', { category: toCategory })}`, 'error');
-            return;
-        }
-        
-        // Remover 1 item do inventário
-        if (inventorySystem?.removeItem(itemId, 1)) {
-            // Adicionar ao baú
-            const existingItem = chest.storage[toCategory].items.find(i => i.id === itemId);
-            if (existingItem) {
-                existingItem.quantity++;
-            } else {
-                chest.storage[toCategory].items.push({
-                    ...itemData,
-                    quantity: 1
-                });
+        const catData = chest.storage[toCategory];
+        if (!catData) return;
+        const limit = catData.limit || this.slotsPerCategory;
+
+        // Quer mover o mínimo entre o pedido e o que o player realmente tem.
+        const invHas = inventorySystem.getItemQuantity(itemId);
+        const want = Math.max(1, Math.min(Math.floor(amount) || 1, invHas));
+
+        let moved = 0;
+        while (moved < want) {
+            const existing = catData.items.find(i => i.id === itemId);
+            // Item novo sem slot livre → categoria cheia (para o loop).
+            if (!existing && catData.items.length >= limit) {
+                if (moved === 0) {
+                    this.showMessage(`❌ ${t('chest.categoryFull', { category: this._categoryName(toCategory) })}`, 'error');
+                    return;
+                }
+                break;
             }
-            
-            this.showMessage(`✅ ${t('chest.stored', { name: itemData.name })}`, 'success');
-            this.renderChestItems(chestId);
-            this.renderPlayerInventory(chestId);
-            this.renderChestCategories(chestId);
-            this.saveChests();
+            if (!inventorySystem.removeItem(itemId, 1)) break;
+            if (existing) existing.quantity++;
+            else catData.items.push({ ...itemData, quantity: 1 });
+            moved++;
         }
+        if (moved === 0) return;
+
+        this.showMessage(`✅ ${t('chest.storedQty', { qty: moved, name: itemData.name })}`, 'success');
+        this.qtySelection.delete(`inv:${itemId}`);
+        this.renderChestItems(chestId);
+        this.renderPlayerInventory(chestId);
+        this.renderChestCategories(chestId);
+        this.saveChests();
     },
     
     /**
@@ -486,33 +651,35 @@ export const chestSystem = {
      * @param {string} fromCategory - Categoria do item no baú
      * @returns {void}
      */
-    takeItemFromChest(chestId, itemId, fromCategory) {
+    takeItemFromChest(chestId, itemId, fromCategory, amount = 1) {
         const chest = this.chests[chestId];
         if (!chest) return;
-        
+
         const categoryData = chest.storage[fromCategory];
         if (!categoryData) return;
-        
+
         const itemIndex = categoryData.items.findIndex(i => i.id === itemId);
         if (itemIndex === -1) return;
-        
+
         const item = categoryData.items[itemIndex];
-        
-        // Adicionar ao inventário do jogador
-        if (inventorySystem?.addItem(itemId, 1)) {
-            // Remover do baú
-            if (item.quantity > 1) {
-                item.quantity--;
-            } else {
-                categoryData.items.splice(itemIndex, 1);
-            }
-            
-            this.showMessage(`✅ ${t('chest.taken', { name: item.name })}`, 'success');
-            this.renderChestItems(chestId);
-            this.renderPlayerInventory(chestId);
-            this.renderChestCategories(chestId);
-            this.saveChests();
+        const want = Math.max(1, Math.min(Math.floor(amount) || 1, item.quantity || 0));
+
+        let moved = 0;
+        // Transfere unidade a unidade; para se o inventário do player encher.
+        while (moved < want && item.quantity > 0) {
+            if (!inventorySystem?.addItem(itemId, 1)) break;
+            item.quantity--;
+            moved++;
         }
+        if (moved === 0) return;
+        if (item.quantity <= 0) categoryData.items.splice(itemIndex, 1);
+
+        this.showMessage(`✅ ${t('chest.tookQty', { qty: moved, name: item.name })}`, 'success');
+        this.qtySelection.delete(`chest:${fromCategory}:${itemId}`);
+        this.renderChestItems(chestId);
+        this.renderPlayerInventory(chestId);
+        this.renderChestCategories(chestId);
+        this.saveChests();
     },
     
     /**
@@ -664,6 +831,16 @@ export const chestSystem = {
         };
         return icons[category] || '📦';
     },
+
+    /**
+     * Nome localizado da categoria do baú (fallback: a própria chave).
+     * @param {string} category - chave da categoria
+     * @returns {string} nome traduzido
+     */
+    _categoryName(category) {
+        const name = t(`chest.categories.${category}`);
+        return (name && name !== `chest.categories.${category}`) ? name : category;
+    },
     
     /**
      * Exibe uma mensagem temporária na tela
@@ -689,85 +866,74 @@ export const chestSystem = {
     },
     
     /**
-     * Salva todos os baús no localStorage
-     * Serializa os dados dos baús removendo referências circulares
+     * No-op. Baús são persistidos POR SLOT pelo saveSystem (getChestsData na
+     * hora de salvar). A antiga chave global `farmingXP_chests` vazava entre
+     * saves/personagens (#181-like), então foi removida. Mantido pra compat com
+     * os vários callers internos que sinalizavam "estado mudou".
      * @returns {void}
      */
-    saveChests() {
-        try {
-            const chestsToSave = {};
-            
-            for (const chestId in this.chests) {
-                const chest = this.chests[chestId];
-                // Remover referências circulares
-                chestsToSave[chestId] = {
-                    id: chest.id,
-                    name: chest.name,
-                    x: chest.x,
-                    y: chest.y,
-                    width: chest.width,
-                    height: chest.height,
-                    storage: chest.storage,
-                    type: chest.type,
-                    originalType: chest.originalType
-                };
-            }
+    saveChests() { /* persistência agora é por slot (saveSystem) */ },
 
-            localStorage.setItem('farmingXP_chests', JSON.stringify(chestsToSave));
-            logger.debug('💾 Baús salvos no localStorage');
-        } catch (e) {
-            logger.error('❌ Erro ao salvar baús:', e);
-        }
-    },
-    
     /**
-     * Carrega baús salvos do localStorage
-     * Deserializa os dados e recria os baús no mundo do jogo
+     * No-op. Ver {@link chestSystem.saveChests}. O carregamento acontece por
+     * slot via `saveSystem._applyChestsData` → `restoreChest`.
      * @returns {void}
      */
-    loadChests() {
-        try {
-            const saved = localStorage.getItem('farmingXP_chests');
-            if (saved) {
-                const loadedChests = JSON.parse(saved);
-                const theWorld = getObject('world');
-                const addWorldObject = theWorld?.addWorldObject;
+    loadChests() { /* carregamento agora é por slot (saveSystem) */ },
 
-                for (const chestId in loadedChests) {
-                    const chestData = loadedChests[chestId];
-                    this.chests[chestId] = chestData;
-
-                    // Adicionar ao mundo visual (sem função draw personalizada)
-                    if (addWorldObject) {
-                        addWorldObject({
-                            id: chestData.id,
-                            name: chestData.name,
-                            x: chestData.x,
-                            y: chestData.y,
-                            width: chestData.width,
-                            height: chestData.height,
-                            type: 'chest',
-                            originalType: 'chest',
-                            interactable: true,
-                            draw: undefined, // Deixa o theWorld.js desenhar
-                            getHitbox: () => ({
-                                x: chestData.x,
-                                y: chestData.y,
-                                width: chestData.width,
-                                height: chestData.height
-                            }),
-                            onInteract: () => this.openChest(chestData.id)
-                        });
-                    }
-                }
-
-                logger.debug('💾 Baús carregados do localStorage:', Object.keys(loadedChests).length);
-            }
-        } catch (e) {
-            logger.error('❌ Erro ao carregar baús:', e);
+    /**
+     * Remove TODOS os baús do mundo e da memória. Chamado ao carregar um save ou
+     * iniciar um novo jogo, pra não vazar baús de um slot/sessão pra outro.
+     * @returns {void}
+     */
+    resetChests() {
+        const theWorld = getObject('world');
+        const removeWorldObject = window.removeWorldObject || theWorld?.objectDestroyed;
+        for (const chestId of Object.keys(this.chests)) {
+            if (removeWorldObject) removeWorldObject(chestId);
         }
+        this.chests = {};
+        // Se a UI de um baú que sumiu estava aberta, fecha.
+        if (this.currentChest) this.closeChestUI();
     },
-    
+
+    /**
+     * Recria um baú a partir dos dados de um save (usado por saveSystem no load).
+     * Preserva id/posição/dimensões e restaura o `storage` (itens por categoria).
+     * @param {Object} chestData - dados serializados do baú
+     * @returns {void}
+     */
+    restoreChest(chestData) {
+        if (!chestData || !chestData.id) return;
+
+        const chest = {
+            id: chestData.id,
+            name: chestData.name || 'Baú',
+            x: chestData.x,
+            y: chestData.y,
+            width: chestData.width || 31,
+            height: chestData.height || 31,
+            icon: '📦',
+            type: 'chest',
+            originalType: 'chest',
+            interactable: true,
+            storageId: chestData.id,
+            storage: {}
+        };
+
+        // Inicializa as categorias e restaura os itens salvos (se houver).
+        this.categories.forEach(category => {
+            const saved = chestData.storage?.[category];
+            chest.storage[category] = {
+                items: Array.isArray(saved?.items) ? saved.items : [],
+                limit: this.slotsPerCategory
+            };
+        });
+
+        this.chests[chest.id] = chest;
+        this.addChestToWorld(chest);
+    },
+
     /**
      * Remove um baú do jogo
      * Deleta o baú do mundo visual e do sistema de armazenamento

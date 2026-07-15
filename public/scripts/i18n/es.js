@@ -1016,7 +1016,28 @@ export default {
     storedAll: '{count} artículos guardados en el cofre',
     organized: '¡Cofre organizado!',
     notFound: '¡Cofre no encontrado!',
-    categoryFull: '¡Categoría {category} llena en el cofre!'
+    categoryFull: '¡Categoría {category} llena en el cofre!',
+    search: 'Buscar...',
+    noResults: 'Ningún artículo coincide con la búsqueda',
+    all: 'Todo',
+    takeBtn: 'tomar ({qty})',
+    storeBtn: 'guardar ({qty})',
+    tookQty: '{qty}x {name} retirado(s) del cofre',
+    storedQty: '{qty}x {name} guardado(s) en el cofre',
+    searchChestAria: 'Buscar en el almacenamiento del cofre',
+    searchInvAria: 'Buscar en tu inventario',
+    qtyAria: 'Cantidad de {name}',
+    takeAria: 'Tomar {qty} de {name}',
+    storeAria: 'Guardar {qty} de {name}',
+    presetAria: 'Definir cantidad {qty} de {name}',
+    allAria: 'Seleccionar todo de {name}',
+    categories: {
+      tools: 'Herramientas',
+      construction: 'Construcción',
+      animals: 'Animales',
+      food: 'Comida',
+      resources: 'Recursos'
+    }
   },
 
   // Well System
