@@ -1024,6 +1024,13 @@ export default {
     storeBtn: 'guardar ({qty})',
     tookQty: '{qty}x {name} retirado(s) del cofre',
     storedQty: '{qty}x {name} guardado(s) en el cofre',
+    searchChestAria: 'Buscar en el almacenamiento del cofre',
+    searchInvAria: 'Buscar en tu inventario',
+    qtyAria: 'Cantidad de {name}',
+    takeAria: 'Tomar {qty} de {name}',
+    storeAria: 'Guardar {qty} de {name}',
+    presetAria: 'Definir cantidad {qty} de {name}',
+    allAria: 'Seleccionar todo de {name}',
     categories: {
       tools: 'Herramientas',
       construction: 'Construcción',

@@ -1023,6 +1023,13 @@ export default {
     storeBtn: 'guardar ({qty})',
     tookQty: '{qty}x {name} retirado(s) do baú',
     storedQty: '{qty}x {name} guardado(s) no baú',
+    searchChestAria: 'Buscar no armazenamento do baú',
+    searchInvAria: 'Buscar no seu inventário',
+    qtyAria: 'Quantidade de {name}',
+    takeAria: 'Pegar {qty} de {name}',
+    storeAria: 'Guardar {qty} de {name}',
+    presetAria: 'Definir quantidade {qty} de {name}',
+    allAria: 'Selecionar todos de {name}',
     categories: {
       tools: 'Ferramentas',
       construction: 'Construção',

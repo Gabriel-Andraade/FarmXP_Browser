@@ -1023,6 +1023,13 @@ export default {
     storeBtn: 'store ({qty})',
     tookQty: '{qty}x {name} taken from chest',
     storedQty: '{qty}x {name} stored in chest',
+    searchChestAria: 'Search chest storage',
+    searchInvAria: 'Search your inventory',
+    qtyAria: 'Quantity of {name}',
+    takeAria: 'Take {qty} of {name}',
+    storeAria: 'Store {qty} of {name}',
+    presetAria: 'Set quantity {qty} for {name}',
+    allAria: 'Select all of {name}',
     categories: {
       tools: 'Tools',
       construction: 'Construction',

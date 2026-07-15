@@ -205,7 +205,7 @@ export const chestSystem = {
         const leftTitle = document.createElement('div');
         leftTitle.className = 'cht-side-title';
         leftTitle.textContent = `📦 ${t('chest.storage')}`;
-        const chestSearch = this._makeSearchInput('cht-search-chest', (v) => {
+        const chestSearch = this._makeSearchInput('cht-search-chest', t('chest.searchChestAria'), (v) => {
             this.chestSearch = v;
             this.renderChestItems(chest.id);
         });
@@ -222,7 +222,7 @@ export const chestSystem = {
         const rightTitle = document.createElement('div');
         rightTitle.className = 'cht-side-title';
         rightTitle.textContent = `🎒 ${t('chest.inventory')}`;
-        const invSearch = this._makeSearchInput('cht-search-inv', (v) => {
+        const invSearch = this._makeSearchInput('cht-search-inv', t('chest.searchInvAria'), (v) => {
             this.invSearch = v;
             this.renderPlayerInventory(chest.id);
         });
@@ -409,7 +409,7 @@ export const chestSystem = {
             qtyDiv.textContent = `${max}x`;
             slot.append(iconDiv, nameDiv, qtyDiv);
 
-            const controls = this._makeQtyControls(key, max, 'take', (amount) => {
+            const controls = this._makeQtyControls(key, max, 'take', item.name, (amount) => {
                 this.takeItemFromChest(chestId, item.id, category, amount);
             });
             slot.appendChild(controls);
@@ -476,7 +476,7 @@ export const chestSystem = {
             qtyDiv.textContent = `${max}x`;
             itemEl.append(iconDiv, nameDiv, qtyDiv);
 
-            const controls = this._makeQtyControls(key, max, 'store', (amount) => {
+            const controls = this._makeQtyControls(key, max, 'store', item.name, (amount) => {
                 this.storeItemInChest(chestId, item.id, category, amount);
             });
             itemEl.appendChild(controls);
@@ -490,7 +490,7 @@ export const chestSystem = {
      * @param {(value:string)=>void} onInput - callback com o valor digitado
      * @returns {HTMLElement} wrapper contendo o input
      */
-    _makeSearchInput(id, onInput) {
+    _makeSearchInput(id, ariaLabel, onInput) {
         const wrap = document.createElement('div');
         wrap.className = 'cht-search';
         const input = document.createElement('input');
@@ -498,6 +498,7 @@ export const chestSystem = {
         input.id = id;
         input.className = 'cht-search-input';
         input.placeholder = `🔍 ${t('chest.search')}`;
+        input.setAttribute('aria-label', ariaLabel);
         input.addEventListener('input', () => onInput(input.value));
         wrap.appendChild(input);
         return wrap;
@@ -513,9 +514,12 @@ export const chestSystem = {
      * @param {(amount:number)=>void} onAction - executa a transferência
      * @returns {HTMLElement} wrapper com controles + botão
      */
-    _makeQtyControls(key, max, action, onAction) {
+    _makeQtyControls(key, max, action, itemName, onAction) {
         const wrap = document.createElement('div');
         wrap.className = 'cht-qty-controls';
+        // Agrupa os controles sob o nome do item (contexto p/ leitor de tela).
+        wrap.setAttribute('role', 'group');
+        wrap.setAttribute('aria-label', itemName);
 
         const saved = this.qtySelection.get(key) || 1;
         const selected = Math.max(1, Math.min(saved, Math.max(1, max)));
@@ -526,11 +530,17 @@ export const chestSystem = {
         input.min = '1';
         input.max = String(max);
         input.value = String(selected);
+        input.setAttribute('aria-label', t('chest.qtyAria', { name: itemName }));
 
         const actionBtn = document.createElement('button');
         actionBtn.className = `cht-qty-action ${action === 'take' ? 'take' : 'store'}`;
         const btnKey = action === 'take' ? 'chest.takeBtn' : 'chest.storeBtn';
-        const setBtnText = (q) => { actionBtn.textContent = t(btnKey, { qty: q }); };
+        const ariaKey = action === 'take' ? 'chest.takeAria' : 'chest.storeAria';
+        const setBtnText = (q) => {
+            actionBtn.textContent = t(btnKey, { qty: q });
+            // aria nomeia o item (o texto visível só traz a quantidade).
+            actionBtn.setAttribute('aria-label', t(ariaKey, { qty: q, name: itemName }));
+        };
 
         // Fixa (clamp) a seleção e reflete no campo + botão.
         const setQty = (v) => {
@@ -546,12 +556,14 @@ export const chestSystem = {
             const b = document.createElement('button');
             b.className = 'cht-qty-btn';
             b.textContent = p;
+            b.setAttribute('aria-label', t('chest.presetAria', { qty: p, name: itemName }));
             b.addEventListener('click', (e) => { e.stopPropagation(); setQty(Number(p)); });
             presets.appendChild(b);
         }
         const allBtn = document.createElement('button');
         allBtn.className = 'cht-qty-btn cht-qty-all';
         allBtn.textContent = t('chest.all');
+        allBtn.setAttribute('aria-label', t('chest.allAria', { name: itemName }));
         allBtn.addEventListener('click', (e) => { e.stopPropagation(); setQty(max); });
         presets.appendChild(allBtn);
 
