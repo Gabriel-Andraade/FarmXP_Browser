@@ -91,9 +91,21 @@ function getCurrentTime() {
     return { hour: 12, minute: 0 };
 }
 
+/** Índice de dia absoluto e monotônico, à prova de virada de mês/ano
+ *  (WeatherSystem.day reseta a cada mês). Usado pra comparar "dia seguinte". */
+function gameDayKey() {
+    if (typeof WeatherSystem?.totalGameMinutes === 'number') {
+        return Math.floor(WeatherSystem.totalGameMinutes / 1440);
+    }
+    const day = (typeof WeatherSystem?.day === 'number') ? WeatherSystem.day : null;
+    if (day == null) return null;
+    const month = (typeof WeatherSystem?.month === 'number') ? WeatherSystem.month : 0;
+    return month * 100 + day;
+}
+
 function shouldBeVisible() {
     // Dia da carona: a Bru está na empresa — some da cidade até o dia seguinte.
-    if (rideDay != null && typeof WeatherSystem?.day === 'number' && WeatherSystem.day === rideDay) {
+    if (rideDay != null && gameDayKey() === rideDay) {
         return false;
     }
     const { hour, minute } = getCurrentTime();
@@ -175,14 +187,17 @@ function getGreeting() {
 
 function markIntroDone() {
     dialogueState = 'intro_done';
-    if (typeof WeatherSystem?.day === 'number') introDoneDay = WeatherSystem.day;
+    const key = gameDayKey();
+    if (key != null) introDoneDay = key;
+    getSystem('save')?.markDirty?.();
 }
 
 /** true quando já passou pelo menos 1 dia desde o intro (Bru+Juan). */
 function hasRideDayArrived() {
     if (dialogueState !== 'intro_done') return false;
     if (typeof introDoneDay !== 'number') return false;
-    const today = (typeof WeatherSystem?.day === 'number') ? WeatherSystem.day : introDoneDay;
+    const today = gameDayKey();
+    if (today == null) return false;
     return today > introDoneDay;
 }
 
@@ -237,7 +252,8 @@ function runPendingRideOffer() {
  */
 function finishRide() {
     rideQuest = 'completed';
-    if (typeof WeatherSystem?.day === 'number') rideDay = WeatherSystem.day; // some da cidade hoje
+    const key = gameDayKey();
+    if (key != null) rideDay = key; // some da cidade hoje
     const xp = getSystem('xp');
     if (xp?.grantXP) xp.grantXP(BRU_RIDE_XP, 'quest:bru_ride');
     const save = getSystem('save');
@@ -729,15 +745,12 @@ function onInteract() {
         return;
     }
 
-    // 4) Aceitou a carona; cena do carro/agradecimento é parte B — fala neutra.
+    // 4) Aceitou a carona mas a cena do carro não concluiu (ex.: save/load no
+    //    meio) → retoma a cena, senão finishRide nunca roda e trava em 'riding'.
     const playerName = getPlayerName();
     const playerPortrait = getPlayerDialogPortrait();
     if (rideQuest === 'riding') {
-        dlg.start({
-            left: { name: playerName, portrait: playerPortrait },
-            right: { name: 'Bru', portrait: BRU_DIALOG_00 },
-            lines: [{ side: 'right', text: t('npc.bruQuest.ridingLine', { name: playerName }), end: true }],
-        });
+        dlg.start(buildCarRideDialogue());
         return;
     }
 
@@ -757,12 +770,26 @@ function getQuestState() {
 
 function setQuestState(data) {
     if (!data) return;
-    if (typeof data === 'string') { dialogueState = data; return; }
-    if (data.dialogue) dialogueState = data.dialogue;
-    if (typeof data.introDoneDay === 'number') introDoneDay = data.introDoneDay;
-    if (data.rideQuest) rideQuest = data.rideQuest;
-    if (typeof data.juanThanked === 'boolean') juanThanked = data.juanThanked;
-    if (typeof data.rideDay === 'number') rideDay = data.rideDay;
+    // Reseta campos ausentes aos defaults — evita vazamento de estado entre
+    // saves carregados na mesma sessão.
+    if (typeof data === 'string') {
+        dialogueState = data;
+        introDoneDay = null;
+        rideQuest = 'idle';
+        juanThanked = false;
+        rideDay = null;
+    } else {
+        dialogueState = data.dialogue ?? 'idle';
+        introDoneDay = (typeof data.introDoneDay === 'number') ? data.introDoneDay : null;
+        rideQuest = data.rideQuest ?? 'idle';
+        juanThanked = data.juanThanked === true;
+        rideDay = (typeof data.rideDay === 'number') ? data.rideDay : null;
+    }
+    // Migração: save antigo com intro concluído mas sem dia registrado → ancora
+    // no dia atual pra a carona liberar no dia seguinte (não na mesma hora).
+    if (dialogueState === 'intro_done' && introDoneDay == null) {
+        introDoneDay = gameDayKey();
+    }
 }
 
 // ─── Register NPC ───────────────────────────────────────────────────────────

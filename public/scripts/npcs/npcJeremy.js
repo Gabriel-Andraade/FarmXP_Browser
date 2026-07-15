@@ -92,6 +92,18 @@ function getCurrentTime() {
     return { hour: 12, minute: 0 };
 }
 
+/** Índice de dia absoluto e monotônico, à prova de virada de mês/ano
+ *  (WeatherSystem.day reseta a cada mês). Usado pra comparar "dia seguinte". */
+function gameDayKey() {
+    if (typeof WeatherSystem?.totalGameMinutes === 'number') {
+        return Math.floor(WeatherSystem.totalGameMinutes / 1440);
+    }
+    const day = (typeof WeatherSystem?.day === 'number') ? WeatherSystem.day : null;
+    if (day == null) return null;
+    const month = (typeof WeatherSystem?.month === 'number') ? WeatherSystem.month : 0;
+    return month * 100 + day;
+}
+
 function shouldBeVisible() {
     const { hour, minute } = getCurrentTime();
     if (hour > MORNING_HOUR && hour < NIGHT_HOUR) return true;
@@ -199,7 +211,8 @@ function buildIdleDialogue() {
         end: true,
         action: () => {
             dialogueState = 'rejected';
-            if (typeof WeatherSystem?.day === 'number') introDoneDay = WeatherSystem.day;
+            const key = gameDayKey();
+            if (key != null) introDoneDay = key;
             try { getSystem('save')?.markDirty?.(); } catch (_) { /* ignore */ }
         },
     });
@@ -253,7 +266,8 @@ function markDirtySave() {
 function hasRequestDayArrived() {
     if (dialogueState !== 'rejected') return false;
     if (typeof introDoneDay !== 'number') return false;
-    const today = (typeof WeatherSystem?.day === 'number') ? WeatherSystem.day : introDoneDay;
+    const today = gameDayKey();
+    if (today == null) return false;
     return today > introDoneDay;
 }
 
@@ -486,7 +500,7 @@ const JEREMY_CHOICES = {
 /** "J|texto" (Jeremy) / "M|texto" (player), interpolando {food}. */
 function choiceLineDecode(enc) {
     const kind = enc.slice(0, 1);
-    const text = enc.slice(2).split('{food}').join(deliveredFoodName || 'aquilo');
+    const text = enc.slice(2).split('{food}').join(deliveredFoodName || t('npc.jeremy.choices.foodFallback'));
     if (kind === 'J') return { side: 'right', text, setPortrait: { side: 'right', src: JEREMY_DIALOG_01 } };
     return { side: 'left', text };
 }
@@ -634,18 +648,33 @@ function getQuestState() {
 
 function setQuestState(data) {
     if (!data) return;
+    // Reseta campos ausentes aos defaults — evita vazamento de estado entre
+    // saves carregados na mesma sessão.
     if (typeof data === 'string') {
         dialogueState = data;
-        return;
+        introDoneDay = null;
+        supplyQuest = 'idle';
+        priceAgreed = false;
+        deliveredFoodName = '';
+        choicesQuest = 'idle';
+        jeremyTraits = { C: 0, R: 0, Re: 0 };
+        jeremyChoice = null;
+    } else {
+        dialogueState = data.dialogue ?? 'idle';
+        introDoneDay = (typeof data.introDoneDay === 'number') ? data.introDoneDay : null;
+        supplyQuest = data.supplyQuest ?? 'idle';
+        priceAgreed = data.priceAgreed === true;
+        deliveredFoodName = (typeof data.deliveredFoodName === 'string') ? data.deliveredFoodName : '';
+        choicesQuest = data.choicesQuest ?? 'idle';
+        jeremyTraits = (data.jeremyTraits && typeof data.jeremyTraits === 'object')
+            ? data.jeremyTraits : { C: 0, R: 0, Re: 0 };
+        jeremyChoice = data.jeremyChoice ?? null;
     }
-    if (data.dialogue) dialogueState = data.dialogue;
-    if (typeof data.introDoneDay === 'number') introDoneDay = data.introDoneDay;
-    if (data.supplyQuest) supplyQuest = data.supplyQuest;
-    if (typeof data.priceAgreed === 'boolean') priceAgreed = data.priceAgreed;
-    if (typeof data.deliveredFoodName === 'string') deliveredFoodName = data.deliveredFoodName;
-    if (data.choicesQuest) choicesQuest = data.choicesQuest;
-    if (data.jeremyTraits && typeof data.jeremyTraits === 'object') jeremyTraits = data.jeremyTraits;
-    if (data.jeremyChoice) jeremyChoice = data.jeremyChoice;
+    // Migração: save antigo com intro concluído mas sem dia registrado → ancora
+    // no dia atual pra o pedido liberar no dia seguinte (não na mesma hora).
+    if (dialogueState === 'rejected' && introDoneDay == null) {
+        introDoneDay = gameDayKey();
+    }
 }
 
 // ─── Register NPC ───────────────────────────────────────────────────────────

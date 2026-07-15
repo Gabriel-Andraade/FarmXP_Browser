@@ -2554,6 +2554,7 @@ export default {
         endRY: ["J|mejor seguir así. cada uno en su rincón, menos dolor de cabeza."],
         postComFamilia: "hola. ...todavía estoy pensando en lo que hablamos. gracias.",
         postSozinho: "hola. ...nada cambió por aquí, pero gracias por escuchar.",
+        foodFallback: "eso",
       },
       supply: {
         stellaIntro: [

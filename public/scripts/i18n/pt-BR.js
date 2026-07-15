@@ -2562,6 +2562,7 @@ export default {
         endRY: ['J|melhor continuar assim. cada um no seu canto, menos dor de cabeça.'],
         postComFamilia: 'e aí. ...ainda tô pensando naquilo que a gente conversou. obrigado.',
         postSozinho: 'e aí. ...nada mudou por aqui, mas valeu por ter ouvido.',
+        foodFallback: 'aquilo',
       },
       supply: {
         stellaIntro: [

@@ -456,7 +456,7 @@ function buildWelcomeDialogue() {
     lines.push(molly(t('npc.family.mollyQuest.declineBranch'), {
         type: 'choice',
         options: [
-            { text: t('npc.family.mollyQuest.declineChoice'), _goto: 'declineEnd', onSelect: () => { followupState = 'pending'; } },
+            { text: t('npc.family.mollyQuest.declineChoice'), _goto: 'declineEnd', onSelect: () => { followupState = 'pending'; getSystem('save')?.markDirty?.(); } },
             { text: aText, _goto: 'playerA' },
         ],
     }));
@@ -495,8 +495,8 @@ function buildReofferDialogue() {
         molly(t('npc.family.mollyQuest.reofferPrompt'), {
             type: 'choice',
             options: [
-                { text: t('npc.family.mollyQuest.reofferYes'), _goto: 'yes', onSelect: () => { followupState = 'resolved'; } },
-                { text: t('npc.family.mollyQuest.reofferNo'), _goto: 'no', onSelect: () => { followupState = 'declined'; } },
+                { text: t('npc.family.mollyQuest.reofferYes'), _goto: 'yes', onSelect: () => { followupState = 'resolved'; getSystem('save')?.markDirty?.(); } },
+                { text: t('npc.family.mollyQuest.reofferNo'), _goto: 'no', onSelect: () => { followupState = 'declined'; getSystem('save')?.markDirty?.(); } },
             ],
         }),
         me(t('npc.family.mollyQuest.reofferNo'), { _label: 'no' }),
@@ -602,17 +602,15 @@ function buildDeliveryDialogue() {
     lines.push(molly(t('npc.family.mollyQuest.deliverThanks'), {
         end: true,
         action: () => {
-            if (consumeIngredients()) {
+            const registry = getSystem('questRegistry');
+            // Sem registry não há como entregar a recompensa configurada → não
+            // consome nem conclui (mantém a quest ativa, pra não perder o item).
+            if (!registry?.complete) return;
+            if (!consumeIngredients()) return;
+            const questId = dinnerRecipe === 'dessert' ? 'molly_dinner_dessert' : 'molly_dinner_main';
+            if (registry.complete(questId)) {
                 dinnerQuest = 'completed';
-                const questId = dinnerRecipe === 'dessert' ? 'molly_dinner_dessert' : 'molly_dinner_main';
-                const registry = getSystem('questRegistry');
-                if (registry?.complete) {
-                    registry.complete(questId);
-                } else {
-                    document.dispatchEvent(new CustomEvent('questUpdated', { detail: { id: questId, status: 'completed' } }));
-                    const save = getSystem('save');
-                    if (save?.markDirty) save.markDirty();
-                }
+                getSystem('save')?.markDirty?.();
             }
         },
     }));
@@ -640,7 +638,7 @@ function onInteract() {
 
     if (dialogueState === 'idle') {
         const config = buildWelcomeDialogue();
-        config.onEnd = () => { dialogueState = 'intro_done'; };
+        config.onEnd = () => { dialogueState = 'intro_done'; getSystem('save')?.markDirty?.(); };
         dlg.start(config);
         return;
     }
@@ -679,11 +677,19 @@ function getQuestState() {
 
 function setQuestState(data) {
     if (!data) return;
-    if (typeof data === 'string') { dialogueState = data; return; }
-    if (data.dialogue) dialogueState = data.dialogue;
-    if (data.dinnerQuest) dinnerQuest = data.dinnerQuest;
-    if (data.dinnerRecipe) dinnerRecipe = data.dinnerRecipe;
-    if (data.followupState) followupState = data.followupState;
+    // Reseta campos ausentes aos defaults — evita que estado de um save vaze
+    // para outro carregado na mesma sessão.
+    if (typeof data === 'string') {
+        dialogueState = data;
+        dinnerQuest = 'idle';
+        dinnerRecipe = null;
+        followupState = 'idle';
+        return;
+    }
+    dialogueState = data.dialogue ?? 'idle';
+    dinnerQuest = data.dinnerQuest ?? 'idle';
+    dinnerRecipe = data.dinnerRecipe ?? null;
+    followupState = data.followupState ?? 'idle';
 }
 
 // ─── Register ───────────────────────────────────────────────────────────────

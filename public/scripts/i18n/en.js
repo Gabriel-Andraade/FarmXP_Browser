@@ -1279,7 +1279,7 @@ export default {
       title: 'Dinner with the Miller Family',
       description: 'Help Molly prepare the welcome feast: bring her the ingredients she asked for.',
       progressDessert: 'Ingredients (dessert):\nMilk: {milk}/1\nEggs: {eggs}/3',
-      progressMain: 'Ingredients (main dish):\nBroccoli: {broc}/2\nCauliflower: {cauli}/2\nBell Pepper: {chili}/1',
+      progressMain: 'Ingredients (main dish):\nBroccoli: {broc}/2\nCauliflower: {cauli}/2\nChili Pepper: {chili}/1',
       ready: 'You already have everything Molly asked for — take it to her!',
     },
     lucasSecret: {
@@ -2268,7 +2268,7 @@ export default {
         chooseMain: 'Main dish (longer, bigger reward)',
         chooseDessert: 'Dessert (faster, smaller reward)',
         dessertRequest: 'Great!!! well... I was thinking of making a cake... I will need [[1x Milk]] and [[3x Eggs]]. could you bring them to me?',
-        mainRequest: 'Great!!! Hmm... well, I already have a recipe in mind... I was thinking of making a warm Pumpkin Cream with gratin vegetables as one of the dishes! The problem is that I need to collect some things. Could you bring me [[2x Broccoli]], [[2x Cauliflower]] and [[1x Bell Pepper]] to give it a special touch?',
+        mainRequest: 'Great!!! Hmm... well, I already have a recipe in mind... I was thinking of making a warm Pumpkin Cream with gratin vegetables as one of the dishes! The problem is that I need to collect some things. Could you bring me [[2x Broccoli]], [[2x Cauliflower]] and [[1x Chili Pepper]] to give it a special touch?',
         pumpkinDelay: 'Ah, and the most time-consuming... I will need [[1x Big Pumpkin]]. My goodness, just thinking about how long a pumpkin takes to grow already depresses me... I think dinner will turn into breakfast!',
         pumpkinQuestion: {
           stella: 'What if there is a good pumpkin at the produce shop?',
@@ -2553,6 +2553,7 @@ export default {
         endRY: ["J|better to keep it this way. everyone in their own corner, less of a headache."],
         postComFamilia: "hey. ...I'm still thinking about what we talked about. thank you.",
         postSozinho: "hey. ...nothing's changed around here, but thanks for listening.",
+        foodFallback: "that",
       },
       supply: {
         stellaIntro: [
