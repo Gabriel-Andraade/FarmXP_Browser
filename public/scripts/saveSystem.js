@@ -978,6 +978,7 @@ class SaveSystem {
         const lucas = getSystem('npcLucas');
         const isabela = getSystem('npcIsabela');
         const molly = getSystem('npcMolly');
+        const jeremy = getSystem('npcJeremy');
         const tutorials = getSystem('tutorialQuests');
         const fuel = getSystem('fuel');
         // #227 lazy-load: se um NPC (de city) ainda não foi carregado, preserva
@@ -996,6 +997,7 @@ class SaveSystem {
             lucas_quest: npcState(lucas, 'lucas_quest', { secretQuest: 'idle' }),
             isabela_quest: npcState(isabela, 'isabela_quest', { hasNoticed: false }),
             molly_quest: npcState(molly, 'molly_quest', { dialogue: 'idle' }),
+            jeremy_quest: npcState(jeremy, 'jeremy_quest', { dialogue: 'idle', supplyQuest: 'idle' }),
             tutorial_quests: tutorials ? tutorials.getQuestState() : null,
         };
     }
@@ -1031,7 +1033,9 @@ class SaveSystem {
                 hunger: playerSystem?.needs?.hunger ?? 100,
                 thirst: playerSystem?.needs?.thirst ?? 100,
                 energy: playerSystem?.needs?.energy ?? 100
-            }
+            },
+            // Timer (ms epoch) do efeito de comida especial que congela fome+sede.
+            needsFreezeUntil: playerSystem?.needsFreezeUntil ?? 0
         };
     }
 
@@ -1158,6 +1162,10 @@ class SaveSystem {
                 playerSystem.needs.thirst = data.needs.thirst ?? 100;
                 playerSystem.needs.energy = data.needs.energy ?? 100;
             }
+        }
+        if (playerSystem && typeof data.needsFreezeUntil === 'number') {
+            // Timer em tempo real: se já expirou no momento do load, vira 0.
+            playerSystem.needsFreezeUntil = data.needsFreezeUntil > Date.now() ? data.needsFreezeUntil : 0;
         }
     }
 
@@ -1439,6 +1447,10 @@ class SaveSystem {
         const molly = getSystem('npcMolly');
         if (molly && flags.molly_quest) {
             molly.setQuestState(flags.molly_quest);
+        }
+        const jeremy = getSystem('npcJeremy');
+        if (jeremy && flags.jeremy_quest) {
+            jeremy.setQuestState(flags.jeremy_quest);
         }
         const tutorials = getSystem('tutorialQuests');
         if (tutorials && flags.tutorial_quests) {

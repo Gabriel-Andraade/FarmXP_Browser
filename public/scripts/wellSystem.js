@@ -312,6 +312,11 @@ export const wellSystem = {
     canSlider.addEventListener('input', () => { canSliderVal.textContent = `${canSlider.value}%`; });
     fillCanRow.append(canSlider, canSliderVal);
     transferOpts.appendChild(fillCanRow);
+    // Nível atual do balde/regador — feedback de que o fill funcionou.
+    const fillLevelsInfo = document.createElement('div');
+    fillLevelsInfo.id = 'well-fill-levels';
+    fillLevelsInfo.style.cssText = 'font-size:12px;opacity:0.9;margin-top:4px;text-align:center;';
+    transferOpts.appendChild(fillLevelsInfo);
     col2.append(h3_2, btnDrink, btnTransfer, transferOpts);
 
     // Coluna well
@@ -377,17 +382,33 @@ export const wellSystem = {
 
     if (timerEl) timerEl.hidden = !wellState.isPulling;
 
-    // Enquanto o balde está descendo (isPulling), bloqueia coletar/beber e
-    // descer de novo — só dá pra agir quando o balde volta.
+    // Feedback do nível atual do balde e do regador (senão o player enche e
+    // não vê nada mudar no menu, só a quantidade "1").
+    const levelsEl = document.getElementById('well-fill-levels');
+    if (levelsEl) {
+      const bucketLvl = Math.round(getSystem('bucket')?.getLevel?.() ?? 0);
+      const canLvl = Math.round(getSystem('wateringCan')?.getLevel?.() ?? 0);
+      levelsEl.textContent = `🪣 ${bucketLvl}%   ·   🚿 ${canLvl}%`;
+    }
+
+    // Enquanto o balde está descendo (isPulling), bloqueia coletar/beber/encher.
     const pulling = wellState.isPulling;
-    for (const id of ['btn-drink', 'btn-transfer-menu', 'btn-fill-bottle', 'btn-fill-can', 'btn-pull-water']) {
+    for (const id of ['btn-drink', 'btn-transfer-menu', 'btn-fill-bottle', 'btn-fill-can', 'btn-fill-bucket']) {
       const b = document.getElementById(id);
       if (b) b.disabled = pulling;
     }
+    // "Descer o balde": bloqueado descendo OU quando o poço já está cheio.
+    const pullBtn = document.getElementById('btn-pull-water');
+    if (pullBtn) pullBtn.disabled = pulling || wellState.waterLevel >= 100;
   },
 
   startPullingWater() {
     if (wellState.isPulling) return; // já descendo — não reinicia
+    if (wellState.waterLevel >= 100) {
+      // Poço já cheio — descer o balde não faz nada, então bloqueia.
+      handleWarn(t('well.alreadyFull'), "wellSystem:startPullingWater");
+      return;
+    }
 
     wellState.isPulling = true;
 

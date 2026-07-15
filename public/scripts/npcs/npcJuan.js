@@ -6,6 +6,7 @@
  */
 
 import { getSystem, registerSystem } from '../gameState.js';
+import { i18n } from '../i18n/i18n.js';
 import { WeatherSystem } from '../weather.js';
 import { camera } from '../thePlayer/cameraSystem.js';
 import { logger } from '../logger.js';
@@ -23,6 +24,8 @@ const JUAN = {
     map: 'city',
     interactRadius: 60,
 };
+
+const JUAN_DIALOG_00 = 'assets/character/juan/Juan_dialog_00.png';
 
 const NIGHT_HOUR = 19;
 const MORNING_HOUR = 6;
@@ -106,6 +109,56 @@ function checkPendingChange() {
     }
 }
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function t(key, params) { return i18n.t(key, params); }
+
+function getActiveCharacterId() {
+    const playerSys = getSystem('player');
+    return playerSys?.activeCharacter?.id || 'stella';
+}
+
+function getPlayerName() {
+    const id = getActiveCharacterId();
+    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
+}
+
+function getPlayerDialogPortrait() {
+    const id = getActiveCharacterId();
+    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
+}
+
+// ─── Recompensa (agradecimento pela carona) ─────────────────────────────────
+
+/**
+ * Juan entrega dinheiro = custo de encher o tanque de volta a 100% (varia
+ * conforme o combustível atual). O player não sabe do cálculo; pra ele é só
+ * um "obrigado". Concedido uma vez só (flag juanThanked na Bru).
+ */
+function giveJuanReward() {
+    const fuel = getSystem('fuel');
+    const refillPct = (fuel && typeof fuel.getMaxRefillPercent === 'function') ? fuel.getMaxRefillPercent() : 0;
+    const money = (fuel && typeof fuel.costForPercent === 'function') ? fuel.costForPercent(refillPct) : 0;
+    if (money > 0) {
+        const currency = getSystem('currency');
+        if (currency?.earn) currency.earn(money, 'quest:bru_ride_juan');
+    }
+    getSystem('npcBru')?.markJuanThanked?.();
+}
+
+function buildJuanThanksDialogue() {
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
+    return {
+        left: { name: playerName, portrait: playerPortrait },
+        right: { name: 'Juan', portrait: JUAN_DIALOG_00 },
+        lines: [
+            { side: 'right', text: t('npc.bruQuest.juanThanks'), setPortrait: { side: 'right', src: JUAN_DIALOG_00 } },
+            { side: 'left', text: t('npc.bruQuest.juanHandsMoney'), thought: true, narration: true, end: true, action: giveJuanReward },
+        ],
+    };
+}
+
 // ─── Interaction handler ────────────────────────────────────────────────────
 
 function onInteract() {
@@ -115,7 +168,25 @@ function onInteract() {
         return;
     }
 
-    // Placeholder — dialogue will be added later
+    const bru = getSystem('npcBru');
+    const ride = bru?.getRideQuestState?.();
+
+    // Depois da carona: Juan agradece e entrega o dinheiro (uma vez só).
+    if (ride && ride.rideQuest === 'completed' && !ride.juanThanked) {
+        dlg.start(buildJuanThanksDialogue());
+        return;
+    }
+
+    // Durante a janela da quest (antes da carona): Juan "dormindo na terra".
+    if (ride && (ride.available || ride.rideQuest === 'pending')) {
+        dlg.start({
+            left: { name: getPlayerName(), portrait: getPlayerDialogPortrait() },
+            lines: [{ side: 'left', text: t('npc.bruQuest.juanSleeping'), thought: true, end: true }],
+        });
+        return;
+    }
+
+    // Placeholder — diálogo próprio do Juan entra depois.
     logger.info('[Juan] Interaction triggered (no dialogue configured yet)');
 }
 

@@ -47,6 +47,14 @@ export class PlayerSystem {
         /** @type {Object} Needs modifiers from active character */
         this.needsModifiers = { energy: 1.0, hunger: 1.0, thirst: 1.0 };
 
+        /**
+         * Timestamp (ms, Date.now()) até quando fome+sede ficam "congeladas"
+         * em 100% (efeito de comidas especiais, ex.: marmita/bolo da Molly).
+         * 0 = sem efeito ativo. Energia continua decaindo normalmente.
+         * @type {number}
+         */
+        this.needsFreezeUntil = 0;
+
         // AbortController para cleanup de event listeners
         this.abortController = new AbortController();
 
@@ -221,8 +229,16 @@ export class PlayerSystem {
 
         const rates = this.needs.consumptionRates[actionType];
         const { hunger: mH = 1.0, thirst: mT = 1.0, energy: mE = 1.0 } = this.needsModifiers;
-        this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier * mH));
-        this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier * mT));
+
+        // Comida especial ativa: fome+sede ficam pinadas em 100% (não decaem)
+        // até o timer expirar. Energia decai normalmente mesmo assim.
+        if (Date.now() < this.needsFreezeUntil) {
+            this.needs.hunger = GAME_BALANCE.NEEDS.MAX_VALUE;
+            this.needs.thirst = GAME_BALANCE.NEEDS.MAX_VALUE;
+        } else {
+            this.needs.hunger = Math.max(0, this.needs.hunger - (rates.hunger * validMultiplier * mH));
+            this.needs.thirst = Math.max(0, this.needs.thirst - (rates.thirst * validMultiplier * mT));
+        }
 
         this.needs.energy = Math.max(0, Math.min(GAME_BALANCE.NEEDS.MAX_VALUE,
             this.needs.energy - (rates.energy * validMultiplier * mE)));
@@ -438,6 +454,31 @@ export class PlayerSystem {
         }
         
         this.restoreNeeds(hungerRestore, thirstRestore, energyRestore);
+
+        // Comidas especiais: congela fome+sede em 100% por N minutos e/ou dá XP.
+        if (item.needsFreezeMinutes > 0) {
+            this.freezeNeeds(item.needsFreezeMinutes * 60 * 1000);
+        }
+        if (item.eatXp > 0) {
+            const xp = getSystem('xp');
+            if (xp?.grantXP) xp.grantXP(item.eatXp, `food:${item.id}`);
+        }
+    }
+
+    /**
+     * Congela fome+sede em 100% por `durationMs` (efeito "estagnador"). Enche
+     * imediatamente e estende o timer se um efeito maior já estiver ativo.
+     * @param {number} durationMs
+     * @returns {void}
+     */
+    freezeNeeds(durationMs) {
+        const until = Date.now() + Math.max(0, durationMs);
+        this.needsFreezeUntil = Math.max(this.needsFreezeUntil, until);
+        this.needs.hunger = GAME_BALANCE.NEEDS.MAX_VALUE;
+        this.needs.thirst = GAME_BALANCE.NEEDS.MAX_VALUE;
+        this.dispatchNeedsUpdate();
+        const save = getSystem('save');
+        if (save?.markDirty) save.markDirty();
     }
 
     /**

@@ -35,6 +35,15 @@ const NIGHT_HOUR = 19;
 const MORNING_HOUR = 6;
 const MORNING_MINUTE = 10;
 
+/** % de combustível gasto ao oferecer carona pra Bru (ajustável). */
+const RIDE_FUEL_COST = 15;
+
+/** XP dado pela Bru ao fim da carona (ela não dá dinheiro — só XP). Ajustável. */
+const BRU_RIDE_XP = 100;
+
+/** Minutos de jogo que passam durante a viagem (ex.: 06:10 → 06:30). */
+const RIDE_TIME_SKIP_MIN = 20;
+
 // ─── State ──────────────────────────────────────────────────────────────────
 
 let isVisible = true;
@@ -42,6 +51,26 @@ let pendingChange = null; // 'show' | 'hide' | null
 
 /** 'idle' | 'intro_done' */
 let dialogueState = 'idle';
+
+/** Dia (WeatherSystem.day) em que o intro da Bru foi concluído. A quest da
+ *  carona só fica disponível no dia SEGUINTE. */
+let introDoneDay = null;
+
+/** Quest da carona: 'idle' (não ofertada) | 'pending' (viu o encontro e
+ *  recusou → reoferta curta) | 'riding' (aceitou a carona; cena do carro é
+ *  parte B, a definir) | 'completed' (agradecimento do Juan — parte B). */
+let rideQuest = 'idle';
+
+/** Flag: player aceitou a carona no diálogo; a transição pra tela preta
+ *  acontece no onEnd (depois do fade), evitando conflito de dois start(). */
+let pendingRideOffer = false;
+
+/** Se o Juan já agradeceu + entregou o dinheiro (uma vez só). */
+let juanThanked = false;
+
+/** Dia (WeatherSystem.day) em que a carona rolou. Nesse dia a Bru fica na
+ *  empresa — some da cidade — e só reaparece no dia seguinte. */
+let rideDay = null;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -63,6 +92,10 @@ function getCurrentTime() {
 }
 
 function shouldBeVisible() {
+    // Dia da carona: a Bru está na empresa — some da cidade até o dia seguinte.
+    if (rideDay != null && typeof WeatherSystem?.day === 'number' && WeatherSystem.day === rideDay) {
+        return false;
+    }
     const { hour, minute } = getCurrentTime();
     if (hour > MORNING_HOUR && hour < NIGHT_HOUR) return true;
     if (hour === MORNING_HOUR && minute >= MORNING_MINUTE) return true;
@@ -136,6 +169,93 @@ function getGreeting() {
     return hour < 12
         ? t('npc.bruJuan.greetMorning')
         : t('npc.bruJuan.greetAfternoon');
+}
+
+// ─── Ride quest: dia seguinte + estado ─────────────────────────────────────
+
+function markIntroDone() {
+    dialogueState = 'intro_done';
+    if (typeof WeatherSystem?.day === 'number') introDoneDay = WeatherSystem.day;
+}
+
+/** true quando já passou pelo menos 1 dia desde o intro (Bru+Juan). */
+function hasRideDayArrived() {
+    if (dialogueState !== 'intro_done') return false;
+    if (typeof introDoneDay !== 'number') return false;
+    const today = (typeof WeatherSystem?.day === 'number') ? WeatherSystem.day : introDoneDay;
+    return today > introDoneDay;
+}
+
+/** Player recusou a carona → reoferta curta na próxima interação. */
+function declineRide() {
+    rideQuest = 'pending';
+    const save = getSystem('save');
+    if (save?.markDirty) save.markDirty();
+}
+
+/**
+ * Resolve marcadores `_label`/`_goto` em índices `next` (na linha ou nas
+ * opções de escolha), pra o roteiro ramificado ficar legível.
+ */
+function resolveDialogueLabels(config) {
+    const { lines } = config;
+    const labelIndex = {};
+    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
+    for (const line of lines) {
+        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
+        if (Array.isArray(line.options)) {
+            for (const opt of line.options) {
+                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
+            }
+        }
+        delete line._label;
+    }
+    return config;
+}
+
+/**
+ * Executado no onEnd do encontro/reoferta: se o player aceitou a carona,
+ * gasta combustível e abre a cena (tela preta) do carro. Chamado após o fade,
+ * pra não conflitar com o start() do diálogo que está encerrando.
+ */
+function runPendingRideOffer() {
+    if (!pendingRideOffer) return;
+    pendingRideOffer = false;
+    const fuel = getSystem('fuel');
+    if (fuel?.consumePercent(RIDE_FUEL_COST)) {
+        rideQuest = 'riding';
+        const save = getSystem('save');
+        if (save?.markDirty) save.markDirty();
+        getSystem('dialogue')?.start(buildCarRideDialogue());
+    }
+}
+
+/**
+ * Fim da carona (rodado no onEnd da cena do carro): concede o XP da Bru,
+ * pula {RIDE_TIME_SKIP_MIN} min do relógio e leva o player de volta pra
+ * fazenda (transição direta, sem UI de viagem).
+ */
+function finishRide() {
+    rideQuest = 'completed';
+    if (typeof WeatherSystem?.day === 'number') rideDay = WeatherSystem.day; // some da cidade hoje
+    const xp = getSystem('xp');
+    if (xp?.grantXP) xp.grantXP(BRU_RIDE_XP, 'quest:bru_ride');
+    const save = getSystem('save');
+    if (save?.markDirty) save.markDirty();
+    if (typeof WeatherSystem?.skipMinutes === 'function') WeatherSystem.skipMinutes(RIDE_TIME_SKIP_MIN);
+    getSystem('mapManager')?.travelToFarmCutscene?.();
+}
+
+/** Estado da quest da carona (consultado pelo Juan pra sua fala contextual). */
+function getRideQuestState() {
+    return { rideQuest, available: hasRideDayArrived() && rideQuest === 'idle', juanThanked };
+}
+
+/** Marca que o Juan já agradeceu + pagou (chamado pelo npcJuan). */
+function markJuanThanked() {
+    juanThanked = true;
+    const save = getSystem('save');
+    if (save?.markDirty) save.markDirty();
 }
 
 // ─── Right-side speaker swap helper ────────────────────────────────────────
@@ -327,14 +447,14 @@ function buildFirstDialogue() {
             side: 'left',
             text: t(`${K}.benFarewell`, { greeting: getGreeting() }),
             end: true,
-            action: () => { dialogueState = 'intro_done'; },
+            action: markIntroDone,
         });
     } else if (charId === 'graham') {
         lines.push({
             side: 'left',
             text: t(`${K}.farewellGraham`),
             end: true,
-            action: () => { dialogueState = 'intro_done'; },
+            action: markIntroDone,
         });
     } else {
         // Stella
@@ -342,7 +462,7 @@ function buildFirstDialogue() {
             side: 'left',
             text: t(`${K}.farewellStella`),
             end: true,
-            action: () => { dialogueState = 'intro_done'; },
+            action: markIntroDone,
         });
     }
 
@@ -350,6 +470,236 @@ function buildFirstDialogue() {
     choiceLine.options[0].next = approachIdx;
 
     return config;
+}
+
+// ─── Ride quest dialogues (parte A: encontro no ponto de táxi) ──────────────
+
+/**
+ * Encontro do "dia seguinte": Bru esperando o táxi (que sempre cancela), Juan
+ * por perto. Roteiro ramificado (ouvir / interferir / se afastar → oferecer
+ * carona). Oferecer a carona gasta combustível e leva à cena do carro (parte B).
+ */
+function buildTaxiEncounter() {
+    const charId = getActiveCharacterId();
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
+    const K = 'npc.bruQuest';
+    const T = (k, p) => t(`${K}.${k}`, p);
+    const pick = (base) => T(`${base}${charId.charAt(0).toUpperCase()}${charId.slice(1)}`);
+    const hasFuel = getSystem('fuel')?.hasEnough(RIDE_FUEL_COST) ?? false;
+
+    const config = {
+        left: { name: playerName, portrait: playerPortrait },
+        right: { name: 'Bru', portrait: BRU_DIALOG_01 },
+        lines: [],
+    };
+    const lines = config.lines;
+    const swapToBru = makeSpeakerSwap(config, 'Bru');
+    const swapToJuan = makeSpeakerSwap(config, 'Juan');
+
+    const bru01 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: BRU_DIALOG_01 }, action: swapToBru, ...extra });
+    const bru00 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: BRU_DIALOG_00 }, action: swapToBru, ...extra });
+    const juan01 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: JUAN_DIALOG_01 }, action: swapToJuan, ...extra });
+    const juan00 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: JUAN_DIALOG_00 }, action: swapToJuan, ...extra });
+    const me = (text, extra = {}) => ({ side: 'left', text, ...extra });
+
+    // Opção "oferecer carona" (reutilizada nas duas escolhas): se tiver
+    // combustível, marca a transição pra tela preta; senão, vai pro "sem gasolina".
+    const offerRide = () => ({
+        text: T('choiceOfferRide'),
+        _goto: hasFuel ? 'rideAccept' : 'noFuel',
+        onSelect: hasFuel ? () => { pendingRideOffer = true; } : undefined,
+    });
+
+    // ── Abertura ──
+    lines.push(bru01(T('bruRant1')));
+    lines.push(bru01(T('bruRant2')));
+    lines.push(me(T('playerApproach', { name: playerName }), { thought: true }));
+    lines.push(bru00(T('bruHiAgain')));
+    lines.push(bru01(T('bruTaxiPrice')));
+    lines.push(juan01(T('juanCalm')));
+    lines.push(bru01(T('bruFast')));
+
+    // ── Escolha 1: ouvir / interferir / se afastar ──
+    lines.push(me('', {
+        type: 'choice',
+        options: [
+            { text: T('choiceListen'), _goto: 'listen' },
+            { text: T('choiceInterfere'), _goto: 'interfere' },
+            { text: T('choiceWalkAway'), _goto: 'falaPlayer' },
+        ],
+    }));
+
+    // ── Interferir → flui pro "fala {name}" ──
+    lines.push(me(pick('interfere'), { _label: 'interfere' }));
+    lines.push(juan01(T('juanHiPlayer', { name: playerName })));
+
+    // ── "fala {name}" + escolha 2 ──
+    lines.push(bru01(T('bruFalaPlayer', { name: playerName }), { _label: 'falaPlayer' }));
+    lines.push(me('', {
+        _label: 'falaChoice',
+        type: 'choice',
+        options: [
+            { text: T('choiceAskOk'), _goto: 'askOk' },
+            offerRide(),
+            { text: T('choiceWaveLeave'), _goto: 'waveEnd', onSelect: declineRide },
+        ],
+    }));
+    lines.push(bru01(T('bruTaxiStillFar', { name: playerName }), { _label: 'askOk', _goto: 'falaChoice' }));
+    lines.push(me(T('playerWaveLeave'), { _label: 'waveEnd', end: true }));
+
+    // ── Ouvir sem interferir ──
+    lines.push(juan00(T('juanMaybeBug'), { _label: 'listen' }));
+    lines.push(bru01(T('bruBugged')));
+    lines.push(juan01(T('juanSeeing')));
+    lines.push(bru01(T('bruThink')));
+    lines.push(me(pick('check')));
+    lines.push(bru01(T('bruTaxiCurse')));
+    lines.push(juan01(T('juanHowAreYou', { name: playerName })));
+    lines.push(me(T('playerFine')));
+    lines.push(bru01(T('bruAwful')));
+    lines.push(juan00(T('juanNoNeed')));
+    lines.push(bru01(T('bruShutUp')));
+    lines.push(me(T('playerSilent', { name: playerName }), { thought: true }));
+    lines.push(juan00(T('juanSilent'), { thought: true }));
+    lines.push(me('', {
+        type: 'choice',
+        options: [
+            offerRide(),
+            { text: T('choiceWishLuck'), _goto: 'wishLuck', onSelect: declineRide },
+            { text: T('choiceLeave'), _goto: 'leaveEnd', onSelect: declineRide },
+        ],
+    }));
+    lines.push(bru00(T('wishLuckBru'), { _label: 'wishLuck' }));
+    lines.push(juan01(T('wishLuckJuan'), { end: true }));
+    lines.push(me(T('playerLeaveQuiet'), { _label: 'leaveEnd', end: true }));
+
+    // ── Aceitar carona (compartilhado) → tela preta acontece no onEnd ──
+    lines.push(bru00(T('bruSerious'), { _label: 'rideAccept' }));
+    lines.push(me(T('playerYes')));
+    lines.push(bru00(T('bruLetsGo'), { end: true }));
+
+    // ── Sem combustível (compartilhado) ──
+    lines.push(me(T('playerNoFuel'), { _label: 'noFuel', end: true }));
+
+    config.onEnd = runPendingRideOffer;
+    return resolveDialogueLabels(config);
+}
+
+/** Reoferta curta quando o player recusou a carona antes. */
+function buildRideReoffer() {
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
+    const K = 'npc.bruQuest';
+    const T = (k, p) => t(`${K}.${k}`, p);
+    const hasFuel = getSystem('fuel')?.hasEnough(RIDE_FUEL_COST) ?? false;
+
+    const config = {
+        left: { name: playerName, portrait: playerPortrait },
+        right: { name: 'Bru', portrait: BRU_DIALOG_01 },
+        lines: [],
+    };
+    const lines = config.lines;
+    const swapToBru = makeSpeakerSwap(config, 'Bru');
+    const bru01 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: BRU_DIALOG_01 }, action: swapToBru, ...extra });
+    const bru00 = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: BRU_DIALOG_00 }, action: swapToBru, ...extra });
+    const me = (text, extra = {}) => ({ side: 'left', text, ...extra });
+
+    lines.push(bru01(T('reofferPrompt', { name: playerName })));
+    lines.push(me('', {
+        type: 'choice',
+        options: [
+            { text: T('choiceOfferRide'), _goto: hasFuel ? 'rideAccept' : 'noFuel', onSelect: hasFuel ? () => { pendingRideOffer = true; } : undefined },
+            { text: T('reofferNo'), end: true },
+        ],
+    }));
+    lines.push(bru00(T('bruSerious'), { _label: 'rideAccept' }));
+    lines.push(me(T('playerYes')));
+    lines.push(bru00(T('bruLetsGo'), { end: true }));
+    lines.push(me(T('playerNoFuel'), { _label: 'noFuel', end: true }));
+
+    config.onEnd = runPendingRideOffer;
+    return resolveDialogueLabels(config);
+}
+
+/**
+ * Cena do carro (parte B — a definir pelo usuário). Por enquanto: tela preta
+ * (blackout) com a caixa de diálogo + sprites do player e da Bru, e uma fala
+ * placeholder. O diálogo completo da conversa no carro entra aqui depois.
+ */
+/**
+ * Cena da carona (parte B): TELA PRETA, sem retratos — só a caixa de diálogo
+ * e o nome de quem fala. Ramifica por personagem (Stella/Graham/Ben). Ao
+ * terminar (onEnd → finishRide) pula 20 min e volta o player pra fazenda.
+ *
+ * NOTA: texto em PT inline por ora (roteiro ainda em ajuste). Extrair pro
+ * i18n com en/es quando o conteúdo estabilizar.
+ */
+function buildCarRideDialogue() {
+    const charId = getActiveCharacterId();       // 'stella' | 'ben' | 'graham'
+    const playerName = getPlayerName();
+    const CK = 'npc.bruQuest.car';
+    const seg = (k) => { const v = t(`${CK}.${k}`); return Array.isArray(v) ? v : []; };
+    const str = (k) => t(`${CK}.${k}`);
+
+    const config = {
+        blackout: true,
+        left: { name: playerName },   // sem retrato → só o nome aparece
+        right: { name: 'Bru' },
+        lines: [],
+        onEnd: finishRide,
+    };
+    const lines = config.lines;
+
+    // "B|texto" = Bru, "M|texto" = player, "N|texto" = narração (sem nome).
+    // {name} é interpolado aqui (o t() não interpola dentro de arrays).
+    const carLine = (enc) => {
+        const kind = enc.slice(0, 1);
+        const text = enc.slice(2).split('{name}').join(playerName);
+        if (kind === 'B') return { side: 'right', text };
+        if (kind === 'N') return { side: 'left', text, thought: true, narration: true };
+        return { side: 'left', text }; // 'M'
+    };
+    const pushSeg = (key, opts = {}) => {
+        const start = lines.length;
+        for (const enc of seg(key)) lines.push(carLine(enc));
+        if (opts.label && lines[start]) lines[start]._label = opts.label;
+        const last = lines[lines.length - 1];
+        if (last) {
+            if (opts.gotoLast) last._goto = opts.gotoLast;
+            if (opts.endLast) last.end = true;
+        }
+    };
+    const pushChoice = (o1, o2, o3) => lines.push({ side: 'left', text: '', type: 'choice', options: [o1, o2, o3] });
+
+    // ── Abertura compartilhada ──
+    pushSeg('opening');
+    pushChoice(
+        { text: str('choiceThanks'), _goto: 'jobBridge' },
+        { text: str('choiceSmile'), _goto: 'jobBridge' },
+        { text: str('choiceWork'), _goto: 'job' },
+    );
+    pushSeg('jobBridge', { label: 'jobBridge' });
+    pushSeg('job', { label: 'job' });
+    pushSeg(charId === 'ben' ? 'jobReactBen' : charId === 'graham' ? 'jobReactGraham' : 'jobReactStella');
+    pushSeg('faculdade');
+
+    // ── Conversa principal por personagem ──
+    const P = charId === 'graham' ? 'graham' : charId === 'ben' ? 'ben' : 'stella';
+    const L = charId === 'graham' ? 'g' : charId === 'ben' ? 'b' : 's';
+
+    pushSeg(`${P}Pre`);
+    pushChoice(
+        { text: str(`${P}Choice1`), _goto: `${L}Opt1` },
+        { text: str(`${P}Choice2`), _goto: `${L}Opt2` },
+        { text: str(`${P}Choice3`), _goto: `${L}Opt3` },
+    );
+    pushSeg(`${P}Opt1`, { label: `${L}Opt1`, gotoLast: `${L}Converge` });
+    pushSeg(`${P}Opt2`, { label: `${L}Opt2`, gotoLast: `${L}Converge` });
+    pushSeg(`${P}Opt3`, { label: `${L}Opt3` });
+    pushSeg(`${P}Post`, { label: `${L}Converge`, endLast: true });
+
+    return resolveDialogueLabels(config);
 }
 
 // ─── Interaction handler ────────────────────────────────────────────────────
@@ -361,24 +711,58 @@ function onInteract() {
         return;
     }
 
+    // 1) Ainda não fez o primeiro diálogo (Bru+Juan).
     if (dialogueState === 'idle') {
         dlg.start(buildFirstDialogue());
-    } else {
-        // After intro is done, no further dialogue for now
-        logger.info('[Bru] Intro already done, no further dialogue yet');
+        return;
     }
+
+    // 2) Dia seguinte ao intro → encontro do táxi (quest da carona).
+    if (rideQuest === 'idle' && hasRideDayArrived()) {
+        dlg.start(buildTaxiEncounter());
+        return;
+    }
+
+    // 3) Já viu o encontro e recusou → reoferta curta.
+    if (rideQuest === 'pending') {
+        dlg.start(buildRideReoffer());
+        return;
+    }
+
+    // 4) Aceitou a carona; cena do carro/agradecimento é parte B — fala neutra.
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
+    if (rideQuest === 'riding') {
+        dlg.start({
+            left: { name: playerName, portrait: playerPortrait },
+            right: { name: 'Bru', portrait: BRU_DIALOG_00 },
+            lines: [{ side: 'right', text: t('npc.bruQuest.ridingLine', { name: playerName }), end: true }],
+        });
+        return;
+    }
+
+    // 5) Intro feito mas o dia da carona ainda não chegou (ou quest encerrada).
+    dlg.start({
+        left: { name: playerName, portrait: playerPortrait },
+        right: { name: 'Bru', portrait: BRU_DIALOG_00 },
+        lines: [{ side: 'right', text: t('npc.bruQuest.genericGreet', { name: playerName }), end: true }],
+    });
 }
 
 // ─── Save / Load ────────────────────────────────────────────────────────────
 
 function getQuestState() {
-    return { dialogue: dialogueState };
+    return { dialogue: dialogueState, introDoneDay, rideQuest, juanThanked, rideDay };
 }
 
 function setQuestState(data) {
     if (!data) return;
     if (typeof data === 'string') { dialogueState = data; return; }
     if (data.dialogue) dialogueState = data.dialogue;
+    if (typeof data.introDoneDay === 'number') introDoneDay = data.introDoneDay;
+    if (data.rideQuest) rideQuest = data.rideQuest;
+    if (typeof data.juanThanked === 'boolean') juanThanked = data.juanThanked;
+    if (typeof data.rideDay === 'number') rideDay = data.rideDay;
 }
 
 // ─── Register NPC ───────────────────────────────────────────────────────────
@@ -410,6 +794,8 @@ const bruAPI = {
     register,
     getQuestState,
     setQuestState,
+    getRideQuestState,
+    markJuanThanked,
 };
 
 registerSystem('npcBru', bruAPI);
