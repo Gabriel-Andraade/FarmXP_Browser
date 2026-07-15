@@ -20,6 +20,12 @@
     pointer-events: auto;
 }
 
+/* Blackout: cena em fundo 100% preto (ex.: carona da Bru), esconde o jogo. */
+.dlg-overlay.dlg-blackout {
+    background: #000;
+    backdrop-filter: none;
+}
+
 /* ─── Portraits area ─────────────────────────────────────────────────────── */
 
 .dlg-portraits {
@@ -123,18 +129,11 @@
     border-bottom: 2px solid #ffc857;
     display: inline-block;
     letter-spacing: 1px;
-    background: linear-gradient(135deg, #ffd89b, #c7a252);
-    background-clip: text;
-    -webkit-background-clip: text;
-    color: transparent;
-    -webkit-text-stroke: 0.4px #3a2a1f;
-}
-
-@supports not (background-clip: text) {
-    .dlg-speaker {
-        color: #FFD966;
-        text-shadow: 0 1px 2px black;
-    }
+    /* Cor sólida legível. (Antes usava background-clip:text + color:transparent
+       pro degradê, mas em webviews que não renderizam background-clip:text o
+       nome ficava transparente/preto e ilegível.) */
+    color: #ffe0a3;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
 }
 
 /* Dialogue text */

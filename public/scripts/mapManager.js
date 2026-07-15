@@ -192,12 +192,17 @@ export function checkPortalInteraction(playerX, playerY, playerW, playerH) {
     const px = playerX;
     const py = playerY;
 
-    // Simple AABB check
+    // Margem de proximidade. A picape é SÓLIDA (hitbox físico do mesmo tamanho
+    // do retângulo do portal), então o player nunca fica DENTRO do retângulo —
+    // ele para colado na borda de fora. Sem margem, o AABB nunca sobrepunha e a
+    // viagem não disparava ("player de frente com a hitbox vermelha"). A margem
+    // permite acionar a viagem estando ao LADO da picape.
+    const M = 40;
     const collides =
-        px < portal.x + portal.width &&
-        px + playerW > portal.x &&
-        py < portal.y + portal.height &&
-        py + playerH > portal.y;
+        px < portal.x + portal.width + M &&
+        px + playerW > portal.x - M &&
+        py < portal.y + portal.height + M &&
+        py + playerH > portal.y - M;
 
     const hintEl = document.getElementById('portal-hint');
 
@@ -273,6 +278,16 @@ export async function triggerPortalTransition() {
 
     // Fallback: sem UI do mapa, usa a transição direta antiga.
     await _executePortalTransition(portal);
+}
+
+/**
+ * Transição direta cidade→fazenda para cutscenes (ex.: fim da carona da Bru),
+ * SEM abrir a UI do mapa de viagem. No-op se já não estiver na cidade.
+ */
+export async function travelToFarmCutscene() {
+    if (currentMapId !== 'city' || isTransitioning) return;
+    const portal = getPortalForMap('city');
+    if (portal) await _executePortalTransition(portal);
 }
 
 async function _executePortalTransition(portal) {
@@ -610,6 +625,7 @@ registerSystem('mapManager', {
     getCurrentMapId,
     getPortalForMap,
     triggerPortalTransition,
+    travelToFarmCutscene,
     checkPortalInteraction,
     drawPortal,
     isMapTransitioning,

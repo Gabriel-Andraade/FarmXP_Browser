@@ -573,6 +573,37 @@ function gatherAllQuests() {
         }
     }
 
+    // 6. Molly — Jantar com a família Miller (aparece após aceitar ajudar).
+    // A entrada do registry depende da receita (main/dessert), mas título,
+    // descrição e ícone são iguais nas duas.
+    const molly = getSystem('npcMolly');
+    if (molly) {
+        const state = molly.getQuestState();
+        const dq = state?.dinnerQuest;
+        const questId = state?.dinnerRecipe === 'dessert' ? 'molly_dinner_dessert' : 'molly_dinner_main';
+        if (dq === 'active') {
+            const prog = molly.getIngredientProgress?.();
+            let desc;
+            if (prog?.ready) {
+                desc = t('quests.mollyDinner.ready');
+            } else if (prog?.recipe === 'dessert') {
+                desc = t('quests.mollyDinner.progressDessert', {
+                    milk: prog.milk.have,
+                    eggs: prog.eggs.have,
+                });
+            } else if (prog?.recipe === 'main') {
+                desc = t('quests.mollyDinner.progressMain', {
+                    broc: prog.broc.have,
+                    cauli: prog.cauli.have,
+                    chili: prog.chili.have,
+                });
+            }
+            result.push(entryFromRegistry(questId, 'active', { desc }));
+        } else if (dq === 'completed') {
+            result.push(entryFromRegistry(questId, 'completed'));
+        }
+    }
+
     return result;
 }
 

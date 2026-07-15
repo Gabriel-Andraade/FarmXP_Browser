@@ -91,6 +91,14 @@ let isRegistered = false;
 /** 'idle' | 'intro_done' */
 let dialogueState = 'idle';
 
+/** Quest "Jantar com a família Miller": 'idle' | 'active' | 'completed'.
+ *  Por enquanto só ativa (aparece no painel) — sem rastreio de ingredientes. */
+let dinnerQuest = 'idle';
+/** Receita escolhida pelo player: null | 'main' | 'dessert'. */
+let dinnerRecipe = null;
+/** Seguinte estado da reoferta após recusar no primeiro diálogo. */
+let followupState = 'idle';
+
 // ─── Image preload ──────────────────────────────────────────────────────────
 
 function onImageReady(img) {
@@ -284,8 +292,6 @@ function customDraw(ctx, cam, zoom) {
 
 // ─── Dialogue ───────────────────────────────────────────────────────────────
 
-function t(key, params) { return i18n.t(key, params); }
-
 function getActiveCharacterId() {
     const player = getSystem('player');
     return player?.activeCharacter?.id || 'stella';
@@ -301,38 +307,324 @@ function getPlayerDialogPortrait() {
     return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
 }
 
-const MOLLY_PORTRAIT = 'assets/character/family/molly_dialog_00.png';
+function t(key, params) {
+    return i18n.t(key, params);
+}
 
-function buildIntroDialogue() {
+function pickText(stellaKey, benKey, grahamKey) {
     const charId = getActiveCharacterId();
+    if (charId === 'ben') return t(benKey);
+    if (charId === 'graham') return t(grahamKey);
+    return t(stellaKey);
+}
+
+const MOLLY_PORTRAIT = 'assets/character/family/molly_dialog_00.png';
+const JOHN_PORTRAIT  = 'assets/character/family/john_dialog_00.png';
+const LUNA_PORTRAIT  = 'assets/character/family/luna_dialog_00.png';
+const CLARA_PORTRAIT = 'assets/character/family/clara_dialog_00.png';
+
+// Ingredientes por receita (ver item.js): 61=Leite, 60=Ovo Cru, 121=Brócolis,
+// 133=Couve-Flor, 129=Pimentinha. A abóbora é resolvida pela Clara no diálogo,
+// então NÃO entra na lista de itens a coletar.
+const DINNER_RECIPES = {
+    dessert: [ { id: 61, qty: 1 }, { id: 60, qty: 3 } ],
+    main:    [ { id: 121, qty: 2 }, { id: 133, qty: 2 }, { id: 129, qty: 1 } ],
+};
+
+/**
+ * Resolve marcadores `_label` / `_goto` em índices numéricos `next`, para que
+ * o roteiro ramificado fique legível e seguro de editar (sem contagem manual
+ * de índices). Cada `_goto` (na linha ou numa opção de escolha) aponta para a
+ * linha marcada com o `_label` correspondente.
+ */
+function resolveDialogueLabels(config) {
+    const { lines } = config;
+    const labelIndex = {};
+    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
+    for (const line of lines) {
+        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
+        if (Array.isArray(line.options)) {
+            for (const opt of line.options) {
+                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
+            }
+        }
+        delete line._label;
+    }
+    return config;
+}
+
+/**
+ * Ativa a quest do jantar: marca como ativa, guarda a receita escolhida e
+ * persiste. A partir daí, o progresso dos ingredientes aparece no painel e a
+ * entrega (buildDeliveryDialogue) concede a recompensa via questRegistry.
+ */
+function activateDinnerQuest(recipe) {
+    dinnerQuest = 'active';
+    dinnerRecipe = recipe;
+    followupState = 'resolved';
+    const questId = recipe === 'dessert' ? 'molly_dinner_dessert' : 'molly_dinner_main';
+    document.dispatchEvent(new CustomEvent('questUpdated', { detail: { id: questId, status: 'active' } }));
+    const save = getSystem('save');
+    if (save?.markDirty) save.markDirty();
+}
+
+/**
+ * Cutscene de boas-vindas da Molly (primeiro contato).
+ * Molly, John, Luna e Clara dividem o slot de retrato da direita: cada fala
+ * troca a imagem (setPortrait) e o nome do falante (action mutando right.name).
+ * Escolher a receita (principal/sobremesa) ativa a quest via activateDinnerQuest.
+ */
+function buildWelcomeDialogue() {
+    const charId = getActiveCharacterId();            // 'stella' | 'ben' | 'graham'
+    const isStella = charId === 'stella';
     const playerName = getPlayerName();
     const playerPortrait = getPlayerDialogPortrait();
-    const K = 'npc.family.molly';
 
-    const replyKey = { stella: `${K}.replyStella`, graham: `${K}.replyGraham`, ben: `${K}.replyBen` }[charId] || `${K}.replyStella`;
+    const right = { name: 'Molly', portrait: MOLLY_PORTRAIT };
+    const left  = { name: playerName, portrait: playerPortrait };
 
-    return {
-        left: { name: playerName, portrait: playerPortrait },
-        right: { name: 'Molly', portrait: MOLLY_PORTRAIT },
-        lines: [
-            { side: 'right', text: t(`${K}.greet`, { name: playerName }) },
-            { side: 'left',  text: t(replyKey) },
-            { side: 'right', text: t(`${K}.intro`) },
-            { side: 'right', text: t(`${K}.farewell`), end: true, action: () => { dialogueState = 'intro_done'; } },
+    // Helpers de fala: cada um fixa retrato + nome do falante do lado direito.
+    const molly       = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: MOLLY_PORTRAIT }, action: () => { right.name = 'Molly'; }, ...extra });
+    const john        = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: JOHN_PORTRAIT },  action: () => { right.name = 'John'; },  ...extra });
+    const luna        = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: LUNA_PORTRAIT },  action: () => { right.name = 'Luna'; },  ...extra });
+    const lunaHidden  = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: LUNA_PORTRAIT },  action: () => { right.name = '???'; },   ...extra });
+    const claraHidden = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: CLARA_PORTRAIT }, action: () => { right.name = '???'; },   ...extra });
+    const me          = (text, extra = {}) => ({ side: 'left', text, ...extra });
+
+    const farmer = isStella ? t('npc.family.mollyQuest.farmerRole.stella') : t('npc.family.mollyQuest.farmerRole.default');
+
+    const aText = pickText('npc.family.mollyQuest.helpChoiceA.stella', 'npc.family.mollyQuest.helpChoiceA.ben', 'npc.family.mollyQuest.helpChoiceA.graham');
+    const bText = pickText('npc.family.mollyQuest.helpChoiceB.stella', 'npc.family.mollyQuest.helpChoiceB.ben', 'npc.family.mollyQuest.helpChoiceB.graham');
+
+    const lines = [
+        molly(t('npc.family.mollyQuest.introGreeting', { name: playerName })),
+    ];
+
+    if (isStella) {
+        lines.push(me(t('npc.family.mollyQuest.replyStella1')));
+        lines.push(me(t('npc.family.mollyQuest.replyStella2')));
+    } else {
+        lines.push(me(pickText('npc.family.mollyQuest.replyDefault.stella', 'npc.family.mollyQuest.replyDefault.ben', 'npc.family.mollyQuest.replyDefault.graham')));
+    }
+
+    lines.push(molly(t('npc.family.mollyQuest.introFollowUp')));
+    lines.push(john(t('npc.family.mollyQuest.johnAppears')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyStartled')));
+    lines.push(me(t('npc.family.mollyQuest.playerLaugh', { name: playerName })));
+    lines.push(molly(t('npc.family.mollyQuest.mollyScold')));
+    lines.push(john(t('npc.family.mollyQuest.johnAgain')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyQuestion')));
+    lines.push(john(t('npc.family.mollyQuest.johnWhat')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyLaugh')));
+    lines.push(john(t('npc.family.mollyQuest.johnLaugh')));
+    lines.push(molly(t('npc.family.mollyQuest.banquetOffer', { role: farmer })));
+
+    lines.push(me(pickText('npc.family.mollyQuest.playerDecline.stella', 'npc.family.mollyQuest.playerDecline.ben', 'npc.family.mollyQuest.playerDecline.graham')));
+    lines.push(john(t('npc.family.mollyQuest.johnSaveLife')));
+    lines.push(lunaHidden(t('npc.family.mollyQuest.lunaHidden')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyCall')));
+    lines.push(luna(t('npc.family.mollyQuest.lunaMilkOut')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyJohn')));
+    lines.push(john(t('npc.family.mollyQuest.johnLookAway')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyJohnAgain')));
+    lines.push(john(t('npc.family.mollyQuest.johnMurmur')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyJohnMiller')));
+    lines.push(john(t('npc.family.mollyQuest.johnGoGet')));
+    lines.push(john(t('npc.family.mollyQuest.johnLeave')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyForgot')));
+    if (isStella) lines.push(me(t('npc.family.mollyQuest.playerUnderstandsStella')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyThreeJobs')));
+    lines.push(me(t('npc.family.mollyQuest.playerThree')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyJobs')));
+    lines.push(me(pickText('npc.family.mollyQuest.playerReaction.stella', 'npc.family.mollyQuest.playerReaction.ben', 'npc.family.mollyQuest.playerReaction.graham')));
+    lines.push(molly(t('npc.family.mollyQuest.mollySmile')));
+    lines.push(luna(t('npc.family.mollyQuest.lunaCallAgain')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyShout')));
+    lines.push(luna(t('npc.family.mollyQuest.lunaPapa')));
+    lines.push(molly(t('npc.family.mollyQuest.mollyYes')));
+    lines.push(luna(t('npc.family.mollyQuest.lunaYay')));
+
+    lines.push(molly(t('npc.family.mollyQuest.mollyApology', { name: playerName }), {
+        type: 'choice',
+        options: [
+            { text: aText, _goto: 'playerA' },
+            { text: bText, _goto: 'sectionB' },
         ],
+    }));
+
+    lines.push(me(bText, { _label: 'sectionB' }));
+    lines.push(molly(t('npc.family.mollyQuest.declineBranch'), {
+        type: 'choice',
+        options: [
+            { text: t('npc.family.mollyQuest.declineChoice'), _goto: 'declineEnd', onSelect: () => { followupState = 'pending'; getSystem('save')?.markDirty?.(); } },
+            { text: aText, _goto: 'playerA' },
+        ],
+    }));
+    lines.push(me(t('npc.family.mollyQuest.declineChoice'), { _label: 'declineEnd', end: true }));
+
+    lines.push(me(aText, { _label: 'playerA' }));
+    lines.push(molly(t('npc.family.mollyQuest.helpOffer'), {
+        type: 'choice',
+        options: [
+            { text: t('npc.family.mollyQuest.chooseMain'), _goto: 'principal', onSelect: () => activateDinnerQuest('main') },
+            { text: t('npc.family.mollyQuest.chooseDessert'), _goto: 'sobremesa', onSelect: () => activateDinnerQuest('dessert') },
+        ],
+    }));
+
+    lines.push(molly(t('npc.family.mollyQuest.dessertRequest'), { _label: 'sobremesa', end: true }));
+    lines.push(molly(t('npc.family.mollyQuest.mainRequest'), { _label: 'principal' }));
+    lines.push(molly(t('npc.family.mollyQuest.pumpkinDelay')));
+    lines.push(me(pickText('npc.family.mollyQuest.pumpkinQuestion.stella', 'npc.family.mollyQuest.pumpkinQuestion.ben', 'npc.family.mollyQuest.pumpkinQuestion.graham')));
+    lines.push(molly(t('npc.family.mollyQuest.claraHelp')));
+    lines.push(claraHidden(t('npc.family.mollyQuest.claraReveal')));
+    lines.push(molly(t('npc.family.mollyQuest.claraSaved', { name: playerName }), { end: true }));
+
+    return resolveDialogueLabels({ left, right, lines });
+}
+
+function buildReofferDialogue() {
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
+    const right = { name: 'Molly', portrait: MOLLY_PORTRAIT };
+    const left = { name: playerName, portrait: playerPortrait };
+
+    const molly = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: MOLLY_PORTRAIT }, action: () => { right.name = 'Molly'; }, ...extra });
+    const me = (text, extra = {}) => ({ side: 'left', text, ...extra });
+
+    const lines = [
+        molly(t('npc.family.mollyQuest.reofferPrompt'), {
+            type: 'choice',
+            options: [
+                { text: t('npc.family.mollyQuest.reofferYes'), _goto: 'yes', onSelect: () => { followupState = 'resolved'; getSystem('save')?.markDirty?.(); } },
+                { text: t('npc.family.mollyQuest.reofferNo'), _goto: 'no', onSelect: () => { followupState = 'declined'; getSystem('save')?.markDirty?.(); } },
+            ],
+        }),
+        me(t('npc.family.mollyQuest.reofferNo'), { _label: 'no' }),
+        molly(t('npc.family.mollyQuest.reofferDecline'), { end: true }),
+        me(t('npc.family.mollyQuest.reofferYes'), { _label: 'yes' }),
+        molly(t('npc.family.mollyQuest.helpOffer'), {
+            type: 'choice',
+            options: [
+                { text: t('npc.family.mollyQuest.chooseMain'), _goto: 'principal', onSelect: () => activateDinnerQuest('main') },
+                { text: t('npc.family.mollyQuest.chooseDessert'), _goto: 'sobremesa', onSelect: () => activateDinnerQuest('dessert') },
+            ],
+        }),
+        molly(t('npc.family.mollyQuest.dessertRequest'), { _label: 'sobremesa', end: true }),
+        molly(t('npc.family.mollyQuest.mainRequest'), { _label: 'principal' }),
+        molly(t('npc.family.mollyQuest.pumpkinDelay')),
+        me(pickText('npc.family.mollyQuest.pumpkinQuestion.stella', 'npc.family.mollyQuest.pumpkinQuestion.ben', 'npc.family.mollyQuest.pumpkinQuestion.graham')),
+        molly(t('npc.family.mollyQuest.claraHelp')),
+        claraHidden(t('npc.family.mollyQuest.claraReveal')),
+        molly(t('npc.family.mollyQuest.claraSaved', { name: playerName }), { end: true }),
+    ];
+
+    return resolveDialogueLabels({ left, right, lines });
+}
+
+// ─── Progresso / consumo dos ingredientes ───────────────────────────────────
+
+function invQty(id) {
+    const inv = getSystem('inventory');
+    return inv?.getItemQuantity ? (inv.getItemQuantity(id) || 0) : 0;
+}
+
+/**
+ * Progresso dos ingredientes da receita escolhida. Estrutura nomeada por
+ * receita (main/dessert) pra o painel de quests montar a descrição dinâmica.
+ */
+function getIngredientProgress() {
+    if (dinnerRecipe === 'dessert') {
+        const milk = invQty(61), eggs = invQty(60);
+        return {
+            recipe: 'dessert',
+            ready: milk >= 1 && eggs >= 3,
+            milk: { have: milk, need: 1 },
+            eggs: { have: eggs, need: 3 },
+        };
+    }
+    // 'main' (default)
+    const broc = invQty(121), cauli = invQty(133), chili = invQty(129);
+    return {
+        recipe: 'main',
+        ready: broc >= 2 && cauli >= 2 && chili >= 1,
+        broc:  { have: broc,  need: 2 },
+        cauli: { have: cauli, need: 2 },
+        chili: { have: chili, need: 1 },
     };
 }
 
-function buildRepeatDialogue() {
+/**
+ * Consome os ingredientes da receita, com pré-checagem e rollback: se qualquer
+ * remoção falhar, devolve o que já foi removido pra não sumir item do player.
+ */
+function consumeIngredients() {
+    const inv = getSystem('inventory');
+    if (!inv?.removeItem) return false;
+    const reqs = DINNER_RECIPES[dinnerRecipe];
+    if (!reqs) return false;
+
+    for (const r of reqs) {
+        if (invQty(r.id) < r.qty) return false;
+    }
+
+    const removed = [];
+    for (const r of reqs) {
+        if (inv.removeItem(r.id, r.qty)) {
+            removed.push(r);
+        } else {
+            for (const rr of removed) inv.addItem?.(rr.id, rr.qty); // rollback
+            return false;
+        }
+    }
+    return true;
+}
+
+// ─── Diálogos de entrega / conclusão ────────────────────────────────────────
+
+function buildDeliveryDialogue() {
     const playerName = getPlayerName();
     const playerPortrait = getPlayerDialogPortrait();
-    const K = 'npc.family.molly';
+    const right = { name: 'Molly', portrait: MOLLY_PORTRAIT };
+    const left = { name: playerName, portrait: playerPortrait };
+    const molly = (text, extra = {}) => ({ side: 'right', text, setPortrait: { side: 'right', src: MOLLY_PORTRAIT }, action: () => { right.name = 'Molly'; }, ...extra });
+    const me = (text, extra = {}) => ({ side: 'left', text, ...extra });
 
+    const prog = getIngredientProgress();
+    const lines = [ molly(t('npc.family.mollyQuest.deliveryAsk')) ];
+
+    if (!prog.ready) {
+        // Ainda falta algo: só lembra, sem consumir nada.
+        lines.push(molly(t('npc.family.mollyQuest.notReady'), { end: true }));
+        return { left, right, lines };
+    }
+
+    lines.push(me(t('npc.family.mollyQuest.deliverBring')));
+    lines.push(molly(t('npc.family.mollyQuest.deliverThanks'), {
+        end: true,
+        action: () => {
+            const registry = getSystem('questRegistry');
+            // Sem registry não há como entregar a recompensa configurada → não
+            // consome nem conclui (mantém a quest ativa, pra não perder o item).
+            if (!registry?.complete) return;
+            if (!consumeIngredients()) return;
+            const questId = dinnerRecipe === 'dessert' ? 'molly_dinner_dessert' : 'molly_dinner_main';
+            if (registry.complete(questId)) {
+                dinnerQuest = 'completed';
+                getSystem('save')?.markDirty?.();
+            }
+        },
+    }));
+    return { left, right, lines };
+}
+
+function buildDoneDialogue() {
+    const playerName = getPlayerName();
+    const playerPortrait = getPlayerDialogPortrait();
     return {
         left: { name: playerName, portrait: playerPortrait },
         right: { name: 'Molly', portrait: MOLLY_PORTRAIT },
         lines: [
-            { side: 'right', text: t(`${K}.repeat`, { name: playerName }), end: true },
+            { side: 'right', text: t('npc.family.mollyQuest.questDone', { name: playerName }), end: true },
         ],
     };
 }
@@ -343,14 +635,36 @@ function onInteract() {
         logger.warn('[Molly] DialogueSystem not available');
         return;
     }
-    // Molly ainda não tem diálogo próprio — placeholder em tela de diálogo.
+
+    if (dialogueState === 'idle') {
+        const config = buildWelcomeDialogue();
+        config.onEnd = () => { dialogueState = 'intro_done'; getSystem('save')?.markDirty?.(); };
+        dlg.start(config);
+        return;
+    }
+
+    if (dinnerQuest === 'active') {
+        dlg.start(buildDeliveryDialogue());
+        return;
+    }
+
+    if (dinnerQuest === 'completed') {
+        dlg.start(buildDoneDialogue());
+        return;
+    }
+
+    if (followupState === 'pending') {
+        dlg.start(buildReofferDialogue());
+        return;
+    }
+
     const playerName = getPlayerName();
     const playerPortrait = getPlayerDialogPortrait();
     dlg.start({
         left: { name: playerName, portrait: playerPortrait },
         right: { name: 'Molly', portrait: MOLLY_PORTRAIT },
         lines: [
-            { side: 'right', text: i18n.t('npc.family.mollySilent'), end: true },
+            { side: 'right', text: t('npc.family.mollyQuest.repeat', { name: playerName }), end: true },
         ],
     });
 }
@@ -358,13 +672,24 @@ function onInteract() {
 // ─── Save / Load ────────────────────────────────────────────────────────────
 
 function getQuestState() {
-    return { dialogue: dialogueState };
+    return { dialogue: dialogueState, dinnerQuest, dinnerRecipe, followupState };
 }
 
 function setQuestState(data) {
     if (!data) return;
-    if (typeof data === 'string') { dialogueState = data; return; }
-    if (data.dialogue) dialogueState = data.dialogue;
+    // Reseta campos ausentes aos defaults — evita que estado de um save vaze
+    // para outro carregado na mesma sessão.
+    if (typeof data === 'string') {
+        dialogueState = data;
+        dinnerQuest = 'idle';
+        dinnerRecipe = null;
+        followupState = 'idle';
+        return;
+    }
+    dialogueState = data.dialogue ?? 'idle';
+    dinnerQuest = data.dinnerQuest ?? 'idle';
+    dinnerRecipe = data.dinnerRecipe ?? null;
+    followupState = data.followupState ?? 'idle';
 }
 
 // ─── Register ───────────────────────────────────────────────────────────────
@@ -411,6 +736,7 @@ const mollyAPI = {
     register,
     getQuestState,
     setQuestState,
+    getIngredientProgress,
 };
 
 registerSystem('npcMolly', mollyAPI);

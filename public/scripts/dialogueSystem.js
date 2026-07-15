@@ -172,18 +172,44 @@ function escapeHtml(value) {
 }
 
 /**
- * Converte *ação* em <span class="dlg-action">ação</span>.
- * Texto fora dos asteriscos fica normal.
+ * Markup inline suportado no texto de diálogo:
+ *   *ação*        → <span class="dlg-action">    (itálico cinza)
+ *   [[destaque]]  → <span class="dlg-highlight">  (cor/negrito — itens, valores)
+ * Tokeniza em segmentos { char, cls } para o typewriter animar caractere a
+ * caractere preservando os estilos.
  */
-function formatActionMarkup(text) {
-    return escapeHtml(text).replace(/\*([^*]+)\*/g, '<span class="dlg-action">$1</span>');
+function parseSegments(text) {
+    const segments = [];
+    let cls = null;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '*') { cls = cls === 'dlg-action' ? null : 'dlg-action'; continue; }
+        if (ch === '[' && text[i + 1] === '[') { cls = 'dlg-highlight'; i++; continue; }
+        if (ch === ']' && text[i + 1] === ']') { cls = null; i++; continue; }
+        segments.push({ char: ch, cls });
+    }
+    return segments;
 }
 
-/**
- * Retorna o texto puro (sem asteriscos) para cálculo de comprimento do typewriter.
- */
-function stripAsterisks(text) {
-    return text.replace(/\*/g, '');
+function hasMarkup(text) {
+    return /\*[^*]+\*/.test(text) || /\[\[[^\]]+\]\]/.test(text);
+}
+
+/** Constrói o HTML dos primeiros `count` segmentos, fechando o span aberto. */
+function segmentsToHtml(segments, count) {
+    let html = '';
+    let openCls = null;
+    for (let i = 0; i < count; i++) {
+        const seg = segments[i];
+        if (seg.cls !== openCls) {
+            if (openCls) html += '</span>';
+            if (seg.cls) html += `<span class="${seg.cls}">`;
+            openCls = seg.cls;
+        }
+        html += escapeHtml(seg.char);
+    }
+    if (openCls) html += '</span>';
+    return html;
 }
 
 function typeText(text, speed = TYPEWRITER_SPEED) {
@@ -195,10 +221,9 @@ function typeText(text, speed = TYPEWRITER_SPEED) {
     textEl.innerHTML = '';
 
     const safeText = typeof text === 'string' ? text : '';
-    const hasActions = /\*[^*]+\*/.test(safeText);
 
-    if (!hasActions) {
-        // Texto simples — typewriter char a char via textContent (seguro)
+    // Texto simples — typewriter char a char via textContent (seguro)
+    if (!hasMarkup(safeText)) {
         let charIndex = 0;
         function tick() {
             if (!textEl) return;
@@ -212,46 +237,25 @@ function typeText(text, speed = TYPEWRITER_SPEED) {
         }
         if (safeText.length === 0) { textEl.textContent = ''; finishTyping(); return; }
         tick();
-    } else {
-        // Texto com *ações* — typewriter sobre texto limpo, renderiza HTML a cada tick
-        const cleanText = stripAsterisks(safeText);
-        // Mapeia cada char do cleanText → { char, isAction }
-        const segments = [];
-        let inAction = false;
-        for (let i = 0; i < safeText.length; i++) {
-            if (safeText[i] === '*') { inAction = !inAction; continue; }
-            segments.push({ char: safeText[i], isAction: inAction });
-        }
-
-        let charIndex = 0;
-        function tick() {
-            if (!textEl) return;
-            if (charIndex < segments.length) {
-                charIndex++;
-                // Build HTML up to charIndex
-                let html = '';
-                let actionOpen = false;
-                for (let i = 0; i < charIndex; i++) {
-                    const seg = segments[i];
-                    if (seg.isAction && !actionOpen) {
-                        html += '<span class="dlg-action">';
-                        actionOpen = true;
-                    } else if (!seg.isAction && actionOpen) {
-                        html += '</span>';
-                        actionOpen = false;
-                    }
-                    html += escapeHtml(seg.char);
-                }
-                if (actionOpen) html += '</span>';
-                textEl.innerHTML = html;
-                typewriterTimer = setTimeout(tick, speed);
-            } else {
-                finishTyping();
-            }
-        }
-        if (segments.length === 0) { textEl.innerHTML = ''; finishTyping(); return; }
-        tick();
+        return;
     }
+
+    // Texto com markup (*ação* / [[destaque]]) — anima sobre os segmentos e
+    // re-renderiza o HTML a cada tick, mantendo os spans corretos.
+    const segments = parseSegments(safeText);
+    let charIndex = 0;
+    function tick() {
+        if (!textEl) return;
+        if (charIndex < segments.length) {
+            charIndex++;
+            textEl.innerHTML = segmentsToHtml(segments, charIndex);
+            typewriterTimer = setTimeout(tick, speed);
+        } else {
+            finishTyping();
+        }
+    }
+    if (segments.length === 0) { textEl.innerHTML = ''; finishTyping(); return; }
+    tick();
 }
 
 function revealFullText() {
@@ -259,8 +263,9 @@ function revealFullText() {
     const line = currentConfig.lines[currentLineIndex];
     if (line) {
         const text = typeof line.text === 'string' ? line.text : '';
-        if (/\*[^*]+\*/.test(text)) {
-            textEl.innerHTML = formatActionMarkup(text);
+        if (hasMarkup(text)) {
+            const segments = parseSegments(text);
+            textEl.innerHTML = segmentsToHtml(segments, segments.length);
         } else {
             textEl.textContent = text;
         }
@@ -382,9 +387,10 @@ function showLine(index) {
         line.action();
     }
 
-    // Update speaker name (after action so swaps take effect)
+    // Update speaker name (after action so swaps take effect).
+    // Linhas de narração (`narration: true`) não mostram nome de falante.
     const speaker = isLeft ? currentConfig.left : currentConfig.right;
-    speakerEl.textContent = speaker.name;
+    speakerEl.textContent = line.narration ? '' : (speaker?.name || '');
 
     // Sync portrait name labels so they reflect current speaker
     if (leftName) leftName.textContent = currentConfig.left?.name || '';
@@ -490,6 +496,10 @@ function start(config) {
 
     // Build UI
     createOverlay();
+
+    // Blackout: fundo 100% preto (esconde o jogo) — usado em cutscenes tipo
+    // "carona" onde a cena acontece fora do mapa.
+    if (config.blackout && overlay) overlay.classList.add('dlg-blackout');
 
     // Set portraits
     const leftImg = leftPortrait.querySelector('img');

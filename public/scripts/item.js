@@ -1323,6 +1323,31 @@ export const items = [
     type: "resource",
     questItem: true
   },
+  {
+    // Recompensa da quest da Molly (prato principal). Enche fome+sede e as
+    // MANTÉM cheias por needsFreezeMinutes (efeito "estagnador").
+    id: 310,
+    name: "Marmita da Molly",
+    icon: "🍱",
+    price: 0,
+    description: "Marmita caprichada da Molly. Mata a fome e a sede de vez — e o efeito dura um bom tempo.",
+    type: "food",
+    fillUp: { hunger: 100, thirst: 100 },
+    needsFreezeMinutes: 10
+  },
+  {
+    // Recompensa da quest da Molly (sobremesa). Além de encher e estagnar
+    // fome+sede, dá um pequeno bônus de XP ao comer (eatXp).
+    id: 311,
+    name: "Fatia do Bolo da Molly",
+    icon: "🍰",
+    price: 0,
+    description: "Uma fatia do bolo caseiro da Molly. Enche a barriga, dá um gás e o efeito perdura.",
+    type: "food",
+    fillUp: { hunger: 100, thirst: 100 },
+    needsFreezeMinutes: 5,
+    eatXp: 10
+  },
 
 {
   id: 9991,

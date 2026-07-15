@@ -83,6 +83,23 @@ export const QUEST_REGISTRY = {
         descKey:  'quests.lucasSecret.description',
         rewards:  { xp: 120 },
     },
+    // Jantar da Molly — recompensa depende da receita escolhida pelo player.
+    // Ambas compartilham título/descrição/ícone; só as recompensas mudam.
+    // 310 = Marmita da Molly, 311 = Fatia do Bolo da Molly (ver item.js).
+    molly_dinner_main: {
+        id: 'molly_dinner_main',
+        icon: '🍲',
+        titleKey: 'quests.mollyDinner.title',
+        descKey:  'quests.mollyDinner.description',
+        rewards:  { xp: 50, currency: 350, items: [{ id: 310, quantity: 1 }] },
+    },
+    molly_dinner_dessert: {
+        id: 'molly_dinner_dessert',
+        icon: '🍲',
+        titleKey: 'quests.mollyDinner.title',
+        descKey:  'quests.mollyDinner.description',
+        rewards:  { xp: 20, currency: 150, items: [{ id: 311, quantity: 1 }] },
+    },
 
     // ── Tutoriais (todos com mesma recompensa base) ──────────────────────────
     tutorial_first_meeting: {
