@@ -127,17 +127,18 @@ export class MinimapSystem {
       stella: 'stellaIcon.png',
       ben: 'benIcon.png',
       graham: 'grahamIcon.png',
-      // Cidade Goose Cape: marcador geral + casas por dono (#231).
-      goosecape: 'gooseCapeIcon.png',
-      bru: 'bruHouseIcon.png',
-      millers: 'millersHouseIcon.png',
-      twins: 'twinHouse.png',
-      bartolomeu: 'bartolomeuHouseIcon.png',
-      milly: 'millyHouseIcon.png',
+      // Cidade Goose Cape: marcador geral + casas por dono (#231). Referenciados
+      // como .webp (assets novos entram só em webp; .png não é garantido).
+      goosecape: 'gooseCapeIcon.webp',
+      bru: 'bruHouseIcon.webp',
+      millers: 'millersHouseIcon.webp',
+      twins: 'twinHouse.webp',
+      bartolomeu: 'bartolomeuHouseIcon.webp',
+      milly: 'millyHouseIcon.webp',
       // Estruturas da fazenda: poço e cercado (um marcador por curral fechado —
       // as cercas individuais não são desenhadas, só o cercado que elas formam).
       well: 'wellIcon.png',
-      enclosure: 'fenceIcon.png',
+      enclosure: 'fenceIcon.webp',
     };
 
     const promises = Object.entries(iconMap).map(([key, filename]) => {

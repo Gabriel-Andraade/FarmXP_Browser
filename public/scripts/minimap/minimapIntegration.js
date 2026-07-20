@@ -10,13 +10,24 @@ import { MinimapUI } from './minimapUI.js';
 import { MinimapSystem } from './minimapSystem.js';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '../worldConstants.js';
 import { trees, rocks, thickets, houses, placedWells } from '../theWorld.js';
-import { registerSystem } from '../gameState.js';
+import { registerSystem, getSystem } from '../gameState.js';
 import { MAPS, getCurrentMapId, getPortalForMap } from '../mapManager.js';
 import { logger } from '../logger.js';
 
 let minimapUI = null;
 let minimapSystem = null;
 let _mapListenerBound = false;
+
+// City house owner (lowercase) → minimap icon key. Used only as a FALLBACK: if
+// the pre-rendered Goose Cape map image fails to load, the minimap draws these
+// house markers so the houses still show. Bartolomeu spans two hitboxes → one.
+const CITY_HOUSE_ICON = {
+  bru: 'bru',
+  family: 'millers',
+  twins: 'twins',
+  bartolomeu: 'bartolomeu',
+  milly: 'milly',
+};
 
 function resetMinimapState() {
   minimapUI = null;
@@ -85,6 +96,33 @@ function _buildFarmPois() {
 }
 
 /**
+ * City house markers — a FALLBACK for when the Goose Cape base image can't be
+ * drawn (the minimap system only renders these if that image isn't available).
+ * `alwaysShow` so they appear regardless of city fog in that degraded case.
+ */
+function _buildCityPois() {
+  const list = getSystem('cityHouse')?.houses;
+  if (!Array.isArray(list)) return [];
+
+  const seen = new Set();
+  const pois = [];
+  for (const h of list) {
+    if (!h || (h.width === 0 && h.height === 0)) continue; // skip placeholders
+    const owner = String(h.owner || '').toLowerCase();
+    if (seen.has(owner)) continue; // Bartolomeu spans 2 hitboxes → one marker
+    seen.add(owner);
+    pois.push({
+      x: h.x + h.width / 2,
+      y: h.y + h.height / 2,
+      icon: CITY_HOUSE_ICON[owner] || 'house',
+      size: 18,
+      alwaysShow: true,
+    });
+  }
+  return pois;
+}
+
+/**
  * Update the minimap. Call from gameLoop every frame.
  * @param {Object} currentPlayer - Player object with x, y properties
  */
@@ -97,11 +135,12 @@ export function updateMinimap(currentPlayer) {
     return;
   }
 
-  // Map-aware payload. The city renders the pre-rendered Goose Cape map (drawn
-  // by the minimap system itself), so it needs no object/POI payload; the farm
-  // shows its world objects plus the Goose Cape marker at the city portal.
+  // Map-aware payload. The city normally renders the pre-rendered Goose Cape
+  // map (drawn by the minimap system); the house POIs ride along only as a
+  // fallback if that image can't be drawn. The farm shows its world objects
+  // plus the Goose Cape marker at the city portal.
   const worldArrays = (getCurrentMapId() === 'city')
-    ? {}
+    ? { pois: _buildCityPois() }
     : { trees, rocks, thickets, houses, placedWells, pois: _buildFarmPois() };
 
   minimapSystem.update(currentPlayer.x, currentPlayer.y, worldArrays);
