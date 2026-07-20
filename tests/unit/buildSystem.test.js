@@ -237,12 +237,12 @@ describe('BuildSystem (Production Implementation)', () => {
       expect(dim.height).toBe(32);
     });
 
-    test('should return 6x62 for vertical fence', () => {
+    test('should return 8x48 for vertical fence', () => {
       BuildSystem.selectedItem = { id: 10, variants: ['fenceX', 'fenceY'] };
       BuildSystem.currentVariant = 'fenceY';
       const dim = BuildSystem.getConstructionDimensions();
-      expect(dim.width).toBe(6);
-      expect(dim.height).toBe(62);
+      expect(dim.width).toBe(8);
+      expect(dim.height).toBe(48);
     });
 
     test('should return 75x95 for well', () => {
@@ -264,6 +264,51 @@ describe('BuildSystem (Production Implementation)', () => {
       const dim = BuildSystem.getConstructionDimensions();
       expect(dim.width).toBe(100);
       expect(dim.height).toBe(80);
+    });
+  });
+
+  describe('_magneticFenceSnap (#230)', () => {
+    test('returns zero delta when there are no endpoints', () => {
+      BuildSystem.currentVariant = 'fenceX';
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 32, height: 32 }, []);
+      expect(d).toEqual({ dx: 0, dy: 0 });
+    });
+
+    test('snaps a horizontal fence corner onto a nearby endpoint', () => {
+      BuildSystem.currentVariant = 'fenceX';
+      // Preview top-left (100,100) → corner endpoints incl. (100,100).
+      // Target at (105,103) is 5.83px away (< radius 16) → snap.
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 32, height: 32 }, [
+        { x: 105, y: 103 },
+      ]);
+      expect(d).toEqual({ dx: 5, dy: 3 });
+    });
+
+    test('does not snap when the nearest endpoint is beyond the radius', () => {
+      BuildSystem.currentVariant = 'fenceX';
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 32, height: 32 }, [
+        { x: 200, y: 200 },
+      ]);
+      expect(d).toEqual({ dx: 0, dy: 0 });
+    });
+
+    test('uses top/bottom-mid endpoints for a vertical fence', () => {
+      BuildSystem.currentVariant = 'fenceY';
+      // Preview top-left (100,100), dim 8x48 → top-mid endpoint (104,100).
+     // Target (104,101) is 1px away → snap onto it..
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 8, height: 48 }, [
+        { x: 104, y: 101 },
+      ]);
+      expect(d).toEqual({ dx: 0, dy: 1 });
+    });
+
+    test('picks the closest endpoint among several', () => {
+      BuildSystem.currentVariant = 'fenceX';
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 32, height: 32 }, [
+        { x: 110, y: 108 }, // far-ish from (100,100): ~12.8
+        { x: 102, y: 101 }, // very close to (100,100): ~2.2 → wins
+      ]);
+      expect(d).toEqual({ dx: 2, dy: 1 });
     });
   });
 
