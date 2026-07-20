@@ -50,6 +50,12 @@ export const BuildSystem = {
     zoomedGridSize: TILE_SIZE * CAMERA_ZOOM,
     mouseTile: { x: 0, y: 0 },
 
+    // Raio (px de mundo) do snap magnético de cercas: se um endpoint do preview
+    // ficar a até esta distância de um endpoint de cerca já colocada, a peça é
+    // deslocada pra os endpoints coincidirem. Maior que a tolerância de conexão
+    // (ENDPOINT_HITBOX_SIZE=8) pra ser fácil de "agarrar".
+    fenceSnapRadius: 16,
+
     lastMouseUpdate: 0,
     mouseUpdateInterval: MOUSE_UPDATE_INTERVAL_MS,
     mouseUpdatePending: false,
@@ -438,10 +444,11 @@ export const BuildSystem = {
         switch (type) {
             case 'chest': return { width: 31, height: 31 };
             case 'fence':
-                // fenceY: 6×48 (entre o original 62 e o muito-baixo 32).
-                // Mantém a sensação de "poste alto" sem ficar tão desproporcional
-                // quanto 62. Encaixe vertical: 2 fenceY = 96px ≈ 3 fenceX (96px).
-                return (this.currentVariant === 'fenceY') ? { width: 6, height: 48 } : { width: 32, height: 32 };
+                // fenceY: poste vertical. Largura 8 (era 6) pra cobrir o vão
+                // fino no canto quando conecta com a fenceX horizontal — o poste
+                // mais gordo fecha a frestinha (#230). Altura 48 mantém a
+                // proporção. Dial: subir a largura fecha mais o canto.
+                return (this.currentVariant === 'fenceY') ? { width: 8, height: 48 } : { width: 32, height: 32 };
             case 'well': return { width: 75, height: 95 };
             case 'watertrough':
                 // Cocho renderizado em escala reduzida — sprite original
@@ -469,8 +476,20 @@ export const BuildSystem = {
         // é coord de mundo bruta (não tile index). Sem snap a grid — onde
         // o mouse passa, é onde o objeto fica. Subpos virou no-op.
         const dim = this.getConstructionDimensions();
-        const snapX = this.mouseTile.x - dim.width / 2;
-        const snapY = this.mouseTile.y - dim.height / 2;
+        let snapX = this.mouseTile.x - dim.width / 2;
+        let snapY = this.mouseTile.y - dim.height / 2;
+
+        // Snap magnético (SÓ cercas): se um endpoint do preview estiver perto
+        // de um endpoint de cerca já colocada, desloca a peça pra os endpoints
+        // coincidirem — trechos conectam limpo, sem grid rígido. Outros
+        // placeables (poço/baú/cocho) seguem no livre (sem regressão).
+        if (this.getConstructionType() === 'fence') {
+            const enc = getSystem('enclosure');
+            const endpoints = enc?.getEndpoints?.() || [];
+            const delta = this._magneticFenceSnap(snapX, snapY, dim, endpoints);
+            snapX += delta.dx;
+            snapY += delta.dy;
+        }
 
         return {
             x: snapX,
@@ -480,6 +499,47 @@ export const BuildSystem = {
             subX: this.currentSubPosX,
             subY: this.currentSubPosY
         };
+    },
+
+    /**
+     * Calcula o deslocamento pra "grudar" o preview da cerca no endpoint de
+     * cerca colocada mais próximo. Espelha a geometria de endpoints do
+     * enclosureSystem (fenceX = 4 cantos; fenceY = topo/baixo no meio).
+     *
+     * @param {number} x - top-left X (mundo) do preview no modo livre
+     * @param {number} y - top-left Y (mundo) do preview no modo livre
+     * @param {{width:number,height:number}} dim - dimensões do preview
+     * @param {Array<{x:number,y:number}>} endpoints - endpoints das cercas já colocadas
+     * @returns {{dx:number, dy:number}} deslocamento a somar (0,0 = sem snap)
+     */
+    _magneticFenceSnap(x, y, dim, endpoints) {
+        const targets = endpoints;
+        if (!Array.isArray(targets) || targets.length === 0) return { dx: 0, dy: 0 };
+
+        const w = dim.width;
+        const h = dim.height;
+        // Mesma regra do drawPreviewEndpoints: fenceX (horizontal) tem os 4
+        // cantos como endpoints; fenceY (vertical) tem topo/baixo no meio.
+        const isHorizontal = this.currentVariant === 'fenceX'
+            || (this.currentVariant !== 'fenceY' && w >= h);
+
+        const previewEps = isHorizontal
+            ? [{ x, y }, { x: x + w, y }, { x, y: y + h }, { x: x + w, y: y + h }]
+            : [{ x: x + w / 2, y }, { x: x + w / 2, y: y + h }];
+
+        const R = this.fenceSnapRadius;
+        let best = null;
+        for (const pe of previewEps) {
+            for (const re of targets) {
+                const dx = re.x - pe.x;
+                const dy = re.y - pe.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist <= R && (!best || dist < best.dist)) {
+                    best = { dist, dx, dy };
+                }
+            }
+        }
+        return best ? { dx: best.dx, dy: best.dy } : { dx: 0, dy: 0 };
     },
 
     /**
@@ -1009,7 +1069,9 @@ export const BuildSystem = {
 
         this.currentVariant = v[(v.indexOf(this.currentVariant) + 1) % v.length];
         this.previewImg = assets.furniture?.[assetGroup]?.[this.currentVariant]?.img;
-        this.showDebugMessage(t('build.variant', { name: this.currentVariant }));
+        // Indicador claro de orientação: ↕ vertical (variant …Y) / ↔ horizontal.
+        const arrow = /Y$/.test(this.currentVariant || '') ? '↕' : '↔';
+        this.showDebugMessage(`${arrow} ${t('build.variant', { name: this.currentVariant })}`);
     },
 
     createDebugOverlay() {
