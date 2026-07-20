@@ -29,28 +29,17 @@ export class MinimapSystem {
     this.minimapWidth = this.canvas.width;
     this.minimapHeight = this.canvas.height;
 
-    // Zoomed scale: minimap shows a viewport around the player
+    // Zoomed scale: fixed-size viewport (world px) around the player —
+    // independent of the map, so it stays constant when switching maps.
     this.scaleX = this.minimapWidth / VIEWPORT_WORLD_WIDTH;
     this.scaleY = this.minimapHeight / VIEWPORT_WORLD_HEIGHT;
 
-    // Exploration uses full-world scale for persistent fog
-    this._fullScaleX = this.minimapWidth / this.worldWidth;
-    this._fullScaleY = this.minimapHeight / this.worldHeight;
-    this._fullScale = Math.min(this._fullScaleX, this._fullScaleY);
-    this._fullOffsetX = (this.minimapWidth - this.worldWidth * this._fullScale) / 2;
-    this._fullOffsetY = (this.minimapHeight - this.worldHeight * this._fullScale) / 2;
-    this._explorationRadiusFull = EXPLORATION_RADIUS_WORLD * this._fullScale;
-
-    // Persistent exploration canvas (fog of war, full world)
-    this.explorationMap = document.createElement('canvas');
-    this.explorationMap.width = this.minimapWidth;
-    this.explorationMap.height = this.minimapHeight;
-    this.explorationCtx = this.explorationMap.getContext('2d');
-    this.explorationCtx.fillStyle = '#000000';
-    this.explorationCtx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
-
-    // Boolean grid for fast exploration lookup (avoids per-pixel getImageData)
-    this._explorationGrid = new Set();
+    // Per-map fog of war + exploration grid. Farm and city keep separate
+    // canvases/grids so exploring one doesn't paint over the other (their
+    // world coords overlap). setMap() swaps the active pointers.
+    this._maps = {};
+    this._activeMapId = null;
+    this.setMap('farm', this.worldWidth, this.worldHeight);
 
     this.colors = {
       ground: '#2d5016',
@@ -73,6 +62,58 @@ export class MinimapSystem {
   }
 
   /**
+   * Create (once) the fog canvas + exploration grid for a map, sized to that
+   * map's world dimensions. Idempotent — returns the existing entry if present.
+   */
+  _createMapEntry(mapId, worldWidth, worldHeight) {
+    if (this._maps[mapId]) return this._maps[mapId];
+    const canvas = document.createElement('canvas');
+    canvas.width = this.minimapWidth;
+    canvas.height = this.minimapHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
+    const fullScale = Math.min(this.minimapWidth / worldWidth, this.minimapHeight / worldHeight);
+    this._maps[mapId] = {
+      worldWidth,
+      worldHeight,
+      canvas,
+      ctx,
+      grid: new Set(),
+      fullScale,
+      fullOffsetX: (this.minimapWidth - worldWidth * fullScale) / 2,
+      fullOffsetY: (this.minimapHeight - worldHeight * fullScale) / 2,
+      explorationRadiusFull: EXPLORATION_RADIUS_WORLD * fullScale,
+    };
+    return this._maps[mapId];
+  }
+
+  /**
+   * Switch the active map: points fog/grid/scale at that map's entry (creating
+   * it on first use). Exploration, render and camera all read these pointers,
+   * so switching is enough to make the whole minimap map-aware.
+   * @param {string} mapId - 'farm' | 'city' | ...
+   * @param {number} worldWidth - map world width (px)
+   * @param {number} worldHeight - map world height (px)
+   */
+  setMap(mapId, worldWidth, worldHeight) {
+    const m = this._createMapEntry(mapId, worldWidth, worldHeight);
+    this._activeMapId = mapId;
+    this.worldWidth = m.worldWidth;
+    this.worldHeight = m.worldHeight;
+    this.explorationMap = m.canvas;
+    this.explorationCtx = m.ctx;
+    this._explorationGrid = m.grid;
+    this._fullScale = m.fullScale;
+    this._fullOffsetX = m.fullOffsetX;
+    this._fullOffsetY = m.fullOffsetY;
+    this._explorationRadiusFull = m.explorationRadiusFull;
+    // Force the next updateExploration to repaint (new coord space).
+    this._lastExplorationX = undefined;
+    this._lastExplorationY = undefined;
+  }
+
+  /**
    * Load icons from assets/icons/ folder
    * @param {string} basePath - Base path to icons folder
    * @returns {Promise} Resolves when all icons finish loading (or fail)
@@ -86,6 +127,18 @@ export class MinimapSystem {
       stella: 'stellaIcon.png',
       ben: 'benIcon.png',
       graham: 'grahamIcon.png',
+      // Cidade Goose Cape: marcador geral + casas por dono (#231). Referenciados
+      // como .webp (assets novos entram só em webp; .png não é garantido).
+      goosecape: 'gooseCapeIcon.webp',
+      bru: 'bruHouseIcon.webp',
+      millers: 'millersHouseIcon.webp',
+      twins: 'twinHouse.webp',
+      bartolomeu: 'bartolomeuHouseIcon.webp',
+      milly: 'millyHouseIcon.webp',
+      // Estruturas da fazenda: poço e cercado (um marcador por curral fechado —
+      // as cercas individuais não são desenhadas, só o cercado que elas formam).
+      well: 'wellIcon.png',
+      enclosure: 'fenceIcon.webp',
     };
 
     const promises = Object.entries(iconMap).map(([key, filename]) => {
@@ -183,30 +236,29 @@ export class MinimapSystem {
     return this._explorationGrid.has(key);
   }
 
-  /** Rebuild exploration grid from canvas pixels (one-time, for legacy saves) */
-  _rebuildGridFromCanvas() {
-    this._explorationGrid = new Set();
-    const imgData = this.explorationCtx.getImageData(0, 0, this.minimapWidth, this.minimapHeight).data;
-    const cellPixelW = EXPLORE_CELL_SIZE * this._fullScale;
-    const cellPixelH = EXPLORE_CELL_SIZE * this._fullScale;
+  /** Rebuild a map entry's grid from its fog canvas pixels (legacy saves w/o grid). */
+  _rebuildGridInto(entry) {
+    entry.grid = new Set();
+    const imgData = entry.ctx.getImageData(0, 0, this.minimapWidth, this.minimapHeight).data;
+    const cellPixelW = EXPLORE_CELL_SIZE * entry.fullScale;
+    const cellPixelH = EXPLORE_CELL_SIZE * entry.fullScale;
 
-    const maxCellX = Math.ceil(this.worldWidth / EXPLORE_CELL_SIZE);
-    const maxCellY = Math.ceil(this.worldHeight / EXPLORE_CELL_SIZE);
+    const maxCellX = Math.ceil(entry.worldWidth / EXPLORE_CELL_SIZE);
+    const maxCellY = Math.ceil(entry.worldHeight / EXPLORE_CELL_SIZE);
 
     for (let gx = 0; gx < maxCellX; gx++) {
       for (let gy = 0; gy < maxCellY; gy++) {
         // Sample center pixel of this cell on the exploration canvas
-        const px = Math.round(this._fullOffsetX + (gx + 0.5) * cellPixelW);
-        const py = Math.round(this._fullOffsetY + (gy + 0.5) * cellPixelH);
+        const px = Math.round(entry.fullOffsetX + (gx + 0.5) * cellPixelW);
+        const py = Math.round(entry.fullOffsetY + (gy + 0.5) * cellPixelH);
         if (px < 0 || py < 0 || px >= this.minimapWidth || py >= this.minimapHeight) continue;
         const idx = (py * this.minimapWidth + px) * 4;
         // Non-black pixel = explored
         if (imgData[idx] !== 0 || imgData[idx + 1] !== 0 || imgData[idx + 2] !== 0) {
-          this._explorationGrid.add(`${gx},${gy}`);
+          entry.grid.add(`${gx},${gy}`);
         }
       }
     }
-    logger.debug(`[MinimapSystem] Rebuilt exploration grid from canvas: ${this._explorationGrid.size} cells`);
   }
 
   /** Get the active character name and direction for player icon */
@@ -218,56 +270,52 @@ export class MinimapSystem {
     };
   }
 
-  /** Reset exploration to an unexplored state (clears canvas + grid) */
+  /** Reset exploration to an unexplored state (clears canvas + grid) — ALL maps. */
   resetExploration() {
-    this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
-    this.explorationCtx.fillStyle = '#000000';
-    this.explorationCtx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
-    this._explorationGrid = new Set();
+    for (const id of Object.keys(this._maps)) {
+      const m = this._maps[id];
+      m.ctx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
+      m.ctx.fillStyle = '#000000';
+      m.ctx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
+      m.grid = new Set();
+    }
+    // Rebind the active grid pointer (grid was reassigned above).
+    if (this._maps[this._activeMapId]) this._explorationGrid = this._maps[this._activeMapId].grid;
   }
 
   /**
-   * Export exploration data as base64 for saving
-   * @returns {{ image: string, grid: string[] }}
+   * Export exploration for saving — per map (fog + grid), so farm and city
+   * fog persist independently.
+   * @returns {{ version: number, activeMap: string, maps: Object }}
    */
   exportExploration() {
-    return {
-      image: this.explorationMap.toDataURL('image/png'),
-      grid: [...this._explorationGrid],
-    };
+    const maps = {};
+    for (const id of Object.keys(this._maps)) {
+      const m = this._maps[id];
+      maps[id] = {
+        worldWidth: m.worldWidth,
+        worldHeight: m.worldHeight,
+        image: m.canvas.toDataURL('image/png'),
+        grid: [...m.grid],
+      };
+    }
+    return { version: 2, activeMap: this._activeMapId, maps };
   }
 
-  /**
-   * Import exploration data from a saved state
-   * @param {string|Object} data - base64 dataUrl (legacy) or { image, grid }
-   * @returns {Promise}
-   */
-  importExploration(data) {
-    if (!data) return Promise.resolve();
+  /** Load one map entry's fog canvas + grid from saved data. Returns a Promise. */
+  _loadFogInto(entry, md) {
+    const hasGrid = Array.isArray(md.grid);
+    if (hasGrid) entry.grid = new Set(md.grid);
 
-    // Support legacy format (plain string) and new format (object)
-    const imageUrl = typeof data === 'string' ? data : data.image;
-    const gridArr = (typeof data === 'object' && data !== null) ? data.grid : null;
-    const hasValidGrid = Array.isArray(gridArr);
-
-    // Restore boolean grid
-    if (hasValidGrid) {
-      this._explorationGrid = new Set(gridArr);
-    }
-
+    const imageUrl = (typeof md === 'string') ? md : md.image;
     if (!imageUrl) return Promise.resolve();
 
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        this.explorationCtx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
-        this.explorationCtx.drawImage(img, 0, 0);
-
-        // Rebuild grid from canvas pixels for legacy saves without grid data
-        if (!hasValidGrid) {
-          this._rebuildGridFromCanvas();
-        }
-
+        entry.ctx.clearRect(0, 0, this.minimapWidth, this.minimapHeight);
+        entry.ctx.drawImage(img, 0, 0);
+        if (!hasGrid) this._rebuildGridInto(entry); // legacy save w/o grid
         resolve();
       };
       img.onerror = () => {
@@ -275,6 +323,37 @@ export class MinimapSystem {
         resolve();
       };
       img.src = imageUrl;
+    });
+  }
+
+  /**
+   * Import exploration from a saved state. Supports the per-map format
+   * (`{ version: 2, maps }`) and the legacy single-map format (a dataURL string
+   * or `{ image, grid }`, restored onto the farm map).
+   * @param {string|Object} data
+   * @returns {Promise}
+   */
+  importExploration(data) {
+    if (!data) return Promise.resolve();
+
+    // Per-map format.
+    if (data.maps && typeof data.maps === 'object') {
+      const tasks = [];
+      for (const id of Object.keys(data.maps)) {
+        const md = data.maps[id];
+        const entry = this._createMapEntry(id, md.worldWidth || this.worldWidth, md.worldHeight || this.worldHeight);
+        tasks.push(this._loadFogInto(entry, md));
+      }
+      return Promise.all(tasks).then(() => {
+        // Grids were reassigned — rebind the active pointer.
+        if (this._maps[this._activeMapId]) this._explorationGrid = this._maps[this._activeMapId].grid;
+      });
+    }
+
+    // Legacy single-map (string dataURL or { image, grid }) → farm map.
+    const farm = this._createMapEntry('farm', this.worldWidth, this.worldHeight);
+    return this._loadFogInto(farm, data).then(() => {
+      if (this._activeMapId === 'farm') this._explorationGrid = farm.grid;
     });
   }
 
@@ -292,18 +371,34 @@ export class MinimapSystem {
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, this.minimapWidth, this.minimapHeight);
 
-    // Draw exploration fog for visible viewport area
-    this._drawExplorationLayer(ctx);
+    // City: use the pre-rendered Goose Cape map (streets + houses) as the base
+    // layer — far nicer than fog + generic markers. Falls back to fog if the
+    // image isn't ready yet.
+    const cityImg = this.icons.goosecape;
+    const useCityBase = this._activeMapId === 'city' && cityImg && cityImg.complete && cityImg.naturalWidth > 0;
 
-    // World objects
-    this._renderObjects(ctx, worldArrays.trees, 'tree', ICON_SIZE);
-    this._renderObjects(ctx, worldArrays.rocks, 'rock', ICON_SIZE - 2);
-    this._renderObjects(ctx, worldArrays.thickets, 'thicket', ICON_SIZE - 4);
-    // Filter houses to only HOUSE_WALLS to avoid duplicates (HOUSE_ROOF is the same position)
-    const wallsOnly = worldArrays.houses?.filter(h => h && h.type === 'HOUSE_WALLS') || [];
-    this._renderObjects(ctx, wallsOnly, 'house', ICON_SIZE + 4);
-    this._renderObjects(ctx, worldArrays.placedBuildings, 'building', ICON_SIZE);
-    this._renderObjects(ctx, worldArrays.placedWells, 'well', ICON_SIZE - 2);
+    if (useCityBase) {
+      this._drawCityBaseMap(ctx, cityImg);
+    } else {
+      // Draw exploration fog for visible viewport area
+      this._drawExplorationLayer(ctx);
+
+      // World objects
+      this._renderObjects(ctx, worldArrays.trees, 'tree', ICON_SIZE);
+      this._renderObjects(ctx, worldArrays.rocks, 'rock', ICON_SIZE - 2);
+      this._renderObjects(ctx, worldArrays.thickets, 'thicket', ICON_SIZE - 4);
+      // Filter houses to only HOUSE_WALLS to avoid duplicates (HOUSE_ROOF is the same position)
+      const wallsOnly = worldArrays.houses?.filter(h => h && h.type === 'HOUSE_WALLS') || [];
+      this._renderObjects(ctx, wallsOnly, 'house', ICON_SIZE + 4);
+      this._renderObjects(ctx, worldArrays.placedWells, 'well', ICON_SIZE - 2);
+
+      // Fences aren't drawn individually — a closed pen shows as ONE marker at
+      // its center, signaling "enclosure here" instead of every fence piece.
+      this._renderEnclosures(ctx);
+
+      // Points of interest (e.g. the Goose Cape marker on the farm).
+      this._renderPois(ctx, worldArrays.pois);
+    }
 
     // Player icon (character-based, flipped by direction)
     const { charId, direction } = this._getPlayerInfo();
@@ -329,6 +424,21 @@ export class MinimapSystem {
       ctx.lineWidth = 1;
       ctx.stroke();
     }
+  }
+
+  /**
+   * Draw the Goose Cape base map. The icon is a top-down render of the whole
+   * city, so we map the full image onto the full world and blit the slice that
+   * matches the current viewport — it pans with the player just like the fog.
+   */
+  _drawCityBaseMap(ctx, img) {
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    const srcX = (this._camX / this.worldWidth) * iw;
+    const srcY = (this._camY / this.worldHeight) * ih;
+    const srcW = (VIEWPORT_WORLD_WIDTH / this.worldWidth) * iw;
+    const srcH = (VIEWPORT_WORLD_HEIGHT / this.worldHeight) * ih;
+    ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, this.minimapWidth, this.minimapHeight);
   }
 
   /** Draw the explored ground for the current viewport area */
@@ -361,6 +471,61 @@ export class MinimapSystem {
       } else {
         ctx.fillStyle = this.colors[type] || '#ffffff';
         ctx.fillRect(pos.x - halfSize / 2, pos.y - halfSize / 2, halfSize, halfSize);
+      }
+    }
+  }
+
+  /**
+   * Render a marker at the center of each detected animal enclosure (farm).
+   * Gated by fog like world objects — pens reveal as their area is explored.
+   */
+  _renderEnclosures(ctx) {
+    const list = getSystem('enclosure')?.getEnclosures?.();
+    if (!Array.isArray(list) || list.length === 0) return;
+
+    const icon = this.icons.enclosure;
+    const size = ICON_SIZE + 4;
+    const half = size / 2;
+
+    for (const enc of list) {
+      if (!enc) continue;
+      if (!this._isInViewport(enc.centerX, enc.centerY)) continue;
+      if (!this._isExplored(enc.centerX, enc.centerY)) continue;
+
+      const pos = this.worldToMinimap(enc.centerX, enc.centerY);
+      if (icon) {
+        ctx.drawImage(icon, pos.x - half, pos.y - half, size, size);
+      } else {
+        ctx.fillStyle = '#b8860b';
+        ctx.fillRect(pos.x - half / 2, pos.y - half / 2, half, half);
+      }
+    }
+  }
+
+  /**
+   * Render point-of-interest markers. Each POI: `{ x, y, icon, size?, alwaysShow? }`.
+   * `alwaysShow` markers (e.g. the city on the farm) ignore fog; others only
+   * appear once their spot has been explored (discovery), like world objects.
+   */
+  _renderPois(ctx, pois) {
+    if (!Array.isArray(pois) || pois.length === 0) return;
+    for (const poi of pois) {
+      if (!poi) continue;
+      if (!this._isInViewport(poi.x, poi.y)) continue;
+      if (!poi.alwaysShow && !this._isExplored(poi.x, poi.y)) continue;
+
+      const icon = this.icons[poi.icon];
+      const size = poi.size || ICON_SIZE;
+      const half = size / 2;
+      const pos = this.worldToMinimap(poi.x, poi.y);
+
+      if (icon) {
+        ctx.drawImage(icon, pos.x - half, pos.y - half, size, size);
+      } else {
+        ctx.fillStyle = '#ffd54f';
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, Math.max(2, half / 2), 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }

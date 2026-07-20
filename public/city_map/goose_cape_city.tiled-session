@@ -265,6 +265,7 @@
     "last.imagePath": "C:/farmingXP/public/city_map",
     "map.lastUsedExportFilter": "Todos os Ficheiros (*)",
     "map.lastUsedFormat": "tmx",
+    "mapScene.enableWorlds": true,
     "openFiles": [
         "city-of-goose-cape.tmx",
         "nature_furniture.tsx",
