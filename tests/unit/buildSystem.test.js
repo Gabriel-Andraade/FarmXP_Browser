@@ -294,12 +294,12 @@ describe('BuildSystem (Production Implementation)', () => {
 
     test('uses top/bottom-mid endpoints for a vertical fence', () => {
       BuildSystem.currentVariant = 'fenceY';
-      // Preview top-left (100,100), dim 6x48 → top-mid endpoint (103,100).
-      // Target (104,101) is ~1.4px away → snap onto it.
-      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 6, height: 48 }, [
+      // Preview top-left (100,100), dim 8x48 → top-mid endpoint (104,100).
+     // Target (104,101) is 1px away → snap onto it..
+      const d = BuildSystem._magneticFenceSnap(100, 100, { width: 8, height: 48 }, [
         { x: 104, y: 101 },
       ]);
-      expect(d).toEqual({ dx: 1, dy: 1 });
+      expect(d).toEqual({ dx: 0, dy: 1 });
     });
 
     test('picks the closest endpoint among several', () => {
