@@ -1,23 +1,32 @@
 /**
  * @file minimapIntegration.js - Minimap initialization and game loop integration
  * @description Initializes MinimapUI + MinimapSystem and provides the update function
- * to be called from the main game loop.
+ * to be called from the main game loop. Map-aware: follows farm↔city transitions,
+ * sourcing the right point-of-interest markers per map (#231).
  * @module MinimapIntegration
  */
 
 import { MinimapUI } from './minimapUI.js';
 import { MinimapSystem } from './minimapSystem.js';
 import { WORLD_WIDTH, WORLD_HEIGHT } from '../worldConstants.js';
-import { trees, rocks, thickets, houses, placedBuildings, placedWells } from '../theWorld.js';
+import { trees, rocks, thickets, houses, placedWells } from '../theWorld.js';
 import { registerSystem } from '../gameState.js';
+import { MAPS, getCurrentMapId, getPortalForMap } from '../mapManager.js';
 import { logger } from '../logger.js';
 
 let minimapUI = null;
 let minimapSystem = null;
+let _mapListenerBound = false;
 
 function resetMinimapState() {
   minimapUI = null;
   minimapSystem = null;
+}
+
+/** Point the minimap at a map (its dimensions + own fog). */
+function _applyMap(mapId) {
+  const map = MAPS[mapId] || MAPS.farm;
+  minimapSystem?.setMap(mapId, map.width, map.height);
 }
 
 /**
@@ -43,11 +52,36 @@ export async function initMinimap() {
     await minimapSystem.loadIcons('assets/icons/');
 
     registerSystem('minimap', minimapSystem);
+
+    // Sync to the current map, then follow farm↔city transitions so fog and
+    // dimensions track the active map.
+    _applyMap(getCurrentMapId());
+    if (!_mapListenerBound) {
+      document.addEventListener('mapChanged', (e) => {
+        const id = e.detail?.mapId;
+        if (id) _applyMap(id);
+      });
+      _mapListenerBound = true;
+    }
+
     logger.debug('Minimap fully initialized');
   } catch (e) {
     logger.error('Minimap init failed:', e);
     resetMinimapState();
   }
+}
+
+/** Farm POIs: a Goose Cape marker at the farm→city portal (known destination). */
+function _buildFarmPois() {
+  const portal = getPortalForMap('farm');
+  if (!portal) return [];
+  return [{
+    x: portal.x + portal.width / 2,
+    y: portal.y + portal.height / 2,
+    icon: 'goosecape',
+    size: 22,
+    alwaysShow: true, // visible even before exploring — it's a known place
+  }];
 }
 
 /**
@@ -57,13 +91,18 @@ export async function initMinimap() {
 export function updateMinimap(currentPlayer) {
   if (!minimapSystem || !currentPlayer) return;
 
-  if (minimapUI?.isVisible) {
-    // worldArrays só é usado no render; monta apenas quando o minimap está
-    // visível (evita o objeto por frame quando está oculto).
-    minimapSystem.update(currentPlayer.x, currentPlayer.y, {
-      trees, rocks, thickets, houses, placedBuildings, placedWells,
-    });
-  } else {
+  // Hidden: only keep painting fog (cheap) — skip building the render payload.
+  if (!minimapUI?.isVisible) {
     minimapSystem.updateExploration(currentPlayer.x, currentPlayer.y);
+    return;
   }
+
+  // Map-aware payload. The city renders the pre-rendered Goose Cape map (drawn
+  // by the minimap system itself), so it needs no object/POI payload; the farm
+  // shows its world objects plus the Goose Cape marker at the city portal.
+  const worldArrays = (getCurrentMapId() === 'city')
+    ? {}
+    : { trees, rocks, thickets, houses, placedWells, pois: _buildFarmPois() };
+
+  minimapSystem.update(currentPlayer.x, currentPlayer.y, worldArrays);
 }
