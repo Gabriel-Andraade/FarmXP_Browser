@@ -720,10 +720,13 @@ export default {
     calf: 'Calf',
     chick: 'Chick',
     chicken: 'Chicken',
-    pig: 'Pig',
+    rooster: 'Rooster',
     cow: 'Cow',
     pig: 'Pig',
+    piglet: 'Piglet',
     sheep: 'Sheep',
+    lamb: 'Lamb',
+    turkey: 'Turkey',
     goat: 'Goat',
     horse: 'Horse'
   },
@@ -855,6 +858,11 @@ export default {
         mature:  '✨ Matured!',
         elderly: '✨ Aged',
       }
+    },
+    // Breeding (#243) — floating FX when a pair is expecting / a young is born.
+    breeding: {
+      pregnant: 'Pregnant',
+      bornFx: '🐣 Born!',
     },
     // Tomb / memorial — when an animal dies of old age, a tomb appears
     // and clicking opens a card with their data.

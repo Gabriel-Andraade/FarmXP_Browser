@@ -720,10 +720,13 @@ export default {
     calf: 'Ternero',
     chick: 'Pollito',
     chicken: 'Gallina',
-    pig: 'Cerdo',
+    rooster: 'Gallo',
     cow: 'Vaca',
     pig: 'Cerdo',
+    piglet: 'Lechón',
     sheep: 'Oveja',
+    lamb: 'Cordero',
+    turkey: 'Pavo',
     goat: 'Cabra',
     horse: 'Caballo'
   },
@@ -856,6 +859,11 @@ export default {
         mature:  '✨ ¡Maduró!',
         elderly: '✨ Envejeció',
       }
+    },
+    // Reproducción (#243) — FX flotante al esperar cría / al nacer.
+    breeding: {
+      pregnant: 'Embarazada',
+      bornFx: '🐣 ¡Nació!',
     },
     // Tumba / memorial — cuando animal muere de viejo, aparece tumba
     // y el clic abre un panel con sus datos.

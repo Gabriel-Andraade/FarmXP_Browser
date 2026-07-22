@@ -1631,6 +1631,13 @@ export function exportWorldState() {
     animalTombs: (() => {
       const tomb = getSystem('animalTomb');
       return tomb?.serializeState ? tomb.serializeState() : [];
+    })(),
+    // Estado de reprodução (#243): gestação/cooldown por cercado+família. Os
+    // pares são recomputados dos animais vivos no load; só os timers precisam
+    // sobreviver ao save.
+    breeding: (() => {
+      const breeding = getSystem('breeding');
+      return breeding?.serializeState ? breeding.serializeState() : {};
     })()
   };
 }
@@ -1822,6 +1829,14 @@ export function importWorldState(data) {
     const tomb = getSystem('animalTomb');
     if (tomb?.restoreState) {
       tomb.restoreState(payload.animalTombs ?? []);
+    }
+
+    // Restaura os timers de reprodução (#243). Os pares se recompõem sozinhos
+    // dos animais vivos no próximo `dayChanged`; só a gestação/cooldown precisa
+    // vir do save.
+    const breeding = getSystem('breeding');
+    if (breeding?.restoreState) {
+      breeding.restoreState(payload.breeding ?? {});
     }
 
     // Re-register entity hitboxes wiped by collisionSystem.clear() so NPCs and

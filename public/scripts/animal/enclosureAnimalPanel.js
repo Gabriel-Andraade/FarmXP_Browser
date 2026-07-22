@@ -23,6 +23,7 @@
 import { items } from '../item.js';
 import { getSystem } from '../gameState.js';
 import { setItemIcon, getItem } from '../itemUtils.js';
+import { getAnimalFamily } from './enclosureSystem.js';
 import { t } from '../i18n/i18n.js';
 
 const OVERLAY_ID = 'enclosure-animal-panel';
@@ -138,8 +139,10 @@ export function openEnclosureAnimalPanel(enclosure) {
     list.replaceChildren();
 
     const encSys = getSystem('enclosure');
-    const species = encSys?.getEnclosureSpecies?.(enclosure.id) || {};
-    const speciesCount = Object.keys(species).length;
+    // Contagem VIVA por família (#243): reflete nascimentos/mortes e conta
+    // Cow+Bull como 1 espécie. Substitui o antigo registro de compras.
+    const counts = encSys?.getLiveAnimalCounts?.(enclosure.id) || { byAsset: {}, byFamily: {}, familyCount: 0 };
+    const speciesCount = counts.familyCount;
 
     const currency = getSystem('currency');
     const balance = currency?.getMoney?.() ?? 0;
@@ -167,14 +170,16 @@ export function openEnclosureAnimalPanel(enclosure) {
     }
 
     for (const animal of catalog) {
-      list.appendChild(buildAnimalItem(animal, species, speciesCount, balance));
+      list.appendChild(buildAnimalItem(animal, counts, speciesCount, balance));
     }
   }
 
-  function buildAnimalItem(animal, species, speciesCount, balance) {
+  function buildAnimalItem(animal, counts, speciesCount, balance) {
     const animalDisplayName = _animalName(animal);
-    const currentCount = species[animal.assetName] || 0;
-    const isNewSpecies = currentCount === 0;
+    // Contagem viva desse asset; bloqueio pela FAMÍLIA (Cow+Bull = 1 espécie).
+    const currentCount = counts.byAsset[animal.assetName] || 0;
+    const family = getAnimalFamily(animal.assetName);
+    const isNewSpecies = !(counts.byFamily[family] > 0);
     const blockedBySpeciesLimit = isNewSpecies && speciesCount >= MAX_SPECIES;
     const blockedByMoney = balance < (animal.price || 0);
     const disabled = blockedBySpeciesLimit || blockedByMoney;
