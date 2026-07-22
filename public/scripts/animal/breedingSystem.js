@@ -90,8 +90,28 @@ class BreedingSystem {
     const enclosures = enc.getEnclosures();
     const knownIds = new Set(enclosures.map(e => e.id));
 
-    // Zera as flags de gravidez — reatribuídas abaixo pras gestações ativas.
-    for (const a of animals) if (a) a._pregnant = false;
+    // Zera as flags de gravidez e indexa os animais por id.
+    const byId = new Map();
+    for (const a of animals) {
+      if (!a) continue;
+      a._pregnant = false;
+      if (a.id) byId.set(a.id, a);
+    }
+
+    // Re-marca a mãe de TODA gestação ativa direto do `_state`, ANTES de
+    // qualquer `continue` do loop de pareamento. Assim o selo 🤰 no mundo
+    // sempre bate com `isPregnant()` mesmo quando o casal fica temporariamente
+    // inválido (parceiro vendido/internado/morto) — o `_state` é a fonte única.
+    for (const encId in this._state) {
+      const fams = this._state[encId];
+      for (const family in fams) {
+        const fs = fams[family];
+        if (fs?.gestation != null && fs.motherId) {
+          const mom = byId.get(fs.motherId);
+          if (mom) mom._pregnant = true;
+        }
+      }
+    }
 
     // Agrupa animais por cercado: total (capacidade) + adultos saudáveis por
     // família/gênero (guarda as fêmeas por ref pra marcar a mãe).
@@ -127,6 +147,7 @@ class BreedingSystem {
           // (estilo Minecraft). A partir daqui a fêmea fica grávida.
           fs.gestation = GESTATION_DAYS;
           fs.motherId = fam.females[0].id;
+          fam.females[0]._pregnant = true; // selo já no mesmo tick do acasalamento
           this._loveFx(fam.males[0]);
           this._loveFx(fam.females[0]);
           document.dispatchEvent(new CustomEvent('animalExpecting', { detail: { enclosureId: encId, family } }));
@@ -134,9 +155,11 @@ class BreedingSystem {
           fs.gestation--;
         }
 
-        // Mantém a mãe marcada enquanto gesta (indicador persistente de grávida).
-        if (fs.gestation != null) {
-          const mother = fam.females.find(f => f.id === fs.motherId) || fam.females[0];
+        // Se a mãe registrada sumiu do mundo (vendida/morta), outra fêmea
+        // presente assume a gestação. Se ela apenas está indisponível (doente,
+        // fora do bucket), segue sendo a mãe — já marcada no passe acima.
+        if (fs.gestation != null && !byId.has(fs.motherId)) {
+          const mother = fam.females[0];
           fs.motherId = mother.id;
           mother._pregnant = true;
         }
@@ -146,7 +169,7 @@ class BreedingSystem {
           const baby = enc.birthAnimal?.(encId, fam.young);
           if (baby) {
             b.total++;
-            const mom = fam.females.find(f => f.id === fs.motherId);
+            const mom = byId.get(fs.motherId);
             if (mom) mom._pregnant = false; // deixou de estar grávida ao parir
             fs.gestation = null;
             fs.motherId = null;
