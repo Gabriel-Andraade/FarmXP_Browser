@@ -309,6 +309,9 @@ async function initializeCriticalSystems() {
     await import("./animal/agingSystem.js");
     logger.debug("animal agingSystem carregado");
 
+    await import("./animal/breedingSystem.js");
+    logger.debug("animal breedingSystem carregado");
+
     await import("./animal/tombSystem.js");
     logger.debug("animal tombSystem carregado");
 
@@ -1344,6 +1347,8 @@ _onMain(document,"mainMenu:newGame", () => {
   // Reseta baús — senão baús de um save carregado antes vazam pro novo jogo.
   const chest = getSystem('chest');
   if (chest?.resetChests) chest.resetChests();
+  // Reseta timers de reprodução (#243) pelo mesmo motivo de isolamento por slot.
+  getSystem('breeding')?.restoreState?.({});
   const selection = new CharacterSelection();
   selection.show();
 });

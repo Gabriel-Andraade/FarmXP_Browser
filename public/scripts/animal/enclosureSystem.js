@@ -63,6 +63,22 @@ const ENCLOSURE_MARKER_COLOR  = '#b8860b';
 // espécie continua ilimitada — espelhando a decisão de design anterior.
 const MAX_SPECIES_PER_ENCLOSURE = 3;
 
+// Família de cada animal (todos os estágios). O limite de espécies e a
+// contagem do painel usam a FAMÍLIA (não o assetName) — assim Cow+Bull contam
+// como 1 espécie (gado), e um casal reprodutor não gasta 2 slots. Desconhecido
+// cai no próprio assetName (cada um vira sua "família").
+const ANIMAL_FAMILY = {
+  Cow: 'cattle', Bull: 'cattle', Calf: 'cattle',
+  Chicken: 'poultry', Rooster: 'poultry', Chick: 'poultry', Turkey: 'poultry',
+  Sheep: 'sheep', Lamb: 'sheep',
+  Pig: 'pig', Piglet: 'pig',
+};
+
+/** Família do animal (Cow/Bull/Calf → 'cattle', etc.), com fallback no asset. */
+export function getAnimalFamily(assetName) {
+  return ANIMAL_FAMILY[assetName] || assetName;
+}
+
 class EnclosureSystem {
   constructor() {
     this._enclosures = [];
@@ -253,6 +269,35 @@ class EnclosureSystem {
   }
 
   /**
+   * Contagem VIVA de animais dentro do cercado (#243): por asset e por família.
+   * Substitui o registro de compras (`_speciesById`) na contagem/limite do
+   * painel — reflete nascimentos e mortes na hora, sem travar após mortes.
+   * @param {string} enclosureId
+   * @returns {{ byAsset: Object, byFamily: Object, familyCount: number }}
+   */
+  getLiveAnimalCounts(enclosureId) {
+    const out = { byAsset: {}, byFamily: {}, familyCount: 0 };
+    const enc = this._enclosures.find(e => e.id === enclosureId);
+    if (!enc) return out;
+    const world = (typeof window !== 'undefined') ? window.theWorld : null;
+    const list = (world && Array.isArray(world.animals)) ? world.animals : null;
+    if (!list) return out;
+
+    for (const a of list) {
+      if (!a) continue;
+      const cx = a.x + (a.width || 0) / 2;
+      const cy = a.y + (a.height || 0) / 2;
+      const key = `${Math.floor(cx / CELL)},${Math.floor(cy / CELL)}`;
+      if (!enc._cellKeys.has(key)) continue;
+      out.byAsset[a.assetName] = (out.byAsset[a.assetName] || 0) + 1;
+      const fam = getAnimalFamily(a.assetName);
+      out.byFamily[fam] = (out.byFamily[fam] || 0) + 1;
+    }
+    out.familyCount = Object.keys(out.byFamily).length;
+    return out;
+  }
+
+  /**
    * Serializa o mapa de espécies por cercado pra o save. Os cercados em
    * si NÃO são persistidos (são recalculados a partir das cercas do save),
    * mas o contador de espécies precisa sobreviver — senão reload zera
@@ -392,9 +437,13 @@ class EnclosureSystem {
     if (!animalItem?.assetName) return { ok: false, reason: 'no_asset_name' };
 
     const species = this._speciesById.get(enclosureId) || {};
-    const isNewSpecies = !species[animalItem.assetName];
-    const speciesCount = Object.keys(species).length;
-    if (isNewSpecies && speciesCount >= MAX_SPECIES_PER_ENCLOSURE) {
+
+    // Limite por FAMÍLIA a partir dos animais VIVOS (#243): Cow+Bull = 1 espécie,
+    // e famílias sem nenhum animal vivo liberam o slot (sem travamento pós-morte).
+    const counts = this.getLiveAnimalCounts(enclosureId);
+    const family = getAnimalFamily(animalItem.assetName);
+    const isNewFamily = !(counts.byFamily[family] > 0);
+    if (isNewFamily && counts.familyCount >= MAX_SPECIES_PER_ENCLOSURE) {
       return { ok: false, reason: 'species_limit' };
     }
 
@@ -450,6 +499,31 @@ class EnclosureSystem {
     }));
 
     return { ok: true, animal, price };
+  }
+
+  /**
+   * Spawna um recém-nascido (young) dentro do cercado numa posição segura.
+   * Usado pelo breedingSystem (#243): diferente de addAnimalToEnclosure, NÃO
+   * cobra nada e IGNORA o limite de espécies-compradas (é um rebanho que o
+   * player já tem). O filhote nasce em 'young' e cresce pelo agingSystem.
+   * @param {string} enclosureId
+   * @param {string} assetName - asset de filhote (Calf/Chick/Lamb/Piglet)
+   * @returns {object|null} o animal criado, ou null
+   */
+  birthAnimal(enclosureId, assetName) {
+    const enc = this._enclosures.find(e => e.id === enclosureId);
+    if (!enc || enc._cellKeys.size === 0) return null;
+    const assetData = assets?.animals?.[assetName];
+    if (!assetData) return null;
+
+    const spawn = this._findSafeSpawnPosition(enc, assetName, assetData);
+    const world = (typeof window !== 'undefined') ? window.theWorld : null;
+    if (!world || typeof world.addAnimal !== 'function') return null;
+
+    return world.addAnimal(assetName, assetData, spawn.x, spawn.y, {
+      daysOld: 0,
+      lifeStage: 'young',
+    }) || null;
   }
 
   /**

@@ -856,6 +856,11 @@ export default {
         elderly: '✨ Aged',
       }
     },
+    // Breeding (#243) — floating FX when a pair is expecting / a young is born.
+    breeding: {
+      pregnant: 'Pregnant',
+      bornFx: '🐣 Born!',
+    },
     // Tomb / memorial — when an animal dies of old age, a tomb appears
     // and clicking opens a card with their data.
     tomb: {

@@ -856,6 +856,11 @@ export default {
         elderly: '✨ Envelheceu',
       }
     },
+    // Reprodução (#243) — FX flutuante ao esperar filhote / ao nascer.
+    breeding: {
+      pregnant: 'Grávida',
+      bornFx: '🐣 Nasceu!',
+    },
     // Tumba / memorial — quando animal morre de velhice, tumba aparece
     // no lugar e clique abre card com os dados.
     tomb: {

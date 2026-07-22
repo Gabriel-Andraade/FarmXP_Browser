@@ -560,6 +560,11 @@ class UiPanel {
       const daysOld = this.target._daysOld || 0;
       stageEl.textContent = `${stageLabel} · ${daysOld}d`;
       stageEl.dataset.stage = stage;
+
+      // Reprodução (#243): fêmea grávida ganha um selo "🤰 grávida" na linha de
+      // estágio. isPregnant lê o estado do breeding (correto já após o load).
+      const pregnant = getSystem('breeding')?.isPregnant?.(this.target.id) || this.target._pregnant;
+      if (pregnant) stageEl.textContent += ` · 🤰 ${t('animal.breeding.pregnant')}`;
     }
 
     // Status badges (canto direito do header) — só renderiza ícones de

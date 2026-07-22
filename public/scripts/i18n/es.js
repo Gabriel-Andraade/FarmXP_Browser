@@ -857,6 +857,11 @@ export default {
         elderly: '✨ Envejeció',
       }
     },
+    // Reproducción (#243) — FX flotante al esperar cría / al nacer.
+    breeding: {
+      pregnant: 'Embarazada',
+      bornFx: '🐣 ¡Nació!',
+    },
     // Tumba / memorial — cuando animal muere de viejo, aparece tumba
     // y el clic abre un panel con sus datos.
     tomb: {

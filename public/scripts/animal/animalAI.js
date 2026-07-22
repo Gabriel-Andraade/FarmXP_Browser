@@ -509,6 +509,10 @@ export class AnimalEntity {
         // Player não vê o valor — gera incerteza de "quando ela vai partir".
         this._lifespan = opts.lifespan ?? (85 + Math.floor(Math.random() * 26));
 
+        // Grávida? (breedingSystem, #243). Persiste pra o selo 🤰 no mundo
+        // reaparecer na hora após o load (o painel usa breeding.isPregnant).
+        this._pregnant = opts.pregnant ?? false;
+
         // FX flutuante de aging (sparkle + toast quando cresce). Não persiste.
         this._ageUpFx = null;
 
@@ -988,31 +992,51 @@ export class AnimalEntity {
             return;
         }
         const t = elapsed / duration;
+        // Partícula orbitando: '✨' no age-up, '❤️' no acasalamento/nascimento.
+        const particle = fx.particle || '✨';
         ctx.save();
         ctx.globalAlpha = 1 - Math.pow(t, 2);  // fade out quadrático
 
-        // Texto "Cresceu!" pulsando acima.
+        // Texto flutuante acima (só quando há texto — o FX de acasalamento é só corações).
         const pulse = 1 + 0.15 * Math.sin(elapsed / 100);
-        ctx.font = `bold ${Math.round(13 * camera.zoom * pulse)}px sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.lineWidth = 3 * camera.zoom;
-        ctx.strokeStyle = '#fff';
-        ctx.fillStyle = '#d4a017';
-        const tx = Math.floor(screenPos.x + zoomedWidth / 2);
-        const ty = Math.floor(screenPos.y - 32 * camera.zoom - t * 12 * camera.zoom);
-        ctx.strokeText(fx.text || '✨', tx, ty);
-        ctx.fillText(fx.text || '✨', tx, ty);
+        if (fx.text) {
+            ctx.font = `bold ${Math.round(13 * camera.zoom * pulse)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 3 * camera.zoom;
+            ctx.strokeStyle = '#fff';
+            ctx.fillStyle = '#d4a017';
+            const tx = Math.floor(screenPos.x + zoomedWidth / 2);
+            const ty = Math.floor(screenPos.y - 32 * camera.zoom - t * 12 * camera.zoom);
+            ctx.strokeText(fx.text, tx, ty);
+            ctx.fillText(fx.text, tx, ty);
+        }
 
-        // 4 sparkles orbitando o sprite (rotação simples).
-        ctx.font = `${Math.round(14 * camera.zoom)}px sans-serif`;
+        // 4 partículas orbitando o sprite (rotação simples), pulsando de tamanho.
+        ctx.textAlign = 'center';
+        ctx.font = `${Math.round(14 * camera.zoom * pulse)}px sans-serif`;
         const cx = screenPos.x + zoomedWidth / 2;
         const cy = screenPos.y + zoomedHeight / 2;
         const radius = (zoomedWidth + zoomedHeight) / 2 * (0.6 + t * 0.3);
         const angleBase = elapsed / 200;
         for (let i = 0; i < 4; i++) {
             const ang = angleBase + i * Math.PI / 2;
-            ctx.fillText('✨', Math.floor(cx + Math.cos(ang) * radius), Math.floor(cy + Math.sin(ang) * radius));
+            ctx.fillText(particle, Math.floor(cx + Math.cos(ang) * radius), Math.floor(cy + Math.sin(ang) * radius));
         }
+        ctx.restore();
+    }
+
+    /**
+     * Persistent pregnancy badge — a small pulsing 🤰 above the sprite while the
+     * female is expecting (set by breedingSystem). Cheap: reads a flag, no
+     * system lookup per frame. Drawn every frame (unlike the one-shot age-up FX).
+     */
+    _drawPregnancyBadge(ctx, camera, screenPos, zoomedWidth, now) {
+        if (!this._pregnant) return;
+        const pulse = 1 + 0.12 * Math.sin(now / 300);
+        ctx.save();
+        ctx.font = `${Math.round(15 * camera.zoom * pulse)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🤰', Math.floor(screenPos.x + zoomedWidth / 2), Math.floor(screenPos.y - 18 * camera.zoom));
         ctx.restore();
     }
 
@@ -2470,6 +2494,7 @@ export class AnimalEntity {
         this._drawMoodEmoji(ctx, camera, screenPos, zoomedWidth);
         this._drawPendingProduct(ctx, camera, screenPos, zoomedWidth, _now);
         this._drawAgeUpFx(ctx, camera, screenPos, zoomedWidth, zoomedHeight, _now);
+        this._drawPregnancyBadge(ctx, camera, screenPos, zoomedWidth, _now);
         this._drawHitboxDebug(ctx, camera);
 
         // ─── Emote de necessidade (💧 sede / 🍽️ fome) antes de consumir ──
@@ -2531,6 +2556,7 @@ export class AnimalEntity {
             lifeStage: this._lifeStage ?? 'adult',
             avgMoral:  this._avgMoral  ?? this.stats.moral,
             lifespan:  this._lifespan  ?? 90,
+            pregnant:  this._pregnant  ?? false,
         };
     }
 
@@ -2583,6 +2609,7 @@ export class AnimalEntity {
         this._lifeStage = data.lifeStage ?? this._defaultLifeStageFromAsset(this.assetName);
         this._avgMoral  = data.avgMoral  ?? this.stats.moral;
         this._lifespan  = data.lifespan  ?? (85 + Math.floor(Math.random() * 26));
+        this._pregnant  = data.pregnant  ?? false;
         this.recalcMood();
     }
 }
