@@ -2583,6 +2583,10 @@ export default {
         endRY: ["J|mejor seguir así. cada uno en su rincón, menos dolor de cabeza."],
         postComFamilia: "hola. ...todavía estoy pensando en lo que hablamos. gracias.",
         postSozinho: "hola. ...nada cambió por aquí, pero gracias por escuchar.",
+        // Saludo que reacciona al rasgo dominante de la relación (#244).
+        moodRespect: "*asiente levemente* ...me alegra verte. en serio.",
+        moodConfidence: "¡hola! justo esperaba encontrarte.",
+        moodAnger: "*apenas levanta la vista* ...ah. eres tú.",
         foodFallback: "eso",
       },
       supply: {

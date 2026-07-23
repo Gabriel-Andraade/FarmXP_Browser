@@ -6,6 +6,7 @@
  */
 
 import { getSystem, registerSystem } from '../gameState.js';
+import { personalitySystem } from './personalitySystem.js';
 import { i18n } from '../i18n/i18n.js';
 import { getItem } from '../itemUtils.js';
 import { WeatherSystem } from '../weather.js';
@@ -66,11 +67,10 @@ let deliveredFoodName = '';
 
 /** Passo 2 (quest de escolhas): 'idle' | 'done'. */
 let choicesQuest = 'idle';
-/** Traços acumulados (motor de personalidade) + resultado final. */
-let jeremyTraits = { C: 0, R: 0, Re: 0 };
+/** Resultado final da quest de escolhas. Os TRAÇOS agora vivem no
+ *  personalitySystem (#244) — acumulados por NPC ao longo do jogo. */
 let jeremyChoice = null; // 'sozinho' | 'com_a_familia'
-// Transitórios (só durante o diálogo de escolhas): ordem dos traços + escolha da Etapa 4.
-let traitOrder = [];
+// Transitório (só durante o diálogo de escolhas): escolha da Etapa 4.
 let stage4Choice = null;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -442,22 +442,8 @@ function buildDeliveryDialogue() {
 
 // ─── Passo 2: quest de escolhas (motor de personalidade) ────────────────────
 
-/**
- * Motor genérico e REUTILIZÁVEL: dada a contagem de traços e a ordem em que
- * foram pontuados, retorna o traço dominante. Desempate: (1) o traço pontuado
- * mais recentemente entre os empatados; (2) prioridade fixa Re > C > R.
- */
-function resolveDominantTrait(counts, order) {
-    const keys = Object.keys(counts);
-    const max = Math.max(...keys.map((k) => counts[k] || 0));
-    const tied = keys.filter((k) => (counts[k] || 0) === max);
-    if (tied.length === 1) return tied[0];
-    for (let i = order.length - 1; i >= 0; i--) {
-        if (tied.includes(order[i])) return order[i];
-    }
-    for (const p of ['Re', 'C', 'R']) if (tied.includes(p)) return p;
-    return tied[0];
-}
+// O motor de resolução de traço dominante virou genérico e mora no
+// personalitySystem (#244) — este arquivo passou a ser só um consumidor.
 
 // Estrutura da quest de escolhas do Jeremy. O TEXTO fica no i18n
 // (npc.jeremy.choices.*); aqui ficam só os traços, o seletor X/Y e o resultado.
@@ -517,8 +503,8 @@ function jChoiceSeg(key) {
  * (onEnd), o motor calcula o dominante e emenda no final.
  */
 function buildChoicesDialogue() {
-    jeremyTraits = { C: 0, R: 0, Re: 0 };
-    traitOrder = [];
+    // NÃO zera os traços: o relacionamento é acumulativo por NPC (#244).
+    // A quest só soma em cima do que já existe.
     stage4Choice = null;
 
     const playerName = getPlayerName();
@@ -550,7 +536,7 @@ function buildChoicesDialogue() {
                 _goto: `s${si}o${oi}`,
                 onSelect: isFinal
                     ? () => { stage4Choice = opt.choice; }
-                    : () => { jeremyTraits[opt.trait] = (jeremyTraits[opt.trait] || 0) + 1; traitOrder.push(opt.trait); },
+                    : () => personalitySystem.score(JEREMY.id, opt.trait),
             })),
         });
 
@@ -570,7 +556,8 @@ function buildChoicesDialogue() {
 
 /** Roda no onEnd das escolhas: calcula dominante, grava resultado + recompensa, e emenda no final. */
 function finishJeremyChoices() {
-    const dominant = resolveDominantTrait(jeremyTraits, traitOrder);
+    // Dominante vem do relacionamento acumulado com o Jeremy (#244).
+    const dominant = personalitySystem.getDominant(JEREMY.id);
     const ending = JEREMY_CHOICES.endings[`${dominant}:${stage4Choice}`] || JEREMY_CHOICES.endings['R:Y'];
     jeremyChoice = ending.result;
     choicesQuest = 'done';
@@ -592,15 +579,29 @@ function buildEndingDialogue(linesKey) {
     return config;
 }
 
-/** Fala curta pós-quest (reflete o resultado). */
+/**
+ * Fala pós-quest (repetível). Abre com um cumprimento que REAGE ao traço
+ * dominante do relacionamento (#244) — caloroso no Respeito, seco na Raiva,
+ * próximo na Confiança — e depois mantém a fala que reflete o resultado da
+ * quest. É a prova de que as escolhas pesam além do diálogo em que foram feitas.
+ */
 function buildPostChoicesDialogue() {
     const playerName = getPlayerName();
     const playerPortrait = getPlayerDialogPortrait();
-    const text = jChoiceStr(jeremyChoice === 'sozinho' ? 'postSozinho' : 'postComFamilia');
+    const jer = (text) => ({ side: 'right', text, setPortrait: { side: 'right', src: JEREMY_DIALOG_01 } });
+
+    const MOOD_KEY = { Re: 'moodRespect', C: 'moodConfidence', R: 'moodAnger' };
+    const moodKey = MOOD_KEY[personalitySystem.getDominant(JEREMY.id)];
+
+    const lines = [];
+    if (moodKey) lines.push(jer(jChoiceStr(moodKey)));
+    lines.push(jer(jChoiceStr(jeremyChoice === 'sozinho' ? 'postSozinho' : 'postComFamilia')));
+    lines[lines.length - 1].end = true;
+
     return {
         left: { name: playerName, portrait: playerPortrait },
         right: { name: 'Jeremy', portrait: JEREMY_DIALOG_01 },
-        lines: [{ side: 'right', text, setPortrait: { side: 'right', src: JEREMY_DIALOG_01 }, end: true }],
+        lines,
     };
 }
 
@@ -642,7 +643,7 @@ function onInteract() {
 function getQuestState() {
     return {
         dialogue: dialogueState, introDoneDay, supplyQuest, priceAgreed,
-        deliveredFoodName, choicesQuest, jeremyTraits, jeremyChoice,
+        deliveredFoodName, choicesQuest, jeremyChoice,
     };
 }
 
@@ -657,7 +658,6 @@ function setQuestState(data) {
         priceAgreed = false;
         deliveredFoodName = '';
         choicesQuest = 'idle';
-        jeremyTraits = { C: 0, R: 0, Re: 0 };
         jeremyChoice = null;
     } else {
         dialogueState = data.dialogue ?? 'idle';
@@ -666,9 +666,22 @@ function setQuestState(data) {
         priceAgreed = data.priceAgreed === true;
         deliveredFoodName = (typeof data.deliveredFoodName === 'string') ? data.deliveredFoodName : '';
         choicesQuest = data.choicesQuest ?? 'idle';
-        jeremyTraits = (data.jeremyTraits && typeof data.jeremyTraits === 'object')
-            ? data.jeremyTraits : { C: 0, R: 0, Re: 0 };
         jeremyChoice = data.jeremyChoice ?? null;
+
+        // Migração (#244): save antigo guardava os traços aqui. Semeia o motor
+        // de personalidade com eles (uma vez), pra não perder o relacionamento.
+        const legacy = data.jeremyTraits;
+        if (legacy && typeof legacy === 'object') {
+            const already = personalitySystem.getTraits(JEREMY.id);
+            const isEmpty = !already.C && !already.R && !already.Re;
+            if (isEmpty) {
+                for (const trait of ['C', 'R', 'Re']) {
+                    const raw = legacy[trait];
+                    const n = Number.isSafeInteger(raw) ? Math.min(Math.max(raw, 0), 3) : 0;
+                    for (let i = 0; i < n; i++) personalitySystem.score(JEREMY.id, trait);
+                }
+            }
+        }
     }
     // Migração: save antigo com intro concluído mas sem dia registrado → ancora
     // no dia atual pra o pedido liberar no dia seguinte (não na mesma hora).
