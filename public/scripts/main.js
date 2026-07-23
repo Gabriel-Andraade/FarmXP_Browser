@@ -955,6 +955,9 @@ async function startFullGameLoad() {
       await Promise.all([
         import('./dialogueSystem.js'),
         import('./npcs/npcSystem.js'),
+        // #244: motor de personalidade — precisa estar registrado ANTES dos
+        // NPCs individuais, que pontuam traços nas escolhas de diálogo.
+        import('./npcs/personalitySystem.js'),
       ]);
     } catch (e) {
       handleWarn("falha ao carregar NPC/dialogue core", "main:startFullGameLoad:npcCore", e);
@@ -1349,6 +1352,8 @@ _onMain(document,"mainMenu:newGame", () => {
   if (chest?.resetChests) chest.resetChests();
   // Reseta timers de reprodução (#243) pelo mesmo motivo de isolamento por slot.
   getSystem('breeding')?.restoreState?.({});
+  // Reseta o relacionamento por NPC (#244) — novo jogo começa "em branco".
+  getSystem('personality')?.reset?.();
   const selection = new CharacterSelection();
   selection.show();
 });

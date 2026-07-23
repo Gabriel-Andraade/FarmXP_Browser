@@ -2582,6 +2582,10 @@ export default {
         endRY: ["J|better to keep it this way. everyone in their own corner, less of a headache."],
         postComFamilia: "hey. ...I'm still thinking about what we talked about. thank you.",
         postSozinho: "hey. ...nothing's changed around here, but thanks for listening.",
+        // Greeting that reacts to the dominant relationship trait (#244).
+        moodRespect: "*gives a small nod* ...good to see you. really.",
+        moodConfidence: "hey! I was actually hoping to run into you.",
+        moodAnger: "*barely looks up* ...oh. it's you.",
         foodFallback: "that",
       },
       supply: {

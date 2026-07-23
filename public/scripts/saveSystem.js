@@ -998,6 +998,9 @@ class SaveSystem {
             molly_quest: npcState(molly, 'molly_quest', { dialogue: 'idle' }),
             jeremy_quest: npcState(jeremy, 'jeremy_quest', { dialogue: 'idle', supplyQuest: 'idle' }),
             tutorial_quests: tutorials ? tutorials.getQuestState() : null,
+            // #244: relacionamento por NPC (traços C/R/Re). Mesmo fallback dos
+            // NPCs lazy-loaded — sem o sistema carregado, preserva o do save.
+            personality: getSystem('personality')?.serializeState?.() ?? (cached.personality ?? null),
         };
     }
 
@@ -1378,6 +1381,11 @@ class SaveSystem {
         // Cacheado pro _getGameFlags (fallback quando o NPC não está carregado)
         // e pro reapplyGameFlags (quando os NPCs de city carregarem depois).
         this._appliedGameFlags = flags;
+
+        // #244: restaura o relacionamento por NPC. Sempre chamado (mesmo sem
+        // dados) pra zerar o que sobrou de outro slot carregado na sessão.
+        getSystem('personality')?.restoreState?.(flags.personality ?? null);
+
         const questSys = getSystem('quests');
         if (questSys) {
             if (flags.pickup_repaired) {

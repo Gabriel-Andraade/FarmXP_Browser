@@ -2591,6 +2591,10 @@ export default {
         endRY: ['J|melhor continuar assim. cada um no seu canto, menos dor de cabeça.'],
         postComFamilia: 'e aí. ...ainda tô pensando naquilo que a gente conversou. obrigado.',
         postSozinho: 'e aí. ...nada mudou por aqui, mas valeu por ter ouvido.',
+        // Cumprimento que reage ao traço dominante do relacionamento (#244).
+        moodRespect: '*acena de leve* ...bom te ver. sério.',
+        moodConfidence: 'e aí! tava mesmo pensando em te encontrar.',
+        moodAnger: '*mal levanta os olhos* ...ah. é você.',
         foodFallback: 'aquilo',
       },
       supply: {
