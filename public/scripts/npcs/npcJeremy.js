@@ -676,7 +676,8 @@ function setQuestState(data) {
             const isEmpty = !already.C && !already.R && !already.Re;
             if (isEmpty) {
                 for (const trait of ['C', 'R', 'Re']) {
-                    const n = Number(legacy[trait]) || 0;
+                    const raw = legacy[trait];
+                    const n = Number.isSafeInteger(raw) ? Math.min(Math.max(raw, 0), 3) : 0;
                     for (let i = 0; i < n; i++) personalitySystem.score(JEREMY.id, trait);
                 }
             }
