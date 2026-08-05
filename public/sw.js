@@ -52,23 +52,16 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Cross-origin que VALE A PENA cachear (fontes do Google que o jogo usa).
-// Sem isso, offline cai no system font default — renderiza mais "encorpado"
-// e nomes de NPC/player ficavam parecendo negrito.
-const CACHEABLE_CROSS_ORIGINS = new Set([
-  'https://fonts.googleapis.com',
-  'https://fonts.gstatic.com',
-]);
-
+// Fontes são same-origin (/assets/fonts) e caem no cache de assets normal;
+// não há cross-origin a tratar.
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
 
   const url = new URL(req.url);
   const sameOrigin = url.origin === self.location.origin;
-  const cacheableCrossOrigin = CACHEABLE_CROSS_ORIGINS.has(url.origin);
 
-  if (!sameOrigin && !cacheableCrossOrigin) return;  // skip outros cross-origin
+  if (!sameOrigin) return;  // skip cross-origin
 
   // HTML / navegação: Network First → fallback cache (mantém deploys frescos)
   if (sameOrigin && (req.mode === 'navigate' || req.destination === 'document')) {
@@ -113,11 +106,9 @@ async function staleWhileRevalidate(request, cacheName) {
   const cached = await cache.match(request);
 
   const networkPromise = fetch(request).then((res) => {
-    // res.ok === true pra 2xx. PORÉM cross-origin sem CORS retorna
-    // "opaque response" (type === 'opaque', ok === false, status 0).
-    // Fontes do Google se encaixam aqui — cacheamos mesmo assim pra
-    // funcionar offline (downside: não podemos verificar se foi 200,
-    // mas no caso de fontes vale o risco).
+    // res.ok === true pra 2xx. O ramo 'opaque' (cross-origin sem CORS,
+    // status 0) hoje não ocorre — o SW só trata same-origin — mas fica
+    // como guarda defensiva de custo zero.
     const isCacheable = res && (res.ok || res.type === 'opaque');
     if (isCacheable) {
       cache.put(request, res.clone()).catch(() => {});

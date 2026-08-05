@@ -131,7 +131,8 @@ export class PlayerHUD {
         portrait.className = 'player-portrait';
         const portraitImg = document.createElement('img');
         portraitImg.id = 'playerPortrait';
-        portraitImg.src = 'assets/characters/default.png';
+        // src fica vazio até um personagem ser selecionado (updatePortrait o
+        // preenche). Sem isso apontava pra um asset inexistente → 404.
         portraitImg.alt = 'Player Portrait';
         portrait.appendChild(portraitImg);
 

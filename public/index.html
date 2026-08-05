@@ -6,17 +6,20 @@
   <meta name="description" content="Farm XP - A browser-based farming game with animals, crafting, merchants and seasons.">
   <meta name="theme-color" content="#4a7c3f">
   <title>Farm XP</title>
-  <!-- fix #84: favicon via SVG data URI (no external file needed) -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
+  <!-- Favicon = Stella. .ico multi-tamanho: o Chrome pega o quadro pronto
+       (16/32/48...) em vez de encolher o 256 e borrar na barra de tarefas. -->
+  <link rel="icon" type="image/x-icon" href="./assets/favicon.ico">
+  <link rel="icon" type="image/png" sizes="256x256" href="./assets/icon.png">
   <link rel="manifest" href="./manifest.json">
 
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Roboto:wght@300;400;500;700&family=Press+Start+2P&family=VT323&display=swap">
+  <!-- Fontes auto-hospedadas (offline-first; sem CDN) -->
+  <link rel="stylesheet" href="./assets/fonts/google-fonts.css">
   <!-- CSS Variables (deve ser carregado primeiro) -->
   <link rel="stylesheet" href="./style/variables.css">
   <!-- CSSs individuais da pasta style/ -->
   <link rel="stylesheet" href="./style/base.css">
   <link rel="stylesheet" href="./style/modals.css">
-  <!-- Issue #76 resolved: hud.css is loaded here as the single source of truth (removed from cssManager.js) -->
+  <!-- hud.css is loaded here as the single source of truth (removed from cssManager.js) -->
   <link rel="stylesheet" href="./style/hud.css">
   <link rel="stylesheet" href="./style/player-panel.css">
   <link rel="stylesheet" href="./style/tool-wheel.css">
@@ -54,8 +57,8 @@
   <link rel="stylesheet" href="./style/dialogue.css">
   <link rel="stylesheet" href="./style/travel-map.css">
   <link rel="stylesheet" href="./style/vet.css">
-  <!-- Ícones do Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- Ícones do Font Awesome (auto-hospedado; só o estilo solid é usado) -->
+  <link rel="stylesheet" href="./assets/fonts/fontawesome.css">
 
   <!-- Modulepreload: critical-path apenas. Hints demais geram warning
        "preloaded but not used" no console e gastam bandwidth à toa.
@@ -197,7 +200,7 @@
                             <div class="mch-merchant-name" id="merchantName">Nome do Mercador</div>
                             <div class="mch-merchant-profession" id="merchantProfession">Profissão</div>
                             <div class="mch-merchant-specialty" id="merchantSpecialty">Especialidade</div>
-                            <!-- Issue #201: merchant's remaining daily cash -->
+                            <!-- merchant's remaining daily cash -->
                             <div class="mch-merchant-fund" id="merchantFund"></div>
                         </div>
                     </div>

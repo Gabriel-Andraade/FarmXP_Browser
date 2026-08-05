@@ -6,13 +6,19 @@ node_modules/
 bun.lockb
 bun.lock
 
-# Ignore favicon
-favicon.ico
+# Ignore a stray root-level favicon.ico artifact (NOT public/assets/favicon.ico)
+/favicon.ico
 
 # output
 out
 dist
+dist-linux
 *.tgz
+*.tar.gz
+
+# #249 executável: binários compilados e zips de entrega
+*.exe
+*.zip
 
 # code coverage
 coverage
