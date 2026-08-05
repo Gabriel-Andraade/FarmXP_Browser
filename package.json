@@ -12,10 +12,14 @@
     "test:coverage": "bun test --coverage",
     "optimize-assets": "node tools/optimize-assets.mjs",
     "optimize-assets:force": "node tools/optimize-assets.mjs --force",
-    "build-icon-atlas": "node tools/build-icon-atlas.mjs"
+    "build-icon-atlas": "node tools/build-icon-atlas.mjs",
+    "gen-icon": "bun tools/combine-icon.mjs icon-src/farmingXP.ico icon-src/iconGame.png",
+    "gen-embedded": "bun tools/gen-embedded.mjs",
+    "build:win": "bun run gen-embedded && bun build --compile ./app.ts --outfile dist/FarmingXP --windows-hide-console --windows-icon=icon.ico --windows-title=\"Farming XP\" --windows-publisher=\"Farming XP\" --windows-version=1.0.0.0 --windows-description=\"Farming XP\" && bun tools/hide-console.mjs dist/FarmingXP.exe",
+    "build:linux": "bun run gen-embedded && bun build --compile --target=bun-linux-x64 ./app.ts --outfile dist-linux/FarmingXP"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.10",
+    "bun-types": "^1.3.14",
     "esbuild": "^0.28.0",
     "sharp": "^0.34.5",
     "typescript": "^5.9.3"

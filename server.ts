@@ -21,11 +21,18 @@ import * as path from "path";
 import { brotliCompressSync, constants as zlibConst } from "node:zlib";
 import { readdirSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { transform as esbuildTransform } from "esbuild";
+// Assets de public/ embutidos no binário (single-file). Em dev os imports
+// resolvem pro disco; compilado, pro embed. Ver tools/gen-embedded.mjs.
+import { EMBEDDED } from "./embeddedAssets.ts";
+// esbuild é carregado DINAMICAMENTE (ver getMinifiedJs) e com specifier não
+// literal — assim o `bun build --compile` NÃO empacota o binário nativo do
+// esbuild (que quebraria o executável compilado). Só carrega quando minifica.
 
 // Liga/desliga minificação on-the-fly. true por padrão; pra debugar
 // pode setar SERVER_NO_MINIFY=1 e ver código original.
-const MINIFY_JS = process.env.SERVER_NO_MINIFY !== "1";
+// Mutável: default vem do env, mas o startServer pode sobrescrever (o executável
+// desliga minify — não precisa esbuild no app).
+let MINIFY_JS = process.env.SERVER_NO_MINIFY !== "1";
 
 // Cache em memória das versões minificadas. Chave = path completo. Valor
 // guarda mtime do arquivo no momento da minificação — invalidamos quando
@@ -113,6 +120,10 @@ async function getMinifiedJs(fullPath: string, rawBytes: Uint8Array, mtimeMs: nu
   if (cached && cached.mtimeMs === mtimeMs) return cached.bytes;
   try {
     const source = new TextDecoder().decode(rawBytes);
+    // Specifier em variável = o bundler do --compile não resolve estaticamente
+    // → esbuild fica fora do binário. Só chega aqui em dev (MINIFY_JS on).
+    const esbuildSpecifier = "esbuild";
+    const { transform: esbuildTransform } = (await import(esbuildSpecifier)) as typeof import("esbuild");
     const result = await esbuildTransform(source, {
       minify: true,
       target: "es2020",       // browsers modernos (98%+). Mantém ES modules.
@@ -164,9 +175,36 @@ function pickEncoding(acceptEncoding: string | null): "br" | "gzip" | null {
   return null;
 }
 
-// serve apenas arquivos publicos daqui
-const BASE_DIR = path.resolve(import.meta.dir, "public");
+// serve apenas arquivos publicos daqui. Resolve pra os 2 modos:
+//   - dev (`bun run server.ts`): `<repo>/public` via import.meta.dir
+//   - binário compilado: import.meta.dir é virtual (B:\~BUN\root), então usa a
+//     pasta do próprio executável (process.execPath) → `public/` ao lado do exe.
+function resolvePublicDir(): string {
+  const candidates = [
+    path.resolve(import.meta.dir, "public"),
+    path.resolve(path.dirname(process.execPath), "public"),
+  ];
+  for (const c of candidates) {
+    try { if (statSync(c).isDirectory()) return c; } catch { /* tenta o próximo */ }
+  }
+  return candidates[0];
+}
+
+const BASE_DIR = resolvePublicDir();
 const BASE_PREFIX = BASE_DIR + path.sep;
+
+// Resolve um path relativo (ex: "assets/animals/Cow.png") pro arquivo real:
+// primeiro no EMBEDDED (single-file compilado), depois no disco (dev ou
+// arquivo ainda não embutido). Retorna caminho pro Bun.file, ou null.
+function resolveAsset(rel: string): string | null {
+  const emb = EMBEDDED.get(rel);
+  if (emb) return emb;
+  const disk = path.resolve(BASE_DIR, rel);
+  if (disk.startsWith(BASE_PREFIX)) {
+    try { if (statSync(disk).isFile()) return disk; } catch { /* não existe */ }
+  }
+  return null;
+}
 
 // allowlist do que pode ser servido
 const ALLOWED_TOP_FILES = new Set([
@@ -293,22 +331,25 @@ const MIME_TYPES: Record<string, string> = {
   ".ico": "image/x-icon",
   ".mp3": "audio/mpeg",
   ".wav": "audio/wav",
+  // Fontes servidas localmente — sem MIME correto, browsers estritos
+  // (Firefox, nosniff) podem recusar carregar a fonte.
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".ttf": "font/ttf",
 };
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "X-Frame-Options": "DENY",
-  // connect-src adicionado pra permitir o SW fazer fetch() das fontes
-  // do Google e cachear pra uso offline. Sem isso, CSP bloqueia o
-  // request dentro do service worker e os nomes de NPC/player caíam
-  // pro fallback de system font (visualmente "negrito") quando offline.
+  // Fontes servidas de public/assets/fonts — sem CDN. CSP 100% 'self':
+  // funciona offline sem depender de rede externa.
   "Content-Security-Policy":
     "default-src 'self'; " +
     "img-src 'self' data:; " +
-    "style-src 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com; " +
-    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; " +
+    "style-src 'self'; " +
+    "font-src 'self'; " +
     "script-src 'self'; " +
-    "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;",
+    "connect-src 'self';",
 };
 
 type BodyLike = ConstructorParameters<typeof Response>[0];
@@ -356,9 +397,7 @@ function hasEncodedTraversal(rawLower: string) {
  * @security Blocks directory listing by rejecting paths ending with '/'
  * @security Path traversal protection implemented via safeDecode, hasEncodedTraversal, and normalizedRel checks
  */
-serve({
-  port,
-  async fetch(req) {
+async function handleRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     const rawPath = url.pathname || "/";
 
@@ -407,26 +446,34 @@ serve({
       return respond("Directory access not allowed", 403);
     }
 
-    // resolve e garante containment
-    const fullPath = path.resolve(BASE_DIR, normalizedRel);
-    if (!fullPath.startsWith(BASE_PREFIX)) {
-      return respond("Forbidden", 403);
+    const ext = path.extname(normalizedRel).toLowerCase();
+    let serveRel = normalizedRel;
+    let contentType = MIME_TYPES[ext] || "application/octet-stream";
+
+    // Negociação WebP: para um .png, se o cliente aceita webp e há webp
+    // disponível, serve ele. Cobre TODOS os loaders (JS e CSS) sem tocar no
+    // código do jogo.
+    if (ext === ".png" && (req.headers.get("Accept") || "").includes("image/webp")) {
+      const webpRel = normalizedRel.slice(0, -4) + ".webp";
+      if (resolveAsset(webpRel)) {
+        serveRel = webpRel;
+        contentType = "image/webp";
+      }
     }
 
-    // bloqueia servir o proprio server.ts e qualquer coisa fora da allowlist
-    if (path.basename(fullPath).toLowerCase() === "server.ts") {
-      return respond("Forbidden", 403);
+    // Resolve pro arquivo real (embed single-file, ou disco em dev). Path
+    // fora do conjunto servível → 404 (traversal fica impossível: chave exata).
+    const serveFullPath = resolveAsset(serveRel);
+    if (!serveFullPath) {
+      return respond("Not found", 404);
     }
-
-    const ext = path.extname(fullPath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
     // Cache:
     //   - HTML: no-cache (sempre revalida, deploys novos refletem)
     //   - sw.js: no-cache TAMBÉM (crítico — se cachear o SW antigo, ele
     //     fica preso e o cache de assets nunca atualiza pro player)
     //   - Resto: max-age=3600 (1h) — o SW dele lida com cache long-term
-    const basename = path.basename(fullPath).toLowerCase();
+    const basename = path.basename(serveRel).toLowerCase();
 
     // Hosts de desenvolvimento (localhost / loopback / LAN privada): NÃO
     // cacheia JS/CSS. Espelha o isDev do register-sw.js. Sem isso, o
@@ -461,7 +508,7 @@ serve({
     // restart, edição manual).
     if (COMPRESSIBLE_EXT.has(ext)) {
       const encoding = pickEncoding(req.headers.get("Accept-Encoding"));
-      const file = Bun.file(fullPath);
+      const file = Bun.file(serveFullPath);
       const mtimeMs = file.lastModified || 0;
       let rawBytes = new Uint8Array(await file.arrayBuffer());
 
@@ -477,19 +524,20 @@ serve({
       if (ext === ".js") {
         // sw.js usa BUILD_HASH como parte da key — assim o cache de
         // minified bytes se renova quando o hash muda em prod.
-        const cacheTag = basename === SW_BASENAME ? `${fullPath}#${BUILD_HASH}` : fullPath;
+        const cacheTag = basename === SW_BASENAME ? `${serveFullPath}#${BUILD_HASH}` : serveFullPath;
         rawBytes = await getMinifiedJs(cacheTag, rawBytes, mtimeMs);
       }
 
       if (encoding) {
-        const cacheKey = `${encoding}|${ext === ".js" && MINIFY_JS ? "min|" : ""}${fullPath}`;
+        const cacheKey = `${encoding}|${ext === ".js" && MINIFY_JS ? "min|" : ""}${serveFullPath}`;
         const compressed = getCompressed(cacheKey, rawBytes, encoding, mtimeMs);
         return new Response(compressed, {
           headers: {
             ...SECURITY_HEADERS,
             "Content-Type": contentType,
             "Content-Encoding": encoding,
-            "Vary": "Accept-Encoding",
+            // Se houve negociação webp, a resposta varia por Accept também.
+            "Vary": serveRel !== normalizedRel ? "Accept, Accept-Encoding" : "Accept-Encoding",
             "Cache-Control": cacheHeader,
           },
         });
@@ -507,15 +555,35 @@ serve({
       }
     }
 
-    return new Response(Bun.file(fullPath), {
-      headers: {
-        ...SECURITY_HEADERS,
-        "Content-Type": contentType,
-        "Cache-Control": cacheHeader,
-      },
-    });
-  },
-});
+    const finalHeaders: Record<string, string> = {
+      ...SECURITY_HEADERS,
+      "Content-Type": contentType,
+      "Cache-Control": cacheHeader,
+    };
+    // Se caiu na negociação webp, avisa caches que a resposta varia por Accept.
+    if (serveRel !== normalizedRel) finalHeaders["Vary"] = "Accept";
+    return new Response(Bun.file(serveFullPath), { headers: finalHeaders });
+}
 
-console.log(`server running on http://localhost:${port}/?hitboxes=1&eatSlots=1&drinkSlots=1 `);
-// for test of collsion, or adjust something: localhost:${port}/?hitboxes=1&eatSlots=1&drinkSlots=1 
+/**
+ * Sobe o servidor. `port` opcional (0 = porta livre aleatória). Retorna o
+ * objeto Server do Bun — use `.port` pra a porta real. Reaproveitado pelo
+ * executável e pelo dev.
+ */
+export function startServer(opts?: { port?: number; minify?: boolean; hostname?: string }) {
+  if (opts?.minify !== undefined) MINIFY_JS = opts.minify;
+  // `hostname` só é passado pelo app (127.0.0.1 = não expõe na rede). O server
+  // web/dev fica sem hostname (default do Bun) pra continuar acessível via LAN/ngrok.
+  return serve({
+    port: opts?.port ?? port,
+    ...(opts?.hostname ? { hostname: opts.hostname } : {}),
+    fetch: handleRequest,
+  });
+}
+
+// Auto-inicia SÓ quando é o entrypoint (`bun run server.ts`). Quando importado
+// (app.ts do executável), NÃO sobe sozinho — quem importa chama startServer().
+if (import.meta.main) {
+  const s = startServer();
+  console.log(`server running on http://localhost:${s.port}/`);
+} 
