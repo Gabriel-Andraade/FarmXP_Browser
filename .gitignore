@@ -16,9 +16,12 @@ dist-linux
 *.tgz
 *.tar.gz
 
-# #249 executável: binários compilados e zips de entrega
+# executável: binários compilados e zips de entrega
 *.exe
 *.zip
+
+# Scratchpad de notas/reviews (não é código do repo)
+claude.md
 
 # code coverage
 coverage

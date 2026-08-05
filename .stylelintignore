@@ -1,0 +1,3 @@
+# Vendored, minified upstream distributions (Google Fonts, Font Awesome) —
+# nao sao nossas pra lintar/reformatar. Servidas como-vem.
+public/assets/fonts/

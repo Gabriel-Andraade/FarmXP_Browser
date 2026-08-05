@@ -46,6 +46,8 @@ function findChromium(): string | undefined {
     "/usr/bin/chromium",
     "/usr/bin/chromium-browser",
     "/snap/bin/chromium",
+    "/usr/bin/microsoft-edge",
+    "/usr/bin/microsoft-edge-stable",
     // macOS
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/Applications/Chromium.app/Contents/MacOS/Chromium",
@@ -74,7 +76,9 @@ try {
   );
   process.exit(1);
 }
-const url = `http://localhost:${server.port}/`;
+// 127.0.0.1 explícito: o server escuta só em IPv4; se "localhost" resolver
+// pra ::1 (IPv6) em alguma máquina, o Chrome não conectaria.
+const url = `http://127.0.0.1:${server.port}/`;
 console.log("[app] Farming XP rodando em", url);
 
 // Perfil PERSISTENTE (mantém os saves entre aberturas).

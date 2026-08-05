@@ -536,7 +536,8 @@ async function handleRequest(req: Request): Promise<Response> {
             ...SECURITY_HEADERS,
             "Content-Type": contentType,
             "Content-Encoding": encoding,
-            "Vary": "Accept-Encoding",
+            // Se houve negociação webp, a resposta varia por Accept também.
+            "Vary": serveRel !== normalizedRel ? "Accept, Accept-Encoding" : "Accept-Encoding",
             "Cache-Control": cacheHeader,
           },
         });
