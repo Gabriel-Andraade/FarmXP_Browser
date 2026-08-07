@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import '../setup.js';
 
 // Issue #216: planting and harvesting must grant XP, scaled per crop.
@@ -21,6 +21,10 @@ const systems = {
   player: { consumeNeeds: () => {} },
   weather,
 };
+
+// Mutável para exercitar o gate de mapa (farming é farm-only).
+const mapState = { onFarm: true };
+systems.mapManager = { getCurrentMapId: () => (mapState.onFarm ? 'farm' : 'city') };
 
 mock.module('../../public/scripts/gameState.js', () => ({
   getSystem: (name) => systems[name] || null,
@@ -60,6 +64,47 @@ function plantHarvest(seedId) {
     harvestXp: xpGrants.find(g => g.source.startsWith('crop_harvest_'))?.amount,
   };
 }
+
+// Crops são indexadas só por tile, sem dimensão de mapa: sem este gate, plantar
+// numa rua da cidade gravava no mesmo espaço de chaves da fazenda.
+describe('farming is farm-only (#252)', () => {
+  beforeEach(() => {
+    cropSystem._crops.clear();
+    mapState.onFarm = true;
+  });
+
+  afterEach(() => {
+    mapState.onFarm = true;
+  });
+
+  test('does not plant when off the farm', () => {
+    activeSeedId = 114;
+    inv.qty[114] = 5;
+    weather._t = 0;
+    mapState.onFarm = false;
+
+    expect(cropSystem.plantAt(0, 0)).toBe(false);
+    expect(cropSystem._crops.size).toBe(0);
+  });
+
+  test('does not report or harvest farm crops while off the farm', () => {
+    activeSeedId = 114;
+    inv.qty[114] = 5;
+    weather._t = 0;
+    expect(cropSystem.plantAt(0, 0)).toBe(true);
+    [...cropSystem._crops.values()][0].stage = 2;
+
+    mapState.onFarm = false;
+    expect(cropSystem.hasCropAt(0, 0)).toBe(false);
+    expect(cropSystem.isMatureAt(0, 0)).toBe(false);
+    expect(cropSystem.harvestAt(0, 0)).toBe(false);
+    expect(cropSystem.waterAt(0, 0)).toBe(false);
+
+    // Voltando à fazenda, a plantação continua lá — só ficou invisível fora.
+    mapState.onFarm = true;
+    expect(cropSystem.isMatureAt(0, 0)).toBe(true);
+  });
+});
 
 describe('crop XP rewards (#216)', () => {
   beforeEach(() => {

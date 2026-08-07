@@ -11,6 +11,10 @@ const weather = { _t: 0, getGameMinutes: () => weather._t, weatherType: 'clear' 
 const crop = { _has: false, hasCropAt: () => crop._has };
 const systems = { weather, crop };
 
+// Mutável para exercitar o gate de mapa (arar é farm-only).
+const mapState = { onFarm: true };
+systems.mapManager = { getCurrentMapId: () => (mapState.onFarm ? 'farm' : 'city') };
+
 mock.module('../../public/scripts/gameState.js', () => ({
   getSystem: (name) => systems[name] || null,
   registerSystem: () => {},
@@ -27,6 +31,25 @@ function tillExpiredTileAt(key) {
   weather._t = 1000;      // in-game "now" well past expiresAt
   hoeTool._lastScan = -1e9; // bypass the scan throttle regardless of clock
 }
+
+describe('tilling is farm-only (#252)', () => {
+  test('does not till while off the farm', () => {
+    hoeTool._tilled.clear();
+    mapState.onFarm = false;
+
+    hoeTool.tillAt(0, 0);
+
+    expect(hoeTool._tilled.size).toBe(0);
+    mapState.onFarm = true;
+  });
+
+  test('tills normally back on the farm', () => {
+    hoeTool._tilled.clear();
+    hoeTool.tillAt(0, 0);
+
+    expect(hoeTool._tilled.size).toBe(1);
+  });
+});
 
 describe('tilled soil lifecycle vs crops (bug fix)', () => {
   test('expired soil reverts to grass when the plot is empty', () => {

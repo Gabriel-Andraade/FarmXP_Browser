@@ -24,6 +24,14 @@ import { TILE_SIZE } from './worldConstants.js';
 // Soil state "IDs".
 export const SOIL_STATE = { DRY: 'dry', WET: 'wet' };
 
+// Tilling is farm-only: tilled tiles are keyed by world tile with no map
+// dimension, so without this gate the player could till city streets into the
+// farm's own tile space. Defaults to the farm because mapManager is
+// lazy-loaded and may be missing during boot.
+function _onFarm() {
+    return (getSystem('mapManager')?.getCurrentMapId?.() ?? 'farm') === 'farm';
+}
+
 // Tilled-soil lifecycle, measured in IN-GAME minutes (#165) so the plot decays
 // with the calendar and reverts to grass when the player sleeps — same time
 // base as crops. Values ≈ the old real-time feel at default speed (timeSpeed 2:
@@ -130,6 +138,7 @@ const hoeTool = {
 
     /** Tills the tile under the world point → fresh DRY soil. Re-till refreshes. */
     tillAt(worldX, worldY) {
+        if (!_onFarm()) return;
         const { x, y } = this._snap(worldX, worldY);
         const key = this._tileKey(x, y);
         const wasNew = !this._tilled.has(key);
@@ -148,6 +157,7 @@ const hoeTool = {
      * @returns {boolean} true if a tilled tile was there and got watered.
      */
     waterAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const { x, y } = this._snap(worldX, worldY);
         const rec = this._tilled.get(this._tileKey(x, y));
         if (!rec) return false;

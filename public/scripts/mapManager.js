@@ -576,6 +576,7 @@ async function restoreMap(mapId) {
         registerPortalHitbox();
         markWorldChanged();
         invalidateGrassCache();
+        _announceMapChanged('city');
 
         logger.info('[MapManager] Restored map to city (from save)');
     } else {
@@ -597,9 +598,22 @@ async function restoreMap(mapId) {
         registerPortalHitbox();
         markWorldChanged();
         invalidateGrassCache();
+        _announceMapChanged('farm');
 
         logger.info('[MapManager] Restored map to farm (from save)');
     }
+}
+
+/**
+ * Anuncia a troca de mapa igual à transição pelo portal. Sem isso, carregar um
+ * save feito na cidade deixava `theWorld` sem a referência do cityRenderer (ele
+ * só a resolve ao ouvir `mapChanged`), então nada da cidade era desenhado — a
+ * tela ficava vazia até o jogador ir à fazenda e voltar pelo portal.
+ * Também realinha hitboxes de NPC e o minimap com o mapa carregado.
+ */
+function _announceMapChanged(mapId) {
+    getSystem('npc')?.registerHitboxesForMap?.(mapId);
+    document.dispatchEvent(new CustomEvent('mapChanged', { detail: { mapId } }));
 }
 
 /**
