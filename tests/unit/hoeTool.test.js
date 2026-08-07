@@ -43,6 +43,20 @@ describe('tilling is farm-only (#252)', () => {
     mapState.onFarm = true;
   });
 
+  test('does not water tilled soil while off the farm', () => {
+    hoeTool._tilled.clear();
+    hoeTool.tillAt(0, 0);
+    const before = { ...[...hoeTool._tilled.values()][0] };
+
+    mapState.onFarm = false;
+    const watered = hoeTool.waterAt(0, 0);
+    mapState.onFarm = true;
+
+    expect(watered).toBe(false);
+    // O registro segue intacto: nem virou WET nem teve o prazo estendido.
+    expect([...hoeTool._tilled.values()][0]).toEqual(before);
+  });
+
   test('tills normally back on the farm', () => {
     hoeTool._tilled.clear();
     hoeTool.tillAt(0, 0);
