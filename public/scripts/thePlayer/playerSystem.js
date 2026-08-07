@@ -133,7 +133,12 @@ export class PlayerSystem {
             // obsoleta da UI restaurava fome/sede de graça, já que o consumo
             // era aplicado antes (e independente) da remoção.
             const inventory = getSystem('inventory');
-            if (typeof itemId === 'number' && (inventory?.getItemQuantity?.(itemId) ?? 0) <= 0) {
+            if (
+                !Number.isInteger(itemId) ||
+                !Number.isInteger(quantity) ||
+                quantity <= 0 ||
+                (inventory?.getItemQuantity?.(category, itemId) ?? 0) < quantity
+            ) {
                 logger.warn(`Consumo ignorado: item ${itemId} não está no inventário`);
                 return;
             }

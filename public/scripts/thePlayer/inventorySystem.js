@@ -123,8 +123,16 @@ export class InventorySystem {
      * do removeItem — a quantidade caía mas a UI nunca era atualizada).
      */
     _equippedSlot() {
-        if (!this.equipped || typeof this.equipped !== 'object') {
-            this.equipped = { tool: this.equipped ?? null };
+        if (
+            !this.equipped ||
+            typeof this.equipped !== 'object' ||
+            !Object.prototype.hasOwnProperty.call(this.equipped, 'tool')
+        ) {
+            const previous = this.equipped;
+            const tool = previous && typeof previous === 'object'
+                ? (previous.tool ?? previous.id ?? null)
+                : (previous ?? null);
+            this.equipped = { tool };
         }
         return this.equipped;
     }

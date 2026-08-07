@@ -1209,9 +1209,12 @@ class SaveSystem {
         // shape ({ tool: id|null }): assigning a bare null made removeItem
         // throw on `this.equipped.tool`, aborting the removal mid-way (the
         // quantity dropped but the UI never refreshed → items looked infinite).
-        if (data.hasOwnProperty('equipped')) {
+        {
+            const rawEquipped = Object.prototype.hasOwnProperty.call(data, 'equipped')
+                ? data.equipped
+                : null;
             // Saves carry different shapes: { tool: id }, { id: ... } or a bare id.
-            const equippedId = data.equipped?.tool ?? data.equipped?.id ?? data.equipped ?? null;
+            const equippedId = rawEquipped?.tool ?? rawEquipped?.id ?? rawEquipped ?? null;
             const isInInventory = equippedId != null && Object.values(inventory.categories).some(cat =>
                 cat.items?.some(item => item.id === equippedId && item.quantity > 0)
             );
