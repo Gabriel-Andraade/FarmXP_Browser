@@ -19,6 +19,14 @@ import { TILE_SIZE } from './worldConstants.js';
 // CROPS overrides this (lower value = sprite sits lower; can go negative).
 const PLANT_LIFT_WORLD = 7.5;
 
+// Farming is farm-only: crops are keyed by world tile with no map dimension,
+// so without this gate a crop planted on a city street is the same record as
+// one at those coordinates on the farm. Defaults to the farm because
+// mapManager is lazy-loaded and may be missing during boot.
+function _onFarm() {
+    return (getSystem('mapManager')?.getCurrentMapId?.() ?? 'farm') === 'farm';
+}
+
 // Crops run on the IN-GAME clock (#165), not real wall-clock — so they advance
 // with the calendar and jump when the player sleeps. The time base is in-game
 // MINUTES (from weather.getGameMinutes()); one in-game day = 1440 of them.
@@ -319,6 +327,7 @@ const cropSystem = {
      * @returns {boolean} true if it planted.
      */
     plantAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const seed = getSystem('seedWheel')?.getActiveSeed?.();
         if (!seed) return false;
         const cfg = CROPS[seed.id];
@@ -369,6 +378,7 @@ const cropSystem = {
      * growing on it (withered crops are removed, so they free the soil).
      */
     hasCropAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const { x, y } = this._snap(worldX, worldY);
         return this._crops.has(this._key(x, y));
     },
@@ -378,6 +388,7 @@ const cropSystem = {
      * @returns {boolean} true if a (non-harvested) crop was there and got watered.
      */
     waterAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const { x, y } = this._snap(worldX, worldY);
         const c = this._crops.get(this._key(x, y));
         if (!c || c.harvested) return false;
@@ -447,6 +458,7 @@ const cropSystem = {
 
     /** True if a mature, not-yet-harvested crop sits under the world point. */
     isMatureAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const { x, y } = this._snap(worldX, worldY);
         const c = this._crops.get(this._key(x, y));
         if (!c || c.harvested) return false;
@@ -459,6 +471,7 @@ const cropSystem = {
      * @returns {boolean} true if it harvested.
      */
     harvestAt(worldX, worldY) {
+        if (!_onFarm()) return false;
         const { x, y } = this._snap(worldX, worldY);
         const key = this._key(x, y);
         const c = this._crops.get(key);

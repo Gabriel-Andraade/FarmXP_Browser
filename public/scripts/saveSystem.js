@@ -717,10 +717,6 @@ class SaveSystem {
                 this._applyWorldData(data.world);
             }
 
-            // Plantio (#165): SEMPRE aplica — mesmo se o save não tiver dados,
-            // limpa o solo/plantas/regador atuais pra não vazar entre saves.
-            this._applyPlantationData(data.plantation);
-
             // Agora sim restaura o mapa (city snapshota a farm correta acima).
             if (data.currentMap && data.currentMap !== 'farm') {
                 const mapMgr = getSystem('mapManager');
@@ -741,6 +737,13 @@ class SaveSystem {
             // Issue #201: restore the merchant daily-cash ledger AFTER weather so
             // the in-game day is already set (the ledger is keyed by day).
             getSystem('merchant')?.restore?.(data.merchant);
+
+            // Plantio (#165): SEMPRE aplica — mesmo se o save não tiver dados,
+            // limpa o solo/plantas/regador atuais pra não vazar entre saves.
+            // DEPOIS do clima: solo e plantas re-ancoram seus prazos no relógio
+            // in-game, e com o relógio ainda no valor antigo o solo arado nascia
+            // com o prazo no passado e revertia pra grama no primeiro scan.
+            this._applyPlantationData(data.plantation);
 
             // Aplicar flags do jogo (pickup_repaired, etc.)
             if (data.gameFlags) {

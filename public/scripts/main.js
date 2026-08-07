@@ -1684,8 +1684,11 @@ function gameLoop(timestamp) {
   }
 
   // Tilled soil + crops (planting #165) — over grass, under world objects.
+  // Farm-only: crops are keyed by world tile with no map dimension, so without
+  // this guard they were painted over the city ground at the same coordinates.
+  const onFarm = (getSystem('mapManager')?.getCurrentMapId?.() ?? 'farm') === 'farm';
   try {
-    if (camera) {
+    if (camera && onFarm) {
       getSystem('hoeTool')?.drawTilledSoil?.(ctx, camera);
       getSystem('crop')?.drawCrops?.(ctx, camera);
     }
@@ -1744,14 +1747,15 @@ function gameLoop(timestamp) {
         ftSys?.drawEatSlots?.(ctx, camera);
       }
 
-      // Hoe / planting / watering tile-cursors (planting #165). Skip in build mode.
-      if (!BuildSystem?.active) {
+      // Hoe / planting / watering tile-cursors (planting #165). Farm-only,
+      // and skipped in build mode.
+      if (onFarm && !BuildSystem?.active) {
         getSystem('hoeTool')?.drawTileCursor?.(ctx, camera);
         getSystem('crop')?.drawPlantCursor?.(ctx, camera);
         getSystem('wateringCan')?.drawCursor?.(ctx, camera);
       }
       // Crop hover tooltip (name + vitality bar) — independent of build mode.
-      getSystem('crop')?.drawCropTooltip?.(ctx, camera);
+      if (onFarm) getSystem('crop')?.drawCropTooltip?.(ctx, camera);
     }
   } catch (e) {
     handleWarn("falha ao desenhar preview de construcao", "main:gameLoop:buildPreview", e);

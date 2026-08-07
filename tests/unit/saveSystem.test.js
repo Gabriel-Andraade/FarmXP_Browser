@@ -846,6 +846,40 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(mockWeather.weatherType).toBe('rain');
     });
 
+    // Regressão: o plantio era restaurado ANTES do clima. Solo arado e plantas
+    // re-ancoram seus prazos no relógio in-game, então com o relógio ainda no
+    // valor antigo o solo nascia com o prazo no passado e revertia pra grama.
+    test('should restore plantation only after the in-game clock', async () => {
+      const mockWeather = {
+        currentTime: 0, day: 1, month: 1, year: 1,
+        season: 'Primavera', weatherType: 'clear',
+        weatherTimer: 0, nextWeatherChange: 120,
+        ambientDarkness: 0, isSleeping: false,
+        sleepTransitionProgress: 0, sleepPhase: null,
+        sleepTimerAcc: 0, rainParticles: [],
+        fogLayers: [], snowParticles: [],
+        lightningFlashes: [],
+        pause: () => {}, resume: () => {},
+        updateAmbientLight: () => {},
+        getWeekday: () => 'Monday'
+      };
+      mockSystems.weather = mockWeather;
+
+      let clockSeenByHoe = null;
+      mockSystems.hoeTool = {
+        restore: () => { clockSeenByHoe = mockWeather.currentTime; },
+      };
+
+      await saveSystem.applySaveData({
+        data: {
+          weather: { currentTime: 720, day: 15, month: 6, year: 3, season: 'Verão' },
+          plantation: { tilled: [{ x: 32, y: 32, state: 'dry', remaining: 40 }] },
+        }
+      });
+
+      expect(clockSeenByHoe).toBe(720);
+    });
+
     test('should clear particles when applying weather data', async () => {
       const mockWeather = {
         currentTime: 0, day: 1, month: 1, year: 1,
