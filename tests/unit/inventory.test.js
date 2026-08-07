@@ -307,6 +307,19 @@ describe('InventorySystem (Production Implementation)', () => {
       expect(inventory.getItemQuantity(1)).toBe(5);
     });
 
+    // Regressão: o restore de save atribuía `equipped = null` (em vez do shape
+    // canônico `{ tool }`), e removeItem lançava ao ler `.tool`. A quantidade
+    // caía mas a exceção abortava o resto — a UI nunca atualizava e os
+    // consumíveis pareciam infinitos.
+    test('should still remove when equipped was replaced by a bare null', () => {
+      inventory.addItem(1, 3);
+      inventory.equipped = null;
+
+      expect(() => inventory.removeItem(1, 1)).not.toThrow();
+      expect(inventory.getItemQuantity(1)).toBe(2);
+      expect(inventory.equipped).toEqual({ tool: null });
+    });
+
     test('should remove entire stack when quantity matches', () => {
       inventory.addItem(1, 10);
       inventory.removeItem(1, 10);

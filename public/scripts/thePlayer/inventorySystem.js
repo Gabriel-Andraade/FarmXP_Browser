@@ -116,20 +116,33 @@ export class InventorySystem {
         this.scheduleUIUpdate();
     }
 
+    /**
+     * Devolve `equipped` garantindo o shape canônico `{ tool: id|null }`,
+     * reparando-o se algum caller externo o tiver substituído (o restore de
+     * save já atribuiu `null` cru aqui, e a leitura de `.tool` lançava no meio
+     * do removeItem — a quantidade caía mas a UI nunca era atualizada).
+     */
+    _equippedSlot() {
+        if (!this.equipped || typeof this.equipped !== 'object') {
+            this.equipped = { tool: this.equipped ?? null };
+        }
+        return this.equipped;
+    }
+
     setupGlobalListeners() {
         const { signal } = this.abortController;
 
         document.addEventListener('itemEquipped', (e) => {
             const item = e.detail.item;
             if (item.type === 'tool') {
-                this.equipped.tool = item.id;
+                this._equippedSlot().tool = item.id;
             }
             this._markSaveDirty();
             this.scheduleUIUpdate();
         }, { signal });
 
         document.addEventListener('itemUnequipped', () => {
-            this.equipped.tool = null;
+            this._equippedSlot().tool = null;
             this._markSaveDirty();
             this.scheduleUIUpdate();
         }, { signal });
@@ -137,7 +150,11 @@ export class InventorySystem {
         document.addEventListener('removeItemAfterConsumption', (e) => {
             const { category, itemId, quantity } = e.detail;
             if (category && itemId) {
-                this.removeItem(category, itemId, quantity || 1);
+                // Uma remoção que falha aqui significa que o efeito do consumo
+                // foi aplicado sem debitar o item — não pode passar em silêncio.
+                if (!this.removeItem(category, itemId, quantity || 1)) {
+                    logger.warn(`Falha ao remover item ${itemId} de "${category}" após consumo`);
+                }
             }
         }, { signal });
     }
@@ -389,7 +406,7 @@ export class InventorySystem {
         //   - `playerHUD` esconde o badge "Equipado: X"
         //   - Q-wheel deixa de marcar a slot como atual
         // Setar direto pulava todos os 3 → estado fantasma no HUD/wheel após venda.
-        if (this.equipped.tool === id) {
+        if (this._equippedSlot().tool === id) {
             document.dispatchEvent(new Event('unequipItemRequest'));
         }
 
@@ -449,7 +466,7 @@ export class InventorySystem {
             logger.warn(` Tentativa de equipar não-ferramenta: ${item.name}`);
             return false;
         }
-        this.equipped.tool = itemId;
+        this._equippedSlot().tool = itemId;
 
         this._markSaveDirty();
         this.scheduleUIUpdate();
@@ -538,7 +555,7 @@ export class InventorySystem {
                 logger.debug('   🚫 Vazio');
             } else {
                 data.items.forEach(item => {
-                    const equipped = this.equipped.tool === item.id ? ' ⚡' : '';
+                    const equipped = this.equipped?.tool === item.id ? ' ⚡' : '';
                     const consumable = item.fillUp ? ' 🍽️' : '';
                     const placeable = item.placeable ? ' 🏗️' : '';
                     logger.debug(`   ${item.icon} ${item.name} x${item.quantity}${equipped}${consumable}${placeable}`);
@@ -548,7 +565,7 @@ export class InventorySystem {
         });
 
         logger.debug('⚡ EQUIPADO:');
-        logger.debug(`   Ferramenta: ${this.equipped.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
+        logger.debug(`   Ferramenta: ${this.equipped?.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
         logger.debug('');
 
         const totalItems = Object.values(this.categories).reduce((total, cat) =>
