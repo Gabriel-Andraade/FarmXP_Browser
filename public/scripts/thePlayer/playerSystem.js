@@ -128,6 +128,21 @@ export class PlayerSystem {
 
         document.addEventListener('startConsumptionRequest', (e) => {
             const { category, itemId, quantity, item, fillUp } = e.detail;
+
+            // O efeito só vale se o item existe de fato: clicar numa entrada
+            // obsoleta da UI restaurava fome/sede de graça, já que o consumo
+            // era aplicado antes (e independente) da remoção.
+            const inventory = getSystem('inventory');
+            if (
+                !Number.isInteger(itemId) ||
+                !Number.isInteger(quantity) ||
+                quantity <= 0 ||
+                (inventory?.getItemQuantity?.(category, itemId) ?? 0) < quantity
+            ) {
+                logger.warn(`Consumo ignorado: item ${itemId} não está no inventário`);
+                return;
+            }
+
             this.consumeItem(item);
 
             safeDispatch(document, new CustomEvent('removeItemAfterConsumption', {

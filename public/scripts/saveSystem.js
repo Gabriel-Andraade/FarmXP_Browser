@@ -1208,22 +1208,23 @@ class SaveSystem {
             logger.warn('[SaveSystem] Failed to restore items:', failedItems);
         }
 
-        // Restore equipped state (may be null if nothing was equipped)
-        if (data.hasOwnProperty('equipped')) {
-            if (data.equipped) {
-                const equippedId = data.equipped?.id ?? data.equipped;
-                const isInInventory = Object.values(inventory.categories).some(cat =>
-                    cat.items?.some(item => item.id === equippedId && item.quantity > 0)
-                );
-                if (isInInventory) {
-                    inventory.equipped = data.equipped;
-                } else {
-                    logger.warn('[SaveSystem] Equipped item not found in restored inventory, skipping');
-                    inventory.equipped = null;
-                }
-            } else {
-                inventory.equipped = null;
+        // Restore equipped state. `equipped` must ALWAYS keep its canonical
+        // shape ({ tool: id|null }): assigning a bare null made removeItem
+        // throw on `this.equipped.tool`, aborting the removal mid-way (the
+        // quantity dropped but the UI never refreshed → items looked infinite).
+        {
+            const rawEquipped = Object.prototype.hasOwnProperty.call(data, 'equipped')
+                ? data.equipped
+                : null;
+            // Saves carry different shapes: { tool: id }, { id: ... } or a bare id.
+            const equippedId = rawEquipped?.tool ?? rawEquipped?.id ?? rawEquipped ?? null;
+            const isInInventory = equippedId != null && Object.values(inventory.categories).some(cat =>
+                cat.items?.some(item => item.id === equippedId && item.quantity > 0)
+            );
+            if (equippedId != null && !isInInventory) {
+                logger.warn('[SaveSystem] Equipped item not found in restored inventory, skipping');
             }
+            inventory.equipped = { tool: isInInventory ? equippedId : null };
         }
 
         inventory.scheduleUIUpdate();
