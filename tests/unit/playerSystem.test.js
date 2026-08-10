@@ -310,6 +310,33 @@ describe('PlayerSystem (Production Implementation)', () => {
       expect(player.needs.thirst).toBe(70);
     });
 
+    // Um pedido pode remover várias unidades: restaurar por uma só engoliria
+    // o excedente (o jogador perderia N itens e ganharia o efeito de 1).
+    test('should scale the effect by the consumed quantity', () => {
+      player.needs.hunger = 20;
+      player.needs.thirst = 20;
+
+      const food = { name: 'Apple', fillUp: { hunger: 20, thirst: 10 } };
+
+      player.consumeItem(food, 3);
+
+      expect(player.needs.hunger).toBe(80);
+      expect(player.needs.thirst).toBe(50);
+    });
+
+    test('should treat a missing or invalid quantity as one unit', () => {
+      player.needs.hunger = 50;
+
+      const food = { name: 'Apple', fillUp: { hunger: 20 } };
+
+      player.consumeItem(food, undefined);
+      expect(player.needs.hunger).toBe(70);
+
+      player.needs.hunger = 50;
+      player.consumeItem(food, 0);
+      expect(player.needs.hunger).toBe(70);
+    });
+
     test('should handle food items without fillUp by type', () => {
       player.needs.hunger = 50;
 

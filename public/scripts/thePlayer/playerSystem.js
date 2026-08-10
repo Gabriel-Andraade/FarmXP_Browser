@@ -128,7 +128,7 @@ export class PlayerSystem {
 
         document.addEventListener('startConsumptionRequest', (e) => {
             const { category, itemId, quantity, item, fillUp } = e.detail;
-            this.consumeItem(item);
+            this.consumeItem(item, quantity);
 
             safeDispatch(document, new CustomEvent('removeItemAfterConsumption', {
                 detail: { category, itemId, quantity }
@@ -426,9 +426,14 @@ export class PlayerSystem {
      * Processes item consumption and restores appropriate needs
      * Determines restoration values from item properties or type
      * @param {Object} item - Item to consume with fillUp or type properties
+     * @param {number} [quantity=1] - Units consumed; scales the effects
      * @returns {void}
      */
-    consumeItem(item) {
+    consumeItem(item, quantity = 1) {
+        // Um pedido de consumo pode remover várias unidades do inventário, então
+        // os efeitos escalam junto — restaurar por uma só engoliria o excedente.
+        const qty = Math.max(1, Math.floor(Number(quantity) || 1));
+
         let hungerRestore = 0;
         let thirstRestore = 0;
         let energyRestore = 0;
@@ -453,15 +458,15 @@ export class PlayerSystem {
             }
         }
         
-        this.restoreNeeds(hungerRestore, thirstRestore, energyRestore);
+        this.restoreNeeds(hungerRestore * qty, thirstRestore * qty, energyRestore * qty);
 
         // Comidas especiais: congela fome+sede em 100% por N minutos e/ou dá XP.
         if (item.needsFreezeMinutes > 0) {
-            this.freezeNeeds(item.needsFreezeMinutes * 60 * 1000);
+            this.freezeNeeds(item.needsFreezeMinutes * qty * 60 * 1000);
         }
         if (item.eatXp > 0) {
             const xp = getSystem('xp');
-            if (xp?.grantXP) xp.grantXP(item.eatXp, `food:${item.id}`);
+            if (xp?.grantXP) xp.grantXP(item.eatXp * qty, `food:${item.id}`);
         }
     }
 
