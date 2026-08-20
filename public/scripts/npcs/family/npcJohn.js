@@ -11,6 +11,8 @@ import { i18n } from '../../i18n/i18n.js';
 import { WeatherSystem } from '../../weather.js';
 import { camera } from '../../thePlayer/cameraSystem.js';
 import { logger } from '../../logger.js';
+import { resolvePresence } from '../npcSchedule.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait, makeSpeakerSwap } from '../../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -62,6 +64,31 @@ const ISABELA_DIALOG_02 = 'assets/character/family/isabela_dialog_02.png';
 
 const NIGHT_HOUR = 19;
 const MORNING_HOUR = 6;
+
+/**
+ * Agenda de trabalho do John (#247). Ele é piloto de caça, engenheiro civil e
+ * ainda faz segurança particular — a lore diz isso, e até agora era só texto.
+ *
+ * Os cortes encolhem as PONTAS do dia e nunca o miolo: o jogador vai à cidade
+ * no meio do dia, então uma ausência das 10h às 16h faria ele quase nunca
+ * encontrar o cara — o que se lê como "esse NPC nunca tá", não como "ele é
+ * ocupado".
+ *
+ * A viagem de 3 dias tem intervalo irregular de propósito (ritmo militar:
+ * às vezes puxa, às vezes alivia), mas é determinística pelo dia corrido —
+ * ver `npcSchedule.js` pra o porquê de não ser sorteio.
+ */
+const JOHN_SCHEDULE = {
+    base: { from: MORNING_HOUR * 60 + 30, until: NIGHT_HOUR * 60 },
+    // 0 = Segunda, igual ao weather.getWeekday()
+    weekly: { 0: 'engineering', 2: 'security', 4: 'engineering' },
+    shifts: {
+        engineering: { from: 10 * 60 },   // obra de manhã: chega às 10h
+        security:    { until: 18 * 60 },  // serviço à noite: sai às 18h
+        airforce:    { allDay: true },
+    },
+    trip: { work: 'airforce', lengthDays: 3, intervals: [18, 34, 12, 27] },
+};
 const MORNING_MINUTE = 10;
 
 // Roam / animação
@@ -354,11 +381,71 @@ function getCurrentTime() {
     return { hour: 12, minute: 0 };
 }
 
+/** Dia corrido do calendário in-game (1-based). */
+function getCurrentDay() {
+    return typeof WeatherSystem?.day === 'number' ? WeatherSystem.day : 1;
+}
+
+/**
+ * Uma quest está esperando algo do John?
+ *
+ * Enquanto estiver, a agenda de trabalho é ignorada e ele fica disponível —
+ * senão o jogador ficaria trancado no meio de uma entrega esperando o cara
+ * voltar do serviço. A noite continua valendo (ele dorme como todo mundo).
+ */
+function questNeedsJohn() {
+    const milk = milkQuestState === 'in_progress';
+    const family = getSystem('familyQuests')?.getPendingPetQuest?.() != null;
+    // Parafusadeira: o player escolheu ir junto com o Lucas contar pro John.
+    // Enquanto essa cena está pendente, o John é a contraparte direta — sem
+    // isso ele poderia sumir numa viagem de 3 dias e o player ficaria
+    // trancado no galho "contar juntos".
+    const drill = getSystem('npcLucas')?.getDrillState?.() === 'waiting_john';
+    return milk || family || drill;
+}
+
+/** Presença agora, já considerando a agenda de trabalho. */
+function currentPresence() {
+    const { hour, minute } = getCurrentTime();
+    return resolvePresence(JOHN_SCHEDULE, getCurrentDay(), hour * 60 + minute);
+}
+
 function shouldBeVisible() {
     const { hour, minute } = getCurrentTime();
-    if (hour > MORNING_HOUR && hour < NIGHT_HOUR) return true;
-    if (hour === MORNING_HOUR && minute >= MORNING_MINUTE) return true;
-    return false;
+    const dentroDoHorarioBase =
+        (hour > MORNING_HOUR && hour < NIGHT_HOUR) ||
+        (hour === MORNING_HOUR && minute >= MORNING_MINUTE);
+
+    // Antes de conhecer o John e fechar a quest do leite, ele fica na cidade o
+    // dia inteiro — a rotina de trabalho só começa depois. Sem isso ele sumiria
+    // antes do player sequer falar com a família, e o Lucas ficaria no quintal
+    // "sem o pai" sem nenhum contexto.
+    const milkDone = milkQuestState === 'delivered' || milkQuestState === 'declined';
+    if (dialogueState !== 'intro_done' || !milkDone) return dentroDoHorarioBase;
+
+    // Quest pendente: ele aparece no horário normal, sem os cortes do trabalho.
+    if (questNeedsJohn()) return dentroDoHorarioBase;
+
+    return currentPresence().present;
+}
+
+/**
+ * Por que o John não está aqui (pra Molly, Lucas e Isabela responderem).
+ * `null` quando ele está presente.
+ *
+ * @returns {{work: string, returnsAtMinutes: number|null, returnsOnDay: number|null}|null}
+ */
+function getAbsenceInfo() {
+    if (isVisible) return null;
+
+    const p = currentPresence();
+    if (p.present || p.reason !== 'work') return null;  // ausência de noite não rende pergunta
+
+    return {
+        work: p.work,
+        returnsAtMinutes: p.returnsAtMinutes,
+        returnsOnDay: p.returnsOnDay,
+    };
 }
 
 function isNpcOnScreen() {
@@ -417,31 +504,6 @@ function checkPendingChange() {
         if (pendingChange === 'show') showNpc();
         else hideNpc();
     }
-}
-
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
-
-// ─── Right-side speaker swap helper ────────────────────────────────────────
-
-function makeSpeakerSwap(config, name) {
-    return () => {
-        config.right.name = name;
-        const el = document.querySelector('.dlg-speaker');
-        if (el) el.textContent = name;
-    };
 }
 
 // ─── Dialogue builder ─────────────────────────────────────────────────────
@@ -1235,8 +1297,18 @@ function onInteract() {
         return;
     }
 
-    // Após intro, abre quest do leite
-    if (milkQuestState === 'idle' || milkQuestState === 'declined') {
+    // Quests do arco Miller envolvem mais de um familiar, então vivem fora
+    // deste arquivo. Se uma tiver cena pendente com o John, ela toma a vez.
+    if (getSystem('familyQuests')?.tryStartSceneFor?.('npcJohn') === true) return;
+
+    // Parafusadeira: o Lucas espera o pai voltar pra contar junto.
+    if (getSystem('npcLucas')?.tryStartDrillJohnScene?.() === true) return;
+
+    // Após intro, abre quest do leite — a menos que o mundo esteja segurando
+    // as ofertas pro clímax do protagonista. Nesse caso ele só conversa.
+    const offeringPaused = getSystem('questRegistry')?.isOfferingPaused?.() === true;
+
+    if (!offeringPaused && (milkQuestState === 'idle' || milkQuestState === 'declined')) {
         dlg.start(buildMilkQuestDialogue());
     } else if (milkQuestState === 'in_progress') {
         if (playerHasMilk()) {
@@ -1312,6 +1384,8 @@ const johnAPI = {
     getQuestState,
     setQuestState,
     hasFamilyRoamStarted,
+    /** Agenda (#247): por que ele não está aqui, e quando volta. */
+    getAbsenceInfo,
 };
 
 registerSystem('npcJohn', johnAPI);

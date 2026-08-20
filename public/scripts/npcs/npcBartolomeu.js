@@ -10,6 +10,7 @@ import { getSystem, registerSystem } from '../gameState.js';
 import { i18n, t } from '../i18n/i18n.js';
 import { logger } from '../logger.js';
 import { placedBuildings, placedWells } from '../theWorld.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -57,22 +58,6 @@ let quest2State = 'idle';
 let lastTaxDay = 0;
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerDialogPortrait() {
-    const charId = getActiveCharacterId();
-    return `assets/character/${charId}/dialog_${charId.charAt(0).toUpperCase() + charId.slice(1)}_00.png`;
-}
-
-function getPlayerName() {
-    const charId = getActiveCharacterId();
-    const names = { stella: 'Stella', ben: 'Ben', graham: 'Graham' };
-    return names[charId] || 'Stella';
-}
 
 /** Returns currency symbol based on current language */
 function getCurrency() {

@@ -30,7 +30,7 @@ const AUTO_SAVE_INTERVAL_MS = 60000;
 //   3. The function receives the save's `data` object and mutates it in place
 //   4. For item/entity ID remaps, use the helper `remapIds()`
 
-const SAVE_DATA_VERSION = 5;
+const SAVE_DATA_VERSION = 7;
 
 /**
  * Migration functions keyed by target version.
@@ -92,6 +92,38 @@ const MIGRATIONS = {
         }
 
         logger.info('[Migration v5] Added molly_quest');
+    },
+
+    // v5 -> v6: Miller family quest arc (aggregated state for quests that
+    // involve more than one family member)
+    6: (data) => {
+        if (!data.gameFlags) data.gameFlags = {};
+
+        if (!data.gameFlags.family_quests) {
+            data.gameFlags.family_quests = {
+                luna_chick: { state: 'idle', answer: null, pet: null },
+            };
+        }
+
+        logger.info('[Migration v6] Added family_quests');
+    },
+
+    // v6 -> v7: Lucas drill quest state (parafusadeira)
+    7: (data) => {
+        if (!data.gameFlags) data.gameFlags = {};
+
+        if (!data.gameFlags.lucas_quest) {
+            data.gameFlags.lucas_quest = { secretQuest: 'idle', drillQuest: 'idle', drillPaidDay: null };
+        } else {
+            if (!data.gameFlags.lucas_quest.drillQuest) {
+                data.gameFlags.lucas_quest.drillQuest = 'idle';
+            }
+            if (data.gameFlags.lucas_quest.drillPaidDay === undefined) {
+                data.gameFlags.lucas_quest.drillPaidDay = null;
+            }
+        }
+
+        logger.info('[Migration v7] Added lucas drill quest state');
     },
 };
 
@@ -996,11 +1028,13 @@ class SaveSystem {
             milly_quest: npcState(milly, 'milly_quest', 'idle'),
             bru_quest: npcState(bru, 'bru_quest', { dialogue: 'idle' }),
             john_quest: npcState(john, 'john_quest', { dialogue: 'idle', milkQuest: 'idle' }),
-            lucas_quest: npcState(lucas, 'lucas_quest', { secretQuest: 'idle' }),
+            lucas_quest: npcState(lucas, 'lucas_quest', { secretQuest: 'idle', drillQuest: 'idle', drillPaidDay: null }),
             isabela_quest: npcState(isabela, 'isabela_quest', { hasNoticed: false }),
             molly_quest: npcState(molly, 'molly_quest', { dialogue: 'idle' }),
             jeremy_quest: npcState(jeremy, 'jeremy_quest', { dialogue: 'idle', supplyQuest: 'idle' }),
             tutorial_quests: tutorials ? tutorials.getQuestState() : null,
+            // Arco Miller (quests que envolvem mais de um familiar).
+            family_quests: getSystem('familyQuests')?.getQuestState?.() ?? (cached.family_quests ?? null),
             // #244: relacionamento por NPC (traços C/R/Re). Mesmo fallback dos
             // NPCs lazy-loaded — sem o sistema carregado, preserva o do save.
             personality: getSystem('personality')?.serializeState?.() ?? (cached.personality ?? null),
@@ -1380,6 +1414,15 @@ class SaveSystem {
         if (this._appliedGameFlags) this._applyGameFlags(this._appliedGameFlags);
     }
 
+    /**
+     * Últimos gameFlags aplicados. O questRegistry usa isto pra contar o
+     * progresso de NPCs que ainda não foram carregados (#227).
+     * @returns {Object|null}
+     */
+    getAppliedGameFlags() {
+        return this._appliedGameFlags || null;
+    }
+
     _applyGameFlags(flags) {
         if (!flags) return;
         // Cacheado pro _getGameFlags (fallback quando o NPC não está carregado)
@@ -1450,6 +1493,8 @@ class SaveSystem {
         if (tutorials && flags.tutorial_quests) {
             tutorials.setQuestState(flags.tutorial_quests);
         }
+        // Arco Miller: um estado agregado pra todas as quests da família.
+        getSystem('familyQuests')?.setQuestState?.(flags.family_quests);
         logger.info('[SaveSystem] Game flags restored');
     }
 

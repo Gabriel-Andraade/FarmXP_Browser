@@ -616,6 +616,13 @@ function _announceMapChanged(mapId) {
     document.dispatchEvent(new CustomEvent('mapChanged', { detail: { mapId } }));
 }
 
+// Cenas do arco Miller que disparam ao VOLTAR pra fazenda (a da Luna decide
+// ali qual filhote levar). Roda depois da transição, com o mundo já montado.
+document.addEventListener('mapChanged', (e) => {
+    if (e.detail?.mapId !== 'farm') return;
+    getSystem('familyQuests')?.tryStartFarmReturnScene?.();
+});
+
 /**
  * Getter público para o snapshot da farm mantido em memória enquanto
  * o jogador está na cidade. saveSystem usa para persistir a farm mesmo

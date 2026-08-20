@@ -19,6 +19,7 @@ import { WORLD_GENERATOR_CONFIG } from '../generatorSeeds.js';
 import { WORLD_WIDTH, WORLD_HEIGHT, TILE_SIZE } from '../worldConstants.js';
 import { collisionSystem } from '../collisionSystem.js';
 import { logger } from '../logger.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 const SPRITE_DAY = 'assets/character/milly/milly_window_00.png';
@@ -83,26 +84,6 @@ function safeMarkWorldChanged() {
   if (typeof markWorldChanged === 'function') {
     markWorldChanged();
   }
-}
-
-function getActiveCharacterId() {
-  const player = getSystem('player');
-  return player?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-  const id = getActiveCharacterId();
-  const names = {
-    stella: 'Stella',
-    ben: 'Ben',
-    graham: 'Graham',
-  };
-  return names[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-  const id = getActiveCharacterId();
-  return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
 }
 
 function tChar(baseKey, charId) {

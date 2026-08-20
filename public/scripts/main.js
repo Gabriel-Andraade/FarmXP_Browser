@@ -528,6 +528,21 @@ function setupInteractionSystem() {
       case 'guide':
         result = animal.guide();
         break;
+      case 'giftLuna': {
+        // Recolhe o filhote da quest da Luna: sai do mundo, entra no
+        // inventário como item de animal. A validação toda mora no
+        // familyQuests — aqui só traduzo o reason pro feedback bubble.
+        const fam = getSystem('familyQuests');
+        if (!fam?.collectPet) {
+          result = { success: false, message: 'not_ready' };
+          break;
+        }
+        const r = fam.collectPet(animal);
+        result = r?.ok
+          ? { success: true, message: 'collected' }
+          : { success: false, message: r?.reason === 'inventory_full' ? 'inventory_full' : 'not_ready' };
+        break;
+      }
       case 'collect': {
         // Coleta de produção (milk/wool/egg) via botão "Coletar" do UiPanel.
         // Delega TODO check pro productionSystem.collect — ele valida

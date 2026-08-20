@@ -11,6 +11,7 @@ import { i18n } from '../i18n/i18n.js';
 import { WeatherSystem } from '../weather.js';
 import { camera } from '../thePlayer/cameraSystem.js';
 import { logger } from '../logger.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait, makeSpeakerSwap } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -122,36 +123,11 @@ function checkPendingChange() {
     }
 }
 
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
-
 function getGreeting() {
     const { hour } = getCurrentTime();
     return hour < 12
         ? t('npc.couple.greetMorning')
         : t('npc.couple.greetAfternoon');
-}
-
-// Ajudante para trocar speaker e portrait no diálogo
-function makeSpeakerSwap(config, name, portrait) {
-    return () => {
-        config.right.name = name;
-        const speakerEl = document.querySelector('.dlg-speaker');
-        if (speakerEl) speakerEl.textContent = name;
-        // portrait change is done via setPortrait in the line definition
-    };
 }
 
 // ─── Dialogue builder ─────────────────────────────────────────────────────

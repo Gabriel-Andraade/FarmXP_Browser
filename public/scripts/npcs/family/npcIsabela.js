@@ -12,6 +12,7 @@ import { i18n, t } from '../../i18n/i18n.js';
 import { WeatherSystem } from '../../weather.js';
 import { camera } from '../../thePlayer/cameraSystem.js';
 import { logger } from '../../logger.js';
+import { whereIsJohnOption } from './askAboutJohn.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -36,6 +37,8 @@ const ISABELA_MOVE_DRAW_H  = 44;
 // Mantenha em sincronia com ISABELA_START_X/Y e ISABELA_DRAW_W/H.
 const ISABELA = {
     id: 'isabela',
+    // Agenda (#247): só aparece quando o John está fora a trabalho.
+    menuOptions: [whereIsJohnOption('isabela')],
     name: 'Isabela',
     x: 174,
     y: 1214,
