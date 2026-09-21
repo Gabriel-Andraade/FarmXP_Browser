@@ -12,6 +12,7 @@ import { t, i18n } from '../i18n/i18n.js';
 import { registerSystem } from '../gameState.js';
 import { a11y } from '../accessibility.js';
 import { qualityMode } from '../qualityMode.js';
+import { displayMode } from '../displayMode.js';
 import { showReloadPrompt } from '../reloadPrompt.js';
 
 const MenuState = {
@@ -255,6 +256,12 @@ export class MainMenu {
       this._buildQualityRows()
     ));
 
+    // ── Display (fullscreen / windowed) ──
+    panel.appendChild(this._createSettingsSection(
+      t('settings.display.title'),
+      this._buildDisplayRows()
+    ));
+
     // ── Accessibility ──
     panel.appendChild(this._createSettingsSection(
       t('settings.accessibility'),
@@ -324,6 +331,46 @@ export class MainMenu {
   }
 
   // ── Quality / performance rows ──
+
+  _buildDisplayRows() {
+    const wrap = document.createElement('div');
+    wrap.className = 'mm-cfg-rows';
+
+    const row = document.createElement('div');
+    row.className = 'mm-cfg-row';
+    const label = document.createElement('span');
+    label.className = 'mm-cfg-label';
+    label.textContent = t('settings.display.mode');
+    const select = document.createElement('select');
+    select.className = 'mm-cfg-select';
+    [
+      { value: 'fullscreen', label: t('settings.display.fullscreen') },
+      { value: 'windowed', label: t('settings.display.windowed') },
+    ].forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.value;
+      opt.textContent = o.label;
+      if (displayMode.pref === o.value) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener('change', () => {
+      displayMode.set(select.value, { fromUser: true });
+    });
+    row.append(label, select);
+    wrap.appendChild(row);
+
+    const hint = document.createElement('div');
+    hint.className = 'mm-cfg-row';
+    const hintLabel = document.createElement('span');
+    hintLabel.className = 'mm-cfg-label';
+    hintLabel.style.opacity = '0.6';
+    hintLabel.style.fontSize = '0.8rem';
+    hintLabel.textContent = t('settings.display.hint');
+    hint.appendChild(hintLabel);
+    wrap.appendChild(hint);
+
+    return wrap;
+  }
 
   _buildQualityRows() {
     const wrap = document.createElement('div');

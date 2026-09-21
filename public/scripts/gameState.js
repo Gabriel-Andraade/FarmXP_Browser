@@ -40,7 +40,7 @@ const gameState = {
 export function registerSystem(systemName, systemInstance) {
   gameState.systems[systemName] = systemInstance;
   if (getDebugFlag('debug')) {
-    logger.debug(`✅ Registered system: ${systemName}`);
+    logger.debug(`Registered system: ${systemName}`);
   }
   safeDispatch(document, new CustomEvent('gamestate:registered', { detail: { name: systemName } }));
   return systemInstance;
@@ -110,7 +110,7 @@ export function setGameFlag(flag, value) {
   if (Object.prototype.hasOwnProperty.call(gameState.flags, flag)) {
     gameState.flags[flag] = value;
   } else {
-    logger.warn(`⚠️ Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
+    logger.warn(`Unknown game flag: '${flag}'. Add it to gameState.flags initial object if this is intentional.`);
   }
 }
 
@@ -205,7 +205,7 @@ export function installLegacyGlobals() {
     Object.defineProperty(window, windowKey, {
       get() {
         if (getDebugFlag('debug') && !warnedSystemKeys.has(windowKey)) {
-          logger.warn(`⚠️ Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
+          logger.warn(`Deprecated: use getSystem('${systemKey}') instead of window.${windowKey}`);
           warnedSystemKeys.add(windowKey);
         }
         return gameState.systems[systemKey];
@@ -234,7 +234,7 @@ export function installLegacyGlobals() {
     Object.defineProperty(window, windowKey, {
       get() {
         if (getDebugFlag('debug') && !warnedObjectKeys.has(windowKey)) {
-          logger.warn(`⚠️ Deprecated: use getObject('${objectKey}') instead of window.${windowKey}`);
+          logger.warn(`Deprecated: use getObject('${objectKey}') instead of window.${windowKey}`);
           warnedObjectKeys.add(windowKey);
         }
         return gameState.objects[objectKey];
@@ -272,7 +272,7 @@ export function installLegacyGlobals() {
     configurable: true,
   });
 
-  logger.debug('🔗 Legacy globals bridge installed');
+  logger.debug('Legacy globals bridge installed');
 }
 
 // Expose gameState for debugging in console (lazy - only when ?debug=1)

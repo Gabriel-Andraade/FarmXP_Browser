@@ -8,6 +8,7 @@ import { logger } from './logger.js';
 import { a11y } from './accessibility.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from './keybindDefaults.js';
 import { qualityMode } from './qualityMode.js';
+import { displayMode } from './displayMode.js';
 import { showReloadPrompt } from './reloadPrompt.js';
 
 /* ─────────────────────────────────────────────
@@ -409,6 +410,77 @@ function ensureQualitySection() {
     select.value = qualityMode.pref;
     fpsToggle.checked = qualityMode.capFps;
   });
+
+  configContent.appendChild(section);
+
+  try { translateDOM(); } catch {}
+}
+
+/* ─────────────────────────────────────────────
+ * Modo de tela (tela cheia / janela)
+ * ───────────────────────────────────────────── */
+function ensureDisplaySection() {
+  const configModal = document.getElementById('configModal');
+  if (!configModal) return;
+
+  const configContent =
+    document.getElementById('config-content') ||
+    configModal.querySelector('#config-content') ||
+    configModal;
+
+  if (document.getElementById('display-section')) return;
+
+  const section = document.createElement('div');
+  section.className = 'config-section';
+  section.id = 'display-section';
+
+  const h3 = document.createElement('h3');
+  h3.setAttribute('data-i18n', 'settings.display.title');
+  h3.textContent = safeT('settings.display.title', 'Tela');
+  section.appendChild(h3);
+
+  const option = document.createElement('div');
+  option.className = 'config-option';
+
+  const left = document.createElement('div');
+  const label = document.createElement('div');
+  label.className = 'config-label';
+  label.setAttribute('data-i18n', 'settings.display.mode');
+  label.textContent = safeT('settings.display.mode', 'Modo de tela');
+  const hint = document.createElement('div');
+  hint.className = 'config-hint';
+  hint.setAttribute('data-i18n', 'settings.display.hint');
+  hint.textContent = safeT('settings.display.hint', 'Em janela, arraste as bordas pra redimensionar.');
+  left.appendChild(label);
+  left.appendChild(hint);
+
+  const right = document.createElement('div');
+  const select = document.createElement('select');
+  select.id = 'displayModeSelect';
+  select.className = 'config-select';
+  select.setAttribute('aria-label', safeT('settings.display.mode', 'Modo de tela'));
+
+  const OPTIONS = [
+    { value: 'fullscreen', i18n: 'settings.display.fullscreen', fallback: 'Tela cheia' },
+    { value: 'windowed', i18n: 'settings.display.windowed', fallback: 'Janela' },
+  ];
+  for (const opt of OPTIONS) {
+    const el = document.createElement('option');
+    el.value = opt.value;
+    el.setAttribute('data-i18n', opt.i18n);
+    el.textContent = safeT(opt.i18n, opt.fallback);
+    select.appendChild(el);
+  }
+  select.value = displayMode.pref;
+
+  select.addEventListener('change', () => {
+    displayMode.set(select.value, { fromUser: true });
+  });
+
+  right.appendChild(select);
+  option.appendChild(left);
+  option.appendChild(right);
+  section.appendChild(option);
 
   configContent.appendChild(section);
 
@@ -854,7 +926,7 @@ export function initSettingsUI() {
 
   if (!languageSelect) {
     // antes retornava e bloqueava o resto; agora só avisa e continua
-    logger.warn('⚠️ Language selector not found in DOM');
+    logger.warn('Language selector not found in DOM');
   } else {
     // Set current language in selector
     languageSelect.value = i18n.getCurrentLanguage();
@@ -862,17 +934,17 @@ export function initSettingsUI() {
     // Handle language change
     languageSelect.addEventListener('change', async (e) => {
       const newLang = e.target.value;
-      logger.info(`🌍 Changing language to: ${newLang}`);
+      logger.info(`Changing language to: ${newLang}`);
 
       const success = i18n.setLanguage(newLang);
 
       if (!success) {
-        logger.error(`❌ Failed to load language: ${newLang}`);
+        logger.error(`Failed to load language: ${newLang}`);
         alert(t('messages.languageChangeFailed'));
         // Revert to current language
         languageSelect.value = i18n.getCurrentLanguage();
       } else {
-        logger.info(`✅ Language changed successfully to: ${newLang}`);
+        logger.info(`Language changed successfully to: ${newLang}`);
         document.documentElement.lang = newLang;
         translateDOM();
       }
@@ -896,12 +968,16 @@ export function initSettingsUI() {
   // monta seção de desempenho/qualidade
   ensureQualitySection();
 
+  // monta seção de tela e aplica a preferência salva (só faz algo no shell)
+  ensureDisplaySection();
+  displayMode.apply();
+
   // monta a opção + modal de remap
   ensureKeybindsMenuOption();
   ensureKeybindsModal();
   publishToWindow(keybindsState);
 
-  logger.info('✅ Settings UI initialized');
+  logger.info('Settings UI initialized');
 }
 
 /**
@@ -965,6 +1041,7 @@ function initConfigModalFocusTrap() {
           // quando abrir o config, garante que as seções existem
           ensureAudioSection();
           ensureQualitySection();
+          ensureDisplaySection();
           ensureKeybindsMenuOption();
         } else {
           a11y.releaseFocus(configModal);

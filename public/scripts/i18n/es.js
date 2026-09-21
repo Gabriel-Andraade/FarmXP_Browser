@@ -602,6 +602,13 @@ export default {
       animalVolume: 'Volumen de Animales',
       animalVolumeHint: 'Sonidos de animales: mugido, cacareo, etc.',
     },
+    display: {
+      title: 'Pantalla',
+      mode: 'Modo de pantalla',
+      hint: 'En ventana, arrastra los bordes para redimensionar.',
+      fullscreen: 'Pantalla completa',
+      windowed: 'Ventana',
+    },
     quality: {
       title: 'Rendimiento',
       level: 'Calidad gráfica',

@@ -252,5 +252,9 @@
          INSTANTANEAMENTE mesmo offline. Bumpar CACHE_VERSION em sw.js
          pra forçar invalidação após deploy de breaking changes. -->
     <script src="scripts/register-sw.js" defer></script>
+
+    <!-- Ponte com o shell da Steam (tools/cef): overlay pausa, suspender salva,
+         conquistas espelhadas. Sem Steam / na web degrada em silencio. -->
+    <script src="scripts/steamBadge.js" type="module" defer></script>
 </body>
 </html>

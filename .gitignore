@@ -52,3 +52,27 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Tiled editor session snapshots (contain local paths)
 *.tiled-session
+
+# Steamworks (SDK local, não versionar)
+steam_api64.dll
+steam_appid.txt
+# CEF: distribuição binária + builds (~2 GB). O shell é reproduzido pelo
+# tools/cef/README.md a partir de tools/cef/patches/.
+tools/cef/cef/
+tools/cef/*.tar.bz2
+tools/cef/*.7z
+# sobras de `patch` / regeneração do patch
+*.rej
+*.orig
+tools/cef/orig/
+tools/cef/norm/
+
+# Spikes encerrados (Ultralight, Electron) — apagar quando confortável
+tools/ultralight/
+tools/overlay-test/
+
+# Claude Code: permissoes locais desta maquina
+.claude/settings.local.json
+
+# Pacote Steam (exe do shell + DLLs do CEF + servidor compilado, ~480 MB)
+dist-steam/

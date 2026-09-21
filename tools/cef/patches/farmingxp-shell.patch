@@ -1,0 +1,517 @@
+diff -ur a/tests/cefclient/browser/osr_window_win.cc b/tests/cefclient/browser/osr_window_win.cc
+--- a/tests/cefclient/browser/osr_window_win.cc	2026-09-21 15:31:09.979431500 -0300
++++ b/tests/cefclient/browser/osr_window_win.cc	2026-09-21 15:31:09.981427200 -0300
+@@ -787,7 +787,16 @@
+ 
+   CefKeyEvent event;
+   event.windows_key_code = wParam;
+-  event.native_key_code = lParam;
++  // Chromium derives KeyboardEvent.code from native_key_code via
++  // KeycodeConverter::NativeKeycodeToDomCode, which on Windows expects the
++  // scan code (bits 16-23 of lParam, plus 0xE000 when the extended bit 24 is
++  // set) - not the raw lParam. Passing lParam leaves `code` empty, which
++  // breaks any page that maps input by code ("KeyW") instead of key ("w").
++  {
++    int scan_code = (lParam >> 16) & 0xFF;
++    if (lParam & (1 << 24)) scan_code |= 0xE000;
++    event.native_key_code = scan_code;
++  }
+   event.is_system_key = message == WM_SYSCHAR || message == WM_SYSKEYDOWN ||
+                         message == WM_SYSKEYUP;
+ 
+diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/root_window_win.cc
+--- a/tests/cefclient/browser/root_window_win.cc	2026-09-21 15:31:09.993419300 -0300
++++ b/tests/cefclient/browser/root_window_win.cc	2026-09-21 15:31:09.995459900 -0300
+@@ -522,8 +522,21 @@
+     dwStyle |= WS_MINIMIZE;
+   }
+ 
++  // --fullscreen: borderless fullscreen (WS_POPUP covering the primary
++  // monitor). This is what games use: no title bar, no taskbar, and unlike
++  // exclusive fullscreen it keeps the Steam overlay and Alt+Tab well-behaved.
++  // Maximized (the existing "fullscreen" here) still shows the taskbar.
++  const bool borderless_fullscreen = command_line->HasSwitch("fullscreen");
++  is_borderless_fullscreen_ = borderless_fullscreen;
++
+   int x, y, width, height;
+-  if (initial_bounds_.IsEmpty()) {
++  if (borderless_fullscreen) {
++    dwStyle = WS_POPUP | WS_CLIPCHILDREN | WS_VISIBLE;
++    x = 0;
++    y = 0;
++    width = GetSystemMetrics(SM_CXSCREEN);
++    height = GetSystemMetrics(SM_CYSCREEN);
++  } else if (initial_bounds_.IsEmpty()) {
+     // Use the default window position/size.
+     x = y = width = height = CW_USEDEFAULT;
+   } else {
+@@ -804,6 +817,14 @@
+       }
+       break;
+ 
++    case WM_POWERBROADCAST:
++      // The machine is about to sleep: give the page a chance to save. The
++      // D3D11 device is lost on resume and this shell does not survive it yet.
++      if (wParam == PBT_APMSUSPEND) {
++        self->OnSuspend();
++      }
++      break;
++
+     case WM_CLOSE:
+       if (self->OnClose()) {
+         return 0;  // Cancel the close.
+@@ -1313,19 +1334,76 @@
+   }
+ }
+ 
++void RootWindowWin::SetDisplayMode(bool fullscreen) {
++  if (!CURRENTLY_ON_MAIN_THREAD()) {
++    MAIN_POST_CLOSURE(
++        base::BindOnce(&RootWindowWin::SetDisplayMode, this, fullscreen));
++    return;
++  }
++  OnSetFullscreen(fullscreen);
++}
++
++void RootWindowWin::OnSuspend() {
++  REQUIRE_MAIN_THREAD();
++  CefRefPtr<CefBrowser> browser = GetBrowser();
++  if (browser && browser->GetMainFrame()) {
++    browser->GetMainFrame()->ExecuteJavaScript(
++        "window.dispatchEvent(new CustomEvent('system:suspend'))", "", 0);
++  }
++}
++
+ void RootWindowWin::OnSetFullscreen(bool fullscreen) {
+   REQUIRE_MAIN_THREAD();
+ 
+-  CefRefPtr<CefBrowser> browser = GetBrowser();
+-  if (browser) {
+-    std::unique_ptr<window_test::WindowTestRunnerWin> test_runner(
+-        new window_test::WindowTestRunnerWin());
+-    if (fullscreen) {
+-      test_runner->Maximize(browser);
+-    } else {
+-      test_runner->Restore(browser);
+-    }
++  // Toggle borderless fullscreen (WS_POPUP over the monitor the window is on)
++  // instead of just maximizing, so the page's requestFullscreen()/F11 gets the
++  // same result as the --fullscreen switch. Saves/restores style and bounds.
++  if (!hwnd_) {
++    return;
++  }
++  // Same mode again is a no-op. Without this, the game's boot-time
++  // apply() on a --fullscreen launch would save the already-borderless
++  // window as the "windowed" state, and the first Windowed request would
++  // restore that instead of creating the resizable window.
++  if (fullscreen == is_borderless_fullscreen_) {
++    return;
++  }
++  if (fullscreen) {
++    if (!saved_windowed_style_) {
++      saved_windowed_style_ = GetWindowLong(hwnd_, GWL_STYLE);
++      GetWindowRect(hwnd_, &saved_windowed_rect_);
++    }
++    MONITORINFO mi = {sizeof(mi)};
++    GetMonitorInfo(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &mi);
++    SetWindowLong(hwnd_, GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN | WS_VISIBLE);
++    SetWindowPos(hwnd_, HWND_TOP, mi.rcMonitor.left, mi.rcMonitor.top,
++                 mi.rcMonitor.right - mi.rcMonitor.left,
++                 mi.rcMonitor.bottom - mi.rcMonitor.top,
++                 SWP_FRAMECHANGED | SWP_SHOWWINDOW);
++  } else if (saved_windowed_style_) {
++    SetWindowLong(hwnd_, GWL_STYLE, saved_windowed_style_);
++    SetWindowPos(hwnd_, nullptr, saved_windowed_rect_.left,
++                 saved_windowed_rect_.top,
++                 saved_windowed_rect_.right - saved_windowed_rect_.left,
++                 saved_windowed_rect_.bottom - saved_windowed_rect_.top,
++                 SWP_NOZORDER | SWP_FRAMECHANGED | SWP_SHOWWINDOW);
++    saved_windowed_style_ = 0;
++  } else {
++    // Started with --fullscreen: no windowed state to restore. Give the
++    // player a normal resizable window, 1280x720 client area, centered.
++    MONITORINFO mi = {sizeof(mi)};
++    GetMonitorInfo(MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST), &mi);
++    const DWORD style = WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_VISIBLE;
++    RECT rc = {0, 0, 1280, 720};
++    AdjustWindowRectEx(&rc, style, FALSE, 0);
++    const int w = rc.right - rc.left, h = rc.bottom - rc.top;
++    const int x = mi.rcWork.left + ((mi.rcWork.right - mi.rcWork.left) - w) / 2;
++    const int y = mi.rcWork.top + ((mi.rcWork.bottom - mi.rcWork.top) - h) / 2;
++    SetWindowLong(hwnd_, GWL_STYLE, style);
++    SetWindowPos(hwnd_, HWND_NOTOPMOST, x, y, w, h,
++                 SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+   }
++  is_borderless_fullscreen_ = fullscreen;
+ }
+ 
+ void RootWindowWin::OnAutoResize(const CefSize& new_size) {
+diff -ur a/tests/cefclient/browser/root_window_win.h b/tests/cefclient/browser/root_window_win.h
+--- a/tests/cefclient/browser/root_window_win.h	2026-09-21 15:31:09.998405200 -0300
++++ b/tests/cefclient/browser/root_window_win.h	2026-09-21 15:31:09.999402800 -0300
+@@ -24,6 +24,9 @@
+ // indicated.
+ class RootWindowWin : public RootWindow, public BrowserWindow::Delegate {
+  public:
++  // Display mode chosen by the game (settings): borderless fullscreen or a
++  // resizable 1280x720 window. Safe to call from any thread.
++  void SetDisplayMode(bool fullscreen);
+   // Constructor may be called on any thread.
+   explicit RootWindowWin(bool use_alloy_style);
+   ~RootWindowWin() override;
+@@ -116,6 +119,7 @@
+   void OnSetAddress(const std::string& url) override;
+   void OnSetTitle(const std::string& title) override;
+   void OnSetFullscreen(bool fullscreen) override;
++  void OnSuspend();
+   void OnAutoResize(const CefSize& new_size) override;
+   void OnContentsBounds(const CefRect& new_bounds) override {
+     RootWindow::SetBounds(new_bounds,
+@@ -148,6 +152,11 @@
+ 
+   // Main window.
+   HWND hwnd_ = nullptr;
++  // Windowed style/bounds saved while in borderless fullscreen (OnSetFullscreen).
++  LONG saved_windowed_style_ = 0;
++  RECT saved_windowed_rect_ = {};
++  // Current mode; set at creation (--fullscreen) and by OnSetFullscreen.
++  bool is_borderless_fullscreen_ = false;
+ 
+   // Draggable region.
+   HRGN draggable_region_ = nullptr;
+diff -ur a/tests/cefclient/browser/test_runner.cc b/tests/cefclient/browser/test_runner.cc
+--- a/tests/cefclient/browser/test_runner.cc	2026-09-21 15:31:10.015361700 -0300
++++ b/tests/cefclient/browser/test_runner.cc	2026-09-21 15:31:10.017355700 -0300
+@@ -30,6 +30,9 @@
+ #include "tests/cefclient/browser/resource.h"
+ #include "tests/cefclient/browser/response_filter_test.h"
+ #include "tests/cefclient/browser/root_window_manager.h"
++#if defined(OS_WIN)
++#include "tests/cefclient/browser/root_window_win.h"
++#endif
+ #include "tests/cefclient/browser/scheme_test.h"
+ #include "tests/cefclient/browser/server_test.h"
+ #include "tests/cefclient/browser/task_manager_test.h"
+@@ -859,7 +862,40 @@
+   return url_path.find(path) == 0;
+ }
+ 
++// Game -> shell: window.cefQuery({request: "display:fullscreen" | "display:windowed"}).
++// No user gesture needed (unlike requestFullscreen), so the game can apply
++// its saved preference at boot.
++class DisplayModeHandler : public CefMessageRouterBrowserSide::Handler {
++ public:
++  bool OnQuery(CefRefPtr<CefBrowser> browser,
++               CefRefPtr<CefFrame> frame,
++               int64_t query_id,
++               const CefString& request,
++               bool persistent,
++               CefRefPtr<Callback> callback) override {
++    const std::string& req = request;
++    if (req != "display:fullscreen" && req != "display:windowed") {
++      return false;
++    }
++#if defined(OS_WIN)
++    // Only the native Win32 root window implements this; with --use-views the
++    // root window is a different class and the cast below would be invalid.
++    if (!MainContext::Get()->UseViewsGlobal()) {
++      auto root = MainContext::Get()->GetRootWindowManager()->GetWindowForBrowser(
++          browser->GetIdentifier());
++      if (root) {
++        static_cast<RootWindowWin*>(root.get())
++            ->SetDisplayMode(req == "display:fullscreen");
++      }
++    }
++#endif
++    callback->Success(CefString());
++    return true;
++  }
++};
++
+ void CreateMessageHandlers(MessageHandlerSet& handlers) {
++  handlers.insert(new DisplayModeHandler());
+   handlers.insert(new PromptHandler);
+ 
+   // Create the binary trasfer test handlers.
+diff -ur a/tests/cefclient/cefclient_win.cc b/tests/cefclient/cefclient_win.cc
+--- a/tests/cefclient/cefclient_win.cc	2026-09-21 15:31:09.948902900 -0300
++++ b/tests/cefclient/cefclient_win.cc	2026-09-21 15:31:09.951895900 -0300
+@@ -2,7 +2,12 @@
+ // reserved. Use of this source code is governed by a BSD-style license that
+ // can be found in the LICENSE file.
+ 
++// winsock2.h must come before windows.h (which would otherwise pull in the
++// legacy winsock.h). Used by the game-server readiness poll below.
++#include <winsock2.h>
++#include <ws2tcpip.h>
+ #include <windows.h>
++#pragma comment(lib, "ws2_32.lib")
+ 
+ #include <algorithm>
+ #include <memory>
+@@ -25,9 +30,161 @@
+ #include "tests/shared/common/client_switches.h"
+ #include "tests/shared/renderer/client_app_renderer.h"
+ 
++#include "steam/steam_api.h"
++
+ namespace client {
+ namespace {
+ 
++// ── Game server lifecycle ───────────────────────────────────────────────────
++// The game is a web page served by a local HTTP server. This shell owns that
++// server: it spawns it, waits until the port answers, and guarantees it dies
++// with the shell - even on a crash - via a Job Object with KILL_ON_JOB_CLOSE.
++//
++//   --game-server="<command line>"   e.g. "C:\...un.exe run server.ts"
++//   --game-server-cwd=<dir>          working directory for the server
++//   --game-server-port=<n>           port to wait for (default 43110)
++//
++// Without --game-server nothing happens (the URL is assumed to be up already).
++
++HANDLE g_game_server_job = nullptr;
++
++// ── Steam in the shell process ──────────────────────────────────────────────
++// GameOverlayActivated_t is delivered only to the process that hosts the
++// overlay - this one - so this is where it must be caught. The page gets a
++// plain DOM event on window; what to do with it (pause) is the game's call.
++
++void SendToPage(const std::string& js) {
++  if (!CefCurrentlyOn(TID_UI)) {
++    CefPostTask(TID_UI, base::BindOnce(SendToPage, js));
++    return;
++  }
++  auto root = MainContext::Get()->GetRootWindowManager()->GetActiveRootWindow();
++  CefRefPtr<CefBrowser> browser = root ? root->GetBrowser() : nullptr;
++  if (browser && browser->GetMainFrame()) {
++    browser->GetMainFrame()->ExecuteJavaScript(js, "", 0);
++  }
++}
++
++class SteamBridge {
++ public:
++  SteamBridge() : overlay_cb_(this, &SteamBridge::OnOverlay) {}
++
++  void OnOverlay(GameOverlayActivated_t* ev) {
++    const bool active = ev->m_bActive != 0;
++    SendToPage(std::string("window.dispatchEvent(new CustomEvent('steam:overlay',{detail:{active:") +
++               (active ? "true" : "false") + "}}))");
++  }
++
++ private:
++  CCallback<SteamBridge, GameOverlayActivated_t, false> overlay_cb_;
++};
++
++SteamBridge* g_steam_bridge = nullptr;
++
++// Pumped from the main-thread message loop (the thread that called Init).
++void CALLBACK SteamPumpTimer(HWND, UINT, UINT_PTR, DWORD) {
++  SteamAPI_RunCallbacks();
++}
++
++UINT_PTR g_steam_pump_timer = 0;
++
++bool StartSteam() {
++  if (!SteamAPI_Init()) {
++    return false;  // Steam closed / no appid: the game runs without it.
++  }
++  g_steam_bridge = new SteamBridge();
++  g_steam_pump_timer = SetTimer(nullptr, 0, 100, SteamPumpTimer);
++  return true;
++}
++
++// Order matters: the timer must be dead BEFORE SteamAPI_Shutdown, because
++// CefShutdown pumps the message loop and a live timer would call
++// RunCallbacks on a torn-down API - which hangs the process in the kernel
++// at exit (seen as unkillable cefclient.exe zombies holding the profile lock).
++void StopSteam() {
++  if (g_steam_pump_timer) {
++    KillTimer(nullptr, g_steam_pump_timer);
++    g_steam_pump_timer = 0;
++  }
++  if (g_steam_bridge) {
++    delete g_steam_bridge;
++    g_steam_bridge = nullptr;
++    SteamAPI_Shutdown();
++  }
++}
++
++bool PortAnswers(int port) {
++  SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
++  if (s == INVALID_SOCKET) {
++    return false;
++  }
++  sockaddr_in addr = {};
++  addr.sin_family = AF_INET;
++  addr.sin_port = htons(static_cast<u_short>(port));
++  addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
++  const bool ok = connect(s, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) == 0;
++  closesocket(s);
++  return ok;
++}
++
++bool StartGameServer(CefRefPtr<CefCommandLine> command_line) {
++  if (!command_line->HasSwitch("game-server")) {
++    return true;
++  }
++  std::wstring cmd = command_line->GetSwitchValue("game-server").ToWString();
++  std::wstring cwd = command_line->GetSwitchValue("game-server-cwd").ToWString();
++  int port = 43110;
++  if (command_line->HasSwitch("game-server-port")) {
++    port = _wtoi(command_line->GetSwitchValue("game-server-port").ToWString().c_str());
++  }
++
++  WSADATA wsa;
++  WSAStartup(MAKEWORD(2, 2), &wsa);
++
++  // Already up (dev: server started by hand)? Reuse it, don't spawn a second.
++  if (PortAnswers(port)) {
++    return true;
++  }
++
++  // Job object: when the last handle closes (this process exits, however it
++  // exits) every process in the job is killed. No orphan servers.
++  g_game_server_job = CreateJobObjectW(nullptr, nullptr);
++  if (g_game_server_job) {
++    JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = {};
++    info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
++    SetInformationJobObject(g_game_server_job, JobObjectExtendedLimitInformation,
++                            &info, sizeof(info));
++  }
++
++  // The server reads the port from the environment (server.ts: PORT).
++  SetEnvironmentVariableW(L"PORT", std::to_wstring(port).c_str());
++
++  STARTUPINFOW si = {sizeof(si)};
++  PROCESS_INFORMATION pi = {};
++  std::wstring mutable_cmd = cmd;  // CreateProcessW may modify the buffer.
++  if (!CreateProcessW(nullptr, &mutable_cmd[0], nullptr, nullptr, FALSE,
++                      CREATE_NO_WINDOW | CREATE_SUSPENDED, nullptr,
++                      cwd.empty() ? nullptr : cwd.c_str(), &si, &pi)) {
++    return false;
++  }
++  if (g_game_server_job) {
++    AssignProcessToJobObject(g_game_server_job, pi.hProcess);
++  }
++  ResumeThread(pi.hThread);
++  CloseHandle(pi.hThread);
++  CloseHandle(pi.hProcess);
++
++  // Wait up to 20s for the port. Bun + esbuild first-load can take a few s.
++  for (int i = 0; i < 200; i++) {
++    if (PortAnswers(port)) {
++      return true;
++    }
++    Sleep(100);
++  }
++  return false;
++}
++
++
+ // Configure code signing requirements. For a code signing example see
+ // https://github.com/chromiumembedded/cef/issues/3824#issuecomment-2892139995
+ 
+@@ -133,6 +290,41 @@
+   CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
+   command_line->InitFromString(::GetCommandLineW());
+ 
++  // Farming XP defaults. Launched with no --url (e.g. from Steam with empty
++  // launch options, or by double-click), the shell configures itself: OSR on
++  // D3D11, borderless fullscreen, persistent profile under %LOCALAPPDATA%, and
++  // the game server (farmxp-server.exe next to this exe). Any switch given
++  // explicitly wins. Subprocesses (--type=...) are left alone.
++  if (!command_line->HasSwitch("type") && !command_line->HasSwitch("url")) {
++    wchar_t exe_path[MAX_PATH];
++    GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
++    std::wstring exe_dir(exe_path);
++    exe_dir = exe_dir.substr(0, exe_dir.find_last_of(L"\\/"));
++    wchar_t local_app_data[MAX_PATH];
++    const bool has_lad = GetEnvironmentVariableW(L"LOCALAPPDATA", local_app_data, MAX_PATH) > 0;
++
++    const char* flags[] = {"off-screen-rendering-enabled", "shared-texture-enabled",
++                           "hide-controls", "hide-top-menu", "fullscreen"};
++    for (const char* f : flags) {
++      if (!command_line->HasSwitch(f)) command_line->AppendSwitch(f);
++    }
++    if (!command_line->HasSwitch("off-screen-frame-rate"))
++      command_line->AppendSwitchWithValue("off-screen-frame-rate", "60");
++    if (!command_line->HasSwitch("force-device-scale-factor"))
++      command_line->AppendSwitchWithValue("force-device-scale-factor", "1");
++    if (!command_line->HasSwitch("cache-path") && has_lad)
++      command_line->AppendSwitchWithValue("cache-path", std::wstring(local_app_data) + L"\\FarmingXP\\cef-profile");
++    if (!command_line->HasSwitch("game-server"))
++      command_line->AppendSwitchWithValue("game-server", L"\"" + exe_dir + L"\\farmxp-server.exe\"");
++    if (!command_line->HasSwitch("game-server-cwd"))
++      command_line->AppendSwitchWithValue("game-server-cwd", exe_dir);
++    if (!command_line->HasSwitch("game-server-port"))
++      command_line->AppendSwitchWithValue("game-server-port", "43110");
++    // The URL follows the port so --game-server-port alone stays consistent.
++    const std::string port = command_line->GetSwitchValue("game-server-port").ToString();
++    command_line->AppendSwitchWithValue("url", "http://127.0.0.1:" + port + "/");
++  }
++
+   // Create a ClientApp of the correct type.
+   CefRefPtr<CefApp> app;
+   ClientApp::ProcessType process_type = ClientApp::GetProcessType(command_line);
+@@ -193,6 +385,22 @@
+   // Register scheme handlers.
+   test_runner::RegisterSchemeHandlers();
+ 
++  // Bring up the game server before the first window asks for the URL.
++  // Before Steam, so this failure path has nothing of Steam's to tear down.
++  if (!StartGameServer(command_line)) {
++    std::wstring port = command_line->GetSwitchValue("game-server-port").ToWString();
++    if (port.empty()) port = L"43110";
++    MessageBoxW(nullptr,
++                (L"Nao foi possivel iniciar o servidor do jogo.\n"
++                 L"A porta " + port + L" pode estar em uso por outro programa.").c_str(),
++                L"Farming XP", MB_OK | MB_ICONERROR);
++    context->Shutdown();
++    return CEF_RESULT_CODE_KILLED;
++  }
++
++  // Steam (overlay callback lives here). Optional: the game runs without it.
++  StartSteam();
++
+   auto window_config = std::make_unique<RootWindowConfig>();
+   window_config->always_on_top =
+       command_line->HasSwitch(switches::kAlwaysOnTop);
+@@ -206,9 +414,17 @@
+   // RootWindowManager after all windows have been destroyed.
+   int result = message_loop->Run();
+ 
++  // Steam pump off before anything else tears down (see StopSteam).
++  if (g_steam_pump_timer) {
++    KillTimer(nullptr, g_steam_pump_timer);
++    g_steam_pump_timer = 0;
++  }
++
+   // Shut down CEF.
+   context->Shutdown();
+ 
++  StopSteam();
++
+   // Release objects in reverse order of creation.
+   message_loop.reset();
+   context.reset();
+diff -ur a/tests/cefclient/CMakeLists.txt b/tests/cefclient/CMakeLists.txt
+--- a/tests/cefclient/CMakeLists.txt	2026-09-21 15:31:09.965473000 -0300
++++ b/tests/cefclient/CMakeLists.txt	2026-09-21 15:31:09.967465300 -0300
+@@ -613,6 +613,17 @@
+   add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
+   target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS} d3d11.lib glu32.lib imm32.lib opengl32.lib)
+ 
++  # Steamworks SDK: overlay callback + power events go to the page from here,
++  # because Steam delivers GameOverlayActivated_t only to the process that
++  # hosts the overlay (this one). -DSTEAMWORKS_SDK=<dir> overrides the path.
++  set(STEAMWORKS_SDK "C:/sdk" CACHE PATH "Steamworks SDK root")
++  target_include_directories(${CEF_TARGET} PRIVATE "${STEAMWORKS_SDK}/public")
++  target_link_libraries(${CEF_TARGET} "${STEAMWORKS_SDK}/redistributable_bin/win64/steam_api64.lib")
++  add_custom_command(TARGET ${CEF_TARGET} POST_BUILD
++    COMMAND ${CMAKE_COMMAND} -E copy_if_different
++      "${STEAMWORKS_SDK}/redistributable_bin/win64/steam_api64.dll" "${CEF_TARGET_OUT_DIR}"
++    VERBATIM)
++
+   if(USE_ATL)
+     # Required by VS2013 to link accessibility API functions.
+     target_link_libraries(${CEF_TARGET} oleacc.lib)

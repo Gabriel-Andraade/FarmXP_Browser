@@ -828,7 +828,7 @@ async function exposeGlobals() {
                 const item = getItem(Number(id));
                 if (!item) { logger.error(`addItem: item ${id} não existe`); return false; }
                 const ok = inventorySystem.addItem(item.id, Number(qty) || 1);
-                logger.info(`[addItem] ${ok ? '✓' : '✗'} ${item.name} x${qty} (id=${item.id})`);
+                logger.info(`[addItem] ${ok ? 'added' : 'failed'} ${item.name} x${qty} (id=${item.id})`);
                 return ok;
             };
 
@@ -844,7 +844,7 @@ async function exposeGlobals() {
                 }
                 const troughs = wtSys.getWaterTroughs();
                 const animals = world.animals || [];
-                console.group('🥤 Diagnóstico de Bebida');
+                console.group('Diagnóstico de Bebida');
                 logger.info(`Cochos: ${troughs.length}  Animais: ${animals.length}`);
                 troughs.forEach((t, i) => {
                     logger.info(`  Cocho ${i}: id=${t.id} variant=${t.variant} water=${t.waterLevel ?? 0}/100 pos=(${Math.round(t.x)},${Math.round(t.y)})`);
@@ -872,7 +872,7 @@ async function exposeGlobals() {
                 const world = getObject('world');
                 const animals = world?.animals || [];
                 animals.forEach(a => { a.stats.thirst = 3; a._drinkCooldownUntil = 0; });
-                logger.info(`✓ ${animals.length} animais com thirst=3, cooldown zerado`);
+                logger.info(`${animals.length} animais com thirst=3, cooldown zerado`);
             };
 
             // fillAllTroughs(): enche todos os cochos sem precisar do balde.
@@ -880,7 +880,7 @@ async function exposeGlobals() {
                 const wtSys = getSystem('waterTrough');
                 const troughs = wtSys?.getWaterTroughs?.() || [];
                 troughs.forEach(t => { t.waterLevel = 100; });
-                logger.info(`✓ ${troughs.length} cochos enchidos até 100`);
+                logger.info(`${troughs.length} cochos enchidos até 100`);
             };
         }
 
@@ -1112,9 +1112,9 @@ async function startFullGameLoad() {
       if (targetSlot >= 0) {
         saveRef.createOrOverwriteSlot(targetSlot, { saveName: `Save ${targetSlot + 1}` });
         saveRef.selectActiveSlot(targetSlot);
-        logger.info(`💾 Auto-created save slot ${targetSlot} for new game`);
+        logger.info(`Auto-created save slot ${targetSlot} for new game`);
       } else {
-        logger.warn('💾 All 3 save slots occupied; auto-save disabled until player picks a slot');
+        logger.warn('All 3 save slots occupied; auto-save disabled until player picks a slot');
       }
     }
 
@@ -1124,7 +1124,7 @@ async function startFullGameLoad() {
       try {
         updateLoadingProgress(0.95, "restaurando save...");
         await saveRef.applySaveData(pendingSave);
-        logger.info('📂 Save aplicado do startup');
+        logger.info('Save aplicado do startup');
       } catch (e) {
         handleWarn("falha ao aplicar save pendente", "main:startFullGameLoad:pendingSave", e);
       }
@@ -1135,6 +1135,9 @@ async function startFullGameLoad() {
     // Garante 1500ms mínimos de visibilidade do loading screen — se o
     // load real foi rápido demais, espera o resto.
     const _loadElapsed = performance.now() - _loadStartedAt;
+    // O loading tem piso de 1500ms, entao o que o jogador ve nao e o load
+    // real. Este e o numero que importa pra medir.
+    console.info(`[load] jogo pronto em ${Math.round(_loadElapsed)}ms`);
     const MIN_LOADING_MS = 1500;
     if (_loadElapsed < MIN_LOADING_MS) {
       await new Promise(r => setTimeout(r, MIN_LOADING_MS - _loadElapsed));

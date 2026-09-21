@@ -1,0 +1,240 @@
+/**
+ * @file steam.ts - Steamworks SDK bridge via bun:ffi.
+ *
+ * Calls steam_api64.dll through the "flat" API (plain C functions). The
+ * versioned names (_v023, _v018...) come from THIS dll's export table; they
+ * change between SDK versions, so check them when upgrading:
+ *
+ *   SteamAPI_SteamUser_v023 / SteamAPI_SteamFriends_v018 / SteamAPI_SteamUtils_v011
+ *
+ * Everything here degrades silently: no dll, Steam not running or no appid
+ * -> `connected: false` and the game goes on. Steam is never a requirement.
+ */
+import { dlopen, FFIType, read } from "bun:ffi";
+import { existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+
+/** SteamAPI_InitFlat result (ESteamAPIInitResult). */
+const INIT_RESULT: Record<number, string> = {
+  0: "ok",
+  1: "generic failure",
+  2: "Steam client is not running",
+  3: "SDK version mismatch",
+};
+
+const DLL_NAME = "steam_api64.dll";
+
+/** Next to the executable first (compiled binary: import.meta.dir is virtual
+ *  and cwd depends on the launcher), then cwd and the project root (dev). */
+function findDll(): string | null {
+  const candidates = [
+    join(dirname(process.execPath), DLL_NAME),
+    join(process.cwd(), DLL_NAME),
+    join(import.meta.dir, DLL_NAME),
+  ];
+  return candidates.find((p) => existsSync(p)) ?? null;
+}
+
+export type SteamStatus = {
+  connected: boolean;
+  name: string | null;
+  steamId: string | null;
+  appId: number | null;
+  error: string | null;
+};
+
+let lib: any = null;
+// The routes call initSteam on every request. Without this, a failure (Steam
+// closed) would redo dlopen + InitFlat on every call.
+let attempted = false;
+let pump: ReturnType<typeof setInterval> | null = null;
+let status: SteamStatus = {
+  connected: false,
+  name: null,
+  steamId: null,
+  appId: null,
+  error: "not initialized",
+};
+
+export function initSteam(): SteamStatus {
+  if (lib || attempted) return status;
+  attempted = true;
+
+  const dll = findDll();
+  if (!dll) {
+    status = { ...status, error: `${DLL_NAME} not found` };
+    return status;
+  }
+
+  try {
+    lib = dlopen(dll, {
+      SteamAPI_InitFlat: { args: [FFIType.ptr], returns: FFIType.i32 },
+      SteamAPI_Shutdown: { args: [], returns: FFIType.void },
+      SteamAPI_RunCallbacks: { args: [], returns: FFIType.void },
+      SteamAPI_SteamUser_v023: { args: [], returns: FFIType.ptr },
+      SteamAPI_SteamFriends_v018: { args: [], returns: FFIType.ptr },
+      SteamAPI_SteamUtils_v011: { args: [], returns: FFIType.ptr },
+      SteamAPI_ISteamUser_GetSteamID: { args: [FFIType.ptr], returns: FFIType.u64 },
+      SteamAPI_ISteamUser_BLoggedOn: { args: [FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ISteamFriends_GetPersonaName: { args: [FFIType.ptr], returns: FFIType.cstring },
+      SteamAPI_ISteamUtils_GetAppID: { args: [FFIType.ptr], returns: FFIType.u32 },
+      // Achievements. Input strings go as NUL-terminated buffers (see cstr).
+      SteamAPI_SteamUserStats_v013: { args: [], returns: FFIType.ptr },
+      SteamAPI_ISteamUserStats_SetAchievement: { args: [FFIType.ptr, FFIType.cstring], returns: FFIType.bool },
+      SteamAPI_ISteamUserStats_ClearAchievement: { args: [FFIType.ptr, FFIType.cstring], returns: FFIType.bool },
+      SteamAPI_ISteamUserStats_GetAchievement: { args: [FFIType.ptr, FFIType.cstring, FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ISteamUserStats_StoreStats: { args: [FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ISteamUserStats_GetNumAchievements: { args: [FFIType.ptr], returns: FFIType.u32 },
+      SteamAPI_ISteamUserStats_GetAchievementName: { args: [FFIType.ptr, FFIType.u32], returns: FFIType.cstring },
+      // Overlay: what Steam ITSELF says about this process.
+      SteamAPI_ISteamUtils_IsOverlayEnabled: { args: [FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ISteamUtils_BOverlayNeedsPresent: { args: [FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ISteamFriends_ActivateGameOverlay: { args: [FFIType.ptr, FFIType.cstring], returns: FFIType.void },
+      // Manual dispatch: reads Steam's callback queue without registering C++
+      // classes. The only way to receive GameOverlayActivated_t via the flat API.
+      SteamAPI_ManualDispatch_Init: { args: [], returns: FFIType.void },
+      SteamAPI_GetHSteamPipe: { args: [], returns: FFIType.i32 },
+      SteamAPI_ManualDispatch_RunFrame: { args: [FFIType.i32], returns: FFIType.void },
+      SteamAPI_ManualDispatch_GetNextCallback: { args: [FFIType.i32, FFIType.ptr], returns: FFIType.bool },
+      SteamAPI_ManualDispatch_FreeLastCallback: { args: [FFIType.i32], returns: FFIType.void },
+    });
+  } catch (err: any) {
+    status = { ...status, error: `dlopen failed: ${err?.message ?? err}` };
+    return status;
+  }
+
+  // InitFlat writes its error message into this buffer. The SDK asks for 1024 bytes.
+  const msg = new Uint8Array(1024);
+  const code = lib.symbols.SteamAPI_InitFlat(msg);
+
+  if (code !== 0) {
+    const detail = new TextDecoder().decode(msg).replace(/\0.*$/, "").trim();
+    status = {
+      ...status,
+      connected: false,
+      error: `${INIT_RESULT[code] ?? `code ${code}`}${detail ? ` - ${detail}` : ""}`,
+    };
+    try { lib.close(); } catch {}
+    lib = null;
+    return status;
+  }
+
+  // Steam delivers async responses through callbacks; nothing arrives unless
+  // the queue is pumped. 100ms is plenty for what we use here.
+  // Manual dispatch: AFTER Init (steam_api.h:208), before any other
+  // ManualDispatch_* call. Replaces the automatic dispatch (which needs C++
+  // CCallback classes) with the queue drainCallbacks() empties.
+  lib.symbols.SteamAPI_ManualDispatch_Init();
+  pump = setInterval(drainCallbacks, 100);
+
+  status = { ...readStatus(), error: null };
+  return status;
+}
+
+// GameOverlayActivated_t = k_iSteamFriendsCallbacks (300) + 31.
+const CB_GAME_OVERLAY_ACTIVATED = 331;
+let overlayActive = false;
+let overlayChangedAt = 0;
+
+// CallbackMsg_t (pack 8, x64): hSteamUser@0 i32, iCallback@4 i32,
+// pubParam@8 ptr, cubParam@16 i32 -> 24 bytes.
+const cbMsg = new Uint8Array(24);
+const cbView = new DataView(cbMsg.buffer);
+
+/** With manual dispatch this replaces SteamAPI_RunCallbacks: run the frame and
+ *  drain the queue. Only the overlay matters here; the rest is discarded. */
+function drainCallbacks() {
+  if (!lib) return;
+  try {
+    const pipe = lib.symbols.SteamAPI_GetHSteamPipe();
+    lib.symbols.SteamAPI_ManualDispatch_RunFrame(pipe);
+    while (lib.symbols.SteamAPI_ManualDispatch_GetNextCallback(pipe, cbMsg)) {
+      const id = cbView.getInt32(4, true);
+      if (id === CB_GAME_OVERLAY_ACTIVATED) {
+        const param = Number(cbView.getBigUint64(8, true));
+        overlayActive = read.u8(param, 0) === 1;  // m_bActive @0
+        overlayChangedAt = Date.now();
+      }
+      lib.symbols.SteamAPI_ManualDispatch_FreeLastCallback(pipe);
+    }
+  } catch {
+    /* during shutdown */
+  }
+}
+
+function readStatus(): SteamStatus {
+  if (!lib) return status;
+  const user = lib.symbols.SteamAPI_SteamUser_v023();
+  const friends = lib.symbols.SteamAPI_SteamFriends_v018();
+  const utils = lib.symbols.SteamAPI_SteamUtils_v011();
+
+  return {
+    connected: lib.symbols.SteamAPI_ISteamUser_BLoggedOn(user),
+    name: String(lib.symbols.SteamAPI_ISteamFriends_GetPersonaName(friends)),
+    // SteamID is a uint64: sent as a string so JSON does not lose precision.
+    steamId: lib.symbols.SteamAPI_ISteamUser_GetSteamID(user).toString(),
+    appId: lib.symbols.SteamAPI_ISteamUtils_GetAppID(utils),
+    error: null,
+  };
+}
+
+// The "\0" escape (not a literal NUL byte): git must see this file as text.
+const cstr = (v: string) => Buffer.from(v + "\0", "utf8");
+
+/** Achievements the current App ID knows (on 480 those are Spacewar's). */
+export function listAchievements(): { name: string; achieved: boolean }[] {
+  if (!lib) return [];
+  const st = lib.symbols.SteamAPI_SteamUserStats_v013();
+  const n = lib.symbols.SteamAPI_ISteamUserStats_GetNumAchievements(st);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const name = String(lib.symbols.SteamAPI_ISteamUserStats_GetAchievementName(st, i));
+    const flag = new Uint8Array(1);
+    lib.symbols.SteamAPI_ISteamUserStats_GetAchievement(st, cstr(name), flag);
+    out.push({ name, achieved: flag[0] === 1 });
+  }
+  return out;
+}
+
+/** Unlocks (or clears) an achievement and pushes it to Steam. The pop-up is the proof. */
+export function setAchievement(name: string, achieved = true): { ok: boolean; stored: boolean; error?: string } {
+  if (!lib) return { ok: false, stored: false, error: status.error ?? "not connected" };
+  const st = lib.symbols.SteamAPI_SteamUserStats_v013();
+  const ok = achieved
+    ? lib.symbols.SteamAPI_ISteamUserStats_SetAchievement(st, cstr(name))
+    : lib.symbols.SteamAPI_ISteamUserStats_ClearAchievement(st, cstr(name));
+  // StoreStats is what sends it to Steam's servers; without it, it stays local.
+  const stored = ok ? lib.symbols.SteamAPI_ISteamUserStats_StoreStats(st) : false;
+  return { ok, stored, ...(ok ? {} : { error: `Steam rejected "${name}" (does the name exist on this App ID?)` }) };
+}
+
+/** Overlay diagnostics. `enabled` = Steam considers the overlay hooked into
+ *  THIS process (the one that called Init). `activate` tries to open it by API, no hotkey. */
+export function overlayInfo(activate = false): { enabled: boolean; needsPresent: boolean; activated: boolean; active: boolean; changedAt: number } {
+  if (!lib) return { enabled: false, needsPresent: false, activated: false, active: false, changedAt: 0 };
+  const utils = lib.symbols.SteamAPI_SteamUtils_v011();
+  const enabled = lib.symbols.SteamAPI_ISteamUtils_IsOverlayEnabled(utils);
+  const needsPresent = lib.symbols.SteamAPI_ISteamUtils_BOverlayNeedsPresent(utils);
+  if (activate) lib.symbols.SteamAPI_ISteamFriends_ActivateGameOverlay(lib.symbols.SteamAPI_SteamFriends_v018(), cstr("Friends"));
+  return { enabled, needsPresent, activated: activate, active: overlayActive, changedAt: overlayChangedAt };
+}
+
+export function getSteamStatus(): SteamStatus {
+  return lib ? readStatus() : status;
+}
+
+/** Allows a retry (e.g. the player opened Steam after the game). */
+export function resetSteam() {
+  attempted = false;
+}
+
+export function shutdownSteam() {
+  if (pump) clearInterval(pump);
+  pump = null;
+  try {
+    lib?.symbols.SteamAPI_Shutdown();
+  } catch {
+    /* already closed */
+  }
+  lib = null;
+}
