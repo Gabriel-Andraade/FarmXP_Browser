@@ -203,11 +203,19 @@ function _loadImageStrict(src) {
     return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => {
-            if (img.decode) {
-                img.decode().then(() => resolve(img)).catch(() => resolve(img));
-            } else {
+            if (!img.decode) return resolve(img);
+            // decode() é só pré-decodificação: onload já garante que a imagem
+            // é usável. Em alguns Chromium ele nunca resolve nem rejeita
+            // (visto no Electron 44: o loader parava no ~52º asset sem erro
+            // nenhum, porque uma promise pendurada segurava o chunk inteiro).
+            // Timeout curto e segue com a imagem; resolve() repetido é inócuo.
+            const timer = setTimeout(() => {
+                logger.warn(`[AssetManager] decode() não respondeu: ${src}`);
                 resolve(img);
-            }
+            }, 2000);
+            img.decode()
+                .catch(() => {})
+                .finally(() => { clearTimeout(timer); resolve(img); });
         };
         img.onerror = () => reject(new Error(`load failed: ${src}`));
         img.src = src;

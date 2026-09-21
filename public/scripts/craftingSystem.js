@@ -232,20 +232,20 @@ export class CraftingSystem {
    * @returns {void}
    */
   open() {
-    logger.debug("🎯 CraftingSystem.open() - INICIADO");
+    logger.debug("CraftingSystem.open() - INICIADO");
 
     if (this.isOpen) {
-      logger.debug("⚠️ Crafting já está aberto");
+      logger.debug("Crafting já está aberto");
       return;
     }
 
     this.isOpen = true;
-    logger.debug("🖼️ Criando UI do crafting...");
+    logger.debug("Criando UI do crafting...");
 
     this.createCraftingUI();
     this.renderRecipeList();
 
-    logger.info("✅ Crafting aberto com sucesso");
+    logger.info("Crafting aberto com sucesso");
   }
 
   /**

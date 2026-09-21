@@ -865,7 +865,7 @@ export function initInventoryUI() {
   window.closeInventory = closeInventoryModal;
   window.destroyInventoryUI = destroyInventoryUI;
 
-  logger.info('✅ Inventory UI (Shadow DOM) Carregada');
+  logger.info('Inventory UI (Shadow DOM) Carregada');
 }
 
 /**
@@ -1391,7 +1391,7 @@ function updateDetailsPanel(item, qty) {
     buildBtn.className = 'btn-action btn-build';
     buildBtn.textContent = `🔨 ${t('inventory.actions.build')}`;
     buildBtn.addEventListener('click', async () => {
-      logger.debug(`🔨 Iniciando construção: ${item.name}`);
+      logger.debug(`Iniciando construção: ${item.name}`);
       closeInventoryModal();
 
       // chestSystem loads lazily on first chest interaction in the world. If
@@ -1413,11 +1413,11 @@ function updateDetailsPanel(item, qty) {
             if (typeof BuildSystem.startBuilding === 'function') {
               BuildSystem.startBuilding(item);
             } else {
-              logger.error('❌ window.BuildSystem.startBuilding não disponível');
+              logger.error('window.BuildSystem.startBuilding não disponível');
               alert(t('build.notAvailable'));
             }
           } catch (err) {
-            logger.error('❌ Erro ao usar window.BuildSystem:', err);
+            logger.error('Erro ao usar window.BuildSystem:', err);
             alert(t('build.buildError'));
           }
           return;
@@ -1435,15 +1435,15 @@ function updateDetailsPanel(item, qty) {
              if (typeof BuildSystem.startBuilding === 'function') {
                BuildSystem.startBuilding(item);
              } else {
-               logger.error('❌ BuildSystem carregado mas startBuilding ausente');
+               logger.error('BuildSystem carregado mas startBuilding ausente');
                alert(t('build.notAvailableAfter'));
              }
           } else {
-            logger.error('❌ BuildSystem não foi exportado corretamente do módulo');
+            logger.error('BuildSystem não foi exportado corretamente do módulo');
             alert(t('build.buildError'));
           }
       } catch (error) {
-          logger.error('❌ Falha crítica ao iniciar BuildSystem:', error);
+          logger.error('Falha crítica ao iniciar BuildSystem:', error);
           alert(t('build.buildError'));
       }
     });
@@ -1664,7 +1664,7 @@ export function destroyInventoryUI() {
 
 // Exportar funções de debug
 window.debugInventory = () => {
-  logger.debug('🔧 Debug Inventory UI:');
+  logger.debug('Debug Inventory UI:');
   logger.debug('- Shadow Root:', shadowRoot ? 'OK' : 'NULL');
   logger.debug('- Modal:', modalEl ? 'OK' : 'NULL');
   logger.debug('- Active Category:', activeCategory);

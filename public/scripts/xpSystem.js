@@ -130,7 +130,7 @@ export class XPSystem {
                     source,
                 },
             }));
-            logger.info(`[XPSystem] Level up! ${this.level - 1} → ${this.level} (source: ${source})`);
+            logger.info(`[XPSystem] Level up! ${this.level - 1} ${this.level} (source: ${source})`);
         }
 
         const xpToNext = this.getXPToNext();

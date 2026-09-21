@@ -55,7 +55,7 @@ function restoreGameState(snapshot) {
  * @returns {Object} Test results summary
  */
 export function runValidationTests() {
-    console.group('🧪 VALIDATION TEST SUITE');
+    console.group('VALIDATION TEST SUITE');
     
     const initialState = captureGameState();
     const results = {
@@ -231,7 +231,7 @@ export function runValidationTests() {
 
     // Summary
     console.groupEnd();
-    console.group('📊 TEST SUMMARY');
+    console.group('TEST SUMMARY');
     logger.info(`Total Tests: ${results.passed + results.failed}`);
     logger.info(`Passed: ${results.passed}`);
     logger.info(`Failed: ${results.failed}`);

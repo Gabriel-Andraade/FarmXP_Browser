@@ -42,7 +42,7 @@ export class InventorySystem {
         this.init();
         this.setupGlobalListeners();
 
-        logger.info('🎒 InventorySystem inicializado com categorias centralizadas');
+        logger.info('InventorySystem inicializado com categorias centralizadas');
     }
     
     _markSaveDirty() {
@@ -84,7 +84,7 @@ export class InventorySystem {
             if (item) {
                 const fullItemData = getItem(itemId);
                 if (!fullItemData) {
-                    logger.error(`❌ Item ID ${itemId} não encontrado em item.js`);
+                    logger.error(`Item ID ${itemId} não encontrado em item.js`);
                     return false;
                 }
                 
@@ -96,12 +96,12 @@ export class InventorySystem {
                     placeable: isPlaceable(itemId)  // Validar se é construível
                 };
                 
-                logger.debug(`🎯 Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
+                logger.debug(`Item selecionado: ${item.name} (${category})${this.selectedItem.placeable ? ' [Construível]' : ''}`);
                 this.scheduleUIUpdate();
                 return true;
             }
         }
-        logger.warn(`❌ Item ID ${itemId} não encontrado no inventário`);
+        logger.warn(`Item ID ${itemId} não encontrado no inventário`);
         this.selectedItem = null;
         this.scheduleUIUpdate();
         return false;
@@ -171,12 +171,12 @@ export class InventorySystem {
         setTimeout(() => {
             this.triggerUIUpdate();
         }, INIT_DELAY_MS);
-        logger.info('🎒 Sistema de inventário pronto para uso');
+        logger.info('Sistema de inventário pronto para uso');
     }
 
     addItem(categoryOrId, itemIdOrQty, quantity = 1, _recursionDepth = 0) {
         if (_recursionDepth > 100) {
-            logger.error('❌ Limite de recursão excedido ao adicionar itens');
+            logger.error('Limite de recursão excedido ao adicionar itens');
             return false;
         }
 
@@ -198,7 +198,7 @@ export class InventorySystem {
 
             // Usar mapeamento centralizado
             category = mapTypeToCategory(itemDataCached.type);
-            logger.debug(`Adicionando: ${itemDataCached.name} (Tipo: ${itemDataCached.type}) → ${category}`);
+            logger.debug(`Adicionando: ${itemDataCached.name} (Tipo: ${itemDataCached.type}) ${category}`);
         }
 
         // Sanitizar quantidade (bloqueia NaN, negativo, Infinity)
@@ -218,7 +218,7 @@ export class InventorySystem {
         }
 
         if (!this.categories[category]) {
-            logger.error(`❌ Categoria '${category}' não definida`);
+            logger.error(`Categoria '${category}' não definida`);
             return false;
         }
 
@@ -232,7 +232,7 @@ export class InventorySystem {
             if (newTotal > stackLimit) {
                 // Adicionar nova stack se houver espaço
                 if (categoryData.items.length >= categoryData.limit) {
-                    logger.warn(`🎒 Inventário de ${category} cheio!`);
+                    logger.warn(`Inventário de ${category} cheio!`);
                     return false;
                 }
 
@@ -260,13 +260,13 @@ export class InventorySystem {
             }
         } else {
             if (categoryData.items.length >= categoryData.limit) {
-                logger.warn(`🎒 Inventário de ${category} cheio!`);
+                logger.warn(`Inventário de ${category} cheio!`);
                 return false;
             }
 
             const itemData = getItem(id);
             if (!itemData) {
-                logger.error(`❌ Erro ao buscar dados do item ${id}`);
+                logger.error(`Erro ao buscar dados do item ${id}`);
                 return false;
             }
 
@@ -288,7 +288,7 @@ export class InventorySystem {
             // Se houver overflow, chamar recursivamente
             if (qty > stackLimit) {
                 const overflow = qty - stackLimit;
-                logger.debug(`📚 Item split: criando nova stack com ${overflow} itens`);
+                logger.debug(`Item split: criando nova stack com ${overflow} itens`);
                 return this.addItem(category, id, overflow, _recursionDepth + 1);
             }
         }
@@ -366,7 +366,7 @@ export class InventorySystem {
 
             category = this.findItemCategory(id);
             if (!category) {
-                logger.warn(`❌ Item ID ${id} não encontrado em nenhuma categoria para remover`);
+                logger.warn(`Item ID ${id} não encontrado em nenhuma categoria para remover`);
                 return false;
             }
         }
@@ -545,7 +545,7 @@ export class InventorySystem {
         this.equipped = { tool: null };
         this._markSaveDirty();
         this.triggerUIUpdate();
-        logger.debug('🗑️ Inventário limpo');
+        logger.debug('Inventário limpo');
     }
 
     updateUI() {
@@ -558,9 +558,9 @@ export class InventorySystem {
         logger.debug('='.repeat(60));
 
         Object.entries(this.categories).forEach(([category, data]) => {
-            logger.debug(`📁 ${category.toUpperCase()} (${data.items.length}/${data.limit}):`);
+            logger.debug(`${category.toUpperCase()} (${data.items.length}/${data.limit}):`);
             if (data.items.length === 0) {
-                logger.debug('   🚫 Vazio');
+                logger.debug('Vazio');
             } else {
                 data.items.forEach(item => {
                     const equipped = this.equipped?.tool === item.id ? ' ⚡' : '';
@@ -572,13 +572,13 @@ export class InventorySystem {
             logger.debug('');
         });
 
-        logger.debug('⚡ EQUIPADO:');
+        logger.debug('EQUIPADO:');
         logger.debug(`   Ferramenta: ${this.equipped?.tool ? this.findItemData(this.equipped.tool)?.name : 'Nenhuma'}`);
         logger.debug('');
 
         const totalItems = Object.values(this.categories).reduce((total, cat) =>
             total + cat.items.reduce((sum, item) => sum + item.quantity, 0), 0);
-        logger.debug(`📊 TOTAL DE ITENS: ${totalItems}`);
+        logger.debug(`TOTAL DE ITENS: ${totalItems}`);
         logger.debug('='.repeat(60));
     }
     

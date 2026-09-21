@@ -601,6 +601,13 @@ export default {
       animalVolume: 'Volume dos Animais',
       animalVolumeHint: 'Sons dos animais: mugido, cacarejo, etc.',
     },
+    display: {
+      title: 'Tela',
+      mode: 'Modo de tela',
+      hint: 'Em janela, arraste as bordas pra redimensionar.',
+      fullscreen: 'Tela cheia',
+      windowed: 'Janela',
+    },
     quality: {
       title: 'Desempenho',
       level: 'Qualidade gráfica',

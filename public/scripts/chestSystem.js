@@ -35,7 +35,7 @@ export const chestSystem = {
         // Baús são persistidos POR SLOT via saveSystem (getChestsData/applyChestsData),
         // não numa chave global — senão vazam entre saves/personagens (bug #181-like).
         registerSystem('chest', this);
-        logger.info('📦 Sistema de baús inicializado');
+        logger.info('Sistema de baús inicializado');
         return this;
     },
     
@@ -92,7 +92,7 @@ export const chestSystem = {
 
         this.chests[chestId] = chest;
 
-        logger.debug(`✅ Baú adicionado: ${chestId}`, chest);
+        logger.debug(`Baú adicionado: ${chestId}`, chest);
 
         // Adicionar ao mundo visual
         this.addChestToWorld(chest);
@@ -134,7 +134,7 @@ export const chestSystem = {
                 onInteract: () => this.openChest(chest.id)
             });
         } else {
-            logger.warn('⚠️ addWorldObject não disponível');
+            logger.warn('addWorldObject não disponível');
         }
     },
     
@@ -156,7 +156,7 @@ export const chestSystem = {
         // Criar interface
         this.createChestUI(chest);
 
-        logger.debug(`📦 Baú aberto: ${chestId}`);
+        logger.debug(`Baú aberto: ${chestId}`);
     },
 
     /**
@@ -953,7 +953,7 @@ export const chestSystem = {
 
             delete this.chests[chestId];
             this.saveChests();
-            logger.debug(`🗑️ Baú removido: ${chestId}`);
+            logger.debug(`Baú removido: ${chestId}`);
         }
     },
     

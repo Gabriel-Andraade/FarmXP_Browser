@@ -108,7 +108,7 @@ function migrateSaveData(data) {
     const fromVersion = data._dataVersion || 1;
     if (fromVersion >= SAVE_DATA_VERSION) return data;
 
-    logger.info(`[SaveSystem] Migrating save from data v${fromVersion} → v${SAVE_DATA_VERSION}`);
+    logger.info(`[SaveSystem] Migrating save from data v${fromVersion} v${SAVE_DATA_VERSION}`);
 
     for (let v = fromVersion + 1; v <= SAVE_DATA_VERSION; v++) {
         if (MIGRATIONS[v]) {
@@ -145,7 +145,7 @@ function remapIds(data, maps) {
             if (!Array.isArray(cat)) continue;
             for (const item of cat) {
                 if (itemMap[item.id] !== undefined) {
-                    logger.info(`[Remap] Item ${item.id} → ${itemMap[item.id]}`);
+                    logger.info(`[Remap] Item ${item.id} ${itemMap[item.id]}`);
                     item.id = itemMap[item.id];
                 }
             }
@@ -168,7 +168,7 @@ function remapIds(data, maps) {
         const bldMap = maps.buildings;
         for (const b of data.world.placedBuildings) {
             if (bldMap[b.type] !== undefined) {
-                logger.info(`[Remap] Building ${b.type} → ${bldMap[b.type]}`);
+                logger.info(`[Remap] Building ${b.type} ${bldMap[b.type]}`);
                 b.type = bldMap[b.type];
             }
         }
@@ -179,7 +179,7 @@ function remapIds(data, maps) {
         const aniMap = maps.animals;
         for (const a of data.world.animals) {
             if (aniMap[a.type] !== undefined) {
-                logger.info(`[Remap] Animal ${a.type} → ${aniMap[a.type]}`);
+                logger.info(`[Remap] Animal ${a.type} ${aniMap[a.type]}`);
                 a.type = aniMap[a.type];
             }
         }
@@ -262,7 +262,7 @@ class SaveSystem {
             });
         }
 
-        logger.info('💾 SaveSystem initialized');
+        logger.info('SaveSystem initialized');
     }
 
     /**
@@ -593,7 +593,7 @@ class SaveSystem {
             if (!written) return false;
             this.isDirty = false;
 
-            logger.info(`💾 Save ${slotIndex} saved successfully (reason: ${slot.meta.lastSaveReason})`);
+            logger.info(`Save ${slotIndex} saved successfully (reason: ${slot.meta.lastSaveReason})`);
             this._dispatchEvent('save:changed', { slotIndex, action: 'save', reason: slot.meta.lastSaveReason });
 
             return true;
@@ -656,7 +656,7 @@ class SaveSystem {
             // Selecionar como ativo
             this.selectActiveSlot(slotIndex);
 
-            logger.info(`📂 Slot ${slotIndex} loaded`);
+            logger.info(`Slot ${slotIndex} loaded`);
             this._dispatchEvent('save:loaded', { slotIndex, data: slot });
 
             return slot;
@@ -776,7 +776,7 @@ class SaveSystem {
             if (tracker) tracker.unmute();
         }
 
-        logger.info('✅ Save data applied');
+        logger.info('Save data applied');
         this._dispatchEvent('save:applied', { saveData });
     }
 
@@ -824,7 +824,7 @@ class SaveSystem {
             }
         }
 
-        logger.info(`🗑️ Slot ${slotIndex} deleted`);
+        logger.info(`Slot ${slotIndex} deleted`);
         this._dispatchEvent('save:changed', { slotIndex, action: 'delete' });
 
         // Se todos os slots estão vazios, limpa conquistas globais
@@ -886,7 +886,7 @@ class SaveSystem {
             weekday: typeof weather.getWeekday === 'function' ? weather.getWeekday() : null
         });
 
-        logger.info('⏰ Game time reset for new game');
+        logger.info('Game time reset for new game');
     }
 
     /**
@@ -900,7 +900,7 @@ class SaveSystem {
                 this.saveActive('auto');
             }
         }, intervalMs);
-        logger.info(`⏰ Auto-save enabled (every ${intervalMs / 1000}s)`);
+        logger.info(`Auto-save enabled (every ${intervalMs / 1000}s)`);
     }
 
     /**
@@ -1306,7 +1306,7 @@ class SaveSystem {
         // Resumir o sistema
         if (typeof weather.resume === 'function') weather.resume();
 
-        logger.info(`⛅ Weather restored: ${weather.weatherType}, Day ${weather.day}, ${typeof weather.getTimeString === 'function' ? weather.getTimeString() : ''}`);
+        logger.info(`Weather restored: ${weather.weatherType}, Day ${weather.day}, ${typeof weather.getTimeString === 'function' ? weather.getTimeString() : ''}`);
     }
 
     /**
@@ -1318,7 +1318,7 @@ class SaveSystem {
 
         try {
             importWorldState(data);
-            logger.info('🌍 World state restored');
+            logger.info('World state restored');
         } catch (error) {
             logger.error('Error restoring world state:', error);
         }
@@ -1336,7 +1336,7 @@ class SaveSystem {
             getSystem('crop')?.restore?.(p.crops ?? []);
             getSystem('wateringCan')?.restore?.(p.wateringCanCharges ?? 0);
             getSystem('bucket')?.restore?.(p.bucketLevel ?? 0);
-            logger.info('🌱 Plantation restored');
+            logger.info('Plantation restored');
         } catch (error) {
             logger.error('Error restoring plantation:', error);
         }

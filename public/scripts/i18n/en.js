@@ -602,6 +602,13 @@ export default {
       animalVolume: 'Animal Volume',
       animalVolumeHint: 'Animal sounds: mooing, clucking, etc.',
     },
+    display: {
+      title: 'Display',
+      mode: 'Display mode',
+      hint: 'In windowed mode, drag the edges to resize.',
+      fullscreen: 'Fullscreen',
+      windowed: 'Windowed',
+    },
     quality: {
       title: 'Performance',
       level: 'Graphics quality',

@@ -27,13 +27,13 @@ import { logger } from '../logger.js';
 export function equipItem(category, itemId) {
     const item = getItem(itemId);
     if (!item) {
-        logger.error('❌ Item não encontrado:', itemId);
+        logger.error('Item não encontrado:', itemId);
         return false;
     }
 
     // Só pode equipar ferramentas por enquanto
     if (item.type !== 'tool') {
-        logger.warn('⚠️ Só é possível equipar ferramentas');
+        logger.warn('Só é possível equipar ferramentas');
         return false;
     }
     
@@ -55,7 +55,7 @@ export function unequipItem() {
 export function discardItem(category, itemId, quantity = 1) {
     const item = getItem(itemId);
     if (!item) {
-        logger.error('❌ Item não encontrado para descartar:', itemId);
+        logger.error('Item não encontrado para descartar:', itemId);
         return false;
     }
     
@@ -98,30 +98,30 @@ function showInventoryMessage(text) {
 // 🆕 FUNÇÃO PARA CONSUMIR ITENS (COMIDA/BEBIDA)
 export function consumeItem(category, itemId, quantity = 1) {
     if (!Number.isInteger(quantity) || quantity <= 0) {
-        logger.warn(`⚠️ Quantidade inválida para consumo: ${quantity}`);
+        logger.warn(`Quantidade inválida para consumo: ${quantity}`);
         return false;
     }
 
     const item = getItem(itemId);
     if (!item) {
-        logger.error('❌ Item não encontrado para consumir:', itemId);
+        logger.error('Item não encontrado para consumir:', itemId);
         return false;
     }
 
     // Verifica se é consumível
     if (!isConsumable(itemId)) {
-        logger.warn('⚠️ Este item não é consumível');
+        logger.warn('Este item não é consumível');
         return false;
     }
 
     // Verifica se tem quantidade suficiente
     const currentQty = inventorySystem.getItemQuantity(category, itemId);
     if (currentQty < quantity) {
-        logger.warn(`⚠️ Quantidade insuficiente: ${currentQty}/${quantity}`);
+        logger.warn(`Quantidade insuficiente: ${currentQty}/${quantity}`);
         return false;
     }
 
-    logger.debug(`🍽️ Tentando consumir: ${item.name} (${itemId})`);
+    logger.debug(`Tentando consumir: ${item.name} (${itemId})`);
 
     // 🔥 Dispara evento para o playerSystem iniciar o consumo
     document.dispatchEvent(new CustomEvent('startConsumptionRequest', { 
