@@ -828,7 +828,7 @@ async function exposeGlobals() {
                 const item = getItem(Number(id));
                 if (!item) { logger.error(`addItem: item ${id} não existe`); return false; }
                 const ok = inventorySystem.addItem(item.id, Number(qty) || 1);
-                logger.info(`[addItem] ${ok ? '': ''} ${item.name} x${qty} (id=${item.id})`);
+                logger.info(`[addItem] ${ok ? 'added' : 'failed'} ${item.name} x${qty} (id=${item.id})`);
                 return ok;
             };
 
@@ -861,7 +861,7 @@ async function exposeGlobals() {
                           ? `PRONTO — iria pro slot ${found.slotIdx} do cocho ${found.trough.id}`
                           : 'NENHUM cocho com água + slot livre no cercado';
                     }
-                    logger.info(`${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} ${reason}`);
+                    logger.info(`  ${a.assetName} #${a.id}: state=${a.state} thirst=${Math.round(a.stats.thirst)} threshold=${a._drinkThreshold} → ${reason}`);
                 });
                 console.groupEnd();
             };

@@ -53,7 +53,7 @@ Sai em `cef/build-nosandbox/tests/cefclient/Release/cefclient.exe`, com
 `libcef.dll` e cia ao lado. Copie `steam_appid.txt` pra essa pasta (o `Init` do
 shell precisa dele quando aberto fora da Steam).
 
-O patch são 6 arquivos, +315/−11 linhas (o ícone vai à parte, em
+O patch são 6 arquivos, +336/−11 linhas (o ícone vai à parte, em
 `patches/icon/`, porque patch de texto não carrega binário). Outra versão do CEF: se um hunk não
 aplicar, o `.rej` mostra onde; as mudanças são pequenas e localizadas.
 

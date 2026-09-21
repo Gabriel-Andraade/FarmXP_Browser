@@ -108,7 +108,7 @@ function migrateSaveData(data) {
     const fromVersion = data._dataVersion || 1;
     if (fromVersion >= SAVE_DATA_VERSION) return data;
 
-    logger.info(`[SaveSystem] Migrating save from data v${fromVersion} v${SAVE_DATA_VERSION}`);
+    logger.info(`[SaveSystem] Migrating save from data v${fromVersion} → v${SAVE_DATA_VERSION}`);
 
     for (let v = fromVersion + 1; v <= SAVE_DATA_VERSION; v++) {
         if (MIGRATIONS[v]) {
@@ -145,7 +145,7 @@ function remapIds(data, maps) {
             if (!Array.isArray(cat)) continue;
             for (const item of cat) {
                 if (itemMap[item.id] !== undefined) {
-                    logger.info(`[Remap] Item ${item.id} ${itemMap[item.id]}`);
+                    logger.info(`[Remap] Item ${item.id} → ${itemMap[item.id]}`);
                     item.id = itemMap[item.id];
                 }
             }
@@ -168,7 +168,7 @@ function remapIds(data, maps) {
         const bldMap = maps.buildings;
         for (const b of data.world.placedBuildings) {
             if (bldMap[b.type] !== undefined) {
-                logger.info(`[Remap] Building ${b.type} ${bldMap[b.type]}`);
+                logger.info(`[Remap] Building ${b.type} → ${bldMap[b.type]}`);
                 b.type = bldMap[b.type];
             }
         }
@@ -179,7 +179,7 @@ function remapIds(data, maps) {
         const aniMap = maps.animals;
         for (const a of data.world.animals) {
             if (aniMap[a.type] !== undefined) {
-                logger.info(`[Remap] Animal ${a.type} ${aniMap[a.type]}`);
+                logger.info(`[Remap] Animal ${a.type} → ${aniMap[a.type]}`);
                 a.type = aniMap[a.type];
             }
         }

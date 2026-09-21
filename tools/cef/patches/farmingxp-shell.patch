@@ -1,6 +1,6 @@
 diff -ur a/tests/cefclient/browser/osr_window_win.cc b/tests/cefclient/browser/osr_window_win.cc
---- a/tests/cefclient/browser/osr_window_win.cc	2026-09-21 12:59:27.760873000 -0300
-+++ b/tests/cefclient/browser/osr_window_win.cc	2026-09-21 12:59:27.774414900 -0300
+--- a/tests/cefclient/browser/osr_window_win.cc	2026-09-21 15:31:09.979431500 -0300
++++ b/tests/cefclient/browser/osr_window_win.cc	2026-09-21 15:31:09.981427200 -0300
 @@ -787,7 +787,16 @@
  
    CefKeyEvent event;
@@ -20,9 +20,9 @@ diff -ur a/tests/cefclient/browser/osr_window_win.cc b/tests/cefclient/browser/o
                          message == WM_SYSKEYUP;
  
 diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/root_window_win.cc
---- a/tests/cefclient/browser/root_window_win.cc	2026-09-21 12:59:27.788400300 -0300
-+++ b/tests/cefclient/browser/root_window_win.cc	2026-09-21 12:59:27.791360700 -0300
-@@ -522,8 +522,20 @@
+--- a/tests/cefclient/browser/root_window_win.cc	2026-09-21 15:31:09.993419300 -0300
++++ b/tests/cefclient/browser/root_window_win.cc	2026-09-21 15:31:09.995459900 -0300
+@@ -522,8 +522,21 @@
      dwStyle |= WS_MINIMIZE;
    }
  
@@ -31,6 +31,7 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
 +  // exclusive fullscreen it keeps the Steam overlay and Alt+Tab well-behaved.
 +  // Maximized (the existing "fullscreen" here) still shows the taskbar.
 +  const bool borderless_fullscreen = command_line->HasSwitch("fullscreen");
++  is_borderless_fullscreen_ = borderless_fullscreen;
 +
    int x, y, width, height;
 -  if (initial_bounds_.IsEmpty()) {
@@ -44,7 +45,7 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
      // Use the default window position/size.
      x = y = width = height = CW_USEDEFAULT;
    } else {
-@@ -804,6 +816,14 @@
+@@ -804,6 +817,14 @@
        }
        break;
  
@@ -59,7 +60,7 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
      case WM_CLOSE:
        if (self->OnClose()) {
          return 0;  // Cancel the close.
-@@ -1313,18 +1333,67 @@
+@@ -1313,19 +1334,76 @@
    }
  }
  
@@ -99,6 +100,13 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
 +  if (!hwnd_) {
 +    return;
 +  }
++  // Same mode again is a no-op. Without this, the game's boot-time
++  // apply() on a --fullscreen launch would save the already-borderless
++  // window as the "windowed" state, and the first Windowed request would
++  // restore that instead of creating the resizable window.
++  if (fullscreen == is_borderless_fullscreen_) {
++    return;
++  }
 +  if (fullscreen) {
 +    if (!saved_windowed_style_) {
 +      saved_windowed_style_ = GetWindowLong(hwnd_, GWL_STYLE);
@@ -134,11 +142,13 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
 +    SetWindowPos(hwnd_, HWND_NOTOPMOST, x, y, w, h,
 +                 SWP_FRAMECHANGED | SWP_SHOWWINDOW);
    }
++  is_borderless_fullscreen_ = fullscreen;
  }
  
+ void RootWindowWin::OnAutoResize(const CefSize& new_size) {
 diff -ur a/tests/cefclient/browser/root_window_win.h b/tests/cefclient/browser/root_window_win.h
---- a/tests/cefclient/browser/root_window_win.h	2026-09-21 12:59:27.803250600 -0300
-+++ b/tests/cefclient/browser/root_window_win.h	2026-09-21 12:59:27.815284500 -0300
+--- a/tests/cefclient/browser/root_window_win.h	2026-09-21 15:31:09.998405200 -0300
++++ b/tests/cefclient/browser/root_window_win.h	2026-09-21 15:31:09.999402800 -0300
 @@ -24,6 +24,9 @@
  // indicated.
  class RootWindowWin : public RootWindow, public BrowserWindow::Delegate {
@@ -157,19 +167,21 @@ diff -ur a/tests/cefclient/browser/root_window_win.h b/tests/cefclient/browser/r
    void OnAutoResize(const CefSize& new_size) override;
    void OnContentsBounds(const CefRect& new_bounds) override {
      RootWindow::SetBounds(new_bounds,
-@@ -148,6 +152,9 @@
+@@ -148,6 +152,11 @@
  
    // Main window.
    HWND hwnd_ = nullptr;
 +  // Windowed style/bounds saved while in borderless fullscreen (OnSetFullscreen).
 +  LONG saved_windowed_style_ = 0;
 +  RECT saved_windowed_rect_ = {};
++  // Current mode; set at creation (--fullscreen) and by OnSetFullscreen.
++  bool is_borderless_fullscreen_ = false;
  
    // Draggable region.
    HRGN draggable_region_ = nullptr;
 diff -ur a/tests/cefclient/browser/test_runner.cc b/tests/cefclient/browser/test_runner.cc
---- a/tests/cefclient/browser/test_runner.cc	2026-09-21 12:59:27.830905000 -0300
-+++ b/tests/cefclient/browser/test_runner.cc	2026-09-21 12:59:27.846764900 -0300
+--- a/tests/cefclient/browser/test_runner.cc	2026-09-21 15:31:10.015361700 -0300
++++ b/tests/cefclient/browser/test_runner.cc	2026-09-21 15:31:10.017355700 -0300
 @@ -30,6 +30,9 @@
  #include "tests/cefclient/browser/resource.h"
  #include "tests/cefclient/browser/response_filter_test.h"
@@ -180,7 +192,7 @@ diff -ur a/tests/cefclient/browser/test_runner.cc b/tests/cefclient/browser/test
  #include "tests/cefclient/browser/scheme_test.h"
  #include "tests/cefclient/browser/server_test.h"
  #include "tests/cefclient/browser/task_manager_test.h"
-@@ -859,7 +862,36 @@
+@@ -859,7 +862,40 @@
    return url_path.find(path) == 0;
  }
  
@@ -200,11 +212,15 @@ diff -ur a/tests/cefclient/browser/test_runner.cc b/tests/cefclient/browser/test
 +      return false;
 +    }
 +#if defined(OS_WIN)
-+    auto root = MainContext::Get()->GetRootWindowManager()->GetWindowForBrowser(
-+        browser->GetIdentifier());
-+    if (root) {
-+      static_cast<RootWindowWin*>(root.get())
-+          ->SetDisplayMode(req == "display:fullscreen");
++    // Only the native Win32 root window implements this; with --use-views the
++    // root window is a different class and the cast below would be invalid.
++    if (!MainContext::Get()->UseViewsGlobal()) {
++      auto root = MainContext::Get()->GetRootWindowManager()->GetWindowForBrowser(
++          browser->GetIdentifier());
++      if (root) {
++        static_cast<RootWindowWin*>(root.get())
++            ->SetDisplayMode(req == "display:fullscreen");
++      }
 +    }
 +#endif
 +    callback->Success(CefString());
@@ -218,8 +234,8 @@ diff -ur a/tests/cefclient/browser/test_runner.cc b/tests/cefclient/browser/test
  
    // Create the binary trasfer test handlers.
 diff -ur a/tests/cefclient/cefclient_win.cc b/tests/cefclient/cefclient_win.cc
---- a/tests/cefclient/cefclient_win.cc	2026-09-21 12:59:27.719675100 -0300
-+++ b/tests/cefclient/cefclient_win.cc	2026-09-21 12:59:27.723665700 -0300
+--- a/tests/cefclient/cefclient_win.cc	2026-09-21 15:31:09.948902900 -0300
++++ b/tests/cefclient/cefclient_win.cc	2026-09-21 15:31:09.951895900 -0300
 @@ -2,7 +2,12 @@
  // reserved. Use of this source code is governed by a BSD-style license that
  // can be found in the LICENSE file.
@@ -395,7 +411,7 @@ diff -ur a/tests/cefclient/cefclient_win.cc b/tests/cefclient/cefclient_win.cc
  // Configure code signing requirements. For a code signing example see
  // https://github.com/chromiumembedded/cef/issues/3824#issuecomment-2892139995
  
-@@ -133,6 +290,39 @@
+@@ -133,6 +290,41 @@
    CefRefPtr<CefCommandLine> command_line = CefCommandLine::CreateCommandLine();
    command_line->InitFromString(::GetCommandLineW());
  
@@ -429,32 +445,38 @@ diff -ur a/tests/cefclient/cefclient_win.cc b/tests/cefclient/cefclient_win.cc
 +      command_line->AppendSwitchWithValue("game-server-cwd", exe_dir);
 +    if (!command_line->HasSwitch("game-server-port"))
 +      command_line->AppendSwitchWithValue("game-server-port", "43110");
-+    command_line->AppendSwitchWithValue("url", "http://127.0.0.1:43110/");
++    // The URL follows the port so --game-server-port alone stays consistent.
++    const std::string port = command_line->GetSwitchValue("game-server-port").ToString();
++    command_line->AppendSwitchWithValue("url", "http://127.0.0.1:" + port + "/");
 +  }
 +
    // Create a ClientApp of the correct type.
    CefRefPtr<CefApp> app;
    ClientApp::ProcessType process_type = ClientApp::GetProcessType(command_line);
-@@ -193,6 +383,18 @@
+@@ -193,6 +385,22 @@
    // Register scheme handlers.
    test_runner::RegisterSchemeHandlers();
  
-+  // Steam (overlay callback lives here). Optional: the game runs without it.
-+  StartSteam();
-+
 +  // Bring up the game server before the first window asks for the URL.
++  // Before Steam, so this failure path has nothing of Steam's to tear down.
 +  if (!StartGameServer(command_line)) {
++    std::wstring port = command_line->GetSwitchValue("game-server-port").ToWString();
++    if (port.empty()) port = L"43110";
 +    MessageBoxW(nullptr,
-+                L"Nao foi possivel iniciar o servidor do jogo. "
-+                L"Verifique --game-server / --game-server-cwd.",
++                (L"Nao foi possivel iniciar o servidor do jogo.\n"
++                 L"A porta " + port + L" pode estar em uso por outro programa.").c_str(),
 +                L"Farming XP", MB_OK | MB_ICONERROR);
++    context->Shutdown();
 +    return CEF_RESULT_CODE_KILLED;
 +  }
++
++  // Steam (overlay callback lives here). Optional: the game runs without it.
++  StartSteam();
 +
    auto window_config = std::make_unique<RootWindowConfig>();
    window_config->always_on_top =
        command_line->HasSwitch(switches::kAlwaysOnTop);
-@@ -206,9 +408,17 @@
+@@ -206,9 +414,17 @@
    // RootWindowManager after all windows have been destroyed.
    int result = message_loop->Run();
  
@@ -473,8 +495,8 @@ diff -ur a/tests/cefclient/cefclient_win.cc b/tests/cefclient/cefclient_win.cc
    message_loop.reset();
    context.reset();
 diff -ur a/tests/cefclient/CMakeLists.txt b/tests/cefclient/CMakeLists.txt
---- a/tests/cefclient/CMakeLists.txt	2026-09-21 12:59:27.734641200 -0300
-+++ b/tests/cefclient/CMakeLists.txt	2026-09-21 12:59:27.747854600 -0300
+--- a/tests/cefclient/CMakeLists.txt	2026-09-21 15:31:09.965473000 -0300
++++ b/tests/cefclient/CMakeLists.txt	2026-09-21 15:31:09.967465300 -0300
 @@ -613,6 +613,17 @@
    add_dependencies(${CEF_TARGET} libcef_dll_wrapper)
    target_link_libraries(${CEF_TARGET} libcef_lib libcef_dll_wrapper ${CEF_STANDARD_LIBS} d3d11.lib glu32.lib imm32.lib opengl32.lib)

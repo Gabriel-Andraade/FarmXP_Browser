@@ -253,8 +253,8 @@
          pra forçar invalidação após deploy de breaking changes. -->
     <script src="scripts/register-sw.js" defer></script>
 
-    <!-- Etapa 1 do teste de integracao com a Steam. Nao faz parte do jogo:
-         apagar esta tag e o steamBadge.js remove tudo. -->
+    <!-- Ponte com o shell da Steam (tools/cef): overlay pausa, suspender salva,
+         conquistas espelhadas. Sem Steam / na web degrada em silencio. -->
     <script src="scripts/steamBadge.js" type="module" defer></script>
 </body>
 </html>

@@ -198,7 +198,7 @@ export class InventorySystem {
 
             // Usar mapeamento centralizado
             category = mapTypeToCategory(itemDataCached.type);
-            logger.debug(`Adicionando: ${itemDataCached.name} (Tipo: ${itemDataCached.type}) ${category}`);
+            logger.debug(`Adicionando: ${itemDataCached.name} (Tipo: ${itemDataCached.type}) → ${category}`);
         }
 
         // Sanitizar quantidade (bloqueia NaN, negativo, Infinity)

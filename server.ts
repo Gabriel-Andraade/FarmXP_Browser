@@ -362,6 +362,18 @@ function respond(body: BodyLike, status: number) {
   });
 }
 
+const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "[::1]"];
+
+/** True when the request's Origin is this very server (loopback host + the
+ *  port it is actually listening on). Sem Origin = nao veio de navegador
+ *  (curl, testes) - aceito, porque essas rotas ja exigem IP de loopback. */
+function isSameServerOrigin(req: Request, server?: Bun.Server): boolean {
+  const origin = req.headers.get("origin");
+  if (origin === null) return true;
+  const listening = server?.port ?? port;
+  return LOOPBACK_HOSTS.some((h) => origin === `http://${h}:${listening}`);
+}
+
 function safeDecode(value: string) {
   try {
     let current = value;
@@ -399,7 +411,7 @@ function hasEncodedTraversal(rawLower: string) {
  * @security Blocks directory listing by rejecting paths ending with '/'
  * @security Path traversal protection implemented via safeDecode, hasEncodedTraversal, and normalizedRel checks
  */
-async function handleRequest(req: Request): Promise<Response> {
+async function handleRequest(req: Request, server?: Bun.Server): Promise<Response> {
     const url = new URL(req.url);
     const rawPath = url.pathname || "/";
 
@@ -431,7 +443,23 @@ async function handleRequest(req: Request): Promise<Response> {
 
     // Rota da Steam. Vem ANTES da allowlist de estaticos porque nao e arquivo.
     // Import dinamico: a versao web nunca carrega o modulo de FFI. Nunca lanca
-    // - sem dll ou sem Steam aberto responde conectado:false e o jogo segue.
+    // - sem dll ou sem Steam aberto responde connected:false e o jogo segue.
+    // So loopback: este mesmo server.ts serve a versao web (ngrok etc.), e a
+    // Steam que ele enxerga e a da maquina que hospeda - um visitante nao pode
+    // destravar conquistas na conta do host. O shell fala sempre por 127.0.0.1.
+    if (requestPath.startsWith("/steam/")) {
+      const ip = server?.requestIP(req)?.address ?? "";
+      const loopback = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+      if (!loopback) return respond("Forbidden", 403);
+      // CSRF: loopback nao basta - uma pagina de outro site aberta neste PC
+      // tambem chega por 127.0.0.1. Os POSTs (destravar conquista, abrir
+      // overlay) exigem Origin igual ao proprio servidor, na porta real
+      // (startServer aceita override). Nomes fixos de loopback, nao o Host,
+      // pra nao passar por DNS rebinding. GETs sao so leitura.
+      if (req.method !== "GET" && !isSameServerOrigin(req, server)) {
+        return respond("Forbidden", 403);
+      }
+    }
     // Conquistas (teste de ESCRITA). GET /steam/achievements lista;
     // POST /steam/achievement {name, achieved?} destrava ou limpa.
     if (requestPath === "/steam/achievements" || requestPath === "/steam/achievement") {
@@ -443,7 +471,7 @@ async function handleRequest(req: Request): Promise<Response> {
         if (requestPath === "/steam/achievements") return json(steam.listAchievements());
         if (req.method !== "POST") return respond("Method not allowed", 405);
         const body = (await req.json().catch(() => ({}))) as { name?: string; achieved?: boolean };
-        if (!body.name) return json({ ok: false, erro: "falta name" });
+        if (!body.name) return json({ ok: false, error: "missing name" });
         // TESTE com App 480 (Spacewar): a Steam so conhece as 5 conquistas dele,
         // entao um id do jogo seria recusado. Roda pelas 5 pra mostrar o pop-up.
         // Com App ID real este bloco nunca executa - o id do jogo vai direto.
@@ -459,7 +487,7 @@ async function handleRequest(req: Request): Promise<Response> {
         const r = steam.setAchievement(name, body.achieved !== false);
         return json(demoAs ? { ...r, demoAs } : r);
       } catch (err: any) {
-        return new Response(JSON.stringify({ ok: false, erro: String(err?.message ?? err) }), {
+        return new Response(JSON.stringify({ ok: false, error: String(err?.message ?? err) }), {
           headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
         });
       }
@@ -474,7 +502,7 @@ async function handleRequest(req: Request): Promise<Response> {
           headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
         });
       } catch (err: any) {
-        return new Response(JSON.stringify({ erro: String(err?.message ?? err) }), {
+        return new Response(JSON.stringify({ error: String(err?.message ?? err) }), {
           headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
         });
       }
@@ -489,7 +517,7 @@ async function handleRequest(req: Request): Promise<Response> {
         });
       } catch (err: any) {
         return new Response(
-          JSON.stringify({ conectado: false, erro: String(err?.message ?? err) }),
+          JSON.stringify({ connected: false, error: String(err?.message ?? err) }),
           { headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
         );
       }
