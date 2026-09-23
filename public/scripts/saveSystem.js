@@ -709,20 +709,25 @@ class SaveSystem {
                 this._applyCurrencyData(data.currency);
             }
 
-            // Aplicar mundo (buildings, wells) ANTES do restoreMap: o map manager
-            // snapshota o live-theWorld em savedFarmState ao entrar em city; se
-            // restoreMap rodasse antes, snapshot seria tirado do mundo ainda vazio
-            // e o save de city perderia a farm ao voltar.
+            // #258: `data.world` is ALWAYS the farm — in the city the farm lives
+            // in the map manager's snapshot, not in theWorld (see _gatherGameData).
+            // So the farm has to be the live map when the world is applied, and
+            // only then do we switch to the map the save was made on. Each step is
+            // a no-op when already on that map, which keeps the farm→farm and
+            // farm→city loads exactly as they were.
+            const mapMgr = getSystem('mapManager');
+            const savedMap = data.currentMap || 'farm';
+
+            if (mapMgr?.restoreMap) {
+                await mapMgr.restoreMap('farm');
+            }
+
             if (data.world) {
                 this._applyWorldData(data.world);
             }
 
-            // Agora sim restaura o mapa (city snapshota a farm correta acima).
-            if (data.currentMap && data.currentMap !== 'farm') {
-                const mapMgr = getSystem('mapManager');
-                if (mapMgr && mapMgr.restoreMap) {
-                    await mapMgr.restoreMap(data.currentMap);
-                }
+            if (savedMap !== 'farm' && mapMgr?.restoreMap) {
+                await mapMgr.restoreMap(savedMap);
             }
 
             // Aplicar baús: SEMPRE chama (mesmo sem dados) pra resetar baús que

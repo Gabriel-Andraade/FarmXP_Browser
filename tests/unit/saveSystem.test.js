@@ -998,6 +998,124 @@ describe('SaveSystem (Production Implementation)', () => {
 
       expect(mockSystems.chest.chests.leaked).toBeUndefined();
     });
+
+    // #258: a save always stores the FARM in `world` (in the city it lives in
+    // the map manager's snapshot). Loading a farm save while in the city called
+    // no restoreMap at all, so the city stayed mounted and both maps ended up
+    // drawn and colliding on top of each other.
+    describe('map restore (#258)', () => {
+      /** Fake map manager recording which map switches were requested. */
+      function fakeMapManager(startMap) {
+        const calls = [];
+        let currentMap = startMap;
+        return {
+          calls,
+          getCurrentMapId: () => currentMap,
+          restoreMap: async (mapId) => {
+            if (mapId === currentMap) return;   // same as the real one: no-op
+            currentMap = mapId;
+            calls.push(`restoreMap:${mapId}`);
+          }
+        };
+      }
+
+      const farmWorld = {
+        trees: [{ id: 'saved_tree', x: 10, y: 20, width: 32, height: 64, type: 'TREE', hp: 6 }]
+      };
+
+      test('loading a farm save while in the city returns to the farm', async () => {
+        const mapMgr = fakeMapManager('city');
+        mockSystems.mapManager = mapMgr;
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'farm', world: farmWorld }
+        });
+
+        expect(mapMgr.calls).toEqual(['restoreMap:farm']);
+        expect(mapMgr.getCurrentMapId()).toBe('farm');
+        expect(theWorld.trees[0].id).toBe('saved_tree');
+      });
+
+      test('the farm is restored before the world data is applied', async () => {
+        // The order is the heart of the bug: restoreMap('farm') puts back the
+        // OLD farm snapshot, so the save's world has to be applied after it —
+        // otherwise the stale snapshot overwrites the save.
+        theWorld.importWorldState({
+          trees: [{ id: 'stale_tree', x: 0, y: 0, width: 32, height: 64, type: 'TREE', hp: 6 }]
+        });
+
+        let treesDuringRestore = null;
+        mockSystems.mapManager = {
+          getCurrentMapId: () => 'city',
+          restoreMap: async () => { treesDuringRestore = theWorld.trees.map(t => t.id); }
+        };
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'farm', world: farmWorld }
+        });
+
+        // During restoreMap the world is still the old one; the save's comes after.
+        expect(treesDuringRestore).toEqual(['stale_tree']);
+        expect(theWorld.trees.map(t => t.id)).toEqual(['saved_tree']);
+      });
+
+      test('loading a city save while in the city rebuilds both maps', async () => {
+        // While in the city, restoreMap('city') would be a no-op and the save's
+        // farm would never reach the map manager's snapshot. Go through the farm.
+        const mapMgr = fakeMapManager('city');
+        mockSystems.mapManager = mapMgr;
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'city', world: farmWorld }
+        });
+
+        expect(mapMgr.calls).toEqual(['restoreMap:farm', 'restoreMap:city']);
+        expect(mapMgr.getCurrentMapId()).toBe('city');
+      });
+
+      test('loading a city save while on the farm still enters the city', async () => {
+        const mapMgr = fakeMapManager('farm');
+        mockSystems.mapManager = mapMgr;
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'city', world: farmWorld }
+        });
+
+        expect(mapMgr.calls).toEqual(['restoreMap:city']);
+        expect(theWorld.trees[0].id).toBe('saved_tree');
+      });
+
+      test('loading a farm save while on the farm switches nothing', async () => {
+        const mapMgr = fakeMapManager('farm');
+        mockSystems.mapManager = mapMgr;
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'farm', world: farmWorld }
+        });
+
+        expect(mapMgr.calls).toEqual([]);
+        expect(theWorld.trees[0].id).toBe('saved_tree');
+      });
+
+      test('a save without currentMap is treated as a farm save', async () => {
+        const mapMgr = fakeMapManager('city');
+        mockSystems.mapManager = mapMgr;
+
+        await saveSystem.applySaveData({ data: { world: farmWorld } });
+
+        expect(mapMgr.calls).toEqual(['restoreMap:farm']);
+      });
+
+      test('works without a map manager registered', async () => {
+        delete mockSystems.mapManager;
+
+        await saveSystem.applySaveData({
+          data: { currentMap: 'city', world: farmWorld }
+        });
+
+        expect(theWorld.trees[0].id).toBe('saved_tree');
+      });
+    });
   });
 
   describe('autoSave', () => {
