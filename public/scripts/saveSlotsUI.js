@@ -346,7 +346,7 @@ class SaveSlotsUI {
                 await this._deleteSave(slotIndex);
                 break;
             case 'export':
-                this._exportSlot(slotIndex);
+                await this._exportSlot(slotIndex);
                 break;
             case 'import':
                 this._triggerImport(slotIndex);
@@ -372,16 +372,34 @@ class SaveSlotsUI {
         }
     }
 
-    _exportSlot(slotIndex) {
-        const json = saveSystem.exportSlot(slotIndex);
-        if (!json) { this._showMessage(t('saveSlots.exportEmpty'), 'error'); return; }
-        this._downloadJson(`farmingxp-slot${slotIndex + 1}.json`, json);
-        this._showMessage(t('saveSlots.exportSuccess'), 'success');
+    // Export/import are async since #259 (the checksum is), and some callers are
+    // plain event listeners — these three never reject, they report instead.
+    async _exportSlot(slotIndex) {
+        try {
+            const res = await saveSystem.exportSlot(slotIndex);
+            if (!res.ok) {
+                const key = res.reason === 'empty_slot' ? 'saveSlots.exportEmpty' : 'saveSlots.exportInvalid';
+                this._showMessage(t(key), 'error');
+                return;
+            }
+            this._downloadJson(`farmingxp-slot${slotIndex + 1}.json`, res.json);
+            this._showMessage(t('saveSlots.exportSuccess'), 'success');
+        } catch (e) {
+            logger.error('Export failed:', e);
+            this._showMessage(t('saveSlots.exportError'), 'error');
+        }
     }
 
-    _exportAll() {
-        this._downloadJson('farmingxp-saves.json', saveSystem.exportAll());
-        this._showMessage(t('saveSlots.exportSuccess'), 'success');
+    async _exportAll() {
+        try {
+            const res = await saveSystem.exportAll();
+            if (!res.ok) { this._showMessage(t('saveSlots.exportInvalid'), 'error'); return; }
+            this._downloadJson('farmingxp-saves.json', res.json);
+            this._showMessage(t('saveSlots.exportSuccess'), 'success');
+        } catch (e) {
+            logger.error('Export failed:', e);
+            this._showMessage(t('saveSlots.exportError'), 'error');
+        }
     }
 
     /** Open the file picker; remembers the target slot (null = global import). */
@@ -399,7 +417,14 @@ class SaveSlotsUI {
         let text;
         try { text = await file.text(); }
         catch (_) { this._showMessage(t('saveSlots.importError'), 'error'); return; }
-        await this._applyImport(text, this._pendingImportSlot);
+        try {
+            await this._applyImport(text, this._pendingImportSlot);
+        } catch (e) {
+            // This runs from a change listener: a rejection here would be an
+            // unhandled one, and the player would see nothing at all.
+            logger.error('Import failed:', e);
+            this._showMessage(t('saveSlots.importError'), 'error');
+        }
     }
 
     async _applyImport(text, slotIndex) {
@@ -417,11 +442,11 @@ class SaveSlotsUI {
                 });
                 if (!ok) return;
             }
-            res = saveSystem.importData(text, { targetSlot: slotIndex });
+            res = await saveSystem.importData(text, { targetSlot: slotIndex });
         } else if (kind === 'all') {
             const ok = await this._dialog({ message: t('saveSlots.importAllConfirm'), success: true });
             if (!ok) return;
-            res = saveSystem.importData(text);
+            res = await saveSystem.importData(text);
         } else {
             // Single-slot file via the global button → ask which slot (1-3).
             const raw = await this._dialog({ message: t('saveSlots.importChooseSlot'), input: true, defaultValue: '1' });
@@ -437,15 +462,33 @@ class SaveSlotsUI {
                 });
                 if (!ok) return;
             }
-            res = saveSystem.importData(text, { targetSlot });
+            res = await saveSystem.importData(text, { targetSlot });
         }
 
         if (res?.ok) {
-            this._showMessage(t('saveSlots.importSuccess'), 'success');
+            // An unsigned/unverifiable backup still imports, but say so — the
+            // player should know the file was not integrity-checked.
+            const key = res.warning ? 'saveSlots.importSuccessUnverified' : 'saveSlots.importSuccess';
+            this._showMessage(t(key), res.warning ? 'warning' : 'success');
             this.render();
         } else {
-            this._showMessage(`${t('saveSlots.importError')}${res?.reason ? ` (${res.reason})` : ''}`, 'error');
+            this._showMessage(this._importErrorMessage(res?.reason), 'error');
         }
+    }
+
+    /** Import failures get their own message; unknown reasons fall back. */
+    _importErrorMessage(reason) {
+        const KEYS = {
+            invalid_json: 'saveSlots.importInvalidJson',
+            not_a_save: 'saveSlots.importNotASave',
+            checksum_mismatch: 'saveSlots.importChecksumMismatch',
+            bad_shape: 'saveSlots.importBadShape',
+            newer_version: 'saveSlots.importNewerVersion',
+            write_failed: 'saveSlots.importWriteFailed',
+        };
+        const key = KEYS[reason];
+        if (key) return t(key);
+        return `${t('saveSlots.importError')}${reason ? ` (${reason})` : ''}`;
     }
 
     /**

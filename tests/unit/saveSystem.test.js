@@ -118,7 +118,11 @@ mock.module('../../public/scripts/validation.js', () => ({
 // =============================================================================
 const theWorldModule = await import('../../public/scripts/theWorld.js');
 const theWorld = theWorldModule;
-const { formatPlayTime, formatDateTime, saveSystem } = await import('../../public/scripts/saveSystem.js');
+const { formatPlayTime, formatDateTime, saveSystem, checksumWith, canonicalJson } = await import('../../public/scripts/saveSystem.js');
+
+// #259: sign a payload the way the module does, so the tests exercise the real
+// canonical form instead of a second implementation of it.
+const fnv1aOf = (payload) => checksumWith('fnv1a-32', payload);
 
 describe('SaveSystem (Production Implementation)', () => {
 
@@ -1054,68 +1058,258 @@ describe('SaveSystem (Production Implementation)', () => {
   });
 
   describe('export / import (#226)', () => {
-    test('exportSlot is null for an empty slot, signed JSON for a filled one', () => {
-      expect(saveSystem.exportSlot(0)).toBeNull();
+    test('exportSlot reports an empty slot, signs a filled one', async () => {
+      expect((await saveSystem.exportSlot(0)).reason).toBe('empty_slot');
       saveSystem.createOrOverwriteSlot(0, { saveName: 'A' });
-      const parsed = JSON.parse(saveSystem.exportSlot(0));
+      const res = await saveSystem.exportSlot(0);
+      expect(res.ok).toBe(true);
+      const parsed = JSON.parse(res.json);
       expect(parsed.signature).toBe('farmingXP-save');
       expect(parsed.kind).toBe('slot');
       expect(parsed.slot.meta.saveName).toBe('A');
     });
 
-    test('round-trips a slot into a different slot', () => {
+    test('round-trips a slot into a different slot', async () => {
       saveSystem.createOrOverwriteSlot(0, { saveName: 'Origin' });
-      const res = saveSystem.importData(saveSystem.exportSlot(0), { targetSlot: 2 });
+      const exported = await saveSystem.exportSlot(0);
+      const res = await saveSystem.importData(exported.json, { targetSlot: 2 });
       expect(res.ok).toBe(true);
       expect(saveSystem.getSlotMeta(2).saveName).toBe('Origin');
     });
 
-    test('exportAll round-trips every slot after a wipe', () => {
+    test('exportAll round-trips every slot after a wipe', async () => {
       saveSystem.createOrOverwriteSlot(0, { saveName: 'S0' });
       saveSystem.createOrOverwriteSlot(1, { saveName: 'S1' });
-      const json = saveSystem.exportAll();
+      const { json } = await saveSystem.exportAll();
       globalThis.localStorage.clear();
       saveSystem._clearCache();
-      expect(saveSystem.importData(json).ok).toBe(true);
+      expect((await saveSystem.importData(json)).ok).toBe(true);
       expect(saveSystem.getSlotMeta(0).saveName).toBe('S0');
       expect(saveSystem.getSlotMeta(1).saveName).toBe('S1');
       expect(saveSystem.isSlotEmpty(2)).toBe(true);
     });
 
-    test('rejects invalid JSON, non-save payloads and newer-version data', () => {
-      expect(saveSystem.importData('{bad').reason).toBe('invalid_json');
-      expect(saveSystem.importData(JSON.stringify({ foo: 1 })).reason).toBe('not_a_save');
+    test('rejects invalid JSON, non-save payloads and newer-version data', async () => {
+      expect((await saveSystem.importData('{bad')).reason).toBe('invalid_json');
+      expect((await saveSystem.importData(JSON.stringify({ foo: 1 }))).reason).toBe('not_a_save');
       const future = JSON.stringify({
         signature: 'farmingXP-save', kind: 'slot',
         slot: { meta: { slotIndex: 0 }, data: { _dataVersion: 999 } },
       });
-      expect(saveSystem.importData(future, { targetSlot: 0 }).reason).toBe('newer_version');
+      expect((await saveSystem.importData(future, { targetSlot: 0 })).reason).toBe('newer_version');
     });
 
-    test('rejects a signed payload with null meta/data instead of throwing', () => {
+    test('rejects a signed payload with null meta/data instead of throwing', async () => {
       const corrupt = JSON.stringify({
         signature: 'farmingXP-save', kind: 'slot',
         slot: { meta: null, data: null },
       });
       // typeof null === 'object' used to slip through and crash later.
-      expect(() => saveSystem.importData(corrupt, { targetSlot: 0 })).not.toThrow();
-      expect(saveSystem.importData(corrupt, { targetSlot: 0 }).reason).toBe('bad_shape');
+      const res = await saveSystem.importData(corrupt, { targetSlot: 0 });
+      expect(res.reason).toBe('bad_shape');
     });
 
-    test('rejects envelopes from a newer build via top-level versions', () => {
+    test('rejects envelopes from a newer build via top-level versions', async () => {
       const futureSave = JSON.stringify({
         signature: 'farmingXP-save', saveVersion: 999, kind: 'all', slots: [],
       });
-      expect(saveSystem.importData(futureSave).reason).toBe('newer_version');
+      expect((await saveSystem.importData(futureSave)).reason).toBe('newer_version');
       const futureData = JSON.stringify({
         signature: 'farmingXP-save', dataVersion: 999, kind: 'all', slots: [],
       });
-      expect(saveSystem.importData(futureData).reason).toBe('newer_version');
+      expect((await saveSystem.importData(futureData)).reason).toBe('newer_version');
     });
 
-    test('single-slot import requires a target slot', () => {
+    test('single-slot import requires a target slot', async () => {
       saveSystem.createOrOverwriteSlot(0, { saveName: 'X' });
-      expect(saveSystem.importData(saveSystem.exportSlot(0)).reason).toBe('no_target');
+      const { json } = await saveSystem.exportSlot(0);
+      expect((await saveSystem.importData(json)).reason).toBe('no_target');
+    });
+  });
+
+  // #259: a corrupted, truncated or hand-edited export has to be caught before
+  // anything is written, and the slots left exactly as they were.
+  describe('save integrity (#259)', () => {
+    /** Export slot 0 and hand back the parsed envelope for tampering. */
+    async function exportEnvelope(name = 'Origin') {
+      saveSystem.createOrOverwriteSlot(0, { saveName: name });
+      const res = await saveSystem.exportSlot(0);
+      expect(res.ok).toBe(true);
+      return JSON.parse(res.json);
+    }
+
+    // Pins the wire format. If the canonical form ever changes — key ordering,
+    // whitespace, the JSON round-trip — every save exported before that change
+    // stops verifying. This vector fails first, instead of players' backups.
+    test('the canonical form and its digest are stable', async () => {
+      const payload = {
+        meta: { slotIndex: 0, saveName: 'Pin' },
+        data: { player: { y: 2, x: 1 }, _dataVersion: 5 },
+      };
+      expect(canonicalJson(payload)).toBe(
+        '{"data":{"_dataVersion":5,"player":{"x":1,"y":2}},"meta":{"saveName":"Pin","slotIndex":0}}'
+      );
+      expect(await checksumWith('sha-256', payload)).toBe(
+        'b424db698375a0db01ece70257a99728887401e97f23c9da28f5e09de2171912'
+      );
+    });
+
+    test('content hidden under __proto__ still reaches the checksum', async () => {
+      // JSON.parse makes "__proto__" an own property, but copying it with a
+      // plain assignment would hit the inherited setter and drop it from the
+      // canonical form — letting an edited file keep a matching checksum.
+      const plain = JSON.parse('{"a":1}');
+      const sneaky = JSON.parse('{"a":1,"__proto__":{"smuggled":true}}');
+      expect(canonicalJson(sneaky)).toContain('smuggled');
+      expect(await checksumWith('sha-256', sneaky)).not.toBe(await checksumWith('sha-256', plain));
+    });
+
+    test('an export carries a checksum over its payload', async () => {
+      const env = await exportEnvelope();
+      expect(env.checksum).toBeDefined();
+      expect(env.checksum.algo).toBe('sha-256');
+      expect(env.checksum.value).toMatch(/^[0-9a-f]{64}$/);
+      // The checksum lives in the envelope, never inside the payload.
+      expect(env.slot.checksum).toBeUndefined();
+    });
+
+    test('exportAll is signed too and re-imports cleanly', async () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'S0' });
+      const { json } = await saveSystem.exportAll();
+      const env = JSON.parse(json);
+      expect(env.checksum.value).toMatch(/^[0-9a-f]{64}$/);
+      const res = await saveSystem.importData(json);
+      expect(res.ok).toBe(true);
+      expect(res.warning).toBeUndefined();
+    });
+
+    test('a tampered payload is rejected and no slot is touched', async () => {
+      const env = await exportEnvelope('Origin');
+      env.slot.meta.saveName = 'Tampered';
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe('checksum_mismatch');
+      expect(saveSystem.isSlotEmpty(1)).toBe(true);
+      expect(saveSystem.getSlotMeta(0).saveName).toBe('Origin');
+    });
+
+    test('one flipped character inside the data is caught', async () => {
+      const env = await exportEnvelope();
+      env.slot.data.player.x = (env.slot.data.player.x ?? 0) + 1;
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.reason).toBe('checksum_mismatch');
+      expect(saveSystem.isSlotEmpty(1)).toBe(true);
+    });
+
+    test('a full backup with a tampered slot leaves every slot untouched', async () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Keep' });
+      const { json } = await saveSystem.exportAll();
+      const env = JSON.parse(json);
+      env.slots[0].meta.saveName = 'Tampered';
+
+      const res = await saveSystem.importData(JSON.stringify(env));
+
+      expect(res.reason).toBe('checksum_mismatch');
+      expect(saveSystem.getSlotMeta(0).saveName).toBe('Keep');
+    });
+
+    test('key order in the file does not affect the checksum', async () => {
+      // The canonical form sorts keys, so a re-serialised file still verifies.
+      const env = await exportEnvelope();
+      const reordered = JSON.parse(JSON.stringify(env));
+      reordered.slot = { data: env.slot.data, meta: env.slot.meta };
+
+      const res = await saveSystem.importData(JSON.stringify(reordered), { targetSlot: 1 });
+
+      expect(res.ok).toBe(true);
+    });
+
+    test('a legacy export without a checksum imports with a warning', async () => {
+      const env = await exportEnvelope('Legacy');
+      delete env.checksum;
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.ok).toBe(true);
+      expect(res.warning).toBe('unsigned');
+      expect(saveSystem.getSlotMeta(1).saveName).toBe('Legacy');
+    });
+
+    test('an unknown checksum algorithm imports with a warning, not a failure', async () => {
+      // Mirrors a sha-256 file opened where crypto.subtle is missing: we cannot
+      // verify it, but refusing would lock the player out of a good backup.
+      const env = await exportEnvelope('Unknown algo');
+      env.checksum = { algo: 'whirlpool-512', value: 'ff'.repeat(32) };
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.ok).toBe(true);
+      expect(res.warning).toBe('checksum_unverified');
+    });
+
+    test('the fnv1a-32 fallback round-trips', async () => {
+      // The algorithm travels in the envelope, so a file signed by a runtime
+      // without crypto.subtle still verifies on one that has it.
+      const env = await exportEnvelope('Fallback');
+      env.checksum = { algo: 'fnv1a-32', value: await fnv1aOf(env.slot) };
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.ok).toBe(true);
+      expect(res.warning).toBeUndefined();
+    });
+
+    test('export refuses a save whose required field was removed', async () => {
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Broken' });
+      const root = saveSystem._readRoot();
+      delete root.slots[0].data.player;
+      saveSystem._writeRoot(root);
+      saveSystem._clearCache();
+
+      const res = await saveSystem.exportSlot(0);
+
+      expect(res.ok).toBe(false);
+      expect(res.reason).toBe('bad_shape');
+      expect(res.field).toBe('player');
+    });
+
+    test('import refuses a save whose required field was removed', async () => {
+      const env = await exportEnvelope();
+      delete env.slot.data.player;
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.reason).toBe('bad_shape');
+      expect(saveSystem.isSlotEmpty(1)).toBe(true);
+    });
+
+    test('import refuses a field of the wrong type', async () => {
+      const env = await exportEnvelope();
+      env.slot.data.world = 'not an object';
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.reason).toBe('bad_shape');
+      expect(res.field).toBe('world');
+      expect(saveSystem.isSlotEmpty(1)).toBe(true);
+    });
+
+    test('fields that may legitimately be null still pass', async () => {
+      // weather/achievements/minimap/merchant/xp serialise to null when their
+      // system is not loaded; rejecting those would break ordinary saves.
+      const env = await exportEnvelope();
+      for (const field of ['weather', 'achievements', 'minimap', 'merchant', 'xp']) {
+        env.slot.data[field] = null;
+      }
+      env.checksum = { algo: 'fnv1a-32', value: await fnv1aOf(env.slot) };
+
+      const res = await saveSystem.importData(JSON.stringify(env), { targetSlot: 1 });
+
+      expect(res.ok).toBe(true);
     });
   });
 

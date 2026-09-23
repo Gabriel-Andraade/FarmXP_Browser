@@ -753,7 +753,7 @@ export class MainMenu {
 
         let res;
         if (kind === 'all') {
-          res = saveSystem.importData(text);
+          res = await saveSystem.importData(text);
         } else {
           const slots = saveSystem.listSlots();
           const firstEmpty = slots.findIndex((s) => s === null);
@@ -762,14 +762,16 @@ export class MainMenu {
             this._showToast(t('saveSlots.importNoSlot'));
             return;
           }
-          res = saveSystem.importData(text, { targetSlot: firstEmpty });
+          res = await saveSystem.importData(text, { targetSlot: firstEmpty });
         }
 
         if (!res?.ok) {
           this._showToast(t('saveSlots.importError'));
           return;
         }
-        this._showToast(t('saveSlots.importSuccess'));
+        // #259: same wording as the in-game slots UI — an unsigned or
+        // unverifiable backup imports, but the player is told it was not checked.
+        this._showToast(t(res.warning ? 'saveSlots.importSuccessUnverified' : 'saveSlots.importSuccess'));
         this._loadGame(); // imported save is now present in the Load screen
       } catch (err) {
         this._showToast(t('saveSlots.importError'));
