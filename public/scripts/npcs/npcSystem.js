@@ -10,6 +10,7 @@ import { registerSystem, getSystem, getObject } from '../gameState.js';
 import { collisionSystem } from '../collisionSystem.js';
 import { camera, CAMERA_ZOOM } from '../thePlayer/cameraSystem.js';
 import { markWorldChanged } from '../theWorld.js';
+import { openNpcMenu } from './npcInteractionMenu.js';
 import { i18n } from '../i18n/i18n.js';
 import { logger } from '../logger.js';
 
@@ -341,7 +342,8 @@ function tryInteract() {
     if (dlg && dlg.isDialogueActive()) return false;
 
     hideHint();
-    npc.onInteract(npc);
+    // Toda interação passa pelo menu — inclusive a que só tem "Interagir".
+    openNpcMenu(npc);
     return true;
 }
 
@@ -573,6 +575,9 @@ const CITY_NPC_MODULES = [
     './family/npcLucas.js',
     './family/npcIsabela.js',
     './family/npcMolly.js',
+    // Arco Miller: quests que envolvem mais de um familiar. Carrega junto com
+    // eles porque é aqui que as cenas disparam.
+    '../quests/family/index.js',
 ];
 
 /**

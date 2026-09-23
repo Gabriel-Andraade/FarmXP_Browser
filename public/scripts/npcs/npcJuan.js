@@ -10,6 +10,7 @@ import { i18n } from '../i18n/i18n.js';
 import { WeatherSystem } from '../weather.js';
 import { camera } from '../thePlayer/cameraSystem.js';
 import { logger } from '../logger.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -112,21 +113,6 @@ function checkPendingChange() {
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function t(key, params) { return i18n.t(key, params); }
-
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
 
 // ─── Recompensa (agradecimento pela carona) ─────────────────────────────────
 

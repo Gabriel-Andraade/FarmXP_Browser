@@ -36,7 +36,7 @@
  * @module DialogueSystem
  */
 
-import { registerSystem } from './gameState.js';
+import { getSystem, registerSystem } from './gameState.js';
 import { i18n } from './i18n/i18n.js';
 import { logger } from './logger.js';
 
@@ -580,6 +580,79 @@ function end() {
  */
 function isDialogueActive() {
     return isActive;
+}
+
+// ─── Player / character helpers ─────────────────────────────────────────────
+//
+// Utilidades genéricas compartilhadas pelas quests/NPCs. Antes ficavam em
+// `quests/family/dialogueHelpers.js`; agora vivem aqui como fonte única.
+// `dialogueHelpers.js` re-exporta estes nomes pra não quebrar os importadores
+// existentes (`askAboutJohn`, `npcLucas`, `lunaChick`).
+
+/** Id do protagonista ativo ('stella' | 'graham' | 'ben'). */
+export function getActiveCharacterId() {
+    return getSystem('player')?.activeCharacter?.id || 'stella';
+}
+
+/** Nome exibido do protagonista ativo. */
+export function getPlayerName() {
+    const id = getActiveCharacterId();
+    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
+}
+
+/** Retrato de diálogo do protagonista ativo. */
+export function getPlayerDialogPortrait() {
+    const id = getActiveCharacterId();
+    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
+}
+
+/**
+ * Troca quem fala do lado direito (a cena alterna entre personagens com o
+ * mesmo slot de retrato).
+ */
+export function makeSpeakerSwap(config, name) {
+    return () => {
+        config.right.name = name;
+        const el = document.querySelector('.dlg-speaker');
+        if (el) el.textContent = name;
+    };
+}
+
+/**
+ * Converte `_label` / `_goto` em índices numéricos `next`.
+ *
+ * O `dialogueSystem` entende `next` (índice), não rótulos — sem isso os ramos
+ * de uma escolha tocam **em sequência** em vez de saltar, e as falas de
+ * caminhos opostos se misturam na mesma cena.
+ *
+ * @param {Object} config - config de diálogo (mutado in place)
+ * @returns {Object} o mesmo config, com os saltos resolvidos
+ */
+export function resolveDialogueLabels(config) {
+    const { lines } = config;
+    const labelIndex = {};
+    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
+    for (const line of lines) {
+        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
+        if (Array.isArray(line.options)) {
+            for (const opt of line.options) {
+                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
+            }
+        }
+        delete line._label;
+    }
+    return config;
+}
+
+/**
+ * Escolhe a chave i18n conforme o protagonista ativo.
+ * `pickByCharacter('npc.family.lunaChick', 'react')` →
+ *   `npc.family.lunaChick.reactStella` | `.reactGraham` | `.reactBen`
+ */
+export function pickByCharacter(baseKey, prefix) {
+    const id = getActiveCharacterId();
+    const suffix = { stella: 'Stella', graham: 'Graham', ben: 'Ben' }[id] || 'Stella';
+    return `${baseKey}.${prefix}${suffix}`;
 }
 
 // ─── Register system ────────────────────────────────────────────────────────

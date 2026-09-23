@@ -167,6 +167,9 @@ class UiPanel {
       // chama o productionSystem que valida tool/sleeping internamente
       // e mostra FX explicativo se falhar — accessibility-first.
       { action: 'collect', icon: '🪣', label: t('animal.actions.collect') },
+      // Quest da Luna: só aparece no filhote que o player escolheu levar
+      // pra ela. Visibilidade em `_updateActionStates`, igual ao collect.
+      { action: 'giftLuna', icon: '🎁', label: t('animal.actions.giftLuna') },
       { action: 'close', icon: '❌', label: t('animal.actions.close') },
     ];
     for (const item of actionItems) {
@@ -760,6 +763,20 @@ class UiPanel {
           if (iconSpan) iconSpan.textContent = '➤';
           if (labelSpan) labelSpan.textContent = t('animal.actions.guide');
         }
+      }
+
+      // Presentear Luna: só no filhote que a quest está esperando. Sem quest
+      // ativa, ou em qualquer outro animal, o botão nem existe na tela.
+      if (action === 'giftLuna') {
+        const pending = getSystem('familyQuests')?.getPendingPetQuest?.();
+        // `type` é sempre "ANIMAL"; o que identifica a espécie é `assetName`.
+        const match = !!pending && this.target?.assetName === pending.pet.young;
+        btn.style.display = match ? '' : 'none';
+        if (match) {
+          btn.style.opacity = '1';
+          btn.style.pointerEvents = 'auto';
+        }
+        return;
       }
 
       // Botão Coletar só aparece quando o animal tem produto pendente.

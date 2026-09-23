@@ -12,6 +12,7 @@ import { getItem } from '../itemUtils.js';
 import { WeatherSystem } from '../weather.js';
 import { camera } from '../thePlayer/cameraSystem.js';
 import { logger } from '../logger.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait, resolveDialogueLabels } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -158,21 +159,6 @@ function checkPendingChange() {
     }
 }
 
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
-
 // ─── Dialogue builders ─────────────────────────────────────────────────────
 
 /** Diálogo inicial (estado 'idle') */
@@ -313,23 +299,6 @@ function deliverFood(foodId) {
         if (currency?.earn) currency.earn(JEREMY_FOOD_PRICE, 'quest:jeremy_food');
     }
     markDirtySave();
-}
-
-/** Resolve _label/_goto em índices numéricos `next` (linha e opções de escolha). */
-function resolveDialogueLabels(config) {
-    const { lines } = config;
-    const labelIndex = {};
-    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
-    for (const line of lines) {
-        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
-        if (Array.isArray(line.options)) {
-            for (const opt of line.options) {
-                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
-            }
-        }
-        delete line._label;
-    }
-    return config;
 }
 
 function jeremyLine(enc) {

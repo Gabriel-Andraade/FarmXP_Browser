@@ -514,6 +514,18 @@ function gatherAllQuests() {
         result.push(entryFromRegistry(q.id, q.status));
     }
 
+    // 1b. Arco Miller — só entram no painel depois que o player se
+    // comprometeu (a cena 1 já rolou). Antes disso não são missão, são conversa.
+    try {
+        for (const fq of getSystem('familyQuests')?.QUESTS ?? []) {
+            const st = fq.getState?.()?.state;
+            if (!st || st === 'idle') continue;
+            result.push(entryFromRegistry(fq.id, st === 'delivered' ? 'completed' : 'active'));
+        }
+    } catch (e) {
+        logger.warn('[QuestSystem] familyQuests indisponível', e);
+    }
+
     // 2. Bartolomeu quest 1 (R$ 1000) — only when accepted or completed
     const bart = getSystem('npcBartolomeu');
     if (bart) {

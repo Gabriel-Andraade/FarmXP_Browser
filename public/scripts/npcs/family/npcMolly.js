@@ -11,6 +11,8 @@ import { getSystem, registerSystem } from '../../gameState.js';
 import { i18n } from '../../i18n/i18n.js';
 import { camera } from '../../thePlayer/cameraSystem.js';
 import { logger } from '../../logger.js';
+import { whereIsJohnOption } from './askAboutJohn.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait, resolveDialogueLabels } from '../../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -292,21 +294,6 @@ function customDraw(ctx, cam, zoom) {
 
 // ─── Dialogue ───────────────────────────────────────────────────────────────
 
-function getActiveCharacterId() {
-    const player = getSystem('player');
-    return player?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
-
 function t(key, params) {
     return i18n.t(key, params);
 }
@@ -330,28 +317,6 @@ const DINNER_RECIPES = {
     dessert: [ { id: 61, qty: 1 }, { id: 60, qty: 3 } ],
     main:    [ { id: 121, qty: 2 }, { id: 133, qty: 2 }, { id: 129, qty: 1 } ],
 };
-
-/**
- * Resolve marcadores `_label` / `_goto` em índices numéricos `next`, para que
- * o roteiro ramificado fique legível e seguro de editar (sem contagem manual
- * de índices). Cada `_goto` (na linha ou numa opção de escolha) aponta para a
- * linha marcada com o `_label` correspondente.
- */
-function resolveDialogueLabels(config) {
-    const { lines } = config;
-    const labelIndex = {};
-    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
-    for (const line of lines) {
-        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
-        if (Array.isArray(line.options)) {
-            for (const opt of line.options) {
-                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
-            }
-        }
-        delete line._label;
-    }
-    return config;
-}
 
 /**
  * Ativa a quest do jantar: marca como ativa, guarda a receita escolhida e
@@ -643,6 +608,10 @@ function onInteract() {
         return;
     }
 
+    // Quests do arco Miller envolvem mais de um familiar, então vivem fora
+    // deste arquivo. Se uma tiver cena pendente com a Molly, ela toma a vez.
+    if (getSystem('familyQuests')?.tryStartSceneFor?.('npcMolly') === true) return;
+
     if (dinnerQuest === 'active') {
         dlg.start(buildDeliveryDialogue());
         return;
@@ -710,6 +679,8 @@ function addMollyToNpcSystem() {
         interactRadius: 60,
         customDraw,
         onInteract,
+        // Agenda (#247): só aparece quando o John está fora a trabalho.
+        menuOptions: [whereIsJohnOption('molly')],
     });
     isRegistered = true;
     logger.info('[Molly] NPC added to scene (post-intro)');

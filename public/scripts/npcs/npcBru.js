@@ -11,6 +11,7 @@ import { i18n } from '../i18n/i18n.js';
 import { WeatherSystem } from '../weather.js';
 import { camera } from '../thePlayer/cameraSystem.js';
 import { logger } from '../logger.js';
+import { getActiveCharacterId, getPlayerName, getPlayerDialogPortrait, resolveDialogueLabels, makeSpeakerSwap } from '../dialogueSystem.js';
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -161,21 +162,6 @@ function checkPendingChange() {
     }
 }
 
-function getActiveCharacterId() {
-    const playerSys = getSystem('player');
-    return playerSys?.activeCharacter?.id || 'stella';
-}
-
-function getPlayerName() {
-    const id = getActiveCharacterId();
-    return { stella: 'Stella', ben: 'Ben', graham: 'Graham' }[id] || 'Stella';
-}
-
-function getPlayerDialogPortrait() {
-    const id = getActiveCharacterId();
-    return `assets/character/${id}/dialog_${id.charAt(0).toUpperCase() + id.slice(1)}_00.png`;
-}
-
 function getGreeting() {
     const { hour } = getCurrentTime();
     return hour < 12
@@ -206,26 +192,6 @@ function declineRide() {
     rideQuest = 'pending';
     const save = getSystem('save');
     if (save?.markDirty) save.markDirty();
-}
-
-/**
- * Resolve marcadores `_label`/`_goto` em índices `next` (na linha ou nas
- * opções de escolha), pra o roteiro ramificado ficar legível.
- */
-function resolveDialogueLabels(config) {
-    const { lines } = config;
-    const labelIndex = {};
-    lines.forEach((line, i) => { if (line._label) labelIndex[line._label] = i; });
-    for (const line of lines) {
-        if (line._goto != null) { line.next = labelIndex[line._goto]; delete line._goto; }
-        if (Array.isArray(line.options)) {
-            for (const opt of line.options) {
-                if (opt._goto != null) { opt.next = labelIndex[opt._goto]; delete opt._goto; }
-            }
-        }
-        delete line._label;
-    }
-    return config;
 }
 
 /**
@@ -272,19 +238,6 @@ function markJuanThanked() {
     juanThanked = true;
     const save = getSystem('save');
     if (save?.markDirty) save.markDirty();
-}
-
-// ─── Right-side speaker swap helper ────────────────────────────────────────
-// The dialogue system sets speaker name from config BEFORE running action(),
-// but all happens in the same JS frame (no paint between), so updating both
-// config.right.name and the DOM in action() works flicker-free.
-
-function makeSpeakerSwap(config, name) {
-    return () => {
-        config.right.name = name;
-        const el = document.querySelector('.dlg-speaker');
-        if (el) el.textContent = name;
-    };
 }
 
 // ─── Dialogue builder ─────────────────────────────────────────────────────
