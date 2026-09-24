@@ -440,11 +440,11 @@
     color: #fff;
 }
 
-/* #259: import went through, but the file carried no verifiable checksum.
-   Dark text on the amber: white would land at 2.2:1, this is 6.2:1. */
+/* `#259`: import went through, but the file carried no verifiable checksum.
+    Near-black text keeps >= 4.5:1 across the whole amber gradient. */
 .save-toast-warning {
     background: var(--save-accent-warning);
-    color: #3b2a12;
+     color: #1a1208;
 }
 
 .save-toast.fade-out {
