@@ -95,6 +95,127 @@ const MIGRATIONS = {
     },
 };
 
+// ─── Integrity: canonical form, checksum, structural validation (#259) ─────
+
+/** Precise type tag: separates null and arrays from plain objects. */
+function typeTag(v) {
+    if (v === null) return 'null';
+    if (Array.isArray(v)) return 'array';
+    return typeof v;
+}
+
+/**
+ * What each field of a save's `data` may hold.
+ *
+ * Almost everything is optional on purpose: migrations fill gaps (v1 saves have
+ * no `gameFlags`) and several systems legitimately serialise to `null` when they
+ * are not loaded (weather, achievements, minimap, merchant, xp). Requiring them
+ * would reject saves the game can load perfectly well.
+ *
+ * `player` is the one exception — a save without it has nothing to restore.
+ * Validation stays at the top level: going deeper would reject legacy saves for
+ * fields a migration is about to add.
+ */
+const SAVE_FIELD_TYPES = {
+    _dataVersion: ['number', 'undefined'],
+    player: ['object'],
+    inventory: ['object', 'null', 'undefined'],
+    currency: ['object', 'null', 'undefined'],
+    weather: ['object', 'null', 'undefined'],
+    world: ['object', 'null', 'undefined'],
+    chests: ['object', 'null', 'undefined'],
+    achievements: ['object', 'array', 'null', 'undefined'],
+    gameFlags: ['object', 'null', 'undefined'],
+    minimap: ['object', 'null', 'undefined'],
+    plantation: ['object', 'null', 'undefined'],
+    merchant: ['object', 'array', 'null', 'undefined'],
+    xp: ['object', 'null', 'undefined'],
+    currentMap: ['string', 'undefined'],
+};
+
+/**
+ * Checks a save's `data` against SAVE_FIELD_TYPES.
+ * Unknown fields are left alone — a newer build may add some, and the envelope
+ * version check already rejects payloads from a newer build.
+ *
+ * @returns {{ ok: boolean, reason?: string, field?: string }}
+ */
+export function validateSaveData(data) {
+    if (typeTag(data) !== 'object') return { ok: false, reason: 'bad_shape' };
+    for (const [field, allowed] of Object.entries(SAVE_FIELD_TYPES)) {
+        if (!allowed.includes(typeTag(data[field]))) {
+            return { ok: false, reason: 'bad_shape', field };
+        }
+    }
+    return { ok: true };
+}
+
+/**
+ * Deterministic JSON for hashing: keys sorted at every level, no whitespace.
+ * Arrays keep their order.
+ *
+ * The value is JSON round-tripped first so both sides hash the same bytes: the
+ * exporting side starts from live objects (which may hold `undefined`, `NaN` or
+ * Dates, all rewritten by JSON) and the importing side from a parsed file.
+ */
+export function canonicalJson(value) {
+    const sortKeys = (v) => {
+        if (Array.isArray(v)) return v.map(sortKeys);
+        if (v && typeof v === 'object') {
+            // Object.create(null), not {}: on a plain object `out['__proto__'] = x`
+            // hits the inherited __proto__ setter, which swaps the prototype and
+            // drops the key from the output — so anything a file hid under
+            // "__proto__" would be left out of the checksum and slip through.
+            const out = Object.create(null);
+            for (const key of Object.keys(v).sort()) out[key] = sortKeys(v[key]);
+            return out;
+        }
+        return v;
+    };
+    return JSON.stringify(sortKeys(JSON.parse(JSON.stringify(value))));
+}
+
+/** FNV-1a 32-bit, hex. Used where crypto.subtle is missing (insecure context). */
+function fnv1a32(str) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+        hash ^= str.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, '0');
+}
+
+/**
+ * Checksum of a payload under a named algorithm.
+ *
+ * `sha-256` needs `crypto.subtle`, which only exists in a secure context — the
+ * game gets one on http://127.0.0.1 and over https, but not if it is ever served
+ * over plain http from another host. `fnv1a-32` is the fallback; the algorithm
+ * used travels in the envelope so an import knows how to re-check.
+ *
+ * This detects corruption, truncation and hand edits. It is not a security
+ * boundary: anyone editing a save can recompute the checksum too.
+ *
+ * @returns {Promise<string|null>} hex digest, or null if the algo is unavailable
+ */
+export async function checksumWith(algo, payload) {
+    const canonical = canonicalJson(payload);
+    if (algo === 'fnv1a-32') return fnv1a32(canonical);
+    if (algo === 'sha-256') {
+        const subtle = globalThis.crypto?.subtle;
+        if (!subtle) return null;
+        const digest = await subtle.digest('SHA-256', new TextEncoder().encode(canonical));
+        return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+    }
+    return null;
+}
+
+/** Best checksum this runtime can produce, as it goes into the envelope. */
+export async function checksumOf(payload) {
+    const algo = globalThis.crypto?.subtle ? 'sha-256' : 'fnv1a-32';
+    return { algo, value: await checksumWith(algo, payload) };
+}
+
 /**
  * Runs all pending migrations on a save's data object.
  * Mutates `data` in place and returns it.
@@ -356,27 +477,61 @@ class SaveSystem {
 
     // ───────────────── Export / Import (#226) ─────────────────
 
-    /** Wrap a payload in the export envelope (signature + versions). */
-    _exportEnvelope(extra) {
+    /**
+     * Detach a value from the cached root.
+     *
+     * `_readRoot()` hands back the cache by reference, and an export awaits the
+     * digest before serialising. Anything mutating the cache in that window — an
+     * auto-save is the realistic one — would otherwise land in the file *after*
+     * it was hashed, producing an export that fails its own checksum on import.
+     * One snapshot then feeds validation, hashing and serialisation alike.
+     */
+    _snapshot(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    /**
+     * Wrap a payload in the export envelope (signature + versions + checksum).
+     * The checksum sits in the envelope, outside `payload`, so the bytes that
+     * were hashed are exactly the bytes an import reads back. `payload` must be
+     * the same detached object that `extra` carries (see `_snapshot`).
+     */
+    async _exportEnvelope(extra, payload) {
         return JSON.stringify({
             signature: EXPORT_SIGNATURE,
             saveVersion: SAVE_VERSION,
             dataVersion: SAVE_DATA_VERSION,
             exportedAt: new Date().toISOString(),
+            checksum: await checksumOf(payload),
             ...extra,
         }, null, 2);
     }
 
-    /** Export one slot as a JSON string, or null if the slot is empty. */
-    exportSlot(slotIndex) {
-        const slot = this._readRoot().slots[slotIndex];
-        if (!slot) return null;
-        return this._exportEnvelope({ kind: 'slot', slotIndex, slot });
+    /**
+     * Export one slot.
+     * @returns {Promise<{ ok: boolean, json?: string, reason?: string, field?: string }>}
+     *   reason: 'empty_slot' | 'bad_shape'
+     */
+    async exportSlot(slotIndex) {
+        const live = this._readRoot().slots[slotIndex];
+        if (!live) return { ok: false, reason: 'empty_slot' };
+        const slot = this._snapshot(live);
+        const v = this._validateSlotPayload(slot);
+        if (!v.ok) return v;
+        return { ok: true, json: await this._exportEnvelope({ kind: 'slot', slotIndex, slot }, slot) };
     }
 
-    /** Export every slot as a single JSON string. */
-    exportAll() {
-        return this._exportEnvelope({ kind: 'all', slots: this._readRoot().slots });
+    /**
+     * Export every slot as a single backup.
+     * @returns {Promise<{ ok: boolean, json?: string, reason?: string, field?: string, slotIndex?: number }>}
+     */
+    async exportAll() {
+        const slots = this._snapshot(this._readRoot().slots);
+        for (const [slotIndex, slot] of slots.entries()) {
+            const v = this._validateSlotPayload(slot);
+            if (!v.ok) return { ...v, slotIndex };  // say which slot is broken
+        }
+        return { ok: true, json: await this._exportEnvelope({ kind: 'all', slots }, slots) };
     }
 
     /** A slot payload is valid if null, or {meta, data} not from a newer build. */
@@ -392,7 +547,9 @@ class SaveSystem {
         if ((Number(slot.data._dataVersion) || 0) > SAVE_DATA_VERSION) {
             return { ok: false, reason: 'newer_version' };
         }
-        return { ok: true };
+        // #259: same structural check on both sides — a file that would be
+        // refused on import is never written on export.
+        return validateSaveData(slot.data);
     }
 
     /**
@@ -400,9 +557,9 @@ class SaveSystem {
      * migrates older data; rejects corrupt or newer-than-supported payloads.
      * @param {string} json - the exported JSON string.
      * @param {{ targetSlot?: number }} opts - required slot for a 'slot' export.
-     * @returns {{ ok: boolean, reason?: string, kind?: string, slotIndex?: number }}
+     * @returns {Promise<{ ok: boolean, reason?: string, warning?: string, kind?: string, slotIndex?: number }>}
      */
-    importData(json, opts = {}) {
+    async importData(json, opts = {}) {
         let parsed;
         try { parsed = JSON.parse(json); }
         catch (_) { return { ok: false, reason: 'invalid_json' }; }
@@ -428,6 +585,8 @@ class SaveSystem {
                 const v = this._validateSlotPayload(slot);
                 if (!v.ok) return v;
             }
+            const integrity = await this._verifyChecksum(parsed, parsed.slots);
+            if (!integrity.ok) return integrity;
             // Persiste o retorno de migrateSaveData (loadSlot também atribui) —
             // se a migração devolver um objeto novo, descartá-lo deixaria saves
             // antigos sem migrar.
@@ -440,7 +599,7 @@ class SaveSystem {
                 return { ok: false, reason: 'write_failed' };
             }
             this._dispatchEvent('save:changed', { action: 'import', kind: 'all' });
-            return { ok: true, kind: 'all' };
+            return { ok: true, kind: 'all', ...(integrity.warning ? { warning: integrity.warning } : {}) };
         }
 
         if (parsed.kind === 'slot' && parsed.slot) {
@@ -450,6 +609,10 @@ class SaveSystem {
             }
             const v = this._validateSlotPayload(parsed.slot);
             if (!v.ok) return v;
+            // Checksum before the migration: it covers the payload as exported,
+            // and before any write, so a bad file leaves every slot untouched.
+            const integrity = await this._verifyChecksum(parsed, parsed.slot);
+            if (!integrity.ok) return integrity;
             parsed.slot.data = migrateSaveData(parsed.slot.data);
             parsed.slot.meta.slotIndex = target;
             const root = this._readRoot();
@@ -458,10 +621,32 @@ class SaveSystem {
                 return { ok: false, reason: 'write_failed' };
             }
             this._dispatchEvent('save:changed', { action: 'import', kind: 'slot', slotIndex: target });
-            return { ok: true, kind: 'slot', slotIndex: target };
+            return { ok: true, kind: 'slot', slotIndex: target, ...(integrity.warning ? { warning: integrity.warning } : {}) };
         }
 
         return { ok: false, reason: 'unknown_kind' };
+    }
+
+    /**
+     * Re-check the envelope's checksum against the payload it describes.
+     *
+     * Two cases pass with a warning instead of failing, because refusing them
+     * would lock players out of legitimate backups:
+     *   - `unsigned`: exported before checksums existed (no `checksum` field)
+     *   - `checksum_unverified`: the file names an algorithm this runtime cannot
+     *     compute (a sha-256 file opened outside a secure context)
+     *
+     * @returns {Promise<{ ok: boolean, reason?: string, warning?: string }>}
+     */
+    async _verifyChecksum(envelope, payload) {
+        const stored = envelope.checksum;
+        if (!stored || typeof stored.value !== 'string') {
+            return { ok: true, warning: 'unsigned' };
+        }
+        const actual = await checksumWith(stored.algo, payload);
+        if (actual === null) return { ok: true, warning: 'checksum_unverified' };
+        if (actual !== stored.value) return { ok: false, reason: 'checksum_mismatch' };
+        return { ok: true };
     }
 
     /**

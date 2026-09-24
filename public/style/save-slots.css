@@ -18,6 +18,7 @@
     --save-text-muted: #a89070;
     --save-accent-success: linear-gradient(135deg, #4ecca3, #3da58a);
     --save-accent-danger: linear-gradient(135deg, #e74c3c, #c0392b);
+    --save-accent-warning: linear-gradient(135deg, #e0a33e, #c07f21);
     --save-accent-primary: linear-gradient(135deg, #c9a463, #a88942);
     --save-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
     --save-radius: 12px;
@@ -437,6 +438,13 @@
 .save-toast-error {
     background: var(--save-accent-danger);
     color: #fff;
+}
+
+/* `#259`: import went through, but the file carried no verifiable checksum.
+    Near-black text keeps >= 4.5:1 across the whole amber gradient. */
+.save-toast-warning {
+    background: var(--save-accent-warning);
+     color: #1a1208;
 }
 
 .save-toast.fade-out {
