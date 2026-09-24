@@ -9,6 +9,7 @@ import { saveSystem, formatPlayTime, formatDateTime } from './saveSystem.js';
 import { logger } from './logger.js';
 import { getSystem, registerSystem } from './gameState.js';
 import { t } from './i18n/i18n.js';
+import { importErrorMessage, importSuccessMessage } from './saveMessages.js';
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen, blockInteractions, unblockInteractions } from './loadingScreen.js';
 
 
@@ -468,27 +469,11 @@ class SaveSlotsUI {
         if (res?.ok) {
             // An unsigned/unverifiable backup still imports, but say so — the
             // player should know the file was not integrity-checked.
-            const key = res.warning ? 'saveSlots.importSuccessUnverified' : 'saveSlots.importSuccess';
-            this._showMessage(t(key), res.warning ? 'warning' : 'success');
+            this._showMessage(importSuccessMessage(res.warning), res.warning ? 'warning' : 'success');
             this.render();
         } else {
-            this._showMessage(this._importErrorMessage(res?.reason), 'error');
+            this._showMessage(importErrorMessage(res?.reason), 'error');
         }
-    }
-
-    /** Import failures get their own message; unknown reasons fall back. */
-    _importErrorMessage(reason) {
-        const KEYS = {
-            invalid_json: 'saveSlots.importInvalidJson',
-            not_a_save: 'saveSlots.importNotASave',
-            checksum_mismatch: 'saveSlots.importChecksumMismatch',
-            bad_shape: 'saveSlots.importBadShape',
-            newer_version: 'saveSlots.importNewerVersion',
-            write_failed: 'saveSlots.importWriteFailed',
-        };
-        const key = KEYS[reason];
-        if (key) return t(key);
-        return `${t('saveSlots.importError')}${reason ? ` (${reason})` : ''}`;
     }
 
     /**

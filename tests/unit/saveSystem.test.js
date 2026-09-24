@@ -1164,6 +1164,23 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(await checksumWith('sha-256', sneaky)).not.toBe(await checksumWith('sha-256', plain));
     });
 
+    test('a save landing mid-digest cannot change what was hashed', async () => {
+      // _readRoot() hands back the cached root by reference, and the digest is
+      // awaited before the envelope is serialised. An auto-save firing in that
+      // window used to mutate the very object being written, producing a file
+      // that failed its own checksum on import.
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'Before' });
+
+      const pending = saveSystem.exportSlot(0);           // suspends on the digest
+      saveSystem.createOrOverwriteSlot(0, { saveName: 'After' });  // mutates the cache
+      const res = await pending;
+
+      expect(res.ok).toBe(true);
+      expect(JSON.parse(res.json).slot.meta.saveName).toBe('Before');
+      // The file has to verify against its own checksum.
+      expect((await saveSystem.importData(res.json, { targetSlot: 1 })).ok).toBe(true);
+    });
+
     test('an export carries a checksum over its payload', async () => {
       const env = await exportEnvelope();
       expect(env.checksum).toBeDefined();

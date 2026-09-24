@@ -478,9 +478,23 @@ class SaveSystem {
     // ───────────────── Export / Import (#226) ─────────────────
 
     /**
+     * Detach a value from the cached root.
+     *
+     * `_readRoot()` hands back the cache by reference, and an export awaits the
+     * digest before serialising. Anything mutating the cache in that window — an
+     * auto-save is the realistic one — would otherwise land in the file *after*
+     * it was hashed, producing an export that fails its own checksum on import.
+     * One snapshot then feeds validation, hashing and serialisation alike.
+     */
+    _snapshot(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    /**
      * Wrap a payload in the export envelope (signature + versions + checksum).
      * The checksum sits in the envelope, outside `payload`, so the bytes that
-     * were hashed are exactly the bytes an import reads back.
+     * were hashed are exactly the bytes an import reads back. `payload` must be
+     * the same detached object that `extra` carries (see `_snapshot`).
      */
     async _exportEnvelope(extra, payload) {
         return JSON.stringify({
@@ -499,8 +513,9 @@ class SaveSystem {
      *   reason: 'empty_slot' | 'bad_shape'
      */
     async exportSlot(slotIndex) {
-        const slot = this._readRoot().slots[slotIndex];
-        if (!slot) return { ok: false, reason: 'empty_slot' };
+        const live = this._readRoot().slots[slotIndex];
+        if (!live) return { ok: false, reason: 'empty_slot' };
+        const slot = this._snapshot(live);
         const v = this._validateSlotPayload(slot);
         if (!v.ok) return v;
         return { ok: true, json: await this._exportEnvelope({ kind: 'slot', slotIndex, slot }, slot) };
@@ -511,7 +526,7 @@ class SaveSystem {
      * @returns {Promise<{ ok: boolean, json?: string, reason?: string, field?: string, slotIndex?: number }>}
      */
     async exportAll() {
-        const slots = this._readRoot().slots;
+        const slots = this._snapshot(this._readRoot().slots);
         for (const [slotIndex, slot] of slots.entries()) {
             const v = this._validateSlotPayload(slot);
             if (!v.ok) return { ...v, slotIndex };  // say which slot is broken

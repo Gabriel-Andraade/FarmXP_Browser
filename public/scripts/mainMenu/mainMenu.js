@@ -9,6 +9,7 @@
 
 import { logger } from '../logger.js';
 import { t, i18n } from '../i18n/i18n.js';
+import { importErrorMessage, importSuccessMessage } from '../saveMessages.js';
 import { registerSystem } from '../gameState.js';
 import { a11y } from '../accessibility.js';
 import { qualityMode } from '../qualityMode.js';
@@ -765,13 +766,14 @@ export class MainMenu {
           res = await saveSystem.importData(text, { targetSlot: firstEmpty });
         }
 
+        // #259: same wording as the in-game slots UI, from the same mapping —
+        // a reason-specific message on failure, and a warning when the file
+        // imported but could not be integrity-checked.
         if (!res?.ok) {
-          this._showToast(t('saveSlots.importError'));
+          this._showToast(importErrorMessage(res?.reason));
           return;
         }
-        // #259: same wording as the in-game slots UI — an unsigned or
-        // unverifiable backup imports, but the player is told it was not checked.
-        this._showToast(t(res.warning ? 'saveSlots.importSuccessUnverified' : 'saveSlots.importSuccess'));
+        this._showToast(importSuccessMessage(res.warning));
         this._loadGame(); // imported save is now present in the Load screen
       } catch (err) {
         this._showToast(t('saveSlots.importError'));
