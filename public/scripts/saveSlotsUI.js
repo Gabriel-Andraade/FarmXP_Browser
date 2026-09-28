@@ -579,6 +579,14 @@ class SaveSlotsUI {
      */
     async _overwriteSave(slotIndex) {
         const meta = saveSystem.getSlotMeta(slotIndex);
+        // #260: a save from a newer build cannot be read by this one, so
+        // overwriting it would throw away something the player gets back by
+        // updating. Say that instead of asking them to confirm a loss.
+        if (saveSystem.slotIssue(slotIndex) === 'newer_version') {
+            this._showMessage(loadErrorMessage('newer_version'), 'error');
+            return;
+        }
+
         const confirmed = await this._dialog({
             message: t('saveSlots.confirmOverwrite', { name: meta?.saveName || 'Save' }),
             danger: true, // overwriting discards the previous save irreversibly

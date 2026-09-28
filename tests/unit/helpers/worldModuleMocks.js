@@ -40,10 +40,6 @@ mock.module('../../../public/scripts/worldConstants.js', () => ({
   TILE_SIZE: 20,
 }));
 
-mock.module('../../../public/scripts/animal/animalAI.js', () => ({
-  AnimalEntity: class { constructor() {} update() {} },
-}));
-
 mock.module('../../../public/scripts/optimizationConstants.js', () => ({
   ZOOMED_TILE_SIZE: 40,
   ZOOMED_TILE_SIZE_INT: 40,
@@ -72,12 +68,19 @@ mock.module('../../../public/scripts/optimizationConstants.js', () => ({
 mock.module('../../../public/scripts/constants.js', () => ({
   DEFAULTS: { SPRITE_SIZE_PX: 32 },
   DEFAULT_SPRITE_SIZE_PX: 32,
-  TIMING: {},
+  TIMING: { IDLE_STATE_MIN_MS: 1000, IDLE_STATE_MAX_MS: 3000, MOVE_STATE_MIN_MS: 500, MOVE_STATE_MAX_MS: 2000 },
+  // Flat re-exports: animalAI.js imports these by name, and it has to stay the
+  // real module — animalAI.test.js tests it for real, and a stub here would
+  // reach that file too.
+  IDLE_STATE_MIN_MS: 1000,
+  IDLE_STATE_MAX_MS: 3000,
+  MOVE_STATE_MIN_MS: 500,
+  MOVE_STATE_MAX_MS: 2000,
   GAME_BALANCE: { DAMAGE: { TREE_HP: 6, ROCK_HP: 3, STRUCTURE_HP: 10, DEFAULT_HP: 1 } },
   SIZES: {},
-  RANGES: {},
-  MOVEMENT: {},
-  ANIMATION: {},
+  RANGES: { INTERACTION_RANGE: 70, ANIMAL_SIGHT_RADIUS: 128 },
+  MOVEMENT: { PLAYER_SPEED: 5, ANIMAL_SPEED: 0.5, DIAGONAL_MULTIPLIER: 0.7071, COLLISION_STEP_PX: 4, MAX_COLLISION_ITERATIONS: 6 },
+  ANIMATION: { FRAME_RATE_IDLE_MS: 500, FRAME_RATE_MOVE_MS: 150 },
   VISUAL: { HEALTH_BAR: {}, GLOW: {}, KEY_PROMPT: {}, GRID: {} },
   HITBOX_CONFIGS: {
     STATIC_OBJECTS: {

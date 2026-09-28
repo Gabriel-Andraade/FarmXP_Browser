@@ -239,6 +239,57 @@ describe('save migrations (#260)', () => {
       expect(saveSystem.loadSlot(0)).toBeNull();
     });
 
+    test('is never overwritten by an automatic save', () => {
+      // The read guard alone is half the protection: another tab (or a Cloud
+      // sync) replacing the active slot leaves `activeSlot` pointing at it,
+      // and the next auto-save or exit save would write older data on top.
+      seedFuture();
+      const before = structuredClone(saveSystem._readRoot().slots[0]);
+
+      const wrote = saveSystem.createOrOverwriteSlot(0, { saveName: 'Clobber' });
+
+      expect(wrote).toBe(false);
+      saveSystem._clearCache();
+      expect(saveSystem._readRoot().slots[0]).toEqual(before);
+    });
+
+    test('saveActive on a slot that turned newer writes nothing', () => {
+      seedFuture();
+      saveSystem.activeSlot = 0;
+
+      expect(saveSystem.saveActive('auto')).toBe(false);
+      saveSystem._clearCache();
+      expect(saveSystem._readRoot().slots[0].meta.saveName).toBe('From the future');
+    });
+
+    test('an empty slot is still writable', () => {
+      // The guard must only bite on an occupied, newer slot.
+      saveSystem._clearCache();
+      saveSystem._writeRoot({ version: 1, slots: [null, null, null] });
+      expect(saveSystem.createOrOverwriteSlot(0, { saveName: 'Fresh' })).toBe(true);
+    });
+
+    test('a malformed _dataVersion does not throw', () => {
+      // Number() on an object runs valueOf/toString and throws for this shape.
+      // slotIssue() runs after the loading screen is up, so a throw would leave
+      // the game stuck behind it.
+      expect(() => isNewerThanGame({ _dataVersion: { toString: null } })).not.toThrow();
+      expect(isNewerThanGame({ _dataVersion: { toString: null } })).toBe(false);
+      expect(isNewerThanGame({ _dataVersion: [] })).toBe(false);
+      expect(isNewerThanGame({ _dataVersion: {} })).toBe(false);
+      // A numeric string is still a version, and still refused when ahead.
+      expect(isNewerThanGame({ _dataVersion: String(CURRENT_VERSION + 1) })).toBe(true);
+    });
+
+    test('slotIssue survives a malformed slot instead of throwing', () => {
+      saveSystem._clearCache();
+      saveSystem._writeRoot({
+        version: 1,
+        slots: [{ meta: { slotIndex: 0 }, data: { _dataVersion: { toString: null } } }, null, null],
+      });
+      expect(() => saveSystem.slotIssue(0)).not.toThrow();
+    });
+
     test('exporting it is refused too', async () => {
       seedFuture();
       const res = await saveSystem.exportSlot(0);

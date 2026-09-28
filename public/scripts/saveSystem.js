@@ -250,7 +250,14 @@ export async function checksumOf(payload) {
  * @param {Object} data - The save's `.data` object
  */
 export function isNewerThanGame(data) {
-    return (Number(data?._dataVersion) || 0) > SAVE_DATA_VERSION;
+    const raw = data?._dataVersion;
+    // `Number()` on an object runs its valueOf/toString, which *throws* for
+    // something like `{"toString": null}` — reachable from a hand-edited or
+    // corrupted profile. This is called before the loading screen is torn down,
+    // so a throw here would leave the game stuck behind it. A version is a
+    // number (or a numeric string); anything else is simply not newer.
+    if (typeof raw !== 'number' && typeof raw !== 'string') return false;
+    return (Number(raw) || 0) > SAVE_DATA_VERSION;
 }
 
 /**
@@ -770,6 +777,21 @@ class SaveSystem {
             const root = this._readRoot();
             const now = Date.now();
             const isNew = root.slots[slotIndex] === null;
+
+            // #260: never write over a save from a newer build. Refusing to
+            // *load* one is only half the protection — this is the path that
+            // would destroy it. The dangerous case is automatic: another tab
+            // (or a Steam Cloud sync) replaces the active slot, the `storage`
+            // listener drops the cache but keeps `activeSlot`, and the next
+            // auto-save or exit save writes this session's older data on top.
+            // Deleting the slot is still possible; that one is deliberate.
+            if (!isNew && isNewerThanGame(root.slots[slotIndex].data)) {
+                logger.warn(
+                    `Slot ${slotIndex} holds a save from a newer build ` +
+                    `(data v${root.slots[slotIndex].data._dataVersion} > v${SAVE_DATA_VERSION}); refusing to overwrite`
+                );
+                return false;
+            }
 
             // Obter informações do personagem atual
             const playerSystem = getSystem('player');
