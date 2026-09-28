@@ -112,6 +112,23 @@ jogo no atalho e na janela. Com `steam_appid.txt` = 480 (Spacewar) as horas não
   `displayMode.js` do jogo usa isso (sem gesto do usuário, então a preferência
   salva é aplicada no boot). Fora do shell cai na Fullscreen API.
 
+## Onde ficam os saves
+
+`localStorage`, que o navegador separa **por origem** — esquema, host e porta
+juntos. O jogo é servido em `http://127.0.0.1:43110`, então **a porta faz parte
+do save**: subir em outra porta, ou como `localhost` em vez de `127.0.0.1`, faz
+todos os slots aparecerem vazios. Nada se perde, mas nada é achado também.
+
+Por isso a porta fica **fixa em 43110** no pacote (é o default embutido no exe).
+Mudá-la é uma quebra para todo jogador que já tem save, até os saves virarem
+arquivo (Steam Cloud).
+
+O armazenamento dessa origem fica no perfil do CEF, em
+`%LOCALAPPDATA%\FarmingXP\cef-profile` — **fora da pasta do jogo**, então uma
+atualização da Steam que substitui a instalação não encosta nos saves. É também
+por isso que o `--cache-path` é obrigatório: sem ele o perfil é temporário e o
+`localStorage` some ao fechar.
+
 ## Comportamentos conhecidos
 
 - **Segunda instância** com o mesmo `--cache-path` sai em silêncio (singleton do

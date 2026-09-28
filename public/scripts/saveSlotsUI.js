@@ -9,7 +9,7 @@ import { saveSystem, formatPlayTime, formatDateTime } from './saveSystem.js';
 import { logger } from './logger.js';
 import { getSystem, registerSystem } from './gameState.js';
 import { t } from './i18n/i18n.js';
-import { importErrorMessage, importSuccessMessage } from './saveMessages.js';
+import { importErrorMessage, importSuccessMessage, loadErrorMessage } from './saveMessages.js';
 import { showLoadingScreen, updateLoadingProgress, hideLoadingScreen, blockInteractions, unblockInteractions } from './loadingScreen.js';
 
 
@@ -516,12 +516,13 @@ class SaveSlotsUI {
     async _loadSave(slotIndex) {
         // ── Fluxo simplificado (startup / callback externo) ──
         if (this.onLoadCallback) {
-            const slot = saveSystem.loadSlot(slotIndex);
+            const issue = saveSystem.slotIssue(slotIndex);
+            const slot = issue ? null : saveSystem.loadSlot(slotIndex);
             if (slot) {
                 this.onLoadCallback(slot, slotIndex);
                 this.close();
             } else {
-                this._showMessage(t('saveSlots.loadError'), 'error');
+                this._showMessage(loadErrorMessage(issue), 'error');
             }
             return;
         }
@@ -538,10 +539,11 @@ class SaveSlotsUI {
         blockInteractions();
 
         // 3. Carregar dados brutos do slot
-        const slot = saveSystem.loadSlot(slotIndex);
+        const issue = saveSystem.slotIssue(slotIndex);
+        const slot = issue ? null : saveSystem.loadSlot(slotIndex);
 
         if (!slot) {
-            this._showMessage(t('saveSlots.loadError'), 'error');
+            this._showMessage(loadErrorMessage(issue), 'error');
             hideLoadingScreen();
             unblockInteractions();
             document.dispatchEvent(new CustomEvent('game:resume'));

@@ -1,0 +1,121 @@
+{
+  "_comment": "Schema as of SAVE_DATA_VERSION 4: john_quest.milkQuest and gameFlags.lucas_quest added.",
+  "meta": {
+    "slotIndex": 0,
+    "saveName": "Legacy v4",
+    "characterId": "stella",
+    "characterName": "Stella",
+    "createdAt": 1700000000000,
+    "lastSavedAt": 1700000000000,
+    "lastPlayedAt": 1700000000000,
+    "totalPlayTimeMs": 3600000,
+    "lastSessionMs": 600000,
+    "lastSaveReason": "manual"
+  },
+  "data": {
+    "player": {
+      "x": 512,
+      "y": 640,
+      "facingDirection": "left",
+      "characterId": "stella",
+      "needs": {
+        "hunger": 71,
+        "thirst": 63,
+        "energy": 88
+      }
+    },
+    "inventory": {
+      "categories": {
+        "tools": {
+          "items": [
+            {
+              "id": 1,
+              "quantity": 1
+            }
+          ],
+          "limit": 5
+        },
+        "seeds": {
+          "items": [
+            {
+              "id": 12,
+              "quantity": 9
+            }
+          ],
+          "limit": 10
+        }
+      },
+      "equipped": null
+    },
+    "currency": {
+      "money": 2450
+    },
+    "weather": {
+      "currentTime": 540,
+      "day": 12,
+      "month": 3,
+      "year": 1,
+      "season": "Primavera",
+      "weatherType": "clear",
+      "weatherTimer": 20,
+      "nextWeatherChange": 150,
+      "ambientDarkness": 0
+    },
+    "world": {
+      "trees": [
+        {
+          "id": "t1",
+          "x": 100,
+          "y": 200,
+          "width": 38,
+          "height": 40,
+          "type": "TREE",
+          "hp": 6
+        }
+      ],
+      "rocks": [
+        {
+          "id": "r1",
+          "x": 300,
+          "y": 220,
+          "width": 32,
+          "height": 27,
+          "type": "ROCK",
+          "hp": 3
+        }
+      ],
+      "thickets": [],
+      "houses": [],
+      "placedBuildings": [],
+      "placedWells": [],
+      "animals": [
+        {
+          "id": "a1",
+          "type": "COW",
+          "x": 420,
+          "y": 380,
+          "stats": {
+            "hunger": 55,
+            "thirst": 40
+          }
+        }
+      ]
+    },
+    "chests": {},
+    "achievements": null,
+    "currentMap": "farm",
+    "_dataVersion": 4,
+    "gameFlags": {
+      "bru_quest": {
+        "dialogue": "completed"
+      },
+      "john_quest": {
+        "dialogue": "met",
+        "milkQuest": "delivered"
+      },
+      "lucas_quest": {
+        "secretQuest": "in_progress"
+      }
+    }
+  }
+}

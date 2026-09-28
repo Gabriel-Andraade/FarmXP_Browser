@@ -1172,6 +1172,7 @@ export default {
     importBadShape: 'Partida incompleta o inválida — no se cambió nada.',
     importNewerVersion: 'Partida de una versión más nueva del juego — actualiza para abrirla.',
     importWriteFailed: 'No se pudo guardar — ¿sin espacio?',
+    loadNewerVersion: 'Esta partida es de una versión más nueva del juego. Actualiza para abrirla — sigue guardada.',
     importAllConfirm: '¿Reemplazar TODAS las ranuras con este respaldo?',
     importChooseSlot: '¿Importar en qué ranura? (1-3)',
     importBadSlot: 'Ranura inválida — elige 1, 2 o 3.',

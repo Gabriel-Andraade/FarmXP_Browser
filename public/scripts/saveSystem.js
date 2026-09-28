@@ -3,6 +3,29 @@
  * @description Gerencia persistência do jogo com 3 slots usando localStorage.
  * Cada slot armazena metadados (nome, personagem, tempo jogado, datas) e dados do jogo.
  * @module SaveSystem
+ *
+ * ## Where saves live, and what that ties them to
+ *
+ * Saves are in `localStorage`, which the browser scopes **by origin** — scheme,
+ * host and port together. The game is served on `http://127.0.0.1:43110`, so
+ * **the port is effectively part of the save**: serve it on another port, or as
+ * `localhost` instead of `127.0.0.1`, and every slot reads as empty. Nothing is
+ * lost, but nothing is found either. Keep the port fixed in the packaged build;
+ * the shell defaults to 43110 (`tools/cef/README.md`).
+ *
+ * In the desktop shell the origin's storage sits in the CEF profile, under
+ * `%LOCALAPPDATA%\FarmingXP\cef-profile` — outside the game folder, so a Steam
+ * update replacing the install does not touch saves.
+ *
+ * Moving saves to files (Steam Cloud) is what removes this coupling; until
+ * then, changing the port is a breaking change for every existing player.
+ *
+ * ## Versioning
+ *
+ * `SAVE_DATA_VERSION` + `MIGRATIONS` carry old saves forward on load. There is
+ * no path backwards: a save from a newer build is refused rather than
+ * half-loaded (`isNewerThanGame`). Regression fixtures for every version live
+ * in `tests/unit/fixtures/saves/`.
  */
 
 import { registerSystem, getSystem, getObject } from './gameState.js';
@@ -217,8 +240,25 @@ export async function checksumOf(payload) {
 }
 
 /**
+ * True when a save was written by a build newer than this one.
+ *
+ * #260: migrations only run forward — there is no way to downgrade a save, and
+ * loading one anyway means unknown fields ignored and known ones possibly in a
+ * shape this build does not expect. Happens after a rollback, or when Steam
+ * Cloud brings a save down from a machine running a newer build.
+ *
+ * @param {Object} data - The save's `.data` object
+ */
+export function isNewerThanGame(data) {
+    return (Number(data?._dataVersion) || 0) > SAVE_DATA_VERSION;
+}
+
+/**
  * Runs all pending migrations on a save's data object.
  * Mutates `data` in place and returns it.
+ *
+ * A save newer than this build is returned untouched — callers must refuse it
+ * first (`isNewerThanGame`); there is nothing to migrate downwards.
  *
  * @param {Object} data - The save's `.data` object
  * @returns {Object} The migrated data
@@ -544,7 +584,7 @@ class SaveSystem {
         if (!isObject(slot) || !isObject(slot.data) || !isObject(slot.meta)) {
             return { ok: false, reason: 'bad_shape' };
         }
-        if ((Number(slot.data._dataVersion) || 0) > SAVE_DATA_VERSION) {
+        if (isNewerThanGame(slot.data)) {
             return { ok: false, reason: 'newer_version' };
         }
         // #259: same structural check on both sides — a file that would be
@@ -811,6 +851,21 @@ class SaveSystem {
      * @param {number} slotIndex - Índice do slot (0-2)
      * @returns {Object|null} Dados do slot ou null se vazio/erro
      */
+    /**
+     * Why a slot cannot be loaded, or null when it can. Lets the UI say what is
+     * wrong instead of showing one generic failure for every cause.
+     *
+     * @param {number} slotIndex
+     * @returns {'empty'|'newer_version'|null}
+     */
+    slotIssue(slotIndex) {
+        if (slotIndex < 0 || slotIndex >= MAX_SLOTS) return 'empty';
+        const slot = this._readRoot().slots[slotIndex];
+        if (!slot) return 'empty';
+        if (isNewerThanGame(slot.data)) return 'newer_version';
+        return null;
+    }
+
     loadSlot(slotIndex) {
         if (slotIndex < 0 || slotIndex >= MAX_SLOTS) {
             logger.error('Invalid slot index:', slotIndex);
@@ -823,6 +878,17 @@ class SaveSystem {
 
             if (!slot) {
                 logger.warn(`Slot ${slotIndex} is empty`);
+                return null;
+            }
+
+            // #260: refuse a save from a newer build instead of half-loading it.
+            // The slot is left exactly as it is, so the player keeps it and can
+            // open it again after updating. `slotIssue()` tells the UI why.
+            if (isNewerThanGame(slot.data)) {
+                logger.warn(
+                    `Slot ${slotIndex} was written by a newer build ` +
+                    `(data v${slot.data._dataVersion} > v${SAVE_DATA_VERSION}); refusing to load`
+                );
                 return null;
             }
 

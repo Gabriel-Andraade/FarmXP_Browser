@@ -1171,6 +1171,7 @@ export default {
     importBadShape: 'Incomplete or invalid save — nothing was changed.',
     importNewerVersion: 'Save from a newer version of the game — update to open it.',
     importWriteFailed: 'Could not write the save — out of space?',
+    loadNewerVersion: 'This save is from a newer version of the game. Update to open it — it is still here.',
     importAllConfirm: 'Replace ALL save slots with this backup?',
     importChooseSlot: 'Import into which slot? (1-3)',
     importBadSlot: 'Invalid slot — choose 1, 2 or 3.',
