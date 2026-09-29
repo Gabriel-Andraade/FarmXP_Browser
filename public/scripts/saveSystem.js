@@ -350,6 +350,12 @@ class SaveSystem {
         this.isDirty = false;
         this._cachedRoot = null; // Cache para otimização
         this._lastExitSaveAt = 0; // dedupe for the exit-save pair (#178)
+        this._paused = false;     // #261: auto-save stands down while paused
+
+        if (typeof document !== 'undefined') {
+            document.addEventListener('game:pause', () => { this._paused = true; });
+            document.addEventListener('game:resume', () => { this._paused = false; });
+        }
 
         // Registrar no gameState
         registerSystem('save', this);
@@ -1086,6 +1092,11 @@ class SaveSystem {
     startAutoSave(intervalMs = AUTO_SAVE_INTERVAL_MS) {
         this.stopAutoSave();
         this.autoSaveInterval = setInterval(() => {
+            // #261: the world is frozen while paused (pause menu, dialogue,
+            // Steam overlay) — nothing changes, so there is nothing to write.
+            // Skipping the tick rather than clearing the interval means a
+            // missed `game:resume` costs one save, not every save after it.
+            if (this._paused) return;
             if (this.activeSlot !== null && this.isDirty) {
                 this.saveActive('auto');
             }

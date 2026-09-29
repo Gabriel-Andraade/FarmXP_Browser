@@ -1072,6 +1072,8 @@ async function startFullGameLoad() {
       const saveModule = await import('./saveSystem.js');
       saveRef = saveModule.saveSystem;
       await import('./saveSlotsUI.js');
+      // #261: after saveSlotsUI — the pause menu borrows its in-DOM dialog.
+      (await import('./pauseMenu.js')).pauseMenu.init();
       if (saveRef) {
         // Configurar listeners para chamar markDirty() em mudanças de estado importantes
         setupStateChangeListenersForSave();

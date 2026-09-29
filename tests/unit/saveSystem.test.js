@@ -1123,6 +1123,27 @@ describe('SaveSystem (Production Implementation)', () => {
   });
 
   describe('autoSave', () => {
+    // #261: while the world is frozen (pause menu, dialogue, Steam overlay)
+    // nothing changes, so there is nothing worth writing.
+    test('stands down while the game is paused', () => {
+      document.dispatchEvent(new CustomEvent('game:pause'));
+      expect(saveSystem._paused).toBe(true);
+
+      document.dispatchEvent(new CustomEvent('game:resume'));
+      expect(saveSystem._paused).toBe(false);
+    });
+
+    test('a missed resume costs one save, not every save after it', () => {
+      // The tick is skipped, the interval is not cleared — so auto-save comes
+      // back on its own once the game resumes.
+      saveSystem.startAutoSave(10_000);
+      document.dispatchEvent(new CustomEvent('game:pause'));
+      expect(saveSystem.autoSaveInterval).not.toBeNull();
+      document.dispatchEvent(new CustomEvent('game:resume'));
+      expect(saveSystem.autoSaveInterval).not.toBeNull();
+      saveSystem.stopAutoSave();
+    });
+
     test('should start and stop auto save', () => {
       saveSystem.startAutoSave(100);
       expect(saveSystem.autoSaveInterval).toBeDefined();

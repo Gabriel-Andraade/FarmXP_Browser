@@ -1123,6 +1123,22 @@ export default {
   },
 
   // Save Slots UI
+  // #261: menú de pausa (Esc)
+  pause: {
+    title: 'En pausa',
+    continue: 'Continuar',
+    save: 'Guardar partida',
+    settings: 'Configuración',
+    inventory: 'Inventario',
+    help: 'Ayuda',
+    mainMenu: 'Salir al menú principal',
+    quit: 'Salir del juego',
+    confirmQuit: '¿Salir del juego? El progreso no guardado se perderá.',
+    confirmMainMenu: '¿Volver al menú principal? El progreso no guardado se perderá.',
+    saveAndExit: 'Guardar y salir',
+    exitAnyway: 'Salir de todos modos',
+  },
+
   saveSlots: {
     titleSaveLoad: 'Guardar / Cargar',
     titleSave: 'Guardar Juego',
