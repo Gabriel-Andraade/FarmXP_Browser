@@ -8,7 +8,7 @@ mock.module('../../public/scripts/i18n/i18n.js', () => ({
   default: {},
 }));
 
-const { importErrorMessage, importSuccessMessage } =
+const { importErrorMessage, importSuccessMessage, loadErrorMessage } =
   await import('../../public/scripts/saveMessages.js');
 
 import en from '../../public/scripts/i18n/en.js';
@@ -71,6 +71,26 @@ describe('save import messages (#259)', () => {
       // If they read the same, the warning carries no information.
       expect(warn, `${locale}: unverified message must differ`).not.toBe(ok);
     }
+  });
+
+  test('a newer-version slot gets its own load message', () => {
+    // #260: "failed to load" would suggest the save is lost; it is untouched,
+    // the game is just behind it.
+    const newer = loadErrorMessage('newer_version');
+    const generic = loadErrorMessage(undefined);
+    expect(newer).toBe('saveSlots.loadNewerVersion');
+    expect(generic).toBe('saveSlots.loadError');
+
+    for (const [locale, dict] of Object.entries(LOCALES)) {
+      const value = lookup(dict, newer);
+      expect(typeof value, `${locale} → ${newer}`).toBe('string');
+      expect(value, `${locale}: must differ from the generic load error`).not.toBe(lookup(dict, generic));
+    }
+  });
+
+  test('an unrecognised load issue falls back to the generic message', () => {
+    expect(loadErrorMessage('empty')).toBe('saveSlots.loadError');
+    expect(loadErrorMessage('something_new')).toBe('saveSlots.loadError');
   });
 
   test('the export-refused message exists in all three locales', () => {

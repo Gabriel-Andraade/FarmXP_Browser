@@ -1171,6 +1171,7 @@ export default {
     importBadShape: 'Save incompleto ou inválido — nada foi alterado.',
     importNewerVersion: 'Save de uma versão mais nova do jogo — atualize para abrir.',
     importWriteFailed: 'Não foi possível gravar o save — espaço insuficiente?',
+    loadNewerVersion: 'Este save é de uma versão mais nova do jogo. Atualize para abri-lo — ele continua salvo.',
     importAllConfirm: 'Substituir TODOS os slots por este backup?',
     importChooseSlot: 'Importar em qual slot? (1-3)',
     importBadSlot: 'Slot inválido — escolha 1, 2 ou 3.',

@@ -40,3 +40,19 @@ export function importErrorMessage(reason) {
 export function importSuccessMessage(warning) {
     return t(warning ? 'saveSlots.importSuccessUnverified' : 'saveSlots.importSuccess');
 }
+
+/** `issue` from saveSystem.slotIssue() → i18n key. */
+const LOAD_ERROR_KEYS = {
+    newer_version: 'saveSlots.loadNewerVersion',
+};
+
+/**
+ * Message for a slot that would not load. #260: a save from a newer build gets
+ * its own wording — it is not broken, the game is just behind it, and saying
+ * "failed to load" would suggest the save is lost when it is untouched.
+ * @param {string} [issue] - from `saveSystem.slotIssue()`
+ * @returns {string}
+ */
+export function loadErrorMessage(issue) {
+    return t(LOAD_ERROR_KEYS[issue] ?? 'saveSlots.loadError');
+}
