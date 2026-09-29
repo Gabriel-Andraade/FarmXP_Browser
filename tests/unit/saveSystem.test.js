@@ -1123,6 +1123,49 @@ describe('SaveSystem (Production Implementation)', () => {
   });
 
   describe('autoSave', () => {
+    // #261: while the world is frozen (pause menu, dialogue, Steam overlay)
+    // nothing changes, so there is nothing worth writing.
+    test('stands down while the game is paused', () => {
+      document.dispatchEvent(new CustomEvent('game:pause'));
+      expect(saveSystem._paused).toBe(true);
+
+      document.dispatchEvent(new CustomEvent('game:resume'));
+      expect(saveSystem._paused).toBe(false);
+    });
+
+    test('the paused tick writes nothing and the next one writes again', () => {
+      // Runs the real interval callback: asserting only on `_paused` and on the
+      // interval still existing would pass even if the skip were missing.
+      let tick = null;
+      const reasons = [];
+      const realSetInterval = globalThis.setInterval;
+      const realClearInterval = globalThis.clearInterval;
+      const realSaveActive = saveSystem.saveActive;
+
+      globalThis.setInterval = (cb) => { tick = cb; return 1; };
+      globalThis.clearInterval = () => {};
+      saveSystem.saveActive = (reason) => { reasons.push(reason); return true; };
+
+      try {
+        saveSystem.activeSlot = 0;
+        saveSystem.isDirty = true;
+        saveSystem.startAutoSave(10_000);
+
+        document.dispatchEvent(new CustomEvent('game:pause'));
+        tick();
+        expect(reasons, 'paused tick must not write').toEqual([]);
+
+        document.dispatchEvent(new CustomEvent('game:resume'));
+        tick();
+        expect(reasons, 'auto-save must come back on its own').toEqual(['auto']);
+      } finally {
+        saveSystem.stopAutoSave();
+        saveSystem.saveActive = realSaveActive;
+        globalThis.setInterval = realSetInterval;
+        globalThis.clearInterval = realClearInterval;
+      }
+    });
+
     test('should start and stop auto save', () => {
       saveSystem.startAutoSave(100);
       expect(saveSystem.autoSaveInterval).toBeDefined();

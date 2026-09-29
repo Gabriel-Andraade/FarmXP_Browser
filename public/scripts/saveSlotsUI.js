@@ -664,7 +664,12 @@ class SaveSlotsUI {
      * @param {boolean} [opts.danger] - Style the confirm button as destructive
      * @returns {Promise<string|null|boolean>}
      */
-    _dialog({ message, input = false, defaultValue = '', danger = false, success = false }) {
+    /**
+     * In-DOM prompt. Resolves to the input's text, `true` on confirm, `false` on
+     * cancel — or `secondary.value` when the optional third button is used
+     * (#261: "save and exit" alongside "exit anyway").
+     */
+    _dialog({ message, input = false, defaultValue = '', danger = false, success = false, okLabel = null, secondary = null }) {
         return new Promise((resolve) => {
             const overlay = document.createElement('div');
             overlay.className = 'save-dialog-overlay';
@@ -702,8 +707,16 @@ class SaveSlotsUI {
             const okBtn = document.createElement('button');
             const okVariant = danger ? ' save-dialog-danger' : (success ? ' save-dialog-success' : '');
             okBtn.className = `save-btn save-dialog-ok${okVariant}`;
-            okBtn.textContent = input ? t('ui.ok') : t('ui.confirm');
-            actions.append(cancelBtn, okBtn);
+            okBtn.textContent = okLabel || (input ? t('ui.ok') : t('ui.confirm'));
+            if (secondary) {
+                const secondaryBtn = document.createElement('button');
+                secondaryBtn.className = 'save-btn save-dialog-secondary';
+                secondaryBtn.textContent = secondary.label;
+                secondaryBtn.addEventListener('click', () => settle(secondary.value));
+                actions.append(cancelBtn, secondaryBtn, okBtn);
+            } else {
+                actions.append(cancelBtn, okBtn);
+            }
             box.appendChild(actions);
             overlay.appendChild(box);
             document.body.appendChild(overlay);
@@ -719,8 +732,17 @@ class SaveSlotsUI {
             const cancel = () => settle(input ? null : false);
 
             const onKey = (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); confirm(); }
-                else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+                if (e.key === 'Enter') {
+                    // A focused button must activate itself. Hijacking Enter here
+                    // resolved every dialog as a plain confirm — so Enter on
+                    // "save and exit" (#261) read as "exit anyway", and the game
+                    // left without saving. Enter still confirms from the input
+                    // field or when focus is anywhere else.
+                    const focused = document.activeElement;
+                    if (focused?.tagName === 'BUTTON' && box.contains(focused)) return;
+                    e.preventDefault();
+                    confirm();
+                } else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
             };
             document.addEventListener('keydown', onKey);
             // Let destroy() abort an open dialog (cancel-equivalent resolution).
