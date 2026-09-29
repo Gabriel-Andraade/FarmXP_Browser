@@ -21,7 +21,6 @@
 import { t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 import { registerSystem, getSystem } from './gameState.js';
-import { a11y } from './accessibility.js';
 
 /**
  * Anything here being on screen means Esc belongs to that panel, not to us.
@@ -117,6 +116,11 @@ class PauseMenu {
 
     _onKeydown(e) {
         if (e.key !== 'Escape') return;
+        // Whatever is on top owns the key — including when the menu is already
+        // open. This listener is registered before any panel's, so without the
+        // check one Esc closed both layers: the exit confirmation cancelled
+        // *and* the menu, dropping the player into a running world.
+        if (this._panelOnTop()) return;
         if (this.isOpen) {
             e.preventDefault();
             this.close();
@@ -127,10 +131,15 @@ class PauseMenu {
         this.open();
     }
 
+    /** Is one of the known panels currently covering us? */
+    _panelOnTop() {
+        return OVERLAY_SELECTORS.some((sel) => isOnScreen(document.querySelector(sel)));
+    }
+
     /** Only in the world, with no other panel holding the screen. */
     _canOpen() {
         if (document.getElementById('gameCanvas') === null) return false;
-        return !OVERLAY_SELECTORS.some((sel) => isOnScreen(document.querySelector(sel)));
+        return !this._panelOnTop();
     }
 
     // ── Open / close ───────────────────────────────────────────────────────
@@ -143,14 +152,12 @@ class PauseMenu {
         document.dispatchEvent(new CustomEvent('game:pause'));
         this._focusIndex = 0;
         this._focusCurrent();
-        try { a11y.trapFocus(this.root); } catch { /* a11y optional */ }
     }
 
     close() {
         if (!this.isOpen) return;
         this.isOpen = false;
         this.root?.classList.remove('active');
-        try { a11y.releaseFocus(this.root); } catch { /* a11y optional */ }
         // Our own resume must not be bounced back by the guard.
         this._reasserting = true;
         document.dispatchEvent(new CustomEvent('game:resume'));
@@ -269,6 +276,19 @@ class PauseMenu {
 
     _onMenuKey(e) {
         const last = this._items.length - 1;
+        if (e.key === 'Tab') {
+            // Own focus cycling instead of a11y.trapFocus: the menu keeps panels
+            // open on top of itself, and a11y holds a single `_previousFocus`,
+            // so nesting traps would lose the return target. This handler is on
+            // the menu's own element, so it only runs while focus is inside it,
+            // and stands down entirely while a panel covers the menu.
+            if (this._panelOnTop()) return;
+            e.preventDefault();
+            const step = e.shiftKey ? -1 : 1;
+            this._focusIndex = (this._focusIndex + step + this._items.length) % this._items.length;
+            this._focusCurrent();
+            return;
+        }
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             this._focusIndex = this._focusIndex >= last ? 0 : this._focusIndex + 1;
@@ -302,15 +322,19 @@ class PauseMenu {
                 break;
             case 'save':
                 getSystem('saveSlotsUI')?.open?.('save');
+                this._handOffFocus('.save-modal-overlay.active');
                 break;
             case 'settings':
                 document.getElementById('configModal')?.classList.add('active');
+                this._handOffFocus('#configModal.active');
                 break;
             case 'inventory':
                 (await import('./thePlayer/inventoryUI.js')).openInventoryModal();
+                this._handOffFocus('#inventoryModal.open, .inv-overlay.open');
                 break;
             case 'help':
                 (await import('./helpPanel.js')).toggleHelpPanel(true);
+                this._handOffFocus('#khp-help-overlay.is-open');
                 break;
             case 'mainMenu':
                 await this._leave('mainMenu');
@@ -319,6 +343,27 @@ class PauseMenu {
                 await this._leave('quit');
                 break;
         }
+    }
+
+    /**
+     * Move focus into a panel this menu just opened.
+     *
+     * Without it focus stays on the menu row behind the panel, and a keyboard
+     * player tabs around the menu they cannot see instead of reaching the
+     * panel's controls. One frame's wait so the panel is rendered and its
+     * buttons are focusable.
+     */
+    _handOffFocus(selector) {
+        const focusIt = () => {
+            const panel = document.querySelector(selector);
+            if (!panel) return;
+            const target = panel.querySelector(
+                'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            );
+            (target ?? panel).focus?.();
+        };
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(focusIt);
+        else focusIt();
     }
 
     /**

@@ -30,10 +30,6 @@ mock.module('../../public/scripts/gameState.js', () => ({
   default: {},
 }));
 
-mock.module('../../public/scripts/accessibility.js', () => ({
-  a11y: { trapFocus() {}, releaseFocus() {} },
-}));
-
 const { ITEMS, OVERLAY_SELECTORS } = await import('../../public/scripts/pauseMenu.js');
 
 import en from '../../public/scripts/i18n/en.js';
@@ -144,6 +140,14 @@ describe('pause menu (#261)', () => {
       expect(joined).toContain('save-modal');    // Save
       expect(joined).toContain('help-overlay');  // Help
       expect(joined).toContain('inv');           // Inventory
+    });
+
+    test('the exit confirmation is in the list', () => {
+      // Esc with the confirmation open must cancel *it* and leave the menu
+      // paused. The menu's listener is registered first, so without this entry
+      // one key press closed both layers and dropped the player into a
+      // running world.
+      expect(OVERLAY_SELECTORS).toContain('.save-dialog-overlay');
     });
 
     test('selectors are unique', () => {

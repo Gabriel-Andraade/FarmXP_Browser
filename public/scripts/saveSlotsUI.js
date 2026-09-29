@@ -722,8 +722,17 @@ class SaveSlotsUI {
             const cancel = () => settle(input ? null : false);
 
             const onKey = (e) => {
-                if (e.key === 'Enter') { e.preventDefault(); confirm(); }
-                else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+                if (e.key === 'Enter') {
+                    // A focused button must activate itself. Hijacking Enter here
+                    // resolved every dialog as a plain confirm — so Enter on
+                    // "save and exit" (#261) read as "exit anyway", and the game
+                    // left without saving. Enter still confirms from the input
+                    // field or when focus is anywhere else.
+                    const focused = document.activeElement;
+                    if (focused?.tagName === 'BUTTON' && box.contains(focused)) return;
+                    e.preventDefault();
+                    confirm();
+                } else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
             };
             document.addEventListener('keydown', onKey);
             // Let destroy() abort an open dialog (cancel-equivalent resolution).

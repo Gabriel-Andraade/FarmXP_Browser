@@ -1133,15 +1133,37 @@ describe('SaveSystem (Production Implementation)', () => {
       expect(saveSystem._paused).toBe(false);
     });
 
-    test('a missed resume costs one save, not every save after it', () => {
-      // The tick is skipped, the interval is not cleared — so auto-save comes
-      // back on its own once the game resumes.
-      saveSystem.startAutoSave(10_000);
-      document.dispatchEvent(new CustomEvent('game:pause'));
-      expect(saveSystem.autoSaveInterval).not.toBeNull();
-      document.dispatchEvent(new CustomEvent('game:resume'));
-      expect(saveSystem.autoSaveInterval).not.toBeNull();
-      saveSystem.stopAutoSave();
+    test('the paused tick writes nothing and the next one writes again', () => {
+      // Runs the real interval callback: asserting only on `_paused` and on the
+      // interval still existing would pass even if the skip were missing.
+      let tick = null;
+      const reasons = [];
+      const realSetInterval = globalThis.setInterval;
+      const realClearInterval = globalThis.clearInterval;
+      const realSaveActive = saveSystem.saveActive;
+
+      globalThis.setInterval = (cb) => { tick = cb; return 1; };
+      globalThis.clearInterval = () => {};
+      saveSystem.saveActive = (reason) => { reasons.push(reason); return true; };
+
+      try {
+        saveSystem.activeSlot = 0;
+        saveSystem.isDirty = true;
+        saveSystem.startAutoSave(10_000);
+
+        document.dispatchEvent(new CustomEvent('game:pause'));
+        tick();
+        expect(reasons, 'paused tick must not write').toEqual([]);
+
+        document.dispatchEvent(new CustomEvent('game:resume'));
+        tick();
+        expect(reasons, 'auto-save must come back on its own').toEqual(['auto']);
+      } finally {
+        saveSystem.stopAutoSave();
+        saveSystem.saveActive = realSaveActive;
+        globalThis.setInterval = realSetInterval;
+        globalThis.clearInterval = realClearInterval;
+      }
     });
 
     test('should start and stop auto save', () => {
