@@ -100,6 +100,7 @@ mock.module('../../public/scripts/logger.js', () => ({
 
 // Import real module after all mocks
 const theWorld = await import('../../public/scripts/theWorld.js');
+const { camera } = await import('../../public/scripts/thePlayer/cameraSystem.js');
 // Real collisionSystem singleton — the same instance theWorld registers into.
 const { collisionSystem } = await import('../../public/scripts/collisionSystem.js');
 
@@ -407,6 +408,138 @@ describe('TheWorld (Production Implementation)', () => {
 
       expect(theWorld.trees).toHaveLength(1);
       expect(theWorld.trees[0].id).toBe('t2');
+    });
+  });
+  // #263: the grass layer is a repeating pattern instead of a rebuilt cache.
+  // The phase is the only arithmetic in it, and the only thing that breaks
+  // silently — a wrong phase shows as the wrong grass tile, not as an error.
+  describe('grass pattern phase (#263)', () => {
+    const phase = theWorld.grassPatternPhase;
+
+    test('a single grass tile never needs a phase', () => {
+      // Today's case: one floor asset, so every tile is the same image.
+      for (const [col, row] of [[0, 0], [7, 3], [1234, 5678]]) {
+        expect(phase(col, row, 1)).toEqual({ x: 0, y: 0 });
+      }
+    });
+
+    test('keeps the world tile under the pattern origin', () => {
+      // The pattern always starts at block cell (0,0); the phase shifts it so
+      // that cell lands on the world tile the fill starts at.
+      expect(phase(0, 0, 3)).toEqual({ x: 0, y: 0 });
+      expect(phase(1, 0, 3)).toEqual({ x: 1, y: 0 });
+      expect(phase(0, 2, 3)).toEqual({ x: 0, y: 2 });
+      expect(phase(4, 5, 3)).toEqual({ x: 1, y: 2 });
+    });
+
+    test('the tile index at the origin survives the shift', () => {
+      // What actually has to hold: block cell (phase) has the same index as
+      // the world tile it is drawn over.
+      const variants = 4;
+      for (let col = 0; col < 12; col++) {
+        for (let row = 0; row < 12; row++) {
+          const p = phase(col, row, variants);
+          expect((p.x + p.y) % variants, `tile (${col},${row})`)
+            .toBe((col + row) % variants);
+        }
+      }
+    });
+
+    test('repeats with the pattern, so it never grows', () => {
+      // Moving a whole block away must land on the same phase — that is what
+      // makes one fillRect enough however far the camera goes.
+      const variants = 3;
+      expect(phase(2, 1, variants)).toEqual(phase(2 + variants, 1, variants));
+      expect(phase(2, 1, variants)).toEqual(phase(2, 1 + variants, variants));
+      expect(phase(2, 1, variants)).toEqual(phase(2 + variants * 40, 1, variants));
+    });
+
+    test('survives odd inputs instead of drawing NaN', () => {
+      expect(phase(0, 0, 0)).toEqual({ x: 0, y: 0 });
+      expect(phase(0, 0, NaN)).toEqual({ x: 0, y: 0 });
+      expect(phase(0, 0, undefined)).toEqual({ x: 0, y: 0 });
+      // Negative tile indices are clamped away before the fill, but the maths
+      // must still return a real offset, never a negative one.
+      const p = phase(-5, -7, 4);
+      expect(p.x).toBeGreaterThanOrEqual(0);
+      expect(p.y).toBeGreaterThanOrEqual(0);
+    });
+
+    test('invalidateGrassCache stays callable for map transitions', () => {
+      // mapManager calls it on every map change; it now drops the pattern.
+      expect(() => theWorld.invalidateGrassCache()).not.toThrow();
+    });
+  });
+  // The point of #263: the cost per frame must not depend on where the camera
+  // is. The old cache redrew every tile of the region (~3,700 on a full-HD
+  // viewport) whenever the camera left it; this counts the draw calls while
+  // walking to prove that spike is gone.
+  describe('grass draw cost (#263)', () => {
+    /** A 2D context that counts what it is asked to draw. */
+    function countingCtx() {
+      const calls = { fillRect: 0, drawImage: 0 };
+      const ctx = {
+        canvas: { width: 1920, height: 1080 },
+        fillStyle: '',
+        imageSmoothingEnabled: true,
+        save() {}, restore() {}, translate() {},
+        fillRect() { calls.fillRect++; },
+        drawImage() { calls.drawImage++; },
+        clearRect() {},
+        createPattern: () => ({}),
+      };
+      return { ctx, calls };
+    }
+
+    test('drawing costs the same however far the camera has moved', () => {
+      theWorld.invalidateGrassCache();
+      const { ctx, calls } = countingCtx();
+
+      // Count the OFFSCREEN draws too. The old cache did its ~3,700 drawImage
+      // calls on a canvas of its own, so watching only the main context would
+      // have shown one call per frame either way — and this test would have
+      // passed against the very code it exists to rule out.
+      const realCreate = document.createElement;
+      document.createElement = (tag) => {
+        if (tag !== 'canvas') return realCreate.call(document, tag);
+        return { width: 0, height: 0, getContext: () => ctx };
+      };
+
+      const perFrame = [];
+      try {
+        // Walk a long way in one direction, one tile at a time — the motion
+        // that used to trigger a rebuild every ~10 tiles.
+        for (let step = 0; step < 200; step++) {
+          camera.x = step * 20;
+          camera.y = 0;
+          const before = calls.fillRect + calls.drawImage;
+          theWorld.drawBackground(ctx);
+          perFrame.push(calls.fillRect + calls.drawImage - before);
+        }
+      } finally {
+        document.createElement = realCreate;
+      }
+
+      const worst = Math.max(...perFrame);
+      // The pattern block is built on the first frame; every frame after is a
+      // single fill. The old code peaked in the thousands.
+      expect(worst, `worst frame drew ${worst} times`).toBeLessThan(10);
+      expect(perFrame.slice(1).every((n) => n === perFrame[1]),
+        'cost must not vary with camera position').toBe(true);
+    });
+
+    test('the pattern block is built once, not per frame', () => {
+      theWorld.invalidateGrassCache();
+      const { ctx } = countingCtx();
+      let patterns = 0;
+      ctx.createPattern = () => { patterns++; return {}; };
+
+      for (let step = 0; step < 50; step++) {
+        camera.x = step * 40;
+        theWorld.drawBackground(ctx);
+      }
+
+      expect(patterns, 'pattern rebuilt every frame').toBe(1);
     });
   });
 });
