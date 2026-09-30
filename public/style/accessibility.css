@@ -688,3 +688,12 @@ html.text-extra-large .player-panel,
 html.text-extra-large .hud-action-buttons {
     zoom: 1.15;
 }
+
+/* #262: was injected as a <style> element by scripts/accessibility.js, which
+   `style-src 'self'` blocks — so the zoom applied by _applyCssGameZoom scaled
+   the canvas from its centre instead of its top-left corner.
+   (`canvas.style.transform` itself is fine: CSP does not cover CSSOM writes,
+   only <style> elements and style="" attributes.) */
+#gameCanvas {
+    transform-origin: 0 0;
+}

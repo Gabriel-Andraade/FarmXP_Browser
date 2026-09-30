@@ -336,18 +336,6 @@ export function showSpeechBubble(text, duration = 3000) {
     bubble.appendChild(arrow);
     document.body.appendChild(bubble);
 
-    if (!document.getElementById('bubble-keyframes')) {
-        const style = document.createElement('style');
-        style.id = 'bubble-keyframes';
-        style.textContent = `
-            @keyframes bubbleFadeIn {
-                from { opacity: 0; transform: translateX(-50%) translateY(8px); }
-                to   { opacity: 1; transform: translateX(-50%) translateY(0); }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     bubbleTimeout = setTimeout(() => hideSpeechBubble(), duration);
 }
 
