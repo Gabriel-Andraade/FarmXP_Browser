@@ -1317,91 +1317,156 @@ export function drawBackground(ctx) {
   }
 }
 
-// Offscreen canvas cache para grass tiles
-let _grassCache = null;
+// ── Grass layer (#263) ──────────────────────────────────────────────────────
+//
+// The grass used to be baked into an offscreen canvas covering the viewport
+// plus a 10-tile buffer, rebuilt from scratch the moment the camera left that
+// region — ~3,700 drawImage calls in a single frame, every ~10 tiles walked.
+// That was the periodic hitch while walking.
+//
+// It does not need a cache at all. The tile is picked by `(x + y) % variants`,
+// a pure function of the world coordinates with no randomness, so the layer is
+// a repeating pattern: a block of `variants × variants` tiles tiles seamlessly
+// in both axes, because ((i + variants) + j) % variants === (i + j) % variants.
+// One `fillRect` with that pattern draws the whole viewport, in constant time,
+// however far the camera moves.
+
+/** Built pattern + the inputs it was built from, so it is rebuilt when they change. */
+let _grassPattern = null;
 
 /** Invalida o cache de grass (chamado em transições de mapa) */
 export function invalidateGrassCache() {
-  _grassCache = null;
+  _grassPattern = null;
 }
 
-function _ensureGrassCache() {
-  // Buffer extra em tiles ao redor do viewport para evitar re-renders frequentes
-  const BUFFER_TILES = 10;
+/**
+ * Where the pattern has to start so its tile (0,0) lands on the world tile the
+ * fill begins at.
+ *
+ * The pattern always starts its block at cell (0,0) — index 0 — but the world
+ * tile under it is `(col + row) % variants`. Shifting the pattern origin back
+ * by the tile's position inside the block lines the two up. With a single
+ * grass tile (today's case) this is always 0; it keeps the layer correct if
+ * more variants are added later.
+ *
+ * @returns {{x: number, y: number}} offset in tiles
+ */
+export function grassPatternPhase(col, row, variants) {
+  if (!Number.isFinite(variants) || variants <= 1) return { x: 0, y: 0 };
+  return {
+    x: ((col % variants) + variants) % variants,
+    y: ((row % variants) + variants) % variants,
+  };
+}
+
+/**
+ * The repeating block, as a canvas. Uses the loaded floor images when they are
+ * ready, and falls back to the same two-tone checkerboard the old code drew.
+ */
+function _buildGrassBlock(variants, useImages) {
+  const size = variants * ZOOMED_TILE_SIZE_INT;
+  const block = document.createElement('canvas');
+  block.width = size;
+  block.height = size;
+  const bctx = block.getContext('2d', { alpha: false });
+  // Nearest-neighbour: the tiles are pixel art, and smoothing at the block's
+  // edges is what would show up as seams once it repeats.
+  bctx.imageSmoothingEnabled = false;
+
+  for (let j = 0; j < variants; j++) {
+    for (let i = 0; i < variants; i++) {
+      const index = (i + j) % variants;
+      const x = i * ZOOMED_TILE_SIZE_INT;
+      const y = j * ZOOMED_TILE_SIZE_INT;
+      if (useImages) {
+        bctx.drawImage(assets.nature.floor[index].img, x, y, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+      } else {
+        bctx.fillStyle = index % 2 === 0 ? "#5a9367" : "#528a5e";
+        bctx.fillRect(x, y, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
+      }
+    }
+  }
+  return block;
+}
+
+/** The pattern for the current assets/tile size, rebuilt only when those change. */
+function _ensureGrassPattern(ctx) {
+  const floors = assets.nature?.floor ?? [];
+  // `complete` is also true for an image that failed to load, and drawing one
+  // paints nothing — on an opaque block that reads as a black field where the
+  // grass should be. `naturalWidth` is what separates loaded from broken.
+  const ready = floors.length > 0
+    && floors.every((f) => f?.img?.complete && f.img.naturalWidth > 0);
+  // Without images the old code drew a 2-colour checkerboard, which is a
+  // 2-variant pattern — same path, no images.
+  const variants = ready ? floors.length : 2;
+
+  if (_grassPattern
+      && _grassPattern.variants === variants
+      && _grassPattern.ready === ready
+      && _grassPattern.tile === ZOOMED_TILE_SIZE_INT) {
+    return _grassPattern;
+  }
+
+  const block = _buildGrassBlock(variants, ready);
+  const pattern = ctx.createPattern(block, 'repeat');
+  if (!pattern) return null;
+
+  _grassPattern = { pattern, variants, ready, tile: ZOOMED_TILE_SIZE_INT };
+  return _grassPattern;
+}
+
+function drawGrass(ctx) {
+  const built = _ensureGrassPattern(ctx);
+
   const camX = camera?.x ?? 0;
   const camY = camera?.y ?? 0;
   const camW = camera?.width ?? GAME_WIDTH;
   const camH = camera?.height ?? GAME_HEIGHT;
 
-  const startCol = Math.max(0, Math.floor((camX - CULLING_BUFFER) / TILE_SIZE) - BUFFER_TILES);
+  // Whole tiles covering the viewport, clamped to the world — the same region
+  // the old cache computed, minus the 10-tile buffer that only existed to make
+  // the rebuilds less frequent.
+  const startCol = Math.max(0, Math.floor((camX - CULLING_BUFFER) / TILE_SIZE));
   const endCol = Math.min(Math.ceil(WORLD_WIDTH / TILE_SIZE),
-    Math.ceil((camX + camW + CULLING_BUFFER) / TILE_SIZE) + BUFFER_TILES);
-  const startRow = Math.max(0, Math.floor((camY - CULLING_BUFFER) / TILE_SIZE) - BUFFER_TILES);
+    Math.ceil((camX + camW + CULLING_BUFFER) / TILE_SIZE));
+  const startRow = Math.max(0, Math.floor((camY - CULLING_BUFFER) / TILE_SIZE));
   const endRow = Math.min(Math.ceil(WORLD_HEIGHT / TILE_SIZE),
-    Math.ceil((camY + camH + CULLING_BUFFER) / TILE_SIZE) + BUFFER_TILES);
-
-  // Reusar cache se a região atual ainda está dentro da região cacheada
-  if (_grassCache &&
-      startCol >= _grassCache.startCol && endCol <= _grassCache.endCol &&
-      startRow >= _grassCache.startRow && endRow <= _grassCache.endRow) {
-    return _grassCache;
-  }
-
-  const cols = endCol - startCol;
-  const rows = endRow - startRow;
-  const w = cols * ZOOMED_TILE_SIZE_INT;
-  const h = rows * ZOOMED_TILE_SIZE_INT;
-
-  let offCanvas, offCtx;
-  if (_grassCache && _grassCache.canvas.width >= w && _grassCache.canvas.height >= h) {
-    offCanvas = _grassCache.canvas;
-    offCtx = _grassCache.ctx;
-    offCtx.clearRect(0, 0, w, h);
-  } else {
-    offCanvas = document.createElement('canvas');
-    offCanvas.width = w;
-    offCanvas.height = h;
-    offCtx = offCanvas.getContext('2d', { alpha: false });
-  }
-
-  for (let y = startRow; y < endRow; y++) {
-    for (let x = startCol; x < endCol; x++) {
-      const drawX = (x - startCol) * ZOOMED_TILE_SIZE_INT;
-      const drawY = (y - startRow) * ZOOMED_TILE_SIZE_INT;
-
-      if (assets.nature?.floor?.length > 0) {
-        const grassType = (x + y) % assets.nature.floor.length;
-        const grassAsset = assets.nature.floor[grassType];
-        if (grassAsset?.img?.complete) {
-          offCtx.drawImage(grassAsset.img, drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
-          continue;
-        }
-      }
-
-      offCtx.fillStyle = (x + y) % 2 === 0 ? "#5a9367" : "#528a5e";
-      offCtx.fillRect(drawX, drawY, ZOOMED_TILE_SIZE_INT, ZOOMED_TILE_SIZE_INT);
-    }
-  }
-
-  _grassCache = { canvas: offCanvas, ctx: offCtx, startCol, endCol, startRow, endRow };
-  return _grassCache;
-}
-
-function drawGrass(ctx) {
-  const cache = _ensureGrassCache();
+    Math.ceil((camY + camH + CULLING_BUFFER) / TILE_SIZE));
+  if (endCol <= startCol || endRow <= startRow) return;
 
   const toScreen = (typeof worldToScreenFast === "function")
     ? worldToScreenFast
     : (x, y) => (camera?.worldToScreen ? camera.worldToScreen(x, y) : { x, y });
 
-  // Uma única drawImage ao invés de centenas
-  const origin = toScreen(cache.startCol * TILE_SIZE, cache.startRow * TILE_SIZE);
-  const cols = cache.endCol - cache.startCol;
-  const rows = cache.endRow - cache.startRow;
-  ctx.drawImage(cache.canvas,
-    0, 0, cols * ZOOMED_TILE_SIZE_INT, rows * ZOOMED_TILE_SIZE_INT,
-    Math.floor(origin.x), Math.floor(origin.y),
-    cols * ZOOMED_TILE_SIZE_INT, rows * ZOOMED_TILE_SIZE_INT);
+  const origin = toScreen(startCol * TILE_SIZE, startRow * TILE_SIZE);
+
+  // createPattern can return null (a zero-sized block). Rather than draw
+  // nothing and leave the world without ground, fall back to the flat colour.
+  if (!built) {
+    ctx.save();
+    ctx.fillStyle = "#5a9367";
+    ctx.fillRect(
+      Math.floor(origin.x), Math.floor(origin.y),
+      (endCol - startCol) * ZOOMED_TILE_SIZE_INT,
+      (endRow - startRow) * ZOOMED_TILE_SIZE_INT);
+    ctx.restore();
+    return;
+  }
+
+  const phase = grassPatternPhase(startCol, startRow, built.variants);
+  const offsetX = phase.x * ZOOMED_TILE_SIZE_INT;
+  const offsetY = phase.y * ZOOMED_TILE_SIZE_INT;
+  const w = (endCol - startCol) * ZOOMED_TILE_SIZE_INT;
+  const h = (endRow - startRow) * ZOOMED_TILE_SIZE_INT;
+
+  ctx.save();
+  // Floor like the old draw did: a fractional origin makes the pixel-art tiles
+  // shimmer as the camera moves.
+  ctx.translate(Math.floor(origin.x) - offsetX, Math.floor(origin.y) - offsetY);
+  ctx.fillStyle = built.pattern;
+  ctx.fillRect(offsetX, offsetY, w, h);
+  ctx.restore();
 }
 
 /* fallbacks simples para natureza */
