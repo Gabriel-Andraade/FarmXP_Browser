@@ -50,6 +50,7 @@
   <link rel="stylesheet" href="./style/inventory-actions.css">
   <link rel="stylesheet" href="./style/save-slots.css">
   <link rel="stylesheet" href="./style/pause-menu.css">
+  <link rel="stylesheet" href="./style/xp-notification.css">
   <link rel="stylesheet" href="./style/update-prompt.css">
   <link rel="stylesheet" href="./style/help-panel.css">
   <link rel="stylesheet" href="./style/main-menu.css">
@@ -87,9 +88,9 @@
                     <button class="modal-close" aria-label="Close">&times;</button>
                 </div>
                 <div id="config-content">
-                    <div class="setting-row" style="margin: 20px; display: flex; align-items: center; gap: 15px;">
-                        <label for="languageSelect" data-i18n="settings.language" style="font-size: 18px; font-weight: 500; color: #fff;">Idioma:</label>
-                        <select id="languageSelect" class="setting-select" style="padding: 8px 12px; font-size: 16px; background: #2a2a2a; color: #fff; border: 1px solid #444; border-radius: 5px; cursor: pointer;">
+                    <div class="setting-row setting-row-language">
+                        <label for="languageSelect" data-i18n="settings.language">Idioma:</label>
+                        <select id="languageSelect" class="setting-select">
                             <option value="pt-BR">Português (Brasil)</option>
                             <option value="en">English</option>
                             <option value="es">Español</option>

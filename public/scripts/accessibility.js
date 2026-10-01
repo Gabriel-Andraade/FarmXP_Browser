@@ -59,7 +59,6 @@ class AccessibilityManager {
     this._announcer = null;
     this._previousFocus = null;
     this._trapHandlers = new WeakMap();
-    this._injectedStyleEl = null;
     this._cvdSvgEl = null;
   }
 
@@ -71,7 +70,6 @@ class AccessibilityManager {
     this._loadSettings();
 
     // Inject minimal CSS needed for new settings (uiScale/gameZoom/cvd)
-    this._ensureInjectedStyles();
     this._ensureColorVisionSvgFilters();
 
     this._applyAllSettings({ emitEvents: false });
@@ -378,23 +376,6 @@ class AccessibilityManager {
       this._previousFocus.focus();
     }
     this._previousFocus = null;
-  }
-
-  // ── New: injected styles for zoom + CVD ───────────────
-
-  _ensureInjectedStyles() {
-    if (document.getElementById('a11y-inline-style')) return;
-
-    const style = document.createElement('style');
-    style.id = 'a11y-inline-style';
-    style.textContent = `
-      /* Injected by scripts/accessibility.js */
-      #gameCanvas {
-        transform-origin: 0 0;
-      }
-    `;
-    document.head.appendChild(style);
-    this._injectedStyleEl = style;
   }
 
   _applyCssGameZoom(zoom) {

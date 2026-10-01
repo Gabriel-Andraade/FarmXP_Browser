@@ -416,3 +416,73 @@ input:checked + .config-slider:before {
     background: rgba(255,255,255,0.05);
     border-radius: 4px;
 }
+
+/* ===== #262: styles that used to live inline in index.html =====
+   `style-src 'self'` blocks style="" attributes, so the language row got no
+   styling at all and rendered with the browser defaults — system font and a
+   white select in the middle of the wooden theme. */
+
+.setting-row-language {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 20px;
+}
+
+.setting-row-language label {
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--save-text-light, #f5e9d3);
+}
+
+/* Same look as the .config-select used across the rest of the screen. */
+.setting-select {
+    background: rgba(46, 28, 15, 0.8);
+    border: 2px solid #8b5a2b;
+    border-radius: 5px;
+    padding: 8px 12px;
+    color: #f5e9d3;
+    font-size: 16px;
+    cursor: pointer;
+    outline: none;
+}
+
+.setting-select:focus-visible {
+    outline: 3px solid rgba(201, 164, 99, 0.75);
+    outline-offset: 2px;
+}
+
+/* ===== Modal shell =====
+   `.store-container` is the settings modal's inner box and had no rule at all, so it had no height limit and was
+   not a flex container — which meant `#config-content`'s `overflow-y: auto`
+   never engaged. The content grew past the viewport and `.modal.active`
+   centred a box taller than the screen, clipping the header off the top and
+   the last section off the bottom.
+
+   Scoped to #configModal on purpose: questSystem.js reuses the same class for
+   the quests modal, which styles itself inline and was never part of this
+   issue. It likely has the same latent clipping — worth its own look. */
+
+#configModal .store-container {
+    display: flex;
+    flex-direction: column;
+    width: min(92vw, 720px);
+    max-height: 90vh;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--save-bg-modal, #1a1208);
+    border: 3px solid var(--save-border-gold, #c9a463);
+    border-radius: var(--save-radius, 12px);
+    box-shadow: var(--save-shadow, 0 10px 40px rgba(0, 0, 0, 0.6));
+}
+
+/* The header stays put; only the content below it scrolls. */
+#configModal .store-container > .modal-header {
+    flex: 0 0 auto;
+}
+
+/* `min-height: 0` lets a flex child shrink below its content size — without
+   it the overflow rule above is ignored and the box grows again. */
+#config-content {
+    min-height: 0;
+}

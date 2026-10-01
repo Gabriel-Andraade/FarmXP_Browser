@@ -275,3 +275,13 @@
         min-height: 2.5rem;
     }
 }
+
+/* #262: the quest speech bubble's entry animation. questSystem.js injected
+   these keyframes as a <style> element, which `style-src 'self'` blocks — so
+   the bubble appeared with no fade-in at all. The bubble's own look is set
+   through `style.cssText`, which CSP does not cover (CSSOM writes are not
+   inline styles), which is why only the animation was missing. */
+@keyframes bubbleFadeIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
