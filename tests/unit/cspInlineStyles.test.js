@@ -65,6 +65,7 @@ describe('CSP: no inline styles (#262)', () => {
     expect(read('accessibility.css'), 'canvas zoom origin').toContain('transform-origin');
     expect(read('dialogue.css'), 'speech bubble animation').toContain('bubbleFadeIn');
     expect(read('xp-notification.css'), 'xp toast').toContain('.xp-toast');
+    expect(read('xp-notification.css'), 'no JS interpolation in CSS').not.toContain('${');
   });
 
   test('style-src stays self — no unsafe-inline crept in', () => {
