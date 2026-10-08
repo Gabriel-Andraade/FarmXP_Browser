@@ -1,5 +1,5 @@
 // GERADO por tools/gen-embedded.mjs — não editar à mão.
-// 576 arquivos, 26.3 MB embutidos no binário.
+// 603 arquivos, 26.6 MB embutidos no binário.
 
 import _a0 from "./public/assets/allRocks/Rock1.webp" with { type: "file" };
 import _a1 from "./public/assets/allRocks/Rock2.webp" with { type: "file" };
@@ -436,147 +436,174 @@ import _a431 from "./public/scripts/bucketSystem.js" with { type: "file" };
 import _a432 from "./public/scripts/buildSystem.js" with { type: "file" };
 import _a433 from "./public/scripts/categoryMapper.js" with { type: "file" };
 import _a434 from "./public/scripts/chestSystem.js" with { type: "file" };
-import _a435 from "./public/scripts/cityHouseSystem.js" with { type: "file" };
-import _a436 from "./public/scripts/cityObstaclesSystem.js" with { type: "file" };
-import _a437 from "./public/scripts/cityRenderer.js" with { type: "file" };
-import _a438 from "./public/scripts/city/cityRenderer.js" with { type: "file" };
-import _a439 from "./public/scripts/collisionSystem.js" with { type: "file" };
-import _a440 from "./public/scripts/constants.js" with { type: "file" };
-import _a441 from "./public/scripts/craftingSystem.js" with { type: "file" };
-import _a442 from "./public/scripts/cropSystem.js" with { type: "file" };
-import _a443 from "./public/scripts/cssManager.js" with { type: "file" };
-import _a444 from "./public/scripts/currencyManager.js" with { type: "file" };
-import _a445 from "./public/scripts/debug/cityHitboxConfig.json" with { type: "file" };
-import _a446 from "./public/scripts/dialogueSystem.js" with { type: "file" };
-import _a447 from "./public/scripts/displayMode.js" with { type: "file" };
-import _a448 from "./public/scripts/equippedFillCursor.js" with { type: "file" };
-import _a449 from "./public/scripts/errorHandler.js" with { type: "file" };
-import _a450 from "./public/scripts/fillLevel.js" with { type: "file" };
-import _a451 from "./public/scripts/fluidContainer.js" with { type: "file" };
-import _a452 from "./public/scripts/foodTroughPanelSimple.js" with { type: "file" };
-import _a453 from "./public/scripts/foodTroughSystem.js" with { type: "file" };
-import _a454 from "./public/scripts/fuelSystem.js" with { type: "file" };
-import _a455 from "./public/scripts/gallery/galleryUI.js" with { type: "file" };
-import _a456 from "./public/scripts/gameCleanup.js" with { type: "file" };
-import _a457 from "./public/scripts/gameState.js" with { type: "file" };
-import _a458 from "./public/scripts/generatorSeeds.js" with { type: "file" };
-import _a459 from "./public/scripts/helpPanel.js" with { type: "file" };
-import _a460 from "./public/scripts/hoeTool.js" with { type: "file" };
-import _a461 from "./public/scripts/houseSystem.js" with { type: "file" };
-import _a462 from "./public/scripts/i18n/en.js" with { type: "file" };
-import _a463 from "./public/scripts/i18n/es.js" with { type: "file" };
-import _a464 from "./public/scripts/i18n/i18n.js" with { type: "file" };
-import _a465 from "./public/scripts/i18n/pt-BR.js" with { type: "file" };
-import _a466 from "./public/scripts/item.js" with { type: "file" };
-import _a467 from "./public/scripts/itemSystem.js" with { type: "file" };
-import _a468 from "./public/scripts/itemUtils.js" with { type: "file" };
-import _a469 from "./public/scripts/keybindDefaults.js" with { type: "file" };
-import _a470 from "./public/scripts/loadingScreen.js" with { type: "file" };
-import _a471 from "./public/scripts/logger.js" with { type: "file" };
-import _a472 from "./public/scripts/main.js" with { type: "file" };
-import _a473 from "./public/scripts/mainMenu/mainMenu.js" with { type: "file" };
-import _a474 from "./public/scripts/mapManager.js" with { type: "file" };
-import _a475 from "./public/scripts/merchant.js" with { type: "file" };
-import _a476 from "./public/scripts/minimap/minimapIntegration.js" with { type: "file" };
-import _a477 from "./public/scripts/minimap/minimapSystem.js" with { type: "file" };
-import _a478 from "./public/scripts/minimap/minimapUI.js" with { type: "file" };
-import _a479 from "./public/scripts/npcs/family/npcIsabela.js" with { type: "file" };
-import _a480 from "./public/scripts/npcs/family/npcJohn.js" with { type: "file" };
-import _a481 from "./public/scripts/npcs/family/npcLucas.js" with { type: "file" };
-import _a482 from "./public/scripts/npcs/family/npcMolly.js" with { type: "file" };
-import _a483 from "./public/scripts/npcs/npcBartolomeu.js" with { type: "file" };
-import _a484 from "./public/scripts/npcs/npcBru.js" with { type: "file" };
-import _a485 from "./public/scripts/npcs/npcCouple.js" with { type: "file" };
-import _a486 from "./public/scripts/npcs/npcJeremy.js" with { type: "file" };
-import _a487 from "./public/scripts/npcs/npcJuan.js" with { type: "file" };
-import _a488 from "./public/scripts/npcs/npcMilly.js" with { type: "file" };
-import _a489 from "./public/scripts/npcs/npcSystem.js" with { type: "file" };
-import _a490 from "./public/scripts/npcs/personalitySystem.js" with { type: "file" };
-import _a491 from "./public/scripts/npcs/tutorialQuests.js" with { type: "file" };
-import _a492 from "./public/scripts/optimizationConstants.js" with { type: "file" };
-import _a493 from "./public/scripts/qualityMode.js" with { type: "file" };
-import _a494 from "./public/scripts/questSystem.js" with { type: "file" };
-import _a495 from "./public/scripts/quests/questRegistry.js" with { type: "file" };
-import _a496 from "./public/scripts/recipes.js" with { type: "file" };
-import _a497 from "./public/scripts/register-sw.js" with { type: "file" };
-import _a498 from "./public/scripts/reloadPrompt.js" with { type: "file" };
-import _a499 from "./public/scripts/responsive.js" with { type: "file" };
-import _a500 from "./public/scripts/safeDispatch.js" with { type: "file" };
-import _a501 from "./public/scripts/saveSlotsUI.js" with { type: "file" };
-import _a502 from "./public/scripts/saveSystem.js" with { type: "file" };
-import _a503 from "./public/scripts/searchMatch.js" with { type: "file" };
-import _a504 from "./public/scripts/settingsUI.js" with { type: "file" };
-import _a505 from "./public/scripts/steamBadge.js" with { type: "file" };
-import _a506 from "./public/scripts/storageSystem.js" with { type: "file" };
-import _a507 from "./public/scripts/thePlayer/ben.js" with { type: "file" };
-import _a508 from "./public/scripts/thePlayer/cameraSystem.js" with { type: "file" };
-import _a509 from "./public/scripts/thePlayer/characterModule.js" with { type: "file" };
-import _a510 from "./public/scripts/thePlayer/characterSelection.js" with { type: "file" };
-import _a511 from "./public/scripts/thePlayer/control.js" with { type: "file" };
-import _a512 from "./public/scripts/thePlayer/frames.js" with { type: "file" };
-import _a513 from "./public/scripts/thePlayer/graham.js" with { type: "file" };
-import _a514 from "./public/scripts/thePlayer/inventorySystem.js" with { type: "file" };
-import _a515 from "./public/scripts/thePlayer/inventoryUI.js" with { type: "file" };
-import _a516 from "./public/scripts/thePlayer/playerHUD.js" with { type: "file" };
-import _a517 from "./public/scripts/thePlayer/playerInventory.js" with { type: "file" };
-import _a518 from "./public/scripts/thePlayer/playerSystem.js" with { type: "file" };
-import _a519 from "./public/scripts/thePlayer/seedWheel.js" with { type: "file" };
-import _a520 from "./public/scripts/thePlayer/stella.js" with { type: "file" };
-import _a521 from "./public/scripts/thePlayer/toolWheel.js" with { type: "file" };
-import _a522 from "./public/scripts/theWorld.js" with { type: "file" };
-import _a523 from "./public/scripts/travelMap.js" with { type: "file" };
-import _a524 from "./public/scripts/troughMarker.js" with { type: "file" };
-import _a525 from "./public/scripts/validation.js" with { type: "file" };
-import _a526 from "./public/scripts/validationTests.js" with { type: "file" };
-import _a527 from "./public/scripts/vetSystem.js" with { type: "file" };
-import _a528 from "./public/scripts/waterTroughPanel.js" with { type: "file" };
-import _a529 from "./public/scripts/waterTroughSystem.js" with { type: "file" };
-import _a530 from "./public/scripts/wateringCan.js" with { type: "file" };
-import _a531 from "./public/scripts/weather.js" with { type: "file" };
-import _a532 from "./public/scripts/wellSystem.js" with { type: "file" };
-import _a533 from "./public/scripts/worldConstants.js" with { type: "file" };
-import _a534 from "./public/scripts/worldUI.js" with { type: "file" };
-import _a535 from "./public/scripts/xpNotification.js" with { type: "file" };
-import _a536 from "./public/scripts/xpSystem.js" with { type: "file" };
-import _a537 from "./public/style/accessibility.css" with { type: "file" };
-import _a538 from "./public/style/achievements.css" with { type: "file" };
-import _a539 from "./public/style/animal-tomb.css" with { type: "file" };
-import _a540 from "./public/style/animal-ui.css" with { type: "file" };
-import _a541 from "./public/style/base.css" with { type: "file" };
-import _a542 from "./public/style/build.css" with { type: "file" };
-import _a543 from "./public/style/character-select.css" with { type: "file" };
-import _a544 from "./public/style/chest.css" with { type: "file" };
-import _a545 from "./public/style/commerce.css" with { type: "file" };
-import _a546 from "./public/style/config.css" with { type: "file" };
-import _a547 from "./public/style/crafting.css" with { type: "file" };
-import _a548 from "./public/style/dialogue.css" with { type: "file" };
-import _a549 from "./public/style/enclosure-animal-panel.css" with { type: "file" };
-import _a550 from "./public/style/food-trough-panel.css" with { type: "file" };
-import _a551 from "./public/style/gallery.css" with { type: "file" };
-import _a552 from "./public/style/game.css" with { type: "file" };
-import _a553 from "./public/style/help-panel.css" with { type: "file" };
-import _a554 from "./public/style/house.css" with { type: "file" };
-import _a555 from "./public/style/hud.css" with { type: "file" };
-import _a556 from "./public/style/icon-atlas.css" with { type: "file" };
-import _a557 from "./public/style/inventory-actions.css" with { type: "file" };
-import _a558 from "./public/style/loading.css" with { type: "file" };
-import _a559 from "./public/style/main-menu.css" with { type: "file" };
-import _a560 from "./public/style/minimap.css" with { type: "file" };
-import _a561 from "./public/style/mobile-controls.css" with { type: "file" };
-import _a562 from "./public/style/modals.css" with { type: "file" };
-import _a563 from "./public/style/player-feedback.css" with { type: "file" };
-import _a564 from "./public/style/player-panel.css" with { type: "file" };
-import _a565 from "./public/style/save-slots.css" with { type: "file" };
-import _a566 from "./public/style/storage.css" with { type: "file" };
-import _a567 from "./public/style/tool-wheel.css" with { type: "file" };
-import _a568 from "./public/style/travel-map.css" with { type: "file" };
-import _a569 from "./public/style/update-prompt.css" with { type: "file" };
-import _a570 from "./public/style/variables.css" with { type: "file" };
-import _a571 from "./public/style/vet.css" with { type: "file" };
-import _a572 from "./public/style/water-trough-panel.css" with { type: "file" };
-import _a573 from "./public/style/weather.css" with { type: "file" };
-import _a574 from "./public/style/well.css" with { type: "file" };
-import _a575 from "./public/sw.js" with { type: "file" };
+import _a435 from "./public/scripts/choiceLock.js" with { type: "file" };
+import _a436 from "./public/scripts/cityHouseSystem.js" with { type: "file" };
+import _a437 from "./public/scripts/cityObstaclesSystem.js" with { type: "file" };
+import _a438 from "./public/scripts/cityRenderer.js" with { type: "file" };
+import _a439 from "./public/scripts/city/cityRenderer.js" with { type: "file" };
+import _a440 from "./public/scripts/collisionSystem.js" with { type: "file" };
+import _a441 from "./public/scripts/constants.js" with { type: "file" };
+import _a442 from "./public/scripts/craftingSystem.js" with { type: "file" };
+import _a443 from "./public/scripts/cropSystem.js" with { type: "file" };
+import _a444 from "./public/scripts/cssManager.js" with { type: "file" };
+import _a445 from "./public/scripts/currencyManager.js" with { type: "file" };
+import _a446 from "./public/scripts/debug/cityHitboxConfig.json" with { type: "file" };
+import _a447 from "./public/scripts/dialogueSystem.js" with { type: "file" };
+import _a448 from "./public/scripts/displayMode.js" with { type: "file" };
+import _a449 from "./public/scripts/equippedFillCursor.js" with { type: "file" };
+import _a450 from "./public/scripts/errorHandler.js" with { type: "file" };
+import _a451 from "./public/scripts/fillLevel.js" with { type: "file" };
+import _a452 from "./public/scripts/fluidContainer.js" with { type: "file" };
+import _a453 from "./public/scripts/foodTroughPanelSimple.js" with { type: "file" };
+import _a454 from "./public/scripts/foodTroughSystem.js" with { type: "file" };
+import _a455 from "./public/scripts/fuelSystem.js" with { type: "file" };
+import _a456 from "./public/scripts/gallery/galleryUI.js" with { type: "file" };
+import _a457 from "./public/scripts/gameCleanup.js" with { type: "file" };
+import _a458 from "./public/scripts/gameState.js" with { type: "file" };
+import _a459 from "./public/scripts/gamepadProbe.js" with { type: "file" };
+import _a460 from "./public/scripts/generatorSeeds.js" with { type: "file" };
+import _a461 from "./public/scripts/helpPanel.js" with { type: "file" };
+import _a462 from "./public/scripts/hoeTool.js" with { type: "file" };
+import _a463 from "./public/scripts/houseSystem.js" with { type: "file" };
+import _a464 from "./public/scripts/i18n/en.js" with { type: "file" };
+import _a465 from "./public/scripts/i18n/es.js" with { type: "file" };
+import _a466 from "./public/scripts/i18n/i18n.js" with { type: "file" };
+import _a467 from "./public/scripts/i18n/pt-BR.js" with { type: "file" };
+import _a468 from "./public/scripts/item.js" with { type: "file" };
+import _a469 from "./public/scripts/itemSystem.js" with { type: "file" };
+import _a470 from "./public/scripts/itemUtils.js" with { type: "file" };
+import _a471 from "./public/scripts/keybindDefaults.js" with { type: "file" };
+import _a472 from "./public/scripts/loadingScreen.js" with { type: "file" };
+import _a473 from "./public/scripts/logger.js" with { type: "file" };
+import _a474 from "./public/scripts/main.js" with { type: "file" };
+import _a475 from "./public/scripts/mainMenu/mainMenu.js" with { type: "file" };
+import _a476 from "./public/scripts/mapManager.js" with { type: "file" };
+import _a477 from "./public/scripts/merchant.js" with { type: "file" };
+import _a478 from "./public/scripts/minimap/minimapIntegration.js" with { type: "file" };
+import _a479 from "./public/scripts/minimap/minimapSystem.js" with { type: "file" };
+import _a480 from "./public/scripts/minimap/minimapUI.js" with { type: "file" };
+import _a481 from "./public/scripts/npcs/family/npcIsabela.js" with { type: "file" };
+import _a482 from "./public/scripts/npcs/family/npcJohn.js" with { type: "file" };
+import _a483 from "./public/scripts/npcs/family/npcLucas.js" with { type: "file" };
+import _a484 from "./public/scripts/npcs/family/npcMolly.js" with { type: "file" };
+import _a485 from "./public/scripts/npcs/npcBartolomeu.js" with { type: "file" };
+import _a486 from "./public/scripts/npcs/npcBru.js" with { type: "file" };
+import _a487 from "./public/scripts/npcs/npcCouple.js" with { type: "file" };
+import _a488 from "./public/scripts/npcs/npcJeremy.js" with { type: "file" };
+import _a489 from "./public/scripts/npcs/npcJuan.js" with { type: "file" };
+import _a490 from "./public/scripts/npcs/npcMilly.js" with { type: "file" };
+import _a491 from "./public/scripts/npcs/npcSystem.js" with { type: "file" };
+import _a492 from "./public/scripts/npcs/personalitySystem.js" with { type: "file" };
+import _a493 from "./public/scripts/npcs/tutorialQuests.js" with { type: "file" };
+import _a494 from "./public/scripts/optimizationConstants.js" with { type: "file" };
+import _a495 from "./public/scripts/pauseMenu.js" with { type: "file" };
+import _a496 from "./public/scripts/qualityMode.js" with { type: "file" };
+import _a497 from "./public/scripts/questSystem.js" with { type: "file" };
+import _a498 from "./public/scripts/quests/questRegistry.js" with { type: "file" };
+import _a499 from "./public/scripts/recipes.js" with { type: "file" };
+import _a500 from "./public/scripts/register-sw.js" with { type: "file" };
+import _a501 from "./public/scripts/reloadPrompt.js" with { type: "file" };
+import _a502 from "./public/scripts/responsive.js" with { type: "file" };
+import _a503 from "./public/scripts/safeDispatch.js" with { type: "file" };
+import _a504 from "./public/scripts/saveMessages.js" with { type: "file" };
+import _a505 from "./public/scripts/saveSlotsUI.js" with { type: "file" };
+import _a506 from "./public/scripts/saveSystem.js" with { type: "file" };
+import _a507 from "./public/scripts/searchMatch.js" with { type: "file" };
+import _a508 from "./public/scripts/selectable.js" with { type: "file" };
+import _a509 from "./public/scripts/settingsUI.js" with { type: "file" };
+import _a510 from "./public/scripts/steamBadge.js" with { type: "file" };
+import _a511 from "./public/scripts/storageSystem.js" with { type: "file" };
+import _a512 from "./public/scripts/thePlayer/ben.js" with { type: "file" };
+import _a513 from "./public/scripts/thePlayer/cameraSystem.js" with { type: "file" };
+import _a514 from "./public/scripts/thePlayer/characterModule.js" with { type: "file" };
+import _a515 from "./public/scripts/thePlayer/characterSelection.js" with { type: "file" };
+import _a516 from "./public/scripts/thePlayer/control.js" with { type: "file" };
+import _a517 from "./public/scripts/thePlayer/frames.js" with { type: "file" };
+import _a518 from "./public/scripts/thePlayer/graham.js" with { type: "file" };
+import _a519 from "./public/scripts/thePlayer/input/bindings.js" with { type: "file" };
+import _a520 from "./public/scripts/thePlayer/input/buttonHints.js" with { type: "file" };
+import _a521 from "./public/scripts/thePlayer/input/chestNavigation.js" with { type: "file" };
+import _a522 from "./public/scripts/thePlayer/input/craftingNavigation.js" with { type: "file" };
+import _a523 from "./public/scripts/thePlayer/input/dialogueNavigation.js" with { type: "file" };
+import _a524 from "./public/scripts/thePlayer/input/gamepadCursor.js" with { type: "file" };
+import _a525 from "./public/scripts/thePlayer/input/gamepadGlyphs.js" with { type: "file" };
+import _a526 from "./public/scripts/thePlayer/input/gamepadInput.js" with { type: "file" };
+import _a527 from "./public/scripts/thePlayer/input/gamepadSettings.js" with { type: "file" };
+import _a528 from "./public/scripts/thePlayer/input/inputSource.js" with { type: "file" };
+import _a529 from "./public/scripts/thePlayer/input/keyboard.js" with { type: "file" };
+import _a530 from "./public/scripts/thePlayer/input/marketNavigation.js" with { type: "file" };
+import _a531 from "./public/scripts/thePlayer/input/panelNavigation.js" with { type: "file" };
+import _a532 from "./public/scripts/thePlayer/input/panels.js" with { type: "file" };
+import _a533 from "./public/scripts/thePlayer/input/sleepState.js" with { type: "file" };
+import _a534 from "./public/scripts/thePlayer/input/storageNavigation.js" with { type: "file" };
+import _a535 from "./public/scripts/thePlayer/input/touch.js" with { type: "file" };
+import _a536 from "./public/scripts/thePlayer/input/travelNavigation.js" with { type: "file" };
+import _a537 from "./public/scripts/thePlayer/input/vetNavigation.js" with { type: "file" };
+import _a538 from "./public/scripts/thePlayer/inventorySystem.js" with { type: "file" };
+import _a539 from "./public/scripts/thePlayer/inventoryUI.js" with { type: "file" };
+import _a540 from "./public/scripts/thePlayer/playerHUD.js" with { type: "file" };
+import _a541 from "./public/scripts/thePlayer/playerInventory.js" with { type: "file" };
+import _a542 from "./public/scripts/thePlayer/playerSystem.js" with { type: "file" };
+import _a543 from "./public/scripts/thePlayer/seedWheel.js" with { type: "file" };
+import _a544 from "./public/scripts/thePlayer/stella.js" with { type: "file" };
+import _a545 from "./public/scripts/thePlayer/toolWheel.js" with { type: "file" };
+import _a546 from "./public/scripts/theWorld.js" with { type: "file" };
+import _a547 from "./public/scripts/travelMap.js" with { type: "file" };
+import _a548 from "./public/scripts/troughMarker.js" with { type: "file" };
+import _a549 from "./public/scripts/validation.js" with { type: "file" };
+import _a550 from "./public/scripts/validationTests.js" with { type: "file" };
+import _a551 from "./public/scripts/vetSystem.js" with { type: "file" };
+import _a552 from "./public/scripts/waterTroughPanel.js" with { type: "file" };
+import _a553 from "./public/scripts/waterTroughSystem.js" with { type: "file" };
+import _a554 from "./public/scripts/wateringCan.js" with { type: "file" };
+import _a555 from "./public/scripts/weather.js" with { type: "file" };
+import _a556 from "./public/scripts/wellSystem.js" with { type: "file" };
+import _a557 from "./public/scripts/worldConstants.js" with { type: "file" };
+import _a558 from "./public/scripts/worldUI.js" with { type: "file" };
+import _a559 from "./public/scripts/xpNotification.js" with { type: "file" };
+import _a560 from "./public/scripts/xpSystem.js" with { type: "file" };
+import _a561 from "./public/style/accessibility.css" with { type: "file" };
+import _a562 from "./public/style/achievements.css" with { type: "file" };
+import _a563 from "./public/style/animal-tomb.css" with { type: "file" };
+import _a564 from "./public/style/animal-ui.css" with { type: "file" };
+import _a565 from "./public/style/base.css" with { type: "file" };
+import _a566 from "./public/style/build.css" with { type: "file" };
+import _a567 from "./public/style/character-select.css" with { type: "file" };
+import _a568 from "./public/style/chest.css" with { type: "file" };
+import _a569 from "./public/style/commerce.css" with { type: "file" };
+import _a570 from "./public/style/config.css" with { type: "file" };
+import _a571 from "./public/style/crafting.css" with { type: "file" };
+import _a572 from "./public/style/dialogue.css" with { type: "file" };
+import _a573 from "./public/style/enclosure-animal-panel.css" with { type: "file" };
+import _a574 from "./public/style/food-trough-panel.css" with { type: "file" };
+import _a575 from "./public/style/gallery.css" with { type: "file" };
+import _a576 from "./public/style/game.css" with { type: "file" };
+import _a577 from "./public/style/gamepad.css" with { type: "file" };
+import _a578 from "./public/style/help-panel.css" with { type: "file" };
+import _a579 from "./public/style/house.css" with { type: "file" };
+import _a580 from "./public/style/hud.css" with { type: "file" };
+import _a581 from "./public/style/icon-atlas.css" with { type: "file" };
+import _a582 from "./public/style/inventory-actions.css" with { type: "file" };
+import _a583 from "./public/style/loading.css" with { type: "file" };
+import _a584 from "./public/style/main-menu.css" with { type: "file" };
+import _a585 from "./public/style/minimap.css" with { type: "file" };
+import _a586 from "./public/style/mobile-controls.css" with { type: "file" };
+import _a587 from "./public/style/modals.css" with { type: "file" };
+import _a588 from "./public/style/pause-menu.css" with { type: "file" };
+import _a589 from "./public/style/player-feedback.css" with { type: "file" };
+import _a590 from "./public/style/player-panel.css" with { type: "file" };
+import _a591 from "./public/style/save-slots.css" with { type: "file" };
+import _a592 from "./public/style/storage.css" with { type: "file" };
+import _a593 from "./public/style/tool-wheel.css" with { type: "file" };
+import _a594 from "./public/style/travel-map.css" with { type: "file" };
+import _a595 from "./public/style/update-prompt.css" with { type: "file" };
+import _a596 from "./public/style/variables.css" with { type: "file" };
+import _a597 from "./public/style/vet.css" with { type: "file" };
+import _a598 from "./public/style/water-trough-panel.css" with { type: "file" };
+import _a599 from "./public/style/weather.css" with { type: "file" };
+import _a600 from "./public/style/well.css" with { type: "file" };
+import _a601 from "./public/style/xp-notification.css" with { type: "file" };
+import _a602 from "./public/sw.js" with { type: "file" };
 
 export const EMBEDDED: Map<string, string> = new Map([
   ["assets/allRocks/Rock1.webp", _a0],
@@ -1014,145 +1041,172 @@ export const EMBEDDED: Map<string, string> = new Map([
   ["scripts/buildSystem.js", _a432],
   ["scripts/categoryMapper.js", _a433],
   ["scripts/chestSystem.js", _a434],
-  ["scripts/cityHouseSystem.js", _a435],
-  ["scripts/cityObstaclesSystem.js", _a436],
-  ["scripts/cityRenderer.js", _a437],
-  ["scripts/city/cityRenderer.js", _a438],
-  ["scripts/collisionSystem.js", _a439],
-  ["scripts/constants.js", _a440],
-  ["scripts/craftingSystem.js", _a441],
-  ["scripts/cropSystem.js", _a442],
-  ["scripts/cssManager.js", _a443],
-  ["scripts/currencyManager.js", _a444],
-  ["scripts/debug/cityHitboxConfig.json", _a445],
-  ["scripts/dialogueSystem.js", _a446],
-  ["scripts/displayMode.js", _a447],
-  ["scripts/equippedFillCursor.js", _a448],
-  ["scripts/errorHandler.js", _a449],
-  ["scripts/fillLevel.js", _a450],
-  ["scripts/fluidContainer.js", _a451],
-  ["scripts/foodTroughPanelSimple.js", _a452],
-  ["scripts/foodTroughSystem.js", _a453],
-  ["scripts/fuelSystem.js", _a454],
-  ["scripts/gallery/galleryUI.js", _a455],
-  ["scripts/gameCleanup.js", _a456],
-  ["scripts/gameState.js", _a457],
-  ["scripts/generatorSeeds.js", _a458],
-  ["scripts/helpPanel.js", _a459],
-  ["scripts/hoeTool.js", _a460],
-  ["scripts/houseSystem.js", _a461],
-  ["scripts/i18n/en.js", _a462],
-  ["scripts/i18n/es.js", _a463],
-  ["scripts/i18n/i18n.js", _a464],
-  ["scripts/i18n/pt-BR.js", _a465],
-  ["scripts/item.js", _a466],
-  ["scripts/itemSystem.js", _a467],
-  ["scripts/itemUtils.js", _a468],
-  ["scripts/keybindDefaults.js", _a469],
-  ["scripts/loadingScreen.js", _a470],
-  ["scripts/logger.js", _a471],
-  ["scripts/main.js", _a472],
-  ["scripts/mainMenu/mainMenu.js", _a473],
-  ["scripts/mapManager.js", _a474],
-  ["scripts/merchant.js", _a475],
-  ["scripts/minimap/minimapIntegration.js", _a476],
-  ["scripts/minimap/minimapSystem.js", _a477],
-  ["scripts/minimap/minimapUI.js", _a478],
-  ["scripts/npcs/family/npcIsabela.js", _a479],
-  ["scripts/npcs/family/npcJohn.js", _a480],
-  ["scripts/npcs/family/npcLucas.js", _a481],
-  ["scripts/npcs/family/npcMolly.js", _a482],
-  ["scripts/npcs/npcBartolomeu.js", _a483],
-  ["scripts/npcs/npcBru.js", _a484],
-  ["scripts/npcs/npcCouple.js", _a485],
-  ["scripts/npcs/npcJeremy.js", _a486],
-  ["scripts/npcs/npcJuan.js", _a487],
-  ["scripts/npcs/npcMilly.js", _a488],
-  ["scripts/npcs/npcSystem.js", _a489],
-  ["scripts/npcs/personalitySystem.js", _a490],
-  ["scripts/npcs/tutorialQuests.js", _a491],
-  ["scripts/optimizationConstants.js", _a492],
-  ["scripts/qualityMode.js", _a493],
-  ["scripts/questSystem.js", _a494],
-  ["scripts/quests/questRegistry.js", _a495],
-  ["scripts/recipes.js", _a496],
-  ["scripts/register-sw.js", _a497],
-  ["scripts/reloadPrompt.js", _a498],
-  ["scripts/responsive.js", _a499],
-  ["scripts/safeDispatch.js", _a500],
-  ["scripts/saveSlotsUI.js", _a501],
-  ["scripts/saveSystem.js", _a502],
-  ["scripts/searchMatch.js", _a503],
-  ["scripts/settingsUI.js", _a504],
-  ["scripts/steamBadge.js", _a505],
-  ["scripts/storageSystem.js", _a506],
-  ["scripts/thePlayer/ben.js", _a507],
-  ["scripts/thePlayer/cameraSystem.js", _a508],
-  ["scripts/thePlayer/characterModule.js", _a509],
-  ["scripts/thePlayer/characterSelection.js", _a510],
-  ["scripts/thePlayer/control.js", _a511],
-  ["scripts/thePlayer/frames.js", _a512],
-  ["scripts/thePlayer/graham.js", _a513],
-  ["scripts/thePlayer/inventorySystem.js", _a514],
-  ["scripts/thePlayer/inventoryUI.js", _a515],
-  ["scripts/thePlayer/playerHUD.js", _a516],
-  ["scripts/thePlayer/playerInventory.js", _a517],
-  ["scripts/thePlayer/playerSystem.js", _a518],
-  ["scripts/thePlayer/seedWheel.js", _a519],
-  ["scripts/thePlayer/stella.js", _a520],
-  ["scripts/thePlayer/toolWheel.js", _a521],
-  ["scripts/theWorld.js", _a522],
-  ["scripts/travelMap.js", _a523],
-  ["scripts/troughMarker.js", _a524],
-  ["scripts/validation.js", _a525],
-  ["scripts/validationTests.js", _a526],
-  ["scripts/vetSystem.js", _a527],
-  ["scripts/waterTroughPanel.js", _a528],
-  ["scripts/waterTroughSystem.js", _a529],
-  ["scripts/wateringCan.js", _a530],
-  ["scripts/weather.js", _a531],
-  ["scripts/wellSystem.js", _a532],
-  ["scripts/worldConstants.js", _a533],
-  ["scripts/worldUI.js", _a534],
-  ["scripts/xpNotification.js", _a535],
-  ["scripts/xpSystem.js", _a536],
-  ["style/accessibility.css", _a537],
-  ["style/achievements.css", _a538],
-  ["style/animal-tomb.css", _a539],
-  ["style/animal-ui.css", _a540],
-  ["style/base.css", _a541],
-  ["style/build.css", _a542],
-  ["style/character-select.css", _a543],
-  ["style/chest.css", _a544],
-  ["style/commerce.css", _a545],
-  ["style/config.css", _a546],
-  ["style/crafting.css", _a547],
-  ["style/dialogue.css", _a548],
-  ["style/enclosure-animal-panel.css", _a549],
-  ["style/food-trough-panel.css", _a550],
-  ["style/gallery.css", _a551],
-  ["style/game.css", _a552],
-  ["style/help-panel.css", _a553],
-  ["style/house.css", _a554],
-  ["style/hud.css", _a555],
-  ["style/icon-atlas.css", _a556],
-  ["style/inventory-actions.css", _a557],
-  ["style/loading.css", _a558],
-  ["style/main-menu.css", _a559],
-  ["style/minimap.css", _a560],
-  ["style/mobile-controls.css", _a561],
-  ["style/modals.css", _a562],
-  ["style/player-feedback.css", _a563],
-  ["style/player-panel.css", _a564],
-  ["style/save-slots.css", _a565],
-  ["style/storage.css", _a566],
-  ["style/tool-wheel.css", _a567],
-  ["style/travel-map.css", _a568],
-  ["style/update-prompt.css", _a569],
-  ["style/variables.css", _a570],
-  ["style/vet.css", _a571],
-  ["style/water-trough-panel.css", _a572],
-  ["style/weather.css", _a573],
-  ["style/well.css", _a574],
-  ["sw.js", _a575],
+  ["scripts/choiceLock.js", _a435],
+  ["scripts/cityHouseSystem.js", _a436],
+  ["scripts/cityObstaclesSystem.js", _a437],
+  ["scripts/cityRenderer.js", _a438],
+  ["scripts/city/cityRenderer.js", _a439],
+  ["scripts/collisionSystem.js", _a440],
+  ["scripts/constants.js", _a441],
+  ["scripts/craftingSystem.js", _a442],
+  ["scripts/cropSystem.js", _a443],
+  ["scripts/cssManager.js", _a444],
+  ["scripts/currencyManager.js", _a445],
+  ["scripts/debug/cityHitboxConfig.json", _a446],
+  ["scripts/dialogueSystem.js", _a447],
+  ["scripts/displayMode.js", _a448],
+  ["scripts/equippedFillCursor.js", _a449],
+  ["scripts/errorHandler.js", _a450],
+  ["scripts/fillLevel.js", _a451],
+  ["scripts/fluidContainer.js", _a452],
+  ["scripts/foodTroughPanelSimple.js", _a453],
+  ["scripts/foodTroughSystem.js", _a454],
+  ["scripts/fuelSystem.js", _a455],
+  ["scripts/gallery/galleryUI.js", _a456],
+  ["scripts/gameCleanup.js", _a457],
+  ["scripts/gameState.js", _a458],
+  ["scripts/gamepadProbe.js", _a459],
+  ["scripts/generatorSeeds.js", _a460],
+  ["scripts/helpPanel.js", _a461],
+  ["scripts/hoeTool.js", _a462],
+  ["scripts/houseSystem.js", _a463],
+  ["scripts/i18n/en.js", _a464],
+  ["scripts/i18n/es.js", _a465],
+  ["scripts/i18n/i18n.js", _a466],
+  ["scripts/i18n/pt-BR.js", _a467],
+  ["scripts/item.js", _a468],
+  ["scripts/itemSystem.js", _a469],
+  ["scripts/itemUtils.js", _a470],
+  ["scripts/keybindDefaults.js", _a471],
+  ["scripts/loadingScreen.js", _a472],
+  ["scripts/logger.js", _a473],
+  ["scripts/main.js", _a474],
+  ["scripts/mainMenu/mainMenu.js", _a475],
+  ["scripts/mapManager.js", _a476],
+  ["scripts/merchant.js", _a477],
+  ["scripts/minimap/minimapIntegration.js", _a478],
+  ["scripts/minimap/minimapSystem.js", _a479],
+  ["scripts/minimap/minimapUI.js", _a480],
+  ["scripts/npcs/family/npcIsabela.js", _a481],
+  ["scripts/npcs/family/npcJohn.js", _a482],
+  ["scripts/npcs/family/npcLucas.js", _a483],
+  ["scripts/npcs/family/npcMolly.js", _a484],
+  ["scripts/npcs/npcBartolomeu.js", _a485],
+  ["scripts/npcs/npcBru.js", _a486],
+  ["scripts/npcs/npcCouple.js", _a487],
+  ["scripts/npcs/npcJeremy.js", _a488],
+  ["scripts/npcs/npcJuan.js", _a489],
+  ["scripts/npcs/npcMilly.js", _a490],
+  ["scripts/npcs/npcSystem.js", _a491],
+  ["scripts/npcs/personalitySystem.js", _a492],
+  ["scripts/npcs/tutorialQuests.js", _a493],
+  ["scripts/optimizationConstants.js", _a494],
+  ["scripts/pauseMenu.js", _a495],
+  ["scripts/qualityMode.js", _a496],
+  ["scripts/questSystem.js", _a497],
+  ["scripts/quests/questRegistry.js", _a498],
+  ["scripts/recipes.js", _a499],
+  ["scripts/register-sw.js", _a500],
+  ["scripts/reloadPrompt.js", _a501],
+  ["scripts/responsive.js", _a502],
+  ["scripts/safeDispatch.js", _a503],
+  ["scripts/saveMessages.js", _a504],
+  ["scripts/saveSlotsUI.js", _a505],
+  ["scripts/saveSystem.js", _a506],
+  ["scripts/searchMatch.js", _a507],
+  ["scripts/selectable.js", _a508],
+  ["scripts/settingsUI.js", _a509],
+  ["scripts/steamBadge.js", _a510],
+  ["scripts/storageSystem.js", _a511],
+  ["scripts/thePlayer/ben.js", _a512],
+  ["scripts/thePlayer/cameraSystem.js", _a513],
+  ["scripts/thePlayer/characterModule.js", _a514],
+  ["scripts/thePlayer/characterSelection.js", _a515],
+  ["scripts/thePlayer/control.js", _a516],
+  ["scripts/thePlayer/frames.js", _a517],
+  ["scripts/thePlayer/graham.js", _a518],
+  ["scripts/thePlayer/input/bindings.js", _a519],
+  ["scripts/thePlayer/input/buttonHints.js", _a520],
+  ["scripts/thePlayer/input/chestNavigation.js", _a521],
+  ["scripts/thePlayer/input/craftingNavigation.js", _a522],
+  ["scripts/thePlayer/input/dialogueNavigation.js", _a523],
+  ["scripts/thePlayer/input/gamepadCursor.js", _a524],
+  ["scripts/thePlayer/input/gamepadGlyphs.js", _a525],
+  ["scripts/thePlayer/input/gamepadInput.js", _a526],
+  ["scripts/thePlayer/input/gamepadSettings.js", _a527],
+  ["scripts/thePlayer/input/inputSource.js", _a528],
+  ["scripts/thePlayer/input/keyboard.js", _a529],
+  ["scripts/thePlayer/input/marketNavigation.js", _a530],
+  ["scripts/thePlayer/input/panelNavigation.js", _a531],
+  ["scripts/thePlayer/input/panels.js", _a532],
+  ["scripts/thePlayer/input/sleepState.js", _a533],
+  ["scripts/thePlayer/input/storageNavigation.js", _a534],
+  ["scripts/thePlayer/input/touch.js", _a535],
+  ["scripts/thePlayer/input/travelNavigation.js", _a536],
+  ["scripts/thePlayer/input/vetNavigation.js", _a537],
+  ["scripts/thePlayer/inventorySystem.js", _a538],
+  ["scripts/thePlayer/inventoryUI.js", _a539],
+  ["scripts/thePlayer/playerHUD.js", _a540],
+  ["scripts/thePlayer/playerInventory.js", _a541],
+  ["scripts/thePlayer/playerSystem.js", _a542],
+  ["scripts/thePlayer/seedWheel.js", _a543],
+  ["scripts/thePlayer/stella.js", _a544],
+  ["scripts/thePlayer/toolWheel.js", _a545],
+  ["scripts/theWorld.js", _a546],
+  ["scripts/travelMap.js", _a547],
+  ["scripts/troughMarker.js", _a548],
+  ["scripts/validation.js", _a549],
+  ["scripts/validationTests.js", _a550],
+  ["scripts/vetSystem.js", _a551],
+  ["scripts/waterTroughPanel.js", _a552],
+  ["scripts/waterTroughSystem.js", _a553],
+  ["scripts/wateringCan.js", _a554],
+  ["scripts/weather.js", _a555],
+  ["scripts/wellSystem.js", _a556],
+  ["scripts/worldConstants.js", _a557],
+  ["scripts/worldUI.js", _a558],
+  ["scripts/xpNotification.js", _a559],
+  ["scripts/xpSystem.js", _a560],
+  ["style/accessibility.css", _a561],
+  ["style/achievements.css", _a562],
+  ["style/animal-tomb.css", _a563],
+  ["style/animal-ui.css", _a564],
+  ["style/base.css", _a565],
+  ["style/build.css", _a566],
+  ["style/character-select.css", _a567],
+  ["style/chest.css", _a568],
+  ["style/commerce.css", _a569],
+  ["style/config.css", _a570],
+  ["style/crafting.css", _a571],
+  ["style/dialogue.css", _a572],
+  ["style/enclosure-animal-panel.css", _a573],
+  ["style/food-trough-panel.css", _a574],
+  ["style/gallery.css", _a575],
+  ["style/game.css", _a576],
+  ["style/gamepad.css", _a577],
+  ["style/help-panel.css", _a578],
+  ["style/house.css", _a579],
+  ["style/hud.css", _a580],
+  ["style/icon-atlas.css", _a581],
+  ["style/inventory-actions.css", _a582],
+  ["style/loading.css", _a583],
+  ["style/main-menu.css", _a584],
+  ["style/minimap.css", _a585],
+  ["style/mobile-controls.css", _a586],
+  ["style/modals.css", _a587],
+  ["style/pause-menu.css", _a588],
+  ["style/player-feedback.css", _a589],
+  ["style/player-panel.css", _a590],
+  ["style/save-slots.css", _a591],
+  ["style/storage.css", _a592],
+  ["style/tool-wheel.css", _a593],
+  ["style/travel-map.css", _a594],
+  ["style/update-prompt.css", _a595],
+  ["style/variables.css", _a596],
+  ["style/vet.css", _a597],
+  ["style/water-trough-panel.css", _a598],
+  ["style/weather.css", _a599],
+  ["style/well.css", _a600],
+  ["style/xp-notification.css", _a601],
+  ["sw.js", _a602],
 ]);

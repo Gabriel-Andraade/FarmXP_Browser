@@ -8,6 +8,7 @@
 import { t } from '../i18n/i18n.js';
 import { getSystem } from '../gameState.js';
 import { ACHIEVEMENTS, ACHIEVEMENT_CATEGORIES } from './achievementDefinitions.js';
+import { selectable } from '../selectable.js';
 
 let currentFilter = 'all';
 
@@ -183,6 +184,7 @@ function _createCard(ach) {
   // Click handler for unlocked achievements → show gallery reward
   if (isUnlocked) {
     card.style.cursor = 'pointer';
+    selectable(card);                 // #264: only unlocked cards are clickable
     card.addEventListener('click', () => {
       _showGalleryRewardPopup(ach);
     });

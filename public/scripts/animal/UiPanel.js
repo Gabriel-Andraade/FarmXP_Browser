@@ -8,6 +8,7 @@ import { t } from '../i18n/i18n.js';
 import { getObject, getSystem, registerSystem } from '../gameState.js';
 import { safeDispatch } from '../safeDispatch.js';
 import { setItemIcon } from '../itemUtils.js';
+import { selectable } from '../selectable.js';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -172,6 +173,7 @@ class UiPanel {
     for (const item of actionItems) {
       const btn = document.createElement('div');
       btn.className = 'aui-action-btn aui-interactive';
+      selectable(btn);                  // #264
       btn.dataset.action = item.action;
       const iconSpan = document.createElement('span');
       iconSpan.className = 'icon';
@@ -956,8 +958,7 @@ class UiPanel {
     // recriamos a semântica de botão com role/tabindex + Enter/Space.
     const btn = document.createElement('div');
     btn.className = 'aui-action-btn aui-interactive';
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('tabindex', '0');
+    selectable(btn);                    // role, tabindex and Enter/Space
     const iconSpan = document.createElement('span');
     iconSpan.className = 'icon';
     setItemIcon(iconSpan, icon, label);
@@ -968,13 +969,6 @@ class UiPanel {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       onClick();
-    });
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }
     });
     return btn;
   }

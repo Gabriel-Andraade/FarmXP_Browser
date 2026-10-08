@@ -9,6 +9,7 @@ import { a11y } from './accessibility.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from './keybindDefaults.js';
 import { qualityMode } from './qualityMode.js';
 import { displayMode } from './displayMode.js';
+import { gamepadSettings, RANGES as GAMEPAD_RANGES, SETTINGS_FIELDS } from './thePlayer/input/gamepadSettings.js';
 import { showReloadPrompt } from './reloadPrompt.js';
 
 /* ─────────────────────────────────────────────
@@ -481,6 +482,139 @@ function ensureDisplaySection() {
   option.appendChild(left);
   option.appendChild(right);
   section.appendChild(option);
+
+  configContent.appendChild(section);
+
+  try { translateDOM(); } catch {}
+}
+
+/* ─────────────────────────────────────────────
+ * Controle (#264)
+ * ───────────────────────────────────────────── */
+function ensureGamepadSection() {
+  const configModal = document.getElementById('configModal');
+  if (!configModal) return;
+
+  const configContent =
+    document.getElementById('config-content') ||
+    configModal.querySelector('#config-content') ||
+    configModal;
+
+  if (document.getElementById('gamepad-section')) return;
+
+  const section = document.createElement('div');
+  section.className = 'config-section';
+  section.id = 'gamepad-section';
+
+  const h3 = document.createElement('h3');
+  h3.setAttribute('data-i18n', 'settings.gamepad.title');
+  h3.textContent = safeT('settings.gamepad.title', 'Controle');
+  section.appendChild(h3);
+
+  // Says whether a pad is actually there, so a player whose controller is not
+  // detected is not left adjusting sliders that do nothing.
+  const status = document.createElement('div');
+  status.className = 'config-hint';
+  status.id = 'gamepad-status';
+  section.appendChild(status);
+
+  const refreshStatus = () => {
+    const pads = (navigator.getGamepads?.() ?? []).filter(Boolean);
+    const standard = pads.find((p) => p.mapping === 'standard') ?? pads[0];
+    status.textContent = standard
+      ? safeT('settings.gamepad.detected', 'Detectado') + `: ${standard.id}`
+      : safeT('settings.gamepad.none', 'Nenhum controle detectado — conecte e aperte um botão.');
+  };
+  refreshStatus();
+  window.addEventListener('gamepadconnected', refreshStatus);
+  window.addEventListener('gamepaddisconnected', refreshStatus);
+
+  /** Percent slider bound to one gamepadSettings key. */
+  const addSlider = (key, i18nKey, fallback, hint) => {
+    const range = GAMEPAD_RANGES[key];
+    const option = document.createElement('div');
+    option.className = 'config-option';
+
+    const left = document.createElement('div');
+    const label = document.createElement('div');
+    label.className = 'config-label';
+    label.setAttribute('data-i18n', i18nKey);
+    label.textContent = safeT(i18nKey, fallback);
+    left.appendChild(label);
+    if (hint) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'config-hint';
+      hintEl.setAttribute('data-i18n', `${i18nKey}Hint`);
+      hintEl.textContent = safeT(`${i18nKey}Hint`, hint);
+      left.appendChild(hintEl);
+    }
+
+    const right = document.createElement('div');
+    const input = document.createElement('input');
+    input.type = 'range';
+    // Not `config-slider`: that class is the knob of the on/off switch, and
+    // reusing it gave the range inputs absolute positioning — they escaped the
+    // modal and drew as one line across the whole screen.
+    input.className = 'config-range';
+    input.min = String(Math.round(range.min * 100));
+    input.max = String(Math.round(range.max * 100));
+    input.step = '5';
+    input.value = String(Math.round(gamepadSettings.current[key] * 100));
+    input.setAttribute('aria-label', safeT(i18nKey, fallback));
+
+    const readout = document.createElement('span');
+    readout.className = 'config-value';
+    readout.textContent = `${input.value}%`;
+
+    input.addEventListener('input', () => {
+      readout.textContent = `${input.value}%`;
+      gamepadSettings.set({ [key]: Number(input.value) / 100 });
+    });
+
+    right.append(input, readout);
+    option.append(left, right);
+    section.appendChild(option);
+  };
+
+  /** Checkbox bound to one gamepadSettings key. */
+  const addToggle = (key, i18nKey, fallback, hint) => {
+    const option = document.createElement('div');
+    option.className = 'config-option';
+
+    const left = document.createElement('div');
+    const label = document.createElement('div');
+    label.className = 'config-label';
+    label.setAttribute('data-i18n', i18nKey);
+    label.textContent = safeT(i18nKey, fallback);
+    left.appendChild(label);
+    if (hint) {
+      const hintEl = document.createElement('div');
+      hintEl.className = 'config-hint';
+      hintEl.setAttribute('data-i18n', `${i18nKey}Hint`);
+      hintEl.textContent = safeT(`${i18nKey}Hint`, hint);
+      left.appendChild(hintEl);
+    }
+
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.className = 'config-check';
+    input.checked = Boolean(gamepadSettings.current[key]);
+    input.setAttribute('aria-label', safeT(i18nKey, fallback));
+    input.addEventListener('change', () => gamepadSettings.set({ [key]: input.checked }));
+
+    const right = document.createElement('div');
+    right.appendChild(input);
+    option.append(left, right);
+    section.appendChild(option);
+  };
+
+  // Drawn from the shared declaration, so a setting added there appears here
+  // and on the main menu at once — this section existed only here for the
+  // whole of #264 because the list lived in the markup of one screen.
+  for (const field of SETTINGS_FIELDS) {
+    const add = field.kind === "toggle" ? addToggle : addSlider;
+    add(field.key, field.i18n, field.fallback, field.hint ? field.hintFallback : undefined);
+  }
 
   configContent.appendChild(section);
 
@@ -972,6 +1106,9 @@ export function initSettingsUI() {
   ensureDisplaySection();
   displayMode.apply();
 
+  // #264: seção do controle
+  ensureGamepadSection();
+
   // monta a opção + modal de remap
   ensureKeybindsMenuOption();
   ensureKeybindsModal();
@@ -1042,6 +1179,7 @@ function initConfigModalFocusTrap() {
           ensureAudioSection();
           ensureQualitySection();
           ensureDisplaySection();
+          ensureGamepadSection();
           ensureKeybindsMenuOption();
         } else {
           a11y.releaseFocus(configModal);

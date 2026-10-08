@@ -567,7 +567,35 @@ export default {
     languageChangeFailed: 'Falha ao trocar idioma. Tente novamente.'
   },
 
+  // #264: the corner that names what each button does, per screen.
+  gamepadHints: {
+    interact: 'Interagir',
+    useTool: 'Usar ferramenta',
+    inventory: 'Inventário',
+    build: 'Construir',
+    pause: 'Pausar',
+    buildPiece: 'Peça / girar',
+    buildPlace: 'Posicionar',
+    buildPick: 'Pegar de volta',
+    buildExit: 'Sair da construção',
+    navigate: 'Navegar',
+    confirm: 'Confirmar',
+    back: 'Voltar',
+    cancel: 'Cancelar',
+    category: 'Categoria',
+    amount: 'Quantidade',
+    amountOpen: 'Escolher quantidade',
+    craft: 'Fabricar',
+    advance: 'Avançar',
+    invPick: 'Escolher item',
+    invBack: 'Voltar uma etapa',
+    marketPanes: 'Suas bolsas / do mercador',
+    marketDirection: 'Vender / comprar',
+    storagePanes: 'Retirar / depositar',
+    vetMenu: 'Menu / escolhas',
+  },
   // Settings
+
   settings: {
     title: '⚙️ Configurações',
     language: 'Idioma',
@@ -600,6 +628,19 @@ export default {
       ambientVolumeHint: 'Sons do ambiente: pedra, madeira, construção, clima.',
       animalVolume: 'Volume dos Animais',
       animalVolumeHint: 'Sons dos animais: mugido, cacarejo, etc.',
+    },
+    gamepad: {
+      title: 'Controle',
+      detected: 'Detectado',
+      none: 'Nenhum controle detectado — conecte e aperte um botão.',
+      cursorScale: 'Tamanho da mira',
+      aimSpeedX: 'Velocidade da mira (horizontal)',
+      aimSpeedY: 'Velocidade da mira (vertical)',
+      deadZone: 'Zona morta',
+      deadZoneHint: 'Aumente se a mira se mexer sozinha.',
+      invertY: 'Inverter eixo Y',
+      acceleration: 'Aceleração da mira',
+      accelerationHint: 'Empurrar devagar mira com precisão; empurrar forte atravessa a tela.',
     },
     display: {
       title: 'Tela',
@@ -999,6 +1040,10 @@ export default {
     withdrawMode: 'retirar',
     depositMode: 'depositar',
     withdrawBtn: 'retirar ({qty})',
+
+    less: 'Menos um',
+
+    more: 'Mais um',
     depositBtn: 'depositar ({qty})',
     emptyCategory: 'Sem itens nesta categoria',
     all: 'Tudo',
@@ -1035,6 +1080,10 @@ export default {
     noResults: 'Nenhum item corresponde à busca',
     all: 'Tudo',
     takeBtn: 'pegar ({qty})',
+
+    less: 'Menos um',
+
+    more: 'Mais um',
     storeBtn: 'guardar ({qty})',
     tookQty: '{qty}x {name} retirado(s) do baú',
     storedQty: '{qty}x {name} guardado(s) no baú',
@@ -2799,6 +2848,10 @@ export default {
   // Painel de atalhos
   shortcutsPanel: {
     title: '⌨️ Atalhos de Teclado',
+
+    titleGamepad: '🎮 Botões do controle',
+
+    noButton: 'Sem botão no controle',
     subtitle: 'As teclas abaixo refletem suas configurações atuais.',
     hintToggle: 'Pressione {key} para abrir/fechar.',
     unbound: 'Não configurado',

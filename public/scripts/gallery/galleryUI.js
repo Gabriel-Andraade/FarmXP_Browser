@@ -8,6 +8,7 @@
 import { t } from '../i18n/i18n.js';
 import { getSystem } from '../gameState.js';
 import { ACHIEVEMENTS } from '../achievements/achievementDefinitions.js';
+import { selectable } from '../selectable.js';
 
 const GALLERY_TABS = ['unlockedImages', 'characters', 'photos', 'notes', 'screenshots'];
 
@@ -91,6 +92,7 @@ function _renderUnlockedImages(area) {
   for (const ach of unlocked) {
     const card = document.createElement('div');
     card.className = 'gal-img-card';
+    selectable(card);                   // #264
 
     // Icon badge
     const badge = document.createElement('div');

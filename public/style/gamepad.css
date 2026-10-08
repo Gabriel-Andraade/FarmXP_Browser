@@ -1,0 +1,164 @@
+/**
+ * @file gamepad.css - Aiming reticle and controller glyphs (#264).
+ */
+
+/* ── Reticle ──────────────────────────────────────────────────────────── */
+
+#gamepad-cursor {
+    position: fixed;
+    left: 0;
+    top: 0;
+    /* Above everything, including the update prompt at 100000: a reticle you
+       cannot see is a reticle you cannot aim with. */
+    z-index: 100001;
+    pointer-events: none;    /* never eats the click it is aiming */
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    will-change: transform;
+}
+
+#gamepad-cursor.visible {
+    opacity: 1;
+}
+
+#gamepad-cursor svg {
+    display: block;
+    /* A dark outline keeps the reticle readable over both the bright grass and
+       the dark modals — without it it vanishes against one or the other. */
+    filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.9));
+}
+
+.gpc-ring {
+    fill: none;
+    stroke: #f5e9d3;
+    stroke-width: 2.5;
+}
+
+.gpc-dot {
+    fill: #c9a463;
+}
+
+.gpc-ticks {
+    stroke: #f5e9d3;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #gamepad-cursor { transition: none; }
+}
+
+/* ── Button glyphs ────────────────────────────────────────────────────── */
+
+/* Shown in place of key names once the player picks up the controller. */
+.gp-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5em;
+    height: 1.5em;
+    padding: 0 0.35em;
+    border-radius: 999px;
+    border: 2px solid currentColor;
+    font-size: 0.8em;
+    font-weight: 700;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Xbox face-button colours, so the glyph reads at a glance. */
+.gp-glyph-a { color: #6cc24a; }
+.gp-glyph-b { color: #e74c3c; }
+.gp-glyph-x { color: #4a90d9; }
+.gp-glyph-y { color: #e0a33e; }
+
+/* ── The system pointer while the controller is driving ───────────────────
+   Hidden everywhere, not only while aiming: in menus it sat frozen on screen
+   suggesting the player could click something. `*` is needed because buttons
+   and links set `cursor: pointer` themselves, which would win over a rule on
+   <body> alone.
+
+   It comes back the instant a key or the mouse is used, because inputSource
+   swaps the class. The Steam overlay draws its own pointer, outside the page. */
+body.input-gamepad,
+body.input-gamepad * {
+    cursor: none !important;
+}
+
+/* ── Selected option (#264) ───────────────────────────────────────────────
+   The controller moves focus, not the pointer, so the player gets none of the
+   `:hover` feedback the mouse does. `.gp-focused` marks whatever the stick
+   last landed on.
+
+   The highlight itself (outline + glow) is written inline by `panels.js`, not
+   here: a document stylesheet does not cross a shadow boundary, so inside the
+   inventory this rule would never apply, and an inline `!important` would beat
+   it anywhere else. Only the stacking is left here. */
+
+.gp-focused {
+    position: relative;
+    z-index: 1;
+}
+
+/* ── What the buttons do, where you are (#264) ─────────────────────────────
+   A strip in the bottom-right corner naming the buttons of the screen the
+   player is on. It only exists while a controller is driving — inputSource
+   swaps the class on <body> — because on a keyboard it would be a lie.
+
+   Bottom right because that is the corner the game puts nothing else in, and
+   because the eye finds it without leaving what it was doing. */
+#gamepad-hints {
+    position: fixed;
+    right: 14px;
+    bottom: 12px;
+    /* Above every panel — they climb to 20000 — and below the three things that
+       outrank them: the skip link (99999), the update prompt (100000) and the
+       reticle (100001). At 9000 the strip was working and naming the right
+       screen; it was simply behind whatever the player had opened, which reads
+       exactly like a strip that never changes. */
+    z-index: 99998;
+    display: none;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(28, 17, 9, 0.72);
+    border: 1px solid rgba(201, 164, 99, 0.35);
+    color: #f5e9d3;
+    font-size: 0.8rem;
+    line-height: 1.2;
+    pointer-events: none;
+    max-width: 44vw;
+}
+
+body.input-gamepad #gamepad-hints.is-visible {
+    display: flex;
+}
+
+.gp-hint {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+}
+
+.gp-hint-keys {
+    display: inline-flex;
+    gap: 3px;
+}
+
+.gp-hint-label {
+    opacity: 0.92;
+}
+
+/* The circled letter beside a Confirm or a Cancel, so a decision says which
+   button takes it without a trip to the corner. */
+.gp-decision-glyph {
+    margin-right: 7px;
+}
+
+@media (max-width: 760px) {
+    /* A phone has no controller, and the strip would eat the HUD. */
+    #gamepad-hints { display: none !important; }
+}

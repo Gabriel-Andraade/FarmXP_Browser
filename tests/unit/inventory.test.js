@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { i18nModule } from './helpers/i18nMock.js';
 import "../setup.js";
 
 // Mock logger.js
@@ -7,9 +8,7 @@ mock.module('../../public/scripts/logger.js', () => ({
 }));
 
 // Mock i18n
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key) => key
-}));
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule());
 
 // Mock constants.js - ALL named exports
 mock.module('../../public/scripts/constants.js', () => ({

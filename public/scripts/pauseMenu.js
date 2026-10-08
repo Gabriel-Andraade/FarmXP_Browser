@@ -21,36 +21,11 @@
 import { t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 import { registerSystem, getSystem } from './gameState.js';
-
-/**
- * Anything here being on screen means Esc belongs to that panel, not to us.
- *
- * It is a list because the panels have no shared "open" registry — they each
- * toggle their own class. **Add new full-screen panels here**, or Esc will open
- * the pause menu on top of them.
- */
-export const OVERLAY_SELECTORS = [
-    '#configModal.active',
-    '#keybinds-modal.is-open',
-    '#keybinds-overlay.is-open',
-    '.save-modal-overlay.active',
-    '.save-dialog-overlay',
-    '#khp-help-overlay.is-open',
-    '#inventoryModal.open',
-    '.inv-overlay.open',
-    '#questsModal.active',
-    '#commerceModal.active',
-    '#merchantsListModal.active',
-    '#tradeConfirmModal.active',
-    '#playerPanel.active',
-    '#tomb-memorial-modal.active',
-    '.cht-overlay.open',
-    '.contract-panel-overlay.open',
-    '.dlg-overlay.active',
-    '.mm-overlay',
-    '#map-transition-screen',
-    '#ldg-initial-screen',
-];
+// #264: one owner for "is a panel open" — the pause menu used to keep its own
+// list, which could not see the inventory's shadow root, so Escape reached past
+// it and opened this menu on top.
+import { openPanel, onScreen } from './thePlayer/input/panels.js';
+import { current as currentSource } from './thePlayer/input/inputSource.js';
 
 /** The menu's own rows, in the order the mockup shows them. */
 export const ITEMS = [
@@ -67,21 +42,6 @@ export const ITEMS = [
 
 /** The shell exposes `cefQuery`; the browser does not. */
 const inShell = () => typeof window.cefQuery === 'function';
-
-/**
- * Is this element actually on screen?
- *
- * Not `offsetParent !== null`: that is null for anything `position: fixed`,
- * which every panel above is — the check would have reported "nothing is open"
- * while a modal was right there. `getClientRects()` is empty only when the
- * element is not rendered, fixed or not (helpPanel.js tests visibility the
- * same way).
- */
-function isOnScreen(el) {
-    if (!el) return false;
-    if (typeof el.getClientRects !== 'function') return true;  // stubbed DOM (tests)
-    return el.getClientRects().length > 0;
-}
 
 const safeT = (key, fallback) => {
     try {
@@ -116,6 +76,11 @@ class PauseMenu {
 
     _onKeydown(e) {
         if (e.key !== 'Escape') return;
+        // On a controller this menu is opened by Start and closed by B, both
+        // direct calls. Escape there is only ever a synthetic event the input
+        // layer sends to close *another* panel — answering it meant B closed
+        // the inventory and opened this menu on the same press.
+        if (currentSource() === 'gamepad') return;
         // Whatever is on top owns the key — including when the menu is already
         // open. This listener is registered before any panel's, so without the
         // check one Esc closed both layers: the exit confirmation cancelled
@@ -133,12 +98,15 @@ class PauseMenu {
 
     /** Is one of the known panels currently covering us? */
     _panelOnTop() {
-        return OVERLAY_SELECTORS.some((sel) => isOnScreen(document.querySelector(sel)));
+        return openPanel({ includePause: false }) !== null;
     }
 
     /** Only in the world, with no other panel holding the screen. */
     _canOpen() {
         if (document.getElementById('gameCanvas') === null) return false;
+        // Build mode owns Escape: there it means "leave build", and opening the
+        // pause menu on the same key did both at once (keyboard included).
+        if (document.body?.classList.contains('building-mode')) return false;
         return !this._panelOnTop();
     }
 
@@ -258,6 +226,16 @@ class PauseMenu {
             if (e.target === overlay) this.close();
         });
         overlay.addEventListener('keydown', (e) => this._onMenuKey(e));
+        // #264: the controller moves focus directly, so the menu's own
+        // highlight follows focus rather than tracking a second index that
+        // would drift out of step with it.
+        overlay.addEventListener('focusin', (e) => {
+            const index = this._items.indexOf(e.target);
+            if (index >= 0) {
+                this._focusIndex = index;
+                this._items.forEach((btn, i) => btn.classList.toggle('selected', i === index));
+            }
+        });
 
         document.body.appendChild(overlay);
         this.root = overlay;

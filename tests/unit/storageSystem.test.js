@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { i18nModule } from './helpers/i18nMock.js';
 import "../setup.js";
 
 // Test data for items
@@ -31,9 +32,7 @@ mock.module('../../public/scripts/itemUtils.js', () => ({
 }));
 
 // Mock i18n to avoid import chain issues
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key) => key
-}));
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule());
 
 // Mock gameState.js - ALL named exports
 mock.module('../../public/scripts/gameState.js', () => ({

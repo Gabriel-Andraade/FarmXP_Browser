@@ -10,234 +10,47 @@ import { openSeedWheel, closeSeedWheel, isSeedWheelOpen } from './seedWheel.js';
 import { getItem } from '../itemUtils.js';
 import { logger } from '../logger.js';
 import { deviceScale } from '../qualityMode.js';
+import { isSleeping, setSleeping } from './input/sleepState.js';
 
 // AbortController global para cleanup de todos os listeners do módulo
 let controlsAbortController = new AbortController();
 
 // Key configuration
-export const keys = {
-    ArrowLeft: false, ArrowRight: false, ArrowUp: false, ArrowDown: false,
-    KeyA: false, KeyW: false, KeyS: false, KeyD: false,
-    KeyE: false, Space: false
-};
+/**
+ * Where the pointer last was, in canvas coordinates.
+ *
+ * Mirrors what the hover handler already works out — including the DPR
+ * correction that took a bug to get right — so anything needing to ask "what is
+ * under the pointer?" can do it without redoing that conversion. The controller
+ * reticle feeds this through the same handler, by dispatching a real mousemove.
+ */
+const lastPointerScreen = { x: null, y: null };
 
-// ─────────────────────────────────────────────
-// Remap (Config) -> farmxp_controls
-// ─────────────────────────────────────────────
-// tenta ler binds também do config/settings geral (se teu configUI usar outra key)
-const CONFIG_STORAGE_KEYS = ["farmxp_config", "farmxp_settings", "farmxp_options"];
-
-// caminho do configUI.js (control/control.js -> ../configUI.js)
-const CONFIG_UI_MODULE_PATH = "../settingsUI.js";
-
-function extractKeybindsFromConfig(candidate) {
-    if (!candidate || typeof candidate !== "object") return null;
-
-    // formatos mais comuns:
-    if (candidate.keybinds && typeof candidate.keybinds === "object") return candidate.keybinds;
-    if (candidate.controls && typeof candidate.controls === "object") return candidate.controls;
-
-    // às vezes vem dentro de settings / config
-    if (candidate.settings && typeof candidate.settings === "object") {
-        if (candidate.settings.keybinds && typeof candidate.settings.keybinds === "object") return candidate.settings.keybinds;
-        if (candidate.settings.controls && typeof candidate.settings.controls === "object") return candidate.settings.controls;
-    }
-
-    if (candidate.config && typeof candidate.config === "object") {
-        if (candidate.config.keybinds && typeof candidate.config.keybinds === "object") return candidate.config.keybinds;
-        if (candidate.config.controls && typeof candidate.config.controls === "object") return candidate.config.controls;
-    }
-
-    return null;
+/** @returns {{x: number, y: number}|null} null until the pointer has moved once */
+export function getPointerScreenPos() {
+    const { x, y } = lastPointerScreen;
+    return (x === null || y === null) ? null : { x, y };
 }
 
-function tryReadKeybindsFromOtherStorage() {
-    for (const k of CONFIG_STORAGE_KEYS) {
-        try {
-            const raw = localStorage.getItem(k);
-            if (!raw) continue;
-            const parsed = JSON.parse(raw);
-            const extracted = extractKeybindsFromConfig(parsed);
-            if (extracted) return extracted;
-        } catch {}
-    }
-    return null;
-}
+/**
+ * The keyboard and the action table live in input/keyboard.js now. Everything
+ * this file exported from here is re-exported, so nothing that imports from
+ * control.js had to change.
+ */
+export {
+    keys, getKeybinds, setKeybinds, setGamepadActions,
+} from './input/keyboard.js';
 
-// API pública (útil pro configUI chamar também, se quiser)
-export function getKeybinds() {
-    try { return JSON.parse(JSON.stringify(keybinds)); } catch { return sanitizeKeybinds(keybinds); }
-}
-
-export function setKeybinds(next, { persist = true, clearState = false } = {}) {
-    keybinds = sanitizeKeybinds(next);
-    if (persist) saveKeybinds(keybinds);
-    if (clearState) clearAllInputState();
-    recalcActions();
-}
-
-// tenta puxar do configUI.js (sem depender de nomes fixos de export)
-async function bootstrapKeybindsFromConfigUI() {
-    // 1) window (se configUI expõe algo global)
-    try {
-        const w = window;
-        const fromWindow =
-            extractKeybindsFromConfig(w?.FarmXPConfig) ||
-            extractKeybindsFromConfig(w?.gameConfig) ||
-            extractKeybindsFromConfig(w?.config) ||
-            extractKeybindsFromConfig(w?.settings);
-
-        if (fromWindow) {
-            setKeybinds(fromWindow, { persist: true });
-            return;
-        }
-    } catch {}
-
-    // 2) módulo configUI (caminho: ../configUI.js)
-    try {
-        const mod = await import(CONFIG_UI_MODULE_PATH);
-
-        // tenta achar binds em exports comuns (sem exigir que exista)
-        const fromExports =
-            (typeof mod.getKeybinds === "function" ? mod.getKeybinds() : null) ||
-            (typeof mod.getControlsKeybinds === "function" ? mod.getControlsKeybinds() : null) ||
-            (typeof mod.getConfig === "function" ? mod.getConfig() : null) ||
-            mod.keybinds ||
-            mod.controls ||
-            mod.config ||
-            mod.settings ||
-            mod.default;
-
-        const extracted = extractKeybindsFromConfig(fromExports) || (fromExports && typeof fromExports === "object" ? fromExports : null);
-        if (extracted) {
-            setKeybinds(extracted, { persist: true });
-            return;
-        }
-    } catch {
-        // ignore: não quebra o jogo se configUI não estiver pronto ainda
-    }
-
-    // 3) fallback: tenta ler de uma storage “geral” (se existir)
-    const fromOtherStorage = tryReadKeybindsFromOtherStorage();
-    if (fromOtherStorage) setKeybinds(fromOtherStorage, { persist: true });
-}
-
-// deixa acessível pra debug/ponte rápida (sem poluir muito)
-window.FarmXPControls = window.FarmXPControls || {};
-window.FarmXPControls.getKeybinds = getKeybinds;
-window.FarmXPControls.setKeybinds = setKeybinds;
-
-
-let keybinds = loadKeybinds();
-
-// pressed state por CODE (KeyW, ArrowLeft, Space, etc)
-const pressed = Object.create(null);
-
-// estado final por ação (já considerando joystick também)
-const actions = {
-    moveUp: false,
-    moveDown: false,
-    moveLeft: false,
-    moveRight: false,
-    interact: false,
-    inventory: false,
-    merchants: false,
-    config: false,
-};
-
-// estado de movimento vindo do joystick (pra não quebrar mobile)
-const joystickActions = { moveUp: false, moveDown: false, moveLeft: false, moveRight: false };
-
-function sanitizeKeybinds(raw) {
-    const merged = JSON.parse(JSON.stringify(DEFAULT_KEYBINDS));
-    if (!raw || typeof raw !== "object") return merged;
-
-    for (const action of Object.keys(merged)) {
-        if (Array.isArray(raw[action]) && raw[action].length) {
-            merged[action] = raw[action]
-                .slice(0, 2)
-                .map(String)
-                .filter(Boolean);
-        }
-    }
-    return merged;
-}
-
-function loadKeybinds() {
-    // prioridade 1: storage dedicada dos controles
-    try {
-        const raw = localStorage.getItem(CONTROLS_STORAGE_KEY);
-        if (raw) return sanitizeKeybinds(JSON.parse(raw));
-    } catch {}
-
-    // prioridade 2: algum storage “geral” 
-    const fromOther = tryReadKeybindsFromOtherStorage();
-    if (fromOther) return sanitizeKeybinds(fromOther);
-
-    // fallback
-    return sanitizeKeybinds(null);
-}
-
-
-function saveKeybinds(next) {
-    try {
-        localStorage.setItem(CONTROLS_STORAGE_KEY, JSON.stringify(next));
-    } catch {}
-}
-
-function getEventCode(e) {
-    return e.code || e.key; // prefer e.code
-}
-
-function isActionKeyEvent(e, action) {
-    const code = getEventCode(e);
-    return (keybinds[action] || []).includes(code);
-}
-
-function recalcActions() {
-    for (const action of Object.keys(actions)) {
-        const binds = keybinds[action] || [];
-        let down = false;
-        for (const code of binds) {
-            if (pressed[code]) { down = true; break; }
-        }
-
-        // OR com joystick apenas para movimento
-        if (action in joystickActions) {
-            down = down || joystickActions[action];
-        }
-
-        actions[action] = down;
-    }
-}
-
-function clearAllInputState() {
-    for (const k of Object.keys(keys)) keys[k] = false;
-    for (const k of Object.keys(pressed)) pressed[k] = false;
-    for (const k of Object.keys(actions)) actions[k] = false;
-    joystickActions.moveUp = joystickActions.moveDown = joystickActions.moveLeft = joystickActions.moveRight = false;
-}
-
-function setPressedFromEvent(e, isDown) {
-    const code = getEventCode(e);
-    if (!code) return;
-
-    pressed[code] = isDown;
-
-    // compat: manter teu objeto keys atualizado pros codes que ele já conhece
-    if (code in keys) keys[code] = isDown;
-    if (e.key in keys) keys[e.key] = isDown;
-
-    recalcActions();
-}
+import {
+    keys, pressed, actions, joystickActions, getKeybinds, setKeybinds,
+    recalcActions, clearAllInputState, setPressedFromEvent,
+    getEventCode, isActionKeyEvent, bootstrapKeybindsFromConfigUI,
+} from './input/keyboard.js';
 
 // Sleep state that blocks all inputs
-let isSleeping = false;
-let isSleepingGlobal = false;
 
 document.addEventListener("sleepStarted", () => {
-    isSleeping = true;
-    isSleepingGlobal = true;
+    setSleeping(true);
     clearAllInputState();
 
     const mobileBtn = document.getElementById('mobile-interact-btn');
@@ -247,8 +60,7 @@ document.addEventListener("sleepStarted", () => {
 }, { signal: controlsAbortController.signal });
 
 document.addEventListener("sleepEnded", () => {
-    isSleeping = false;
-    isSleepingGlobal = false;
+    setSleeping(false);
 
     if (isMobile()) {
         const joystickArea = document.getElementById('joystick-area');
@@ -256,99 +68,10 @@ document.addEventListener("sleepEnded", () => {
     }
 }, { signal: controlsAbortController.signal });
 
-// Device detection
-export const isMobile = () => {
-    try {
-        const hasTouch = navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0 || ('ontouchstart' in window);
-        const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || "");
-        const coarsePointer = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
-        const smallScreen = window.innerWidth <= MOBILE.SCREEN_WIDTH_THRESHOLD;
-        return hasTouch && (uaMobile || coarsePointer || smallScreen);
-    } catch (err) {
-        return false;
-    }
-};
-
-// Touch movement system for mobile devices
-export class TouchMoveSystem {
-    constructor() {
-        this.destination = null;
-        this.isMovingToTouch = false;
-        this.moveSpeed = MOVEMENT.TOUCH_MOVE_SPEED;
-        this.stopDistance = RANGES.TOUCH_MOVE_STOP_DISTANCE;
-        this.canvas = document.getElementById("gameCanvas");
-        this.mobile = isMobile();
-
-        if (this.mobile && this.canvas && !isSleeping) {
-            this.setupTouchControls();
-        }
-    }
-
-    setupTouchControls() {
-        if (!this.mobile || !this.canvas || isSleeping) return;
-
-        this.canvas.addEventListener("pointerdown", (ev) => {
-            if (isSleeping) { ev.preventDefault(); ev.stopPropagation(); return; }
-            if (BuildSystem.active) return;
-            ev.preventDefault();
-
-            const rect = this.canvas.getBoundingClientRect();
-            // Bug fix: dividir por DPR (ver comment no setupMouseInteraction).
-            const dpr = deviceScale();
-            const scaleX = this.canvas.width / rect.width / dpr;
-            const scaleY = this.canvas.height / rect.height / dpr;
-
-            const canvasX = (ev.clientX - rect.left) * scaleX;
-            const canvasY = (ev.clientY - rect.top) * scaleY;
-
-            const worldPos = camera.screenToWorld(canvasX, canvasY);
-            this.setDestination(worldPos.x, worldPos.y);
-        }, { signal: controlsAbortController.signal });
-    }
-
-    setDestination(x, y) {
-        if (isSleeping) return;
-        this.destination = { x, y };
-        this.isMovingToTouch = true;
-    }
-
-    clearDestination() {
-        this.destination = null;
-        this.isMovingToTouch = false;
-    }
-
-    update(player, deltaTime) {
-        if (isSleeping) { this.clearDestination(); return; }
-        if (!this.mobile || !this.isMovingToTouch || !this.destination || !player) return;
-
-        const dx = this.destination.x - player.x;
-        const dy = this.destination.y - player.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < this.stopDistance) {
-            this.clearDestination();
-            player.isMoving = false;
-            return;
-        }
-
-        const directionX = dx / distance;
-        const directionY = dy / distance;
-        const moveAmount = this.moveSpeed * deltaTime;
-
-        player.x += directionX * moveAmount;
-        player.y += directionY * moveAmount;
-
-        if (Math.abs(directionX) > Math.abs(directionY)) {
-            player.direction = directionX > 0 ? 'right' : 'left';
-        } else {
-            player.direction = directionY > 0 ? 'down' : 'up';
-        }
-
-        player.isMoving = true;
-    }
-
-    isActive() { return this.isMovingToTouch && this.mobile && !isSleeping; }
-}
+// The touch layer lives in input/touch.js now; re-exported so nothing that
+// imports from control.js had to change.
+export { isMobile, TouchMoveSystem } from './input/touch.js';
+import { isMobile, TouchMoveSystem } from './input/touch.js';
 
 // Player interaction system
 export class PlayerInteractionSystem {
@@ -362,7 +85,7 @@ export class PlayerInteractionSystem {
 
         this.setupInteractionListeners();
 
-        if (this.mobile && !isSleeping) {
+        if (this.mobile && !isSleeping()) {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => this.setupMobileControls());
             } else {
@@ -372,7 +95,7 @@ export class PlayerInteractionSystem {
     }
 
     updateInteractionRange(playerX, playerY, playerWidth, playerHeight) {
-        if (isSleeping) {
+        if (isSleeping()) {
             this.nearbyObjects.clear();
             return;
         }
@@ -391,7 +114,7 @@ export class PlayerInteractionSystem {
     }
 
     checkNearbyObjects() {
-        if (isSleeping || !this.interactionRange) return;
+        if (isSleeping() || !this.interactionRange) return;
 
         this.nearbyObjects.clear();
         const nearby = collisionSystem.getObjectsInInteractionRange(this.interactionRange);
@@ -402,7 +125,7 @@ export class PlayerInteractionSystem {
     }
 
     updateMobileInteractionUI() {
-        if (isSleeping) {
+        if (isSleeping()) {
             const eButton = document.getElementById('mobile-interact-btn');
             if (eButton) eButton.classList.add('hidden');
             return;
@@ -421,7 +144,7 @@ export class PlayerInteractionSystem {
         const { signal } = controlsAbortController;
 
         document.addEventListener('keydown', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+            if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
 
             if (isActionKeyEvent(e, "interact") && !e.repeat) {
                 this.handleInteraction();
@@ -462,7 +185,7 @@ export class PlayerInteractionSystem {
         if (!canvas) return;
 
         canvas.addEventListener("click", (ev) => {
-            if (isSleeping) { ev.preventDefault(); ev.stopPropagation(); return; }
+            if (isSleeping()) { ev.preventDefault(); ev.stopPropagation(); return; }
 
             const rect = canvas.getBoundingClientRect();
             // Bug fix: dividir por DPR. canvas.width = INTERNAL × dpr;
@@ -578,7 +301,7 @@ export class PlayerInteractionSystem {
         // sob o cursor. Fora do modo construção, preserva o menu de contexto
         // do navegador (não interfere em devtools/inspect).
         canvas.addEventListener("contextmenu", (ev) => {
-            if (isSleeping) return;
+            if (isSleeping()) return;
             if (!BuildSystem.active) return;
 
             ev.preventDefault();
@@ -603,7 +326,7 @@ export class PlayerInteractionSystem {
         }, { signal: controlsAbortController.signal });
 
         canvas.addEventListener("mousemove", (ev) => {
-            if (isSleeping) return;
+            if (isSleeping()) return;
 
             const rect = canvas.getBoundingClientRect();
             // Bug fix: dividir por DPR. canvas.width = INTERNAL × dpr;
@@ -619,6 +342,8 @@ export class PlayerInteractionSystem {
 
             this.lastMouseScreenX = canvasX;
             this.lastMouseScreenY = canvasY;
+            lastPointerScreen.x = canvasX;
+            lastPointerScreen.y = canvasY;
 
             if (BuildSystem.active) {
                 BuildSystem.updateMousePosition(worldPos.x, worldPos.y);
@@ -638,20 +363,20 @@ export class PlayerInteractionSystem {
     }
 
     setupMobileControls() {
-        if (isSleeping) return;
+        if (isSleeping()) return;
 
         const button = document.createElement('button');
         button.id = 'mobile-interact-btn';
         button.textContent = 'E';
         button.addEventListener('touchstart', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+            if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             button.classList.add('active');
             this.handleInteraction();
         }, { signal: controlsAbortController.signal });
 
         button.addEventListener('touchend', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+            if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             button.classList.remove('active');
         }, { signal: controlsAbortController.signal });
@@ -662,7 +387,7 @@ export class PlayerInteractionSystem {
     }
 
     setupVirtualJoystick() {
-        if (isSleeping) return;
+        if (isSleeping()) return;
 
         const joystickArea = document.createElement('div');
         joystickArea.id = 'joystick-area';
@@ -671,7 +396,7 @@ export class PlayerInteractionSystem {
         joystickArea.appendChild(joystick);
         document.body.appendChild(joystickArea);
 
-        if (this.mobile && !isSleeping) {
+        if (this.mobile && !isSleeping()) {
             this.activateVirtualJoystick(joystickArea, joystick);
         }
     }
@@ -682,7 +407,7 @@ export class PlayerInteractionSystem {
         const maxDistance = MOBILE.JOYSTICK_MAX_DISTANCE;
 
         area.addEventListener('touchstart', (e) => {
-            if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+            if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             isTouching = true;
             const rect = area.getBoundingClientRect();
@@ -692,13 +417,13 @@ export class PlayerInteractionSystem {
         }, { signal: controlsAbortController.signal });
 
         area.addEventListener('touchmove', (e) => {
-            if (isSleeping || !isTouching) { e.preventDefault(); e.stopPropagation(); return; }
+            if (isSleeping() || !isTouching) { e.preventDefault(); e.stopPropagation(); return; }
             e.preventDefault();
             this.updateJoystickPosition(e.touches[0].clientX, e.touches[0].clientY, joystick, maxDistance, startX, startY);
         }, { signal: controlsAbortController.signal });
 
         area.addEventListener('touchend', (e) => {
-            if (isSleeping || !isTouching) return;
+            if (isSleeping() || !isTouching) return;
             isTouching = false;
             this.resetJoystick(joystick);
         }, { signal: controlsAbortController.signal });
@@ -743,7 +468,7 @@ export class PlayerInteractionSystem {
     }
 
     updateKeysFromJoystick(x, y) {
-        if (isSleeping) return;
+        if (isSleeping()) return;
 
         const threshold = MOBILE.JOYSTICK_THRESHOLD;
 
@@ -768,7 +493,7 @@ export class PlayerInteractionSystem {
     }
 
     handleCanvasClick(worldX, worldY, screenX, screenY) {
-        if (isSleeping || BuildSystem.active) return;
+        if (isSleeping() || BuildSystem.active) return;
 
         const selectAnimal = (animal) => {
             const animalUI = getSystem('animalUI');
@@ -895,18 +620,18 @@ export class PlayerInteractionSystem {
     }
 
     checkCollisionWithRange(hitbox) {
-        if (isSleeping || !this.interactionRange || !hitbox) return false;
+        if (isSleeping() || !this.interactionRange || !hitbox) return false;
         return collisionSystem.checkCollision(this.interactionRange, hitbox);
     }
 
     handleInteraction() {
-        if (isSleeping || this.nearbyObjects.size === 0) return;
+        if (isSleeping() || this.nearbyObjects.size === 0) return;
         const interactable = this.findClosestInteractable();
         if (interactable) this.interactWithObject(interactable);
     }
 
     findClosestInteractable() {
-        if (isSleeping || !this.interactionRange) return null;
+        if (isSleeping() || !this.interactionRange) return null;
 
         let closest = null;
         let minDistance = Infinity;
@@ -941,7 +666,7 @@ export class PlayerInteractionSystem {
     }
 
     interactWithObject(target) {
-        if (isSleeping) return;
+        if (isSleeping()) return;
         const event = new CustomEvent('playerInteract', {
             detail: {
                 objectId: target.objectId || target.id,
@@ -953,7 +678,7 @@ export class PlayerInteractionSystem {
     }
 
     drawInteractionRange(ctx, camera) {
-        if (isSleeping || !this.interactionRange || !getDebugFlag('hitboxes')) return;
+        if (isSleeping() || !this.interactionRange || !getDebugFlag('hitboxes')) return;
 
         ctx.strokeStyle = "cyan";
         ctx.lineWidth = 2;
@@ -972,7 +697,7 @@ export class PlayerInteractionSystem {
     }
 
     update(player, deltaTime) {
-        if (isSleeping) return;
+        if (isSleeping()) return;
         this.touchMoveSystem.update(player, deltaTime);
     }
 }
@@ -1006,7 +731,7 @@ export function setupControls(player) {
 
 
     document.addEventListener('keydown', (e) => {
-        if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+        if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
         if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
 
         setPressedFromEvent(e, true);
@@ -1024,7 +749,7 @@ export function setupControls(player) {
     }, { signal });
 
     document.addEventListener('keyup', (e) => {
-        if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+        if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
 
         setPressedFromEvent(e, false);
 
@@ -1043,7 +768,7 @@ function setupInventoryControls() {
     const { signal } = controlsAbortController;
 
     document.addEventListener("keydown", (e) => {
-        if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+        if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
 
         const active = document.activeElement;
         const isInputActive = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA');
@@ -1070,7 +795,7 @@ function setupUIShortcuts() {
     const { signal } = controlsAbortController;
 
     document.addEventListener("keydown", (e) => {
-        if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+        if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
 
         const active = document.activeElement;
         const isInputActive = !!(active && (
@@ -1172,7 +897,7 @@ function setupToolWheelControls() {
     const { signal } = controlsAbortController;
 
     document.addEventListener('keydown', (e) => {
-        if (isSleeping) return;
+        if (isSleeping()) return;
         const tgt = e.target;
         if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
                  || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
@@ -1212,7 +937,7 @@ function setupToolWheelControls() {
     const _clearSeedHold = () => { clearTimeout(_seedHoldTimer); _seedHoldTimer = null; };
 
     document.addEventListener('keydown', (e) => {
-        if (isSleeping) return;
+        if (isSleeping()) return;
         const tgt = e.target;
         if (tgt && (tgt.tagName === 'INPUT' || tgt.tagName === 'TEXTAREA'
                  || tgt.tagName === 'SELECT' || tgt.isContentEditable)) return;
@@ -1259,7 +984,7 @@ function setupBuildControls() {
             return;
         }
 
-        if (isSleeping) { e.preventDefault(); e.stopPropagation(); return; }
+        if (isSleeping()) { e.preventDefault(); e.stopPropagation(); return; }
 
         if (e.key === "Escape" && BuildSystem.active) { BuildSystem.stopBuilding(); return; }
 
@@ -1293,19 +1018,19 @@ setupBuildControls();
 
 // Update the player interaction zone
 export function updatePlayerInteraction(playerX, playerY, playerWidth, playerHeight) {
-    if (isSleeping) return;
+    if (isSleeping()) return;
     playerInteractionSystem.updateInteractionRange(playerX, playerY, playerWidth, playerHeight);
 }
 
 // Update touch movement
 export function updateTouchMovement(player, deltaTime) {
-    if (isSleeping) return;
+    if (isSleeping()) return;
     playerInteractionSystem.update(player, deltaTime);
 }
 
 // Get movement direction from keyboard
 export function getMovementDirection() {
-    if (isSleeping) return { x: 0, y: 0 };
+    if (isSleeping()) return { x: 0, y: 0 };
     if (playerInteractionSystem.touchMoveSystem.isActive()) return { x: 0, y: 0 };
 
     let x = 0, y = 0;

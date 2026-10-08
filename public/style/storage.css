@@ -518,15 +518,15 @@
   color:#f5e9d3;
 }
 
-/* Batch presets (5/10/100/All) + manual field + search (lupa). Sized to fit
-   one line in a ~190px slot so each slot stays short (≥2 rows visible). */
-.qty-controls{ flex-wrap: nowrap; gap: 4px; margin-bottom: 6px; }
-.qty-preset{
-  width: auto;
-  min-width: 24px;
+/* Amount: − <field> +. Sized to fit one line in a ~190px slot so each slot
+   stays short (≥2 rows visible). It replaced 5/10/100/All presets, which only
+   ever worked for a pointer. */
+.qty-controls{ flex-wrap: nowrap; gap: 6px; margin-bottom: 6px; }
+.qty-step{
+  width: 26px;
   height: 26px;
-  padding: 0 5px;
-  font-size: 11px;
+  font-size: 15px;
+  line-height: 1;
 }
 .qty-input{
   width: 42px;

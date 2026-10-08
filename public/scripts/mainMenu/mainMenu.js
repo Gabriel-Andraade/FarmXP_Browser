@@ -15,6 +15,10 @@ import { a11y } from '../accessibility.js';
 import { qualityMode } from '../qualityMode.js';
 import { displayMode } from '../displayMode.js';
 import { showReloadPrompt } from '../reloadPrompt.js';
+import { selectable } from '../selectable.js';
+import {
+    gamepadSettings, RANGES as GAMEPAD_RANGES, SETTINGS_FIELDS,
+} from '../thePlayer/input/gamepadSettings.js';
 
 const MenuState = {
   MAIN: 'main',
@@ -167,6 +171,10 @@ export class MainMenu {
       card.className = 'mm-card';
       if (opt.future) card.classList.add('future');
       card.dataset.index = idx;
+      // #264: a bare <div> is not focusable, so the controller - which
+      // navigates by moving focus - could only reach the language flags, the
+      // only real <button>s on this screen.
+      selectable(card);
 
       const label = document.createElement('span');
       label.textContent = opt.text;
@@ -207,6 +215,7 @@ export class MainMenu {
       const card = document.createElement('div');
       card.className = 'mm-sub-card';
       card.dataset.index = idx;
+      selectable(card);                                     // #264, as above
 
       const icon = document.createElement('span');
       icon.className = 'mm-sub-icon';
@@ -270,6 +279,11 @@ export class MainMenu {
     ));
 
     // ── Controls ──
+    panel.appendChild(this._createSettingsSection(
+      t('settings.gamepad.title'),
+      this._buildGamepadRows()
+    ));
+
     panel.appendChild(this._createSettingsSection(
       t('settings.controls.title'),
       this._buildControlsRow()
@@ -596,6 +610,86 @@ export class MainMenu {
     return row;
   }
 
+  // ── Gamepad rows ──
+
+  /**
+   * The controller settings, drawn in this screen's own vocabulary.
+   *
+   * Same list as the in-game gear reads — see SETTINGS_FIELDS. The two screens
+   * are written in different class vocabularies, so they each draw it their own
+   * way; what they must not do is disagree about which settings exist, which is
+   * exactly what happened while this section was missing from here.
+   */
+  _buildGamepadRows() {
+    const wrap = document.createElement('div');
+    wrap.className = 'mm-cfg-rows';
+
+    // Whether a pad is actually there, so nobody adjusts sliders that do
+    // nothing and concludes the game is broken.
+    const statusRow = document.createElement('div');
+    statusRow.className = 'mm-cfg-row';
+    const statusLabel = document.createElement('span');
+    statusLabel.className = 'mm-cfg-label';
+    statusLabel.style.opacity = '0.75';
+    statusLabel.style.fontSize = '0.85rem';
+    const refreshStatus = () => {
+      const pads = (navigator.getGamepads?.() ?? []).filter(Boolean);
+      const pad = pads.find((p) => p.mapping === 'standard') ?? pads[0];
+      statusLabel.textContent = pad
+        ? `${t('settings.gamepad.detected')}: ${pad.id}`
+        : t('settings.gamepad.none');
+    };
+    refreshStatus();
+    window.addEventListener('gamepadconnected', refreshStatus);
+    window.addEventListener('gamepaddisconnected', refreshStatus);
+    statusRow.appendChild(statusLabel);
+    wrap.appendChild(statusRow);
+
+    for (const field of SETTINGS_FIELDS) {
+      wrap.appendChild(field.kind === 'toggle'
+        ? this._buildToggleRow(
+            t(field.i18n),
+            gamepadSettings.current[field.key],
+            (value) => gamepadSettings.set({ [field.key]: value }),
+          )
+        : this._buildGamepadSlider(field));
+    }
+
+    return wrap;
+  }
+
+  /** One percent slider bound to a gamepadSettings key. */
+  _buildGamepadSlider(field) {
+    const range = GAMEPAD_RANGES[field.key];
+    const row = document.createElement('div');
+    row.className = 'mm-cfg-row';
+
+    const label = document.createElement('span');
+    label.className = 'mm-cfg-label';
+    label.textContent = t(field.i18n);
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.className = 'mm-cfg-range';
+    input.min = String(Math.round(range.min * 100));
+    input.max = String(Math.round(range.max * 100));
+    input.step = '5';
+    input.value = String(Math.round(gamepadSettings.current[field.key] * 100));
+    input.setAttribute('aria-label', t(field.i18n));
+
+    const readout = document.createElement('span');
+    readout.className = 'mm-cfg-value';
+    readout.textContent = `${input.value}%`;
+
+    input.addEventListener('input', () => {
+      readout.textContent = `${input.value}%`;
+      gamepadSettings.set({ [field.key]: Number(input.value) / 100 });
+    });
+
+    row.append(label, input, readout);
+    return row;
+  }
+
   // ── Controls row ──
 
   _buildControlsRow() {
@@ -860,6 +954,7 @@ export class MainMenu {
     this._clearNode(this.backArea);
     const backBtn = document.createElement('div');
     backBtn.className = 'mm-back-btn';
+    selectable(backBtn);                                    // #264, as above
     backBtn.textContent = `\u2190 ${t('mainMenu.back')}`;
     backBtn.addEventListener('click', () => this._renderMain());
     this.backArea.appendChild(backBtn);

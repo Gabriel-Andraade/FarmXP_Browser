@@ -4,6 +4,7 @@ import { getItem, setItemIcon } from "./itemUtils.js";
 import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
 import { registerSystem, getSystem } from "./gameState.js";
+import { selectable } from './selectable.js';
 
 /**
  * Retorna o nome traduzido de uma receita, com fallback para o nome original
@@ -395,6 +396,7 @@ export class CraftingSystem {
 
       const div = document.createElement("div");
       div.className = "crf-item";
+      selectable(div);              // #264: the highlight rests on the row
 
       const infoDiv = document.createElement("div");
       infoDiv.className = "crf-info";

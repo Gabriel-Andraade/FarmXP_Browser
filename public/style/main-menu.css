@@ -512,3 +512,13 @@
 .mm-overlay::-webkit-scrollbar-track {
   background: rgba(255, 255, 255, 0.05);
 }
+
+/* The percent beside a slider (#264: the controller settings). Fixed width so
+   the slider does not shift as the number goes from 50% to 100%. */
+.mm-cfg-value {
+  min-width: 46px;
+  text-align: right;
+  font-size: 0.85rem;
+  color: #d8c3a0;
+  flex: 0 0 auto;
+}

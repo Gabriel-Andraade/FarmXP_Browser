@@ -13,6 +13,7 @@ import { registerSystem, getObject, getSystem } from "./gameState.js";
 import { handleWarn } from "./errorHandler.js";
 import { logger } from "./logger.js";
 import { t } from "./i18n/i18n.js";
+import { selectable } from './selectable.js';
 
 /**
  * Configurações do sistema de poços
@@ -344,6 +345,7 @@ export const wellSystem = {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
+    selectable(closeBtn);           // #264: built as a <div>
     closeBtn.addEventListener('click', () => this.closeWellMenu());
     btnPullWater.addEventListener('click', () => this.startPullingWater());
     btnDrink.addEventListener('click', () => this.drinkFromWell());

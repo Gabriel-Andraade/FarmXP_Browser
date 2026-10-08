@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, afterAll, mock } from 'bun:test';
+import { i18nModule } from './helpers/i18nMock.js';
 import "../setup.js";
 
 // Track calls for assertions
@@ -51,9 +52,7 @@ mock.module('../../public/scripts/logger.js', () => ({
   logger: { warn: () => {}, error: () => {}, info: () => {}, debug: () => {} }
 }));
 
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key) => key
-}));
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule());
 
 // playerSystem.js is NOT mocked - uses real module (dependencies are mocked above)
 // Import real PlayerSystem class to create a mock instance

@@ -13,7 +13,17 @@ beforeAll(async () => {
   globalThis.window.innerWidth ??= 1920;
 
   // Mock dependencies before importing control.js
+  // The whole surface, not just `camera`: mock.module replaces the module for
+  // every file that imports it, and control.js pulls in buildSystem, houseSystem
+  // and chestSystem, which all read CAMERA_ZOOM. Without it the import throws
+  // and this file reports one unnamed failure instead of its forty tests.
   mock.module('../../public/scripts/thePlayer/cameraSystem.js', () => ({
+    CAMERA_ZOOM: 1.4,
+    VIEWPORT_WIDTH: 880,
+    VIEWPORT_HEIGHT: 963,
+    ZOOMED_VIEWPORT_WIDTH: 880 / 1.4,
+    ZOOMED_VIEWPORT_HEIGHT: 963 / 1.4,
+    setViewportSize: () => {},
     camera: {
       x: 0, y: 0, width: 880, height: 963,
       worldToScreen: (x, y) => ({ x, y }),

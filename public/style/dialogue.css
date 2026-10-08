@@ -285,3 +285,38 @@
     from { opacity: 0; transform: translateX(-50%) translateY(8px); }
     to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
+
+/* The first moments of a choice (#264).
+   Someone skipping a conversation is pressing as fast as they can, and without
+   this the rhythm that was skipping lines would answer the question too. The
+   options arrive dimmed and unclickable, then settle in — so the press that
+   does nothing is a press the player can see doing nothing. */
+.dlg-choices.is-choice-locked {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.dlg-choices {
+    transition: opacity 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dlg-choices { transition: none; }
+}
+
+/* An answer with a button on it (#264): the circled letter, then the words. */
+.dlg-choice-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dlg-choices-buttons .dlg-choice-btn {
+    /* No sliding on hover here — the letter, not the position, says which is
+       which, and a moving row makes the badges hard to read down the column. */
+    transform: none;
+}
+
+.dlg-choices-buttons .dlg-choice-btn:hover {
+    transform: none;
+}

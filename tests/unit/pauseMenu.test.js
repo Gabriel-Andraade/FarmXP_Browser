@@ -30,7 +30,11 @@ mock.module('../../public/scripts/gameState.js', () => ({
   default: {},
 }));
 
-const { ITEMS, OVERLAY_SELECTORS } = await import('../../public/scripts/pauseMenu.js');
+const { ITEMS } = await import('../../public/scripts/pauseMenu.js');
+// #264: the panel list moved to its proper owner — one module answers "is a
+// panel open", instead of the pause menu and the controller each keeping one.
+const { OVERLAY_SELECTORS, SHADOW_PANELS } =
+  await import('../../public/scripts/thePlayer/input/panels.js');
 
 import en from '../../public/scripts/i18n/en.js';
 import es from '../../public/scripts/i18n/es.js';
@@ -136,10 +140,22 @@ describe('pause menu (#261)', () => {
       // Opening one of these from the menu and pressing Esc must close *it*,
       // not toggle the menu underneath.
       const joined = OVERLAY_SELECTORS.join(' ');
-      expect(joined).toContain('configModal');   // Settings
-      expect(joined).toContain('save-modal');    // Save
-      expect(joined).toContain('help-overlay');  // Help
-      expect(joined).toContain('inv');           // Inventory
+      // Settings is matched by the generic `.modal.active` rather than by an
+      // entry of its own, so what matters is that its classes are covered, not
+      // that its id appears in the list. #configModal carries `modal` in the
+      // markup and gains `active` when the menu opens it.
+      const covers = (className) => {
+        const classes = new Set(className.split(/\s+/));
+        return OVERLAY_SELECTORS.some((sel) =>
+          sel.startsWith('.') && sel.slice(1).split('.').every((c) => classes.has(c)));
+      };
+      expect(covers('modal active')).toBe(true);   // Settings
+      expect(joined).toContain('save-modal');      // Save
+      expect(joined).toContain('help-overlay');    // Help
+      // The inventory is detected through SHADOW_PANELS, not this list: its
+      // markup lives in a shadow root, where querySelector cannot reach.
+      const shadow = SHADOW_PANELS.map((p) => `${p.host} ${p.inner}`).join(' ');
+      expect(shadow).toContain('inventory');
     });
 
     test('the exit confirmation is in the list', () => {

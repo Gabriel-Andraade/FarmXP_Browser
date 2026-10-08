@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { i18nModule } from './helpers/i18nMock.js';
 import "../setup.js";
 
 // Mock logger.js
@@ -84,14 +85,14 @@ mock.module('../../public/scripts/itemUtils.js', () => ({
 }));
 
 // Mock i18n
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key, params) => {
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule(
+  (key, params) => {
     if (key === 'time.weekdays') return ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
     if (key === 'trading.open') return 'Aberto';
     if (key === 'trading.statusUnknown') return 'Status desconhecido';
     return key;
   }
-}));
+));
 
 // Mock settingsUI.js
 mock.module('../../public/scripts/settingsUI.js', () => ({

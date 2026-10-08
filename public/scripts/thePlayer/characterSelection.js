@@ -2,6 +2,7 @@ import { playerSystem } from "./playerSystem.js";
 import { logger } from "../logger.js";
 import { t } from '../i18n/i18n.js';
 import { setObject, getSystem } from "../gameState.js";
+import { selectable } from '../selectable.js';
 
 export class CharacterSelection {
     constructor() {
@@ -80,6 +81,7 @@ export class CharacterSelection {
         this.characters.forEach(character => {
             const characterCard = document.createElement('div');
             characterCard.className = 'chs-character-card';
+            selectable(characterCard);          // #264: a div is not focusable
             characterCard.dataset.characterId = character.id;
 
 const portrait = document.createElement('div');

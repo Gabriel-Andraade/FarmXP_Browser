@@ -302,3 +302,28 @@
     font-size: 12px;
   }
 }
+
+/* ===== #264: seleção pelo controle =====
+   O controle move o FOCO, não o ponteiro — então o item escolhido precisa
+   acender igual ao hover do mouse, senão o jogador não vê onde está. As regras
+   abaixo espelham as de :hover acima; `:focus-within` acende a linha inteira
+   quando o foco está no botão dentro dela. */
+
+.eap-item:focus-within {
+  background: linear-gradient(180deg, rgba(243, 220, 192, 0.14) 0%, rgba(243, 220, 192, 0.06) 100%);
+  border-color: rgba(201, 164, 99, 0.55);
+  transform: translateX(2px);
+}
+
+.eap-add-btn:focus-visible:not(:disabled) {
+  background: linear-gradient(180deg, #ffd166 0%, #c9a463 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  outline: 3px solid rgba(201, 164, 99, 0.75);
+  outline-offset: 2px;
+}
+
+.eap-close:focus-visible {
+  outline: 3px solid rgba(201, 164, 99, 0.75);
+  outline-offset: 2px;
+}

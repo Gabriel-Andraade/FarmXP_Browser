@@ -897,6 +897,43 @@ async function exposeGlobals() {
 // FLUXO: SELEÇÃO DE PERSONAGEM -> LOADING -> START
 // =============================================================================
 
+/**
+ * Brings up the input layer: who is driving, and the controller section.
+ *
+ * Deliberately free of world dependencies, so it can run at the main menu —
+ * build mode is detected through a body class and the tool wheel is wired
+ * separately, once the game itself is loaded.
+ */
+async function setupInputLayer() {
+  try {
+    const [gpInput, gpCursor, gpNav, gpSettings, source] = await Promise.all([
+      import('./thePlayer/input/gamepadInput.js'),
+      import('./thePlayer/input/gamepadCursor.js'),
+      import('./thePlayer/input/panelNavigation.js'),
+      import('./thePlayer/input/gamepadSettings.js'),
+      import('./thePlayer/input/inputSource.js'),
+    ]);
+    source.initInputSource();
+    gpCursor.gamepadCursor.init();
+    gpCursor.gamepadCursor.setScale(gpSettings.gamepadSettings.current.cursorScale);
+    document.addEventListener('gamepad:settingschanged', (e) =>
+      gpCursor.gamepadCursor.setScale(e.detail.cursorScale));
+    gpInput.gamepadInput.init({
+      moveFocus: gpNav.moveFocus,
+      activateFocused: gpNav.confirm,
+      ensureFocus: gpNav.ensureFocus,
+      panelButtons: gpNav.panelButtons,
+      panelKind: gpNav.panelKind,
+      translate: (key) => t(`gamepadHints.${key}`),
+      closeTopPanel: gpNav.back,
+      cursor: gpCursor.gamepadCursor,
+    });
+    gamepadInputRef = gpInput.gamepadInput;
+  } catch (e) {
+    handleWarn("falha ao iniciar a camada de input", "main:setupInputLayer", e);
+  }
+}
+
 async function startFullGameLoad() {
   if (gameStartInProgress || gameStarted) return;
   gameStartInProgress = true;
@@ -1074,6 +1111,20 @@ async function startFullGameLoad() {
       await import('./saveSlotsUI.js');
       // #261: after saveSlotsUI — the pause menu borrows its in-DOM dialog.
       (await import('./pauseMenu.js')).pauseMenu.init();
+      // #264: on-screen gamepad diagnostic, hidden until __debug.gamepad.show().
+      (await import('./gamepadProbe.js')).initGamepadProbe();
+
+      // Tool wheel: hold LB to open, RB to cycle, release LB to equip. Wired
+      // here rather than with the rest of the input layer, because the wheel is
+      // a world system and the input layer now starts at the main menu.
+      const wheel = await import('./thePlayer/toolWheel.js');
+      document.addEventListener('gamepad:toolwheel', (e) => {
+        const action = e.detail?.action;
+        if (action === 'open' && !wheel.isToolWheelOpen()) wheel.openToolWheel();
+        else if (action === 'next') wheel.cycleSelection(1);
+        else if (action === 'equip' && wheel.isToolWheelOpen()) wheel.closeToolWheel(true);
+        else if (action === 'cancel' && wheel.isToolWheelOpen()) wheel.closeToolWheel(false);
+      });
       if (saveRef) {
         // Configurar listeners para chamar markDirty() em mudanças de estado importantes
         setupStateChangeListenersForSave();
@@ -1322,6 +1373,11 @@ async function initGameBootstrap() {
 
   simulationPaused = true;
   interactionEnabled = false;
+
+  // #264: the input layer starts here, before the menu — it used to live inside
+  // startFullGameLoad(), which only runs once a character is picked, so a
+  // controller player could not navigate the main menu or even begin a game.
+  await setupInputLayer();
 
   // Show Main Menu (replaces direct CharacterSelection show)
   const mainMenu = new MainMenu();
@@ -1595,6 +1651,9 @@ function drawDebugCoordinates(ctx) {
 // GAME LOOP PRINCIPAL
 // =============================================================================
 
+// #264: set once the controller modules load; null until then.
+let gamepadInputRef = null;
+
 function gameLoop(timestamp) {
   if (!gameInitialized) {
     requestAnimationFrame(gameLoop);
@@ -1620,6 +1679,9 @@ function gameLoop(timestamp) {
 
   const deltaTime = (timestamp - lastTime) / 1000;
   lastTime = timestamp;
+
+  // #264: poll the controller once per frame, before anything reads input.
+  gamepadInputRef?.update(timestamp);
 
   if (isSleeping) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);

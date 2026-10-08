@@ -19,6 +19,7 @@
 import { registerSystem, getSystem } from './gameState.js';
 import { t, i18n } from './i18n/i18n.js';
 import { logger } from './logger.js';
+import { selectable } from './selectable.js';
 
 // Definições dos locais (coordenadas em % do quadro, igual ao protótipo).
 const LOCATIONS = {
@@ -343,8 +344,7 @@ class TravelMap {
       card.dataset.location = id;
       card.style.left = loc.x + '%';
       card.style.top  = loc.y + '%';
-      card.tabIndex = 0;
-      card.setAttribute('role', 'button');
+      selectable(card);                 // #264
       this._setCardLabels(card, id);
 
       const icon = document.createElement('span');
