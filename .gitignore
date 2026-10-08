@@ -76,3 +76,6 @@ tools/overlay-test/
 
 # Pacote Steam (exe do shell + DLLs do CEF + servidor compilado, ~480 MB)
 dist-steam/
+
+# Editor settings: machine-specific (the CEF checkout path lives here)
+.vscode/

@@ -32,7 +32,9 @@ export function driveDialogue(panel, pressed) {
         // Refused while the choices are still locked, and refused when there is
         // no question on screen — in which case A falls through and advances the
         // line, which is what it means the rest of the time.
-        if (chooseByAction(action)) return true;
+        // 'consumed', not just true: the caller has to know the press was
+        // spent here, because the same buttons mean confirm and back to it.
+        if (chooseByAction(action)) return 'consumed';
     }
     return hasButtonChoices(panel);
 }

@@ -45,6 +45,7 @@ import {
     keys, pressed, actions, joystickActions, getKeybinds, setKeybinds,
     recalcActions, clearAllInputState, setPressedFromEvent,
     getEventCode, isActionKeyEvent, bootstrapKeybindsFromConfigUI,
+    extractKeybindsFromConfig,
 } from './input/keyboard.js';
 
 // Sleep state that blocks all inputs
@@ -79,7 +80,9 @@ export class PlayerInteractionSystem {
         this.interactionRange = null;
         this.nearbyObjects = new Set();
         this.mobile = isMobile();
-        this.touchMoveSystem = new TouchMoveSystem();
+        this.touchMoveSystem = new TouchMoveSystem({
+            getSignal: () => controlsAbortController.signal,
+        });
         this.lastMouseScreenX = null;
         this.lastMouseScreenY = null;
 

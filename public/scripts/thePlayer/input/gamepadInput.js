@@ -235,7 +235,11 @@ class GamepadInput {
 
         // Tool wheel mirrors the keyboard: hold to open, release to equip.
         const holdingLB = held(pad, ACTION.TOOL_WHEEL);
-        if (holdingLB && !this._wheelOpen) {
+        // Cancelling with B only lasts until LB is let go: without this the
+        // "hold to open" check reopened the wheel on the very next frame, so B
+        // did nothing at all while the finger stayed on LB.
+        if (!holdingLB) this._wheelCancelled = false;
+        if (holdingLB && !this._wheelOpen && !this._wheelCancelled) {
             this._wheelOpen = true;
             document.dispatchEvent(new CustomEvent('gamepad:toolwheel', { detail: { action: 'open' } }));
         } else if (!holdingLB && this._wheelOpen) {
@@ -247,6 +251,7 @@ class GamepadInput {
         }
         if (this._wheelOpen && fired(pressed, ACTION.BACK)) {
             this._wheelOpen = false;
+            this._wheelCancelled = true;
             document.dispatchEvent(new CustomEvent('gamepad:toolwheel', { detail: { action: 'cancel' } }));
         }
 
@@ -305,7 +310,13 @@ class GamepadInput {
         // A panel may claim the D-pad for itself — the market does, because it
         // is two panes with their own tabs. The stick is never claimed, so it
         // goes on walking whatever the panel holds.
-        const ownsDpad = this._panelButtons?.(pressed) ?? false;
+        const claim = this._panelButtons?.(pressed) ?? false;
+        const ownsDpad = !!claim;
+        // A is both "first answer" and "confirm"; B is both "second answer" and
+        // "back". When a dialogue answers with one of them, the generic
+        // handlers below must not also act on the same press — A would fall
+        // through to a synthetic Enter and advance the line it just answered.
+        const consumed = claim === 'consumed';
 
         const stick = stickVector(pad, AXIS.LEFT_X, AXIS.LEFT_Y, settings.deadZone);
         const dpad = (action) => !ownsDpad && held(pad, action);
@@ -325,13 +336,14 @@ class GamepadInput {
             this._navigate(dir);
         }
 
-        if (fired(pressed, ACTION.CONFIRM)) {
+        if (!consumed && fired(pressed, ACTION.CONFIRM)) {
             // Panels are navigated, never pointed at — the reticle is not
             // consulted here at all. Enter is the fallback for a panel with
             // nothing focusable in it.
             if (!this._activate?.()) this._key('Enter');
         }
-        if (fired(pressed, ACTION.BACK)) this._back?.();
+        if (!consumed && fired(pressed, ACTION.BACK)) this._back?.();
+        // Start is never an answer, so it keeps working either way.
         if (fired(pressed, ACTION.PAUSE)) this._pause();
     }
 

@@ -1865,9 +1865,20 @@ mock.module('../../public/scripts/dialogueSystem.js', () => ({
           [2, ACTION.CHOICE_3], [3, ACTION.CHOICE_4],
         ]) {
           chosen = [];
-          expect(driveDialogue(panel, press(index))).toBe(true);
+          // 'consumed', not just true: A is also confirm and B is also back,
+          // so the caller has to know the press was spent here. Answering and
+          // then falling through to a synthetic Enter advanced the very line
+          // the player had just answered.
+          expect(driveDialogue(panel, press(index))).toBe('consumed');
           expect(chosen).toEqual([action]);
         }
+      });
+
+      test('a press it did not answer is not reported as consumed', () => {
+        // Otherwise confirm, back and the pause button would all be swallowed
+        // on a dialogue that has no question on screen.
+        accepts = false;
+        expect(driveDialogue(dialogue({ withButtons: false }), press(0))).toBe(false);
       });
 
       test('with answers on screen it claims the D-pad, leaving nothing to walk', () => {

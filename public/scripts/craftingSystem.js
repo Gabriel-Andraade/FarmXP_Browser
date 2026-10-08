@@ -452,7 +452,13 @@ export class CraftingSystem {
       craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
 
       if (can) {
-        craftBtn.addEventListener("click", () => this.craft(recipe.id));
+        const craft = () => this.craft(recipe.id);
+        craftBtn.addEventListener("click", craft);
+        // The row is focusable, so Enter on it has to do what the button does.
+        // Guarded against the button's own click bubbling back up here.
+        div.addEventListener("click", (event) => {
+          if (!craftBtn.contains(event.target)) craft();
+        });
       }
 
       div.append(infoDiv, craftBtn);

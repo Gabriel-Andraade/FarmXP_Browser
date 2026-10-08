@@ -35,6 +35,14 @@ export function selectable(el, { role = 'button' } = {}) {
     // calls .click() directly and never needed this, but the two should not
     // disagree about what the element does.
     el.addEventListener('keydown', (event) => {
+        // Only when this element is the one focused. Several of the elements
+        // wrapped here contain real controls — a recipe row holds its "craft"
+        // button, a storage card holds its action button and its amount field —
+        // and a key pressed on one of those bubbles up here. Acting on it
+        // cancelled the button's own click and clicked the wrapper instead, so
+        // a keyboard user could not craft, take or store, and typing in the
+        // amount field swallowed Space and Enter.
+        if (event.target !== el) return;
         if (event.key !== 'Enter' && event.key !== ' ') return;
         event.preventDefault();
         // The game listens for keys on `document` too. Without this the same

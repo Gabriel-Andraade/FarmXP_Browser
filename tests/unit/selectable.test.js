@@ -197,3 +197,67 @@ describe('every clickable element can be reached without a mouse (#264)', () => 
         expect(attrs.role).toBeUndefined();
     });
 });
+
+describe('selectable: keys that are not ours (#264)', () => {
+    /** Minimal element that records what the handler did to the event. */
+    function node() {
+        let handler = null;
+        const el = {
+            dataset: {},
+            clicks: 0,
+            hasAttribute: () => false,
+            setAttribute: () => {},
+            addEventListener: (type, fn) => { if (type === 'keydown') handler = fn; },
+            click() { this.clicks++; },
+        };
+        return { el, fire: (event) => handler?.(event) };
+    }
+
+    const keyEvent = (key, target) => ({
+        key, target,
+        prevented: false, stopped: false,
+        preventDefault() { this.prevented = true; },
+        stopPropagation() { this.stopped = true; },
+    });
+
+    test('Enter on the element itself presses it', async () => {
+        const { selectable } = await import('../../public/scripts/selectable.js');
+        const { el, fire } = node();
+        selectable(el);
+
+        const event = keyEvent('Enter', el);
+        fire(event);
+        expect(el.clicks).toBe(1);
+        expect(event.prevented).toBe(true);
+    });
+
+    test('Enter on a control inside it is left alone', async () => {
+        // Several wrapped elements contain real controls: a recipe row holds
+        // its craft button, a storage card holds its action button and its
+        // amount field. Acting on a bubbled key cancelled the button's own
+        // click and pressed the wrapper instead — so a keyboard user could not
+        // craft, take or store, and Space in the amount field was swallowed.
+        const { selectable } = await import('../../public/scripts/selectable.js');
+        const { el, fire } = node();
+        selectable(el);
+
+        const inner = { tagName: 'BUTTON' };
+        const event = keyEvent('Enter', inner);
+        fire(event);
+
+        expect(el.clicks).toBe(0);
+        expect(event.prevented).toBe(false);
+        expect(event.stopped).toBe(false);
+    });
+
+    test('a key it does not handle passes through untouched', async () => {
+        const { selectable } = await import('../../public/scripts/selectable.js');
+        const { el, fire } = node();
+        selectable(el);
+
+        const event = keyEvent('a', el);
+        fire(event);
+        expect(el.clicks).toBe(0);
+        expect(event.prevented).toBe(false);
+    });
+});

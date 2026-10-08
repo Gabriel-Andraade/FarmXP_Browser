@@ -15,6 +15,7 @@ import { camera } from '../cameraSystem.js';
 import { MOVEMENT, RANGES, MOBILE } from '../../constants.js';
 import { deviceScale } from '../../qualityMode.js';
 import { isSleeping } from './sleepState.js';
+import { BuildSystem } from '../../buildSystem.js';
 
 // Device detection
 export const isMobile = () => {
@@ -31,7 +32,14 @@ export const isMobile = () => {
 
 // Touch movement system for mobile devices
 export class TouchMoveSystem {
-    constructor() {
+    /**
+     * @param {{ getSignal?: () => AbortSignal|undefined }} [deps]
+     *   The abort signal is read through a getter rather than captured: the
+     *   controller it belongs to lives in control.js and is replaced whenever
+     *   the controls are torn down, so a copy taken here would go stale.
+     */
+    constructor({ getSignal } = {}) {
+        this._getSignal = getSignal ?? (() => undefined);
         this.destination = null;
         this.isMovingToTouch = false;
         this.moveSpeed = MOVEMENT.TOUCH_MOVE_SPEED;
@@ -63,7 +71,7 @@ export class TouchMoveSystem {
 
             const worldPos = camera.screenToWorld(canvasX, canvasY);
             this.setDestination(worldPos.x, worldPos.y);
-        }, { signal: controlsAbortController.signal });
+        }, { signal: this._getSignal() });
     }
 
     setDestination(x, y) {

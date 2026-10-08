@@ -364,13 +364,10 @@ class TravelMap {
         e.stopPropagation();
         this._handleLocationClick(id);
       };
+      // One listener only: selectable(card) turns Enter and Space into a
+      // click, so a second keydown handler here ran the trip twice — the first
+      // press started it and the second answered "still moving".
       card.addEventListener('click', onActivate, { signal });
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this._handleLocationClick(id);
-        }
-      }, { signal });
 
       area.appendChild(card);
       this.cards[id] = card;

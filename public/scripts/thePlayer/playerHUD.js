@@ -490,6 +490,7 @@ export class PlayerHUD {
         document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
         document.removeEventListener('controlsChanged', this._onControlsChanged);
+        document.removeEventListener('input:sourcechanged', this._onControlsChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);
 

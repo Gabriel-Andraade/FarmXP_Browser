@@ -285,4 +285,5 @@ export {
     pressed, actions, joystickActions,
     recalcActions, clearAllInputState, setPressedFromEvent,
     getEventCode, isActionKeyEvent, bootstrapKeybindsFromConfigUI,
+    extractKeybindsFromConfig,
 };

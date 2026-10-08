@@ -126,14 +126,30 @@ export function openPanel({ includePause = true } = {}) {
     const selectors = includePause ? [...OVERLAY_SELECTORS, PAUSE_SELECTOR] : OVERLAY_SELECTORS;
     let best = null;
     let bestZ = -Infinity;
+    const consider = (el, depth) => {
+        if (depth >= bestZ) { best = el; bestZ = depth; }
+    };
+
     for (const selector of selectors) {
         const el = document.querySelector(selector);
         if (!onScreen(el)) continue;
         const z = Number(getComputedStyle(el).zIndex);
-        const depth = Number.isFinite(z) ? z : 0;
-        if (depth >= bestZ) { best = el; bestZ = depth; }
+        consider(el, Number.isFinite(z) ? z : 0);
     }
-    return best ?? openShadowPanel();
+
+    // In the same comparison, not as a fallback after it: the inventory lives
+    // in a shadow root, and taking it only when no document overlay was found
+    // let a lower one win over it.
+    const shadow = openShadowPanel();
+    if (shadow) {
+        // Its own z-index is inside the shadow tree; what stacks against the
+        // other panels is the host.
+        const host = document.querySelector(SHADOW_PANELS[0].host);
+        const z = host ? Number(getComputedStyle(host).zIndex) : 0;
+        consider(shadow, Number.isFinite(z) ? z : 0);
+    }
+
+    return best;
 }
 
 export function isPanelOpen(opts) {

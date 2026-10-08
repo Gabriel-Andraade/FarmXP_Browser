@@ -640,8 +640,14 @@ export class MainMenu {
         : t('settings.gamepad.none');
     };
     refreshStatus();
-    window.addEventListener('gamepadconnected', refreshStatus);
-    window.addEventListener('gamepaddisconnected', refreshStatus);
+    // Settings is rebuilt on every open and on every language change, so these
+    // have to come off with it — otherwise each visit leaves another pair alive,
+    // each holding a label that is no longer on screen.
+    this._gamepadStatusAbort?.abort();
+    this._gamepadStatusAbort = new AbortController();
+    const { signal } = this._gamepadStatusAbort;
+    window.addEventListener('gamepadconnected', refreshStatus, { signal });
+    window.addEventListener('gamepaddisconnected', refreshStatus, { signal });
     statusRow.appendChild(statusLabel);
     wrap.appendChild(statusRow);
 
@@ -968,6 +974,9 @@ export class MainMenu {
   }
 
   _clearMenuArea() {
+    // Whatever the settings screen wired to the window goes with it.
+    this._gamepadStatusAbort?.abort();
+    this._gamepadStatusAbort = null;
     this._clearNode(this.menuArea);
   }
 
