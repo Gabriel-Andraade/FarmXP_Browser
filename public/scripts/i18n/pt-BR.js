@@ -2853,6 +2853,10 @@ export default {
 
     noButton: 'Sem botão no controle',
     subtitle: 'As teclas abaixo refletem suas configurações atuais.',
+
+    subtitleGamepad: 'Os botões abaixo são os do controle conectado.',
+
+    hintGamepad: 'Aperte B para fechar.',
     hintToggle: 'Pressione {key} para abrir/fechar.',
     unbound: 'Não configurado',
     sections: {

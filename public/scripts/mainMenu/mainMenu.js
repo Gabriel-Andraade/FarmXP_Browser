@@ -934,11 +934,11 @@ export class MainMenu {
 
       if (e.key === 'ArrowDown') {
         this.selectedIndex = (this.selectedIndex + 1) % (maxIndex + 1);
-        this._highlightCards(isMain ? '.mm-card' : '.mm-sub-card');
+        this._highlightCards(isMain ? '.mm-card' : '.mm-sub-card', { moveFocus: true });
         e.preventDefault();
       } else if (e.key === 'ArrowUp') {
         this.selectedIndex = (this.selectedIndex - 1 + maxIndex + 1) % (maxIndex + 1);
-        this._highlightCards(isMain ? '.mm-card' : '.mm-sub-card');
+        this._highlightCards(isMain ? '.mm-card' : '.mm-sub-card', { moveFocus: true });
         e.preventDefault();
       } else if (e.key === 'Enter') {
         if (isMain) {
@@ -966,10 +966,16 @@ export class MainMenu {
     this.backArea.appendChild(backBtn);
   }
 
-  _highlightCards(selector) {
+  _highlightCards(selector, { moveFocus = false } = {}) {
     const cards = this.menuArea.querySelectorAll(selector);
     cards.forEach((card, idx) => {
-      card.classList.toggle('selected', idx === this.selectedIndex);
+      const chosen = idx === this.selectedIndex;
+      card.classList.toggle('selected', chosen);
+      // The cards take focus now, and Enter on a focused card activates it
+      // directly. Moving the highlight without the focus meant Down then Enter
+      // opened whatever the focus had been left on, not the option the player
+      // was looking at.
+      if (chosen && moveFocus) card.focus?.();
     });
   }
 

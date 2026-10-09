@@ -2838,6 +2838,10 @@ export default {
 
     noButton: 'No button on the controller',
     subtitle: 'Keys below reflect your current settings.',
+
+    subtitleGamepad: 'The buttons below are those of the connected controller.',
+
+    hintGamepad: 'Press B to close.',
     hintToggle: 'Press {key} to open/close.',
     unbound: 'Not set',
     sections: {

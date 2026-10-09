@@ -158,7 +158,18 @@ body.input-gamepad #gamepad-hints.is-visible {
     margin-right: 7px;
 }
 
+/* Narrow windows get a tighter strip, not no strip. The rule here used to hide
+   it outright "because a phone has no controller" — but the strip only exists
+   while `body.input-gamepad` is set, so a phone never saw it anyway, and all the
+   rule actually did was take the prompts away from a desktop player who had
+   resized their window. */
 @media (max-width: 760px) {
-    /* A phone has no controller, and the strip would eat the HUD. */
-    #gamepad-hints { display: none !important; }
+    #gamepad-hints {
+        right: 8px;
+        bottom: 8px;
+        padding: 6px 8px;
+        gap: 2px;
+        font-size: 0.72rem;
+        max-width: 60vw;
+    }
 }

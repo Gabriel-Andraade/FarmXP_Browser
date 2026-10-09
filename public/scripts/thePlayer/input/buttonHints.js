@@ -100,6 +100,12 @@ const PAIRS = {
 let host = null;
 let shownKey = null;
 
+// The strip redraws only when the screen changes, so a language change on the
+// same screen would have left the previous language's labels sitting there.
+if (typeof document !== 'undefined') {
+    document.addEventListener('languageChanged', () => { shownKey = null; });
+}
+
 function ensureHost() {
     if (host?.isConnected) return host;
     host = document.getElementById(HOST_ID) ?? document.createElement('div');

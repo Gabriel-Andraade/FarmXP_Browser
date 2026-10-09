@@ -173,11 +173,15 @@ class GamepadCursor {
 
     /** A: interact with whatever is under the reticle; callers fall back to proximity. */
     confirmAction() {
-        const target = this.visible ? document.elementFromPoint(this.x, this.y) : null;
-        // An HTML control takes the click; the canvas gets a click event the
-        // game's own handlers already understand.
-        if (target && target !== document.body && typeof target.click === 'function'
-            && target.tagName !== 'CANVAS') {
+        // Only a real control takes the press. Every element answers to
+        // `click()`, so a wrapper or a backdrop under the reticle used to
+        // swallow A and stop it falling through to the proximity interact.
+        const under = this.visible ? document.elementFromPoint(this.x, this.y) : null;
+        const target = under?.closest?.(
+            'button:not([disabled]), a[href], input:not([disabled]), select, '
+            + '[role="button"], [tabindex]:not([tabindex="-1"])',
+        ) ?? null;
+        if (target && typeof target.click === 'function') {
             target.click();
             return true;
         }

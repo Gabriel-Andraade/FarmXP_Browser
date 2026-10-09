@@ -557,13 +557,32 @@ mock.module('../../public/scripts/dialogueSystem.js', () => ({
       });
 
       test('over an HTML control it clicks that, without consulting the world', () => {
-        const button = { tagName: 'BUTTON', clicks: 0, click() { this.clicks++; } };
+        // `closest` because that is how the reticle now decides: every element
+        // answers to click(), so it asks whether this is a real control before
+        // spending the press on it.
+        const button = {
+            tagName: 'BUTTON', clicks: 0,
+            closest(sel) { return sel.includes('button') ? this : null; },
+            click() { this.clicks++; },
+        };
         gamepadCursor.visible = true;
         pointAt(button);
         objectAtPointer = null;              // irrelevant here
 
         expect(gamepadCursor.confirmAction()).toBe(true);
         expect(button.clicks).toBe(1);
+      });
+
+      test('over a plain wrapper it takes nothing', () => {
+        // A backdrop or a layout div answers to click() like anything else, and
+        // used to swallow the press before proximity could have it.
+        const wrapper = { tagName: 'DIV', clicks: 0, closest: () => null, click() { this.clicks++; } };
+        gamepadCursor.visible = true;
+        pointAt(wrapper);
+        objectAtPointer = null;
+
+        expect(gamepadCursor.confirmAction()).toBe(false);
+        expect(wrapper.clicks).toBe(0);
       });
 
       test('with the pointer never moved, it takes nothing', () => {
@@ -1020,7 +1039,7 @@ mock.module('../../public/scripts/dialogueSystem.js', () => ({
     });
 
     describe('market: A on an item asks how many (#264)', () => {
-      test('it selects the item and opens the amount panel', () => {
+      test('it selects the item and opens the amount panel', async () => {
         const { panel, parts } = market();
         const tradeButton = control('mch-trade-button');
         const query = panel.querySelector.bind(panel);
@@ -1029,6 +1048,11 @@ mock.module('../../public/scripts/dialogueSystem.js', () => ({
 
         expect(confirmMarketItem(panel, parts.playerItems[1])).toBe(true);
         expect(parts.playerItems[1].clicks).toBe(1);   // selected
+
+        // A frame later, on purpose: selecting rebuilds the trade button, so
+        // asking for the amount in the same tick would click the node that is
+        // about to be replaced.
+        await new Promise((resolve) => setTimeout(resolve, 20));
         expect(tradeButton.clicks).toBe(1);            // and the amount asked for
       });
 

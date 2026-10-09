@@ -560,13 +560,28 @@ function rerenderTexts(keybinds) {
   const titleEl = panelEl?.querySelector?.(`.${CLS.title}`);
   if (titleEl) titleEl.textContent = panelTitle();
 
+  // The whole header follows the device, not just the heading: saying
+  // "Controller buttons" over "the keys below reflect your settings" and
+  // "press H to close" is worse than saying nothing.
+  const onGamepad = currentInputSource() === 'gamepad';
+
   const subtitleEl = panelEl?.querySelector?.(`.${CLS.subtitle}`);
-  if (subtitleEl) subtitleEl.textContent = safeT('shortcutsPanel.subtitle', 'As teclas abaixo refletem suas configurações atuais.');
+  if (subtitleEl) {
+    subtitleEl.textContent = onGamepad
+      ? safeT('shortcutsPanel.subtitleGamepad', 'Os botões abaixo são os do controle conectado.')
+      : safeT('shortcutsPanel.subtitle', 'As teclas abaixo refletem suas configurações atuais.');
+  }
 
   const hintEl = panelEl?.querySelector?.(`.${CLS.hint}`);
   if (hintEl) {
-    const hintTpl = safeT('shortcutsPanel.hintToggle', 'Pressione {key} para abrir/fechar.');
-    hintEl.textContent = formatTemplate(hintTpl, { key: getHelpKeyLabel(keybinds) });
+    if (onGamepad) {
+      // B is what closes a panel everywhere else in the game, so it is what
+      // closes this one too.
+      hintEl.textContent = safeT('shortcutsPanel.hintGamepad', 'Aperte B para fechar.');
+    } else {
+      const hintTpl = safeT('shortcutsPanel.hintToggle', 'Pressione {key} para abrir/fechar.');
+      hintEl.textContent = formatTemplate(hintTpl, { key: getHelpKeyLabel(keybinds) });
+    }
   }
 
   // close aria
@@ -697,7 +712,10 @@ function onControlsChanged(e) {
 function onLanguageChanged() {
   const keybinds = getCachedKeybinds();
   updateHelpBtnTooltip(keybinds);
-  if (mounted) rerenderTexts(keybinds);
+  // The rows too, not only the headings: "no button on the controller" and
+  // "unbound" are written by setKeysInto, so refreshing the texts alone left
+  // them in the language the player just left.
+  if (mounted) rerenderAll(keybinds);
 }
 
 function onHudReady() {

@@ -486,6 +486,13 @@ export function panelButtons(pressed) {
     if (inFlow && !marketWasOpen) resetMarket();
     marketWasOpen = inFlow;
 
+    // Before the branches below, not after them: each of those returns, so a
+    // warehouse closed while the chest opened never reached its reset and came
+    // back with an amount still armed — on a slot long since detached.
+    if (!isStorage(panel)) resetStorage();
+    if (!isVet(panel)) resetVet();
+    if (!isChest(panel)) resetChest();
+
     if (isTradeConfirm(panel)) return driveTradeConfirm(panel, pressed);
     if (isMarket(panel)) return driveMarket(panel, pressed);
     // Crafting takes the shoulder buttons and hands the D-pad back: one list,
@@ -499,11 +506,6 @@ export function panelButtons(pressed) {
     // stopped by them being panels at all, and swallowing the D-pad keeps a
     // stray press from reaching whatever is behind.
     if (isBlocking(panel)) return true;
-
-    // Left the warehouse: an amount left open would come back armed.
-    if (!isStorage(panel)) resetStorage();
-    if (!isVet(panel)) resetVet();
-    if (!isChest(panel)) resetChest();
     return false;
 }
 

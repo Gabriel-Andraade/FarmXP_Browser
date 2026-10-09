@@ -206,6 +206,13 @@ class NoopObserver {
   takeRecords() { return []; }
 }
 
+// In a browser these are globals as well as members of `window`, and code
+// written against that calls them bare. A module scheduling one on a timer then
+// threw inside whichever test happened to be running when the timer fired,
+// which is a confusing way to learn the stub was incomplete.
+globalThis.requestAnimationFrame ??= (cb) => globalThis.window.requestAnimationFrame(cb);
+globalThis.cancelAnimationFrame ??= (id) => globalThis.window.cancelAnimationFrame(id);
+
 globalThis.MutationObserver ??= NoopObserver;
 globalThis.ResizeObserver ??= NoopObserver;
 globalThis.IntersectionObserver ??= NoopObserver;

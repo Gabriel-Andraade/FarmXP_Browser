@@ -34,11 +34,16 @@ function padIsBeingUsed() {
     const pads = typeof navigator !== 'undefined' && navigator.getGamepads
         ? Array.from(navigator.getGamepads() ?? []).filter(Boolean)
         : [];
-    for (const pad of pads) {
-        if (pad.buttons?.some((b) => (typeof b === 'number' ? b : b.value) > 0.5 || b.pressed)) return true;
-        if (pad.axes?.some((a) => Math.abs(a) > STICK_WAKE)) return true;
-    }
-    return false;
+    // The same pad gamepadInput reads, chosen by the same rule: a standard
+    // mapping first. Windows shows one controller twice, and watching every pad
+    // meant an unselected or drifting one could hand control to the gamepad
+    // while the pad actually in play sat still — the source then flipped back on
+    // the next key, and the prompts flickered between the two.
+    const standard = pads.filter((p) => p.mapping === 'standard');
+    const pad = (standard.length ? standard : pads)[0];
+    if (!pad) return false;
+    if (pad.buttons?.some((b) => (typeof b === 'number' ? b : b.value) > 0.5 || b.pressed)) return true;
+    return pad.axes?.some((a) => Math.abs(a) > STICK_WAKE) === true;
 }
 
 /** @returns {Source} */

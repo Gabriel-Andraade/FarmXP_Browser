@@ -52,6 +52,10 @@ export class CraftingSystem {
 
     this.handleEscapeBound = null;
     this._timeoutIds = new Set();
+    // Recipes with a craft in flight. The guard lives here rather than on the
+    // button because there are two ways in now — the button and the row — and
+    // disabling one does not disable the other.
+    this._crafting = new Set();
   }
 
   /**
@@ -178,6 +182,13 @@ export class CraftingSystem {
       return;
     }
 
+    // The materials are only removed after an 800ms pause, so a second press
+    // inside that window passed canCraft() as well and crafted twice. Guarded
+    // here rather than on the button: the row is a second way in, and disabling
+    // the button does not disable it.
+    const pendingKey = String(recipe.id);
+    if (this._crafting.has(pendingKey)) return;
+    this._crafting.add(pendingKey);
 
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
@@ -199,6 +210,7 @@ export class CraftingSystem {
         getSystem('inventory').addItem(recipe.result.itemId, recipe.result.qty);
       }
     } catch (error) {
+      this._crafting.delete(pendingKey);
       this.showMessage(`❌ ${t('crafting.craftError')}`, "error");
       logger.error("Craft failed:", error);
 
@@ -213,6 +225,7 @@ export class CraftingSystem {
       return;
     }
 
+    this._crafting.delete(pendingKey);
     this.showMessage(`🔨 ${t('crafting.crafted', { name: getRecipeName(recipe)})}`, "success");
     this.renderRecipeList();
 

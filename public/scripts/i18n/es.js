@@ -2839,6 +2839,10 @@ export default {
 
     noButton: 'Sin botón en el mando',
     subtitle: 'Las teclas de abajo reflejan tu configuración actual.',
+
+    subtitleGamepad: 'Los botones de abajo son los del mando conectado.',
+
+    hintGamepad: 'Pulsa B para cerrar.',
     hintToggle: 'Pulsa {key} para abrir/cerrar.',
     unbound: 'Sin asignar',
     sections: {

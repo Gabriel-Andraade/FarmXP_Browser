@@ -184,10 +184,13 @@ export function setGamepadActions(next) {
         gamepadActions[action] = !!next?.[action];
     }
     // Keep the legacy `keys` object in step, the way the joystick does.
-    keys.ArrowLeft = keys.KeyA = gamepadActions.moveLeft || pressed.KeyA || pressed.ArrowLeft || false;
-    keys.ArrowRight = keys.KeyD = gamepadActions.moveRight || pressed.KeyD || pressed.ArrowRight || false;
-    keys.ArrowUp = keys.KeyW = gamepadActions.moveUp || pressed.KeyW || pressed.ArrowUp || false;
-    keys.ArrowDown = keys.KeyS = gamepadActions.moveDown || pressed.KeyS || pressed.ArrowDown || false;
+    // All three sources, not two: `_release()` clears the gamepad half on every
+    // frame a panel is open, and rebuilding from the pad and the keyboard alone
+    // left `keys` denying a joystick that was still being held.
+    keys.ArrowLeft = keys.KeyA = gamepadActions.moveLeft || joystickActions.moveLeft || pressed.KeyA || pressed.ArrowLeft || false;
+    keys.ArrowRight = keys.KeyD = gamepadActions.moveRight || joystickActions.moveRight || pressed.KeyD || pressed.ArrowRight || false;
+    keys.ArrowUp = keys.KeyW = gamepadActions.moveUp || joystickActions.moveUp || pressed.KeyW || pressed.ArrowUp || false;
+    keys.ArrowDown = keys.KeyS = gamepadActions.moveDown || joystickActions.moveDown || pressed.KeyS || pressed.ArrowDown || false;
     recalcActions();
 }
 

@@ -529,6 +529,10 @@ function ensureGamepadSection() {
   window.addEventListener('gamepadconnected', refreshStatus);
   window.addEventListener('gamepaddisconnected', refreshStatus);
 
+  // Every control of this section, so a change made on the other settings
+  // screen can be reflected here instead of leaving a stale number behind.
+  const gamepadControls = new Map();
+
   /** Percent slider bound to one gamepadSettings key. */
   const addSlider = (key, i18nKey, fallback, hint) => {
     const range = GAMEPAD_RANGES[key];
@@ -565,6 +569,7 @@ function ensureGamepadSection() {
     const readout = document.createElement('span');
     readout.className = 'config-value';
     readout.textContent = `${input.value}%`;
+    gamepadControls.set(key, { input, readout });
 
     input.addEventListener('input', () => {
       readout.textContent = `${input.value}%`;
@@ -600,6 +605,7 @@ function ensureGamepadSection() {
     input.className = 'config-check';
     input.checked = Boolean(gamepadSettings.current[key]);
     input.setAttribute('aria-label', safeT(i18nKey, fallback));
+    gamepadControls.set(key, { input });
     input.addEventListener('change', () => gamepadSettings.set({ [key]: input.checked }));
 
     const right = document.createElement('div');
@@ -615,6 +621,22 @@ function ensureGamepadSection() {
     const add = field.kind === "toggle" ? addToggle : addSlider;
     add(field.key, field.i18n, field.fallback, field.hint ? field.hintFallback : undefined);
   }
+
+  // This section is built once and kept, so its controls would otherwise still
+  // be showing whatever the settings were when the modal was first opened. The
+  // main menu writes to the same store, and the next touch of a stale slider
+  // would have written the old number back over the new one.
+  document.addEventListener('gamepad:settingschanged', (e) => {
+    const settings = e?.detail ?? gamepadSettings.current;
+    for (const [key, refs] of gamepadControls) {
+      if (refs.readout) {
+        refs.input.value = String(Math.round(settings[key] * 100));
+        refs.readout.textContent = `${refs.input.value}%`;
+      } else {
+        refs.input.checked = Boolean(settings[key]);
+      }
+    }
+  });
 
   configContent.appendChild(section);
 
