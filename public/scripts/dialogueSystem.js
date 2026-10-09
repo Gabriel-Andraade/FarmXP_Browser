@@ -38,6 +38,10 @@
 
 import { registerSystem } from './gameState.js';
 import { i18n } from './i18n/i18n.js';
+import { CHOICE_LOCK_MS, lockChoices, choicesAreLocked, clearChoiceLock } from './choiceLock.js';
+import { ACTION, bindingsFor } from './thePlayer/input/bindings.js';
+import { faceGlyph, FACE_BY_INDEX } from './thePlayer/input/gamepadGlyphs.js';
+import { current as currentInputSource } from './thePlayer/input/inputSource.js';
 import { logger } from './logger.js';
 
 // ─── Config ─────────────────────────────────────────────────────────────────
@@ -304,31 +308,109 @@ function clearTypewriter() {
 
 // ─── Choices ────────────────────────────────────────────────────────────────
 
-function showChoices(options) {
-    waitingForChoice = true;
-    choicesContainer.innerHTML = '';
-    nextHint.classList.remove('visible');
+/**
+ * The actions a face button can answer with, in the order they are offered.
+ * Four, because that is how many face buttons there are.
+ */
+const CHOICE_ACTIONS = [ACTION.CHOICE_1, ACTION.CHOICE_2, ACTION.CHOICE_3, ACTION.CHOICE_4];
 
-    for (const opt of options) {
+/** What is on screen, so the buttons can be redrawn if the player swaps device. */
+let currentChoices = null;
+
+/**
+ * Should each answer carry a button, rather than a place in a list?
+ *
+ * Only on a controller, and only while they fit: past four there is no fifth
+ * face button, and a conversation should not have to be written around that.
+ * Longer lists keep the highlight and the D-pad.
+ */
+function choicesUseButtons(options) {
+    return currentInputSource() === 'gamepad' && options.length <= CHOICE_ACTIONS.length;
+}
+
+/** The letter printed on an answer — read from the binding that will answer it. */
+function faceFor(index) {
+    const button = bindingsFor('gamepad', CHOICE_ACTIONS[index])[0];
+    return FACE_BY_INDEX[button] ?? null;
+}
+
+function renderChoiceButtons(options) {
+    choicesContainer.innerHTML = '';
+    const withButtons = choicesUseButtons(options);
+    choicesContainer.classList.toggle('dlg-choices-buttons', withButtons);
+
+    options.forEach((opt, index) => {
         const btn = document.createElement('button');
         btn.className = 'dlg-choice-btn';
-        btn.textContent = opt.text;
+
+        if (withButtons) {
+            const letter = faceFor(index);
+            const glyph = letter && faceGlyph(letter);
+            if (glyph) {
+                btn.dataset.choiceAction = CHOICE_ACTIONS[index];
+                btn.appendChild(glyph);
+            }
+        }
+
+        const label = document.createElement('span');
+        label.className = 'dlg-choice-text';
+        label.textContent = opt.text;
+        btn.appendChild(label);
+
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             selectChoice(opt);
         });
         choicesContainer.appendChild(btn);
-    }
+    });
 }
+
+/**
+ * Picks the answer a face button stands for.
+ * @returns {boolean} true when that button was offered
+ */
+export function chooseByAction(action) {
+    if (!waitingForChoice || !currentChoices) return false;
+    const index = CHOICE_ACTIONS.indexOf(action);
+    const option = index >= 0 ? currentChoices[index] : null;
+    if (!option || !choicesUseButtons(currentChoices)) return false;
+    selectChoice(option);
+    return true;
+}
+
+function showChoices(options) {
+    waitingForChoice = true;
+    currentChoices = options;
+    nextHint.classList.remove('visible');
+
+    // Skipping the conversation must not answer the question it arrives at.
+    lockChoices(CHOICE_LOCK_MS, choicesContainer);
+
+    renderChoiceButtons(options);
+}
+
+// Picking up the controller mid-question should put the buttons on the answers
+// that are already on screen, not only on the next ones.
+document.addEventListener('input:sourcechanged', () => {
+    if (waitingForChoice && currentChoices && choicesContainer) {
+        renderChoiceButtons(currentChoices);
+    }
+});
 
 function hideChoices() {
     waitingForChoice = false;
+    currentChoices = null;
+    clearChoiceLock(choicesContainer);
     if (choicesContainer) {
         choicesContainer.innerHTML = '';
     }
 }
 
 function selectChoice(option) {
+    // Guarded here rather than on the button, so it holds for the mouse, the
+    // keyboard and the controller without three copies of the same rule.
+    if (choicesAreLocked()) return;
+
     hideChoices();
 
     // Run onSelect callback if provided

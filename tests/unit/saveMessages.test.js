@@ -2,11 +2,9 @@ import { describe, test, expect, mock } from 'bun:test';
 
 // `t` returns the key itself, so these tests assert which key the mapping picks
 // without dragging in the i18n runtime.
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key) => key,
-  i18n: { t: (key) => key, getCurrentLanguage: () => 'en' },
-  default: {},
-}));
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule(
+  (key) => key,
+));
 
 const { importErrorMessage, importSuccessMessage, loadErrorMessage } =
   await import('../../public/scripts/saveMessages.js');
@@ -14,6 +12,7 @@ const { importErrorMessage, importSuccessMessage, loadErrorMessage } =
 import en from '../../public/scripts/i18n/en.js';
 import es from '../../public/scripts/i18n/es.js';
 import ptBR from '../../public/scripts/i18n/pt-BR.js';
+import { i18nModule } from './helpers/i18nMock.js';
 
 /**
  * #259: the reason → message mapping is shared by the two import paths (the

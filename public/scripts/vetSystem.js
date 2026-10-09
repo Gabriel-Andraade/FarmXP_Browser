@@ -24,6 +24,7 @@ import { mountRecoveryView } from './animal/recoveryPanel.js';
 import { mountDiagnoseView } from './animal/diagnosePanel.js';
 import { mountMedicineView } from './animal/medicinePanel.js';
 import { animals } from './theWorld.js';
+import { selectable } from './selectable.js';
 
 const ALICE_SRC = 'assets/character/portrait/Alice.png';
 
@@ -634,6 +635,7 @@ class VetPanel {
 
     render();
     bubble.addEventListener('click', advance, { signal });
+    selectable(bubble);                 // #264: the controller advances with A
 
     // `blockKeys` (registrado em _buildDOM) intercepta TODAS as teclas com
     // stopImmediatePropagation. Pra Space/Enter avançar o diálogo, expomos

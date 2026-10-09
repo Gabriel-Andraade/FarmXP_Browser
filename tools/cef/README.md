@@ -10,6 +10,7 @@ O shell é o `cefclient` de exemplo do CEF (Chromium embutido) com um patch:
 | O quê | Por quê |
 |---|---|
 | `KeyboardEvent.code` preenchido em OSR (scan code, não `lParam`) | sem isso o jogo, que mapeia teclas por `code`, fica sem teclado |
+| Documento sempre focado (`Emulation.setFocusEmulationEnabled` ao criar o browser) | em OSR não há janela de navegador, então `document.hasFocus()` nunca vira `true` — e o Chromium só entrega gamepad a documento focado, então `navigator.getGamepads()` vinha vazio. O teclado funcionava porque o shell injeta as teclas direto |
 | `--fullscreen` (janela sem borda no tamanho do monitor) + `F11` do jogo | tela cheia de jogo, sem barra de tarefas |
 | `--game-server*`: sobe o servidor do jogo como filho num Job Object | morre junto com o shell, até em crash; sem órfão |
 | `SteamAPI_Init` no shell + callback da overlay → evento `steam:overlay` na página | a Steam só entrega esse callback ao processo que hospeda a overlay |
@@ -53,7 +54,7 @@ Sai em `cef/build-nosandbox/tests/cefclient/Release/cefclient.exe`, com
 `libcef.dll` e cia ao lado. Copie `steam_appid.txt` pra essa pasta (o `Init` do
 shell precisa dele quando aberto fora da Steam).
 
-O patch são 6 arquivos, +336/−11 linhas (o ícone vai à parte, em
+O patch são 6 arquivos, +393/−11 linhas (o ícone vai à parte, em
 `patches/icon/`, porque patch de texto não carrega binário). Outra versão do CEF: se um hunk não
 aplicar, o `.rej` mostra onde; as mudanças são pequenas e localizadas.
 

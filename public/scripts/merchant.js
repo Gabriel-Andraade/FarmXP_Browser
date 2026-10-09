@@ -14,6 +14,7 @@ import { t } from './i18n/i18n.js';
 import { translateDOM } from './settingsUI.js';
 import { registerSystem, getSystem } from "./gameState.js";
 import { isValidPositiveInteger, validateTradeInput, isValidPositiveNumber } from './validation.js';
+import { selectable } from './selectable.js';
 
 /**
  * Issue #200: per-(merchant × inventory category) sell modifier. Selling an
@@ -589,6 +590,7 @@ class MerchantSystem {
 
             const card = document.createElement('div');
             card.className = `mch-merchant-card ${!isOpen ? 'mch-merchant-closed' : ''}`;
+            selectable(card);             // #264
             card.dataset.merchantId = merchant.id;
 
             const cardHeader = document.createElement('div');
@@ -849,6 +851,7 @@ class MerchantSystem {
             const slot = document.createElement('div');
             slot.className = `mch-hexagon-slot ${this.selectedPlayerItem === item.id ? 'mch-item-selected' : ''}`;
             slot.dataset.itemId = item.id;
+            selectable(slot);             // #264: clicked through delegation
             const iconDiv = document.createElement('div');
             iconDiv.className = 'mch-hexagon-icon';
             const iconSrc = item.icon || getItem(item.id)?.icon || '';
@@ -878,6 +881,7 @@ class MerchantSystem {
             const soldOut = (item.quantity ?? 0) <= 0;
             hex.className = `mch-merchant-hexagon${this.selectedMerchantItem === item.id ? ' mch-item-selected' : ''}${soldOut ? ' mch-out-of-stock' : ''}`;
             hex.dataset.itemId = item.id;
+            selectable(hex);              // #264
             const iconDiv = document.createElement('div');
             iconDiv.className = 'mch-hexagon-icon';
             const iconSrc = item.icon || getItem(item.id)?.icon || '';

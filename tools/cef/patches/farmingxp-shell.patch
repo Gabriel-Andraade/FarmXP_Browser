@@ -60,7 +60,37 @@ diff -ur a/tests/cefclient/browser/root_window_win.cc b/tests/cefclient/browser/
      case WM_CLOSE:
        if (self->OnClose()) {
          return 0;  // Cancel the close.
-@@ -1313,19 +1334,76 @@
+@@ -1270,6 +1291,29 @@
+ void RootWindowWin::OnBrowserCreated(CefRefPtr<CefBrowser> browser) {
+   REQUIRE_MAIN_THREAD();
+ 
++  // #264: tell the renderer it is focused, permanently.
++  //
++  // Off-screen rendering has no browser window, so Chromium's window-activation
++  // state never becomes true and `document.hasFocus()` stays false even while
++  // the shell window is active and taking keystrokes. Keyboard still works
++  // because the shell injects key events straight into the host, but Chromium
++  // only hands gamepads to a *focused* document, so `navigator.getGamepads()`
++  // came back empty and `gamepadconnected` never fired.
++  //
++  // `SetFocus(true)` on WM_SETFOCUS is already called and is not enough. This is
++  // the same switch DevTools flips, through the supported API — and it needs no
++  // DevTools frontend attached.
++  //
++  // For a fullscreen single-page game shell "always focused" is simply true: the
++  // page is the application. The trade-off is that the page never sees a blur,
++  // so it keeps reading the pad while alt-tabbed — which matches the game's
++  // existing decision that losing focus does not pause.
++  if (auto host = browser->GetHost()) {
++    CefRefPtr<CefDictionaryValue> params = CefDictionaryValue::Create();
++    params->SetBool("enabled", true);
++    host->ExecuteDevToolsMethod(0, "Emulation.setFocusEmulationEnabled", params);
++  }
++
+   if (is_popup_) {
+     // For popup browsers create the root window once the browser has been
+     // created.
+@@ -1313,19 +1357,76 @@
    }
  }
  

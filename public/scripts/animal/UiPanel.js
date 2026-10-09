@@ -8,6 +8,7 @@ import { t } from '../i18n/i18n.js';
 import { getObject, getSystem, registerSystem } from '../gameState.js';
 import { safeDispatch } from '../safeDispatch.js';
 import { setItemIcon } from '../itemUtils.js';
+import { selectable } from '../selectable.js';
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -172,6 +173,7 @@ class UiPanel {
     for (const item of actionItems) {
       const btn = document.createElement('div');
       btn.className = 'aui-action-btn aui-interactive';
+      selectable(btn);                  // #264
       btn.dataset.action = item.action;
       const iconSpan = document.createElement('span');
       iconSpan.className = 'icon';
@@ -182,6 +184,9 @@ class UiPanel {
       btn.append(iconSpan, labelSpan);
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
+        // A sleeping animal turns these off with pointer-events, which Enter
+        // and Space walk straight past — selectable() calls .click() directly.
+        if (btn.getAttribute('aria-disabled') === 'true') return;
         if (item.action === "close") return this.closeAll();
         // O botão "Alimentar" agora abre um sub-menu com a escolha entre
         // ração (fluxo antigo) e remédios (lista do inventário). Demais
@@ -768,21 +773,23 @@ class UiPanel {
         btn.style.display = hasProduct ? '' : 'none';
         // Quando visível, sempre clicável — productionSystem decide tudo
         // (sleeping, ferramenta, inventário) e mostra FX explicativo.
-        if (hasProduct) {
-          btn.style.opacity = '1';
-          btn.style.pointerEvents = 'auto';
-        }
+        if (hasProduct) this._setActionAvailable(btn, true);
         return;
       }
 
-      if (isSleeping) {
-        btn.style.opacity = '0.4';
-        btn.style.pointerEvents = 'none';
-      } else {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-      }
+      // Three locks, because the three ways in are different: pointer-events
+      // for the mouse, tabindex so the highlight and Tab skip it, aria-disabled
+      // for the click handler and for a screen reader.
+      this._setActionAvailable(btn, !isSleeping);
     });
+  }
+
+  /** Turns one action button on or off for every way of reaching it. */
+  _setActionAvailable(btn, available) {
+    btn.style.opacity = available ? '1' : '0.4';
+    btn.style.pointerEvents = available ? 'auto' : 'none';
+    btn.tabIndex = available ? 0 : -1;
+    btn.setAttribute('aria-disabled', available ? 'false' : 'true');
   }
 
   _showFeedback(action, success, message) {
@@ -956,8 +963,7 @@ class UiPanel {
     // recriamos a semântica de botão com role/tabindex + Enter/Space.
     const btn = document.createElement('div');
     btn.className = 'aui-action-btn aui-interactive';
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('tabindex', '0');
+    selectable(btn);                    // role, tabindex and Enter/Space
     const iconSpan = document.createElement('span');
     iconSpan.className = 'icon';
     setItemIcon(iconSpan, icon, label);
@@ -968,13 +974,6 @@ class UiPanel {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       onClick();
-    });
-    btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }
     });
     return btn;
   }

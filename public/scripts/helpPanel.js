@@ -15,6 +15,8 @@
 import { t } from './i18n/i18n.js';
 import { logger } from './logger.js';
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from './keybindDefaults.js';
+import { buttonsForAction } from './thePlayer/input/gamepadGlyphs.js';
+import { current as currentInputSource } from './thePlayer/input/inputSource.js';
 
 const PREFIX = 'khp';
 
@@ -285,7 +287,7 @@ function createPanelDOM() {
   const title = document.createElement('h2');
   title.className = CLS.title;
   title.id = `${PREFIX}-help-title`;
-  title.textContent = safeT('shortcutsPanel.title', '⌨️ Atalhos de Teclado');
+  title.textContent = panelTitle();
 
   const subtitle = document.createElement('p');
   subtitle.className = CLS.subtitle;
@@ -471,7 +473,44 @@ function buildSections(bodyEl) {
   }
 }
 
-function setKeysInto(keysEl, codes) {
+/** The heading names whichever device the panel is currently describing. */
+function panelTitle() {
+  return currentInputSource() === 'gamepad'
+    ? safeT('shortcutsPanel.titleGamepad', '🎮 Botões do controle')
+    : safeT('shortcutsPanel.title', '⌨️ Atalhos de Teclado');
+}
+
+/**
+ * Fills one row with what the player presses for that action.
+ *
+ * This is the screen people open *because* they do not know what to press, so
+ * on a controller it has to answer about the controller — it listed the keyboard
+ * either way, which made it the one place in the game guaranteed to be wrong for
+ * half its readers.
+ *
+ * The buttons come from the bindings table, so this and the game cannot drift.
+ * An action the controller has no button for says so plainly, rather than
+ * falling back to a key the player is not holding.
+ */
+function setKeysInto(keysEl, codes, action) {
+  if (action && currentInputSource() === 'gamepad') {
+    keysEl.replaceChildren();
+    const buttons = buttonsForAction(action);
+    if (!buttons.length) {
+      const span = document.createElement('span');
+      span.textContent = safeT('shortcutsPanel.noButton', 'Sem botão no controle');
+      keysEl.appendChild(span);
+      return;
+    }
+    for (const label of buttons) {
+      const glyph = document.createElement('span');
+      glyph.className = 'gp-glyph';
+      glyph.textContent = label;
+      keysEl.appendChild(glyph);
+    }
+    return;
+  }
+
   keysEl.replaceChildren();
 
   if (!codes || !codes.length) {
@@ -519,15 +558,30 @@ function updateHelpBtnTooltip(keybinds = getCachedKeybinds()) {
 function rerenderTexts(keybinds) {
   // header
   const titleEl = panelEl?.querySelector?.(`.${CLS.title}`);
-  if (titleEl) titleEl.textContent = safeT('shortcutsPanel.title', '⌨️ Atalhos de Teclado');
+  if (titleEl) titleEl.textContent = panelTitle();
+
+  // The whole header follows the device, not just the heading: saying
+  // "Controller buttons" over "the keys below reflect your settings" and
+  // "press H to close" is worse than saying nothing.
+  const onGamepad = currentInputSource() === 'gamepad';
 
   const subtitleEl = panelEl?.querySelector?.(`.${CLS.subtitle}`);
-  if (subtitleEl) subtitleEl.textContent = safeT('shortcutsPanel.subtitle', 'As teclas abaixo refletem suas configurações atuais.');
+  if (subtitleEl) {
+    subtitleEl.textContent = onGamepad
+      ? safeT('shortcutsPanel.subtitleGamepad', 'Os botões abaixo são os do controle conectado.')
+      : safeT('shortcutsPanel.subtitle', 'As teclas abaixo refletem suas configurações atuais.');
+  }
 
   const hintEl = panelEl?.querySelector?.(`.${CLS.hint}`);
   if (hintEl) {
-    const hintTpl = safeT('shortcutsPanel.hintToggle', 'Pressione {key} para abrir/fechar.');
-    hintEl.textContent = formatTemplate(hintTpl, { key: getHelpKeyLabel(keybinds) });
+    if (onGamepad) {
+      // B is what closes a panel everywhere else in the game, so it is what
+      // closes this one too.
+      hintEl.textContent = safeT('shortcutsPanel.hintGamepad', 'Aperte B para fechar.');
+    } else {
+      const hintTpl = safeT('shortcutsPanel.hintToggle', 'Pressione {key} para abrir/fechar.');
+      hintEl.textContent = formatTemplate(hintTpl, { key: getHelpKeyLabel(keybinds) });
+    }
   }
 
   // close aria
@@ -553,9 +607,13 @@ function rerenderTexts(keybinds) {
 function rerenderKeys(keybinds) {
   for (const [action, refs] of rowRefs.entries()) {
     const codes = getCodesForAction(action, keybinds);
-    setKeysInto(refs.keysEl, codes);
+    setKeysInto(refs.keysEl, codes, action);
   }
 }
+
+// Picking up the controller with the panel already open should rewrite it,
+// not wait for the next time it is opened.
+document.addEventListener('input:sourcechanged', () => rerenderAll());
 
 function rerenderAll(keybinds = getCachedKeybinds()) {
   rerenderTexts(keybinds);
@@ -654,7 +712,10 @@ function onControlsChanged(e) {
 function onLanguageChanged() {
   const keybinds = getCachedKeybinds();
   updateHelpBtnTooltip(keybinds);
-  if (mounted) rerenderTexts(keybinds);
+  // The rows too, not only the headings: "no button on the controller" and
+  // "unbound" are written by setKeysInto, so refreshing the texts alone left
+  // them in the language the player just left.
+  if (mounted) rerenderAll(keybinds);
 }
 
 function onHudReady() {

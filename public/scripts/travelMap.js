@@ -19,6 +19,7 @@
 import { registerSystem, getSystem } from './gameState.js';
 import { t, i18n } from './i18n/i18n.js';
 import { logger } from './logger.js';
+import { selectable } from './selectable.js';
 
 // Definições dos locais (coordenadas em % do quadro, igual ao protótipo).
 const LOCATIONS = {
@@ -343,8 +344,7 @@ class TravelMap {
       card.dataset.location = id;
       card.style.left = loc.x + '%';
       card.style.top  = loc.y + '%';
-      card.tabIndex = 0;
-      card.setAttribute('role', 'button');
+      selectable(card);                 // #264
       this._setCardLabels(card, id);
 
       const icon = document.createElement('span');
@@ -364,13 +364,10 @@ class TravelMap {
         e.stopPropagation();
         this._handleLocationClick(id);
       };
+      // One listener only: selectable(card) turns Enter and Space into a
+      // click, so a second keydown handler here ran the trip twice — the first
+      // press started it and the second answered "still moving".
       card.addEventListener('click', onActivate, { signal });
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          this._handleLocationClick(id);
-        }
-      }, { signal });
 
       area.appendChild(card);
       this.cards[id] = card;

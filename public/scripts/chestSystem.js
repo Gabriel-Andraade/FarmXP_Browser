@@ -7,6 +7,7 @@ import { registerSystem, getObject } from './gameState.js';
 import { t } from './i18n/i18n.js';
 import { setItemIcon } from './itemUtils.js';
 import { searchTokens, matchesSearch } from './searchMatch.js';
+import { selectable } from './selectable.js';
 
 /**
  * Sistema de gerenciamento de baús no mundo do jogo
@@ -395,6 +396,7 @@ export const chestSystem = {
             const key = `chest:${category}:${item.id}`;
             const slot = document.createElement('div');
             slot.className = 'cht-slot';
+            selectable(slot);             // #264: a div is not focusable
             slot.dataset.itemId = item.id;
             slot.dataset.category = category;
 
@@ -462,6 +464,7 @@ export const chestSystem = {
             const key = `inv:${item.id}`;
             const itemEl = document.createElement('div');
             itemEl.className = 'cht-inventory-item';
+            selectable(itemEl);           // #264
             itemEl.dataset.itemId = item.id;
             itemEl.dataset.category = category;
 
@@ -550,22 +553,24 @@ export const chestSystem = {
             setBtnText(clamped);
         };
 
-        const presets = document.createElement('div');
-        presets.className = 'cht-qty-presets';
-        for (const p of ['5', '10', '100']) {
+        // One amount control: − <field> +, the same as the warehouse. It
+        // replaced the 5/10/100/All presets, which worked only for a pointer —
+        // four buttons meant four places for a highlight to visit before
+        // reaching the amount, and none of them answered "one more".
+        const step = (delta, labelKey) => {
             const b = document.createElement('button');
-            b.className = 'cht-qty-btn';
-            b.textContent = p;
-            b.setAttribute('aria-label', t('chest.presetAria', { qty: p, name: itemName }));
-            b.addEventListener('click', (e) => { e.stopPropagation(); setQty(Number(p)); });
-            presets.appendChild(b);
-        }
-        const allBtn = document.createElement('button');
-        allBtn.className = 'cht-qty-btn cht-qty-all';
-        allBtn.textContent = t('chest.all');
-        allBtn.setAttribute('aria-label', t('chest.allAria', { name: itemName }));
-        allBtn.addEventListener('click', (e) => { e.stopPropagation(); setQty(max); });
-        presets.appendChild(allBtn);
+            b.className = 'cht-qty-btn cht-qty-step';
+            b.dataset.step = String(delta);
+            b.textContent = delta > 0 ? '+' : '−';
+            b.setAttribute('aria-label', t(labelKey));
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setQty((Number(input.value) || this.qtySelection.get(key) || 1) + delta);
+            });
+            return b;
+        };
+        const minusBtn = step(-1, 'chest.less');
+        const plusBtn = step(1, 'chest.more');
 
         // Campo manual: digita livre (mesmo acima do máx); fixa no change.
         input.addEventListener('input', () => {
@@ -585,11 +590,15 @@ export const chestSystem = {
 
         setBtnText(selected);
 
+        const stepper = document.createElement('div');
+        stepper.className = 'cht-qty-row';
+        stepper.append(minusBtn, input, plusBtn);
+
         const actions = document.createElement('div');
         actions.className = 'cht-qty-row';
-        actions.append(input, actionBtn);
+        actions.append(actionBtn);
 
-        wrap.append(presets, actions);
+        wrap.append(stepper, actions);
         return wrap;
     },
     

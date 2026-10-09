@@ -4,6 +4,7 @@ import { getItem, setItemIcon } from "./itemUtils.js";
 import { items } from "./item.js";
 import { t } from './i18n/i18n.js';
 import { registerSystem, getSystem } from "./gameState.js";
+import { selectable } from './selectable.js';
 
 /**
  * Retorna o nome traduzido de uma receita, com fallback para o nome original
@@ -51,6 +52,10 @@ export class CraftingSystem {
 
     this.handleEscapeBound = null;
     this._timeoutIds = new Set();
+    // Recipes with a craft in flight. The guard lives here rather than on the
+    // button because there are two ways in now — the button and the row — and
+    // disabling one does not disable the other.
+    this._crafting = new Set();
   }
 
   /**
@@ -177,6 +182,13 @@ export class CraftingSystem {
       return;
     }
 
+    // The materials are only removed after an 800ms pause, so a second press
+    // inside that window passed canCraft() as well and crafted twice. Guarded
+    // here rather than on the button: the row is a second way in, and disabling
+    // the button does not disable it.
+    const pendingKey = String(recipe.id);
+    if (this._crafting.has(pendingKey)) return;
+    this._crafting.add(pendingKey);
 
     const craftBtn = document.querySelector(`.crf-btn[data-id="${recipeId}"]`);
     if (craftBtn) {
@@ -198,6 +210,7 @@ export class CraftingSystem {
         getSystem('inventory').addItem(recipe.result.itemId, recipe.result.qty);
       }
     } catch (error) {
+      this._crafting.delete(pendingKey);
       this.showMessage(`❌ ${t('crafting.craftError')}`, "error");
       logger.error("Craft failed:", error);
 
@@ -212,6 +225,7 @@ export class CraftingSystem {
       return;
     }
 
+    this._crafting.delete(pendingKey);
     this.showMessage(`🔨 ${t('crafting.crafted', { name: getRecipeName(recipe)})}`, "success");
     this.renderRecipeList();
 
@@ -395,6 +409,7 @@ export class CraftingSystem {
 
       const div = document.createElement("div");
       div.className = "crf-item";
+      selectable(div);              // #264: the highlight rests on the row
 
       const infoDiv = document.createElement("div");
       infoDiv.className = "crf-info";
@@ -450,7 +465,13 @@ export class CraftingSystem {
       craftBtn.append(hammerIcon, ` ${t('crafting.craft')}`);
 
       if (can) {
-        craftBtn.addEventListener("click", () => this.craft(recipe.id));
+        const craft = () => this.craft(recipe.id);
+        craftBtn.addEventListener("click", craft);
+        // The row is focusable, so Enter on it has to do what the button does.
+        // Guarded against the button's own click bubbling back up here.
+        div.addEventListener("click", (event) => {
+          if (!craftBtn.contains(event.target)) craft();
+        });
       }
 
       div.append(infoDiv, craftBtn);

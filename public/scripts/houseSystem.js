@@ -18,6 +18,7 @@ import { craftingSystem } from './craftingSystem.js';
 import { t } from './i18n/i18n.js';
 import { registerSystem, getObject, getSystem } from './gameState.js';
 import { logger } from './logger.js';
+import { selectable } from './selectable.js';
 
 /**
  * Sum stack quantities by itemId. Single source of truth for the warehouse's
@@ -671,6 +672,7 @@ export class HouseSystem {
 
             const slot = document.createElement('div');
             slot.className = 'storage-slot';
+            selectable(slot);             // #264: the highlight rests on the card
             slot.dataset.itemid = s.itemId;
             slot.dataset.sourcecat = s.sourceCategory || '';
             slot.dataset.max = qty;
@@ -690,30 +692,34 @@ export class HouseSystem {
             nameDiv.className = 'item-name';
             nameDiv.textContent = name;
 
-            // Batch presets (5/10/100/All) + a manual field. setQty clamps to
-            // the available amount; the manual field allows typing over the max
-            // and clamps on commit/action (e.g. 7 → 6).
+            // One amount control: − <field> +. It replaced the 5/10/100/All
+            // presets, which worked only for a pointer — four buttons meant four
+            // places for a highlight to visit before reaching the amount, and
+            // none of them answered "one more". The field still takes typing,
+            // and setQty clamps to what is available (type 7 with 6 → 6).
             const qtyControls = document.createElement('div');
             qtyControls.className = 'qty-controls';
-            for (const preset of ['5', '10', '100']) {
-                const b = document.createElement('button');
-                b.className = 'qty-btn qty-preset';
-                b.dataset.preset = preset;
-                b.textContent = preset;
-                qtyControls.appendChild(b);
-            }
-            const allBtn = document.createElement('button');
-            allBtn.className = 'qty-btn qty-preset qty-all';
-            allBtn.dataset.preset = 'all';
-            allBtn.textContent = t('storage.all');
-            qtyControls.appendChild(allBtn);
+
+            const minusBtn = document.createElement('button');
+            minusBtn.className = 'qty-btn qty-step';
+            minusBtn.dataset.step = '-1';
+            minusBtn.textContent = '−';
+            minusBtn.setAttribute('aria-label', t('storage.less'));
+
             const qtyInput = document.createElement('input');
             qtyInput.type = 'number';
             qtyInput.className = 'qty-input';
             qtyInput.min = '1';
             qtyInput.max = String(qty);
             qtyInput.value = String(selected);
-            qtyControls.appendChild(qtyInput);
+
+            const plusBtn = document.createElement('button');
+            plusBtn.className = 'qty-btn qty-step';
+            plusBtn.dataset.step = '1';
+            plusBtn.textContent = '+';
+            plusBtn.setAttribute('aria-label', t('storage.more'));
+
+            qtyControls.append(minusBtn, qtyInput, plusBtn);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'item-actions';
@@ -751,12 +757,13 @@ export class HouseSystem {
 
             setQty(this.storageQtySelection.get(key) || 1);
 
-            // Batch presets: 5 / 10 / 100 / All (clamped to what's available).
-            slot.querySelectorAll('.qty-preset').forEach(btn => {
+            // One fewer / one more, clamped to what is available.
+            slot.querySelectorAll('.qty-step').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     e.preventDefault();
-                    setQty(btn.dataset.preset === 'all' ? max : Number(btn.dataset.preset));
+                    const now = Number(inputEl?.value) || this.storageQtySelection.get(key) || 1;
+                    setQty(now + Number(btn.dataset.step));
                 });
             });
 

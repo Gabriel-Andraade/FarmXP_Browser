@@ -193,7 +193,7 @@ function _setSelection(idx) {
  * @param {number} dir - +1 pra direita / próximo, -1 pra esquerda / anterior.
  * @returns {void}
  */
-function cycleSelection(dir) {
+export function cycleSelection(dir) {
   if (!state.open) return;
   const next = Math.max(0, Math.min(state.entries.length - 1, state.selectedIndex + dir));
   _setSelection(next);

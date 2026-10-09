@@ -5,6 +5,8 @@ import { getSystem } from "../gameState.js";
 import { CONTROLS_STORAGE_KEY, DEFAULT_KEYBINDS } from '../keybindDefaults.js';
 import { toggleHelpPanel } from '../helpPanel.js';
 import { isImageIcon } from '../itemUtils.js';
+import { buttonsForAction } from './input/gamepadGlyphs.js';
+import { current as currentInputSource } from './input/inputSource.js';
 
 /**
  * Retorna a label da tecla atual para uma ação de keybind
@@ -109,6 +111,9 @@ export class PlayerHUD {
             if (this._lastEquippedItem) this.updateEquippedItem(this._lastEquippedItem);
         };
         document.addEventListener('controlsChanged', this._onControlsChanged);
+        // #264: and when the player swaps device, for the same reason — the
+        // badge is naming a button that just changed.
+        document.addEventListener('input:sourcechanged', this._onControlsChanged);
     }
 
     createHUDStructure() {
@@ -450,11 +455,14 @@ export class PlayerHUD {
                 nameSpan.textContent = itemName;
 
                 // Hint da tecla do Q-wheel pra ensinar o atalho.
-                // Lê do keybind atual (respeita rebind), em cinza/pequeno.
+                // #264: on a controller the key is the wrong answer — the wheel
+                // opens on LB there, and this badge said "(Q)" regardless.
                 const hintSpan = document.createElement('span');
                 hintSpan.className = 'equipped-item-hint';
-                const wheelKey = getKeyForAction('toolWheel');
-                hintSpan.textContent = wheelKey ? `(${wheelKey})` : '';
+                const wheelHint = currentInputSource() === 'gamepad'
+                    ? buttonsForAction('toolWheel')[0]
+                    : getKeyForAction('toolWheel');
+                hintSpan.textContent = wheelHint ? `(${wheelHint})` : '';
 
                 wrapper.append(labelSpan, iconSpan, nameSpan, hintSpan);
                 equippedElement.appendChild(wrapper);
@@ -482,6 +490,7 @@ export class PlayerHUD {
         document.removeEventListener('xpRestored', this._onXpRestored);
         document.removeEventListener('languageChanged', this._onLanguageChanged);
         document.removeEventListener('controlsChanged', this._onControlsChanged);
+        document.removeEventListener('input:sourcechanged', this._onControlsChanged);
         document.removeEventListener('click', this._onHudClick);
         document.removeEventListener('moneyChanged', this._onMoneyChanged);
 

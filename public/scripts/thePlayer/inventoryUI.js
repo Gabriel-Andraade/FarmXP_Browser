@@ -5,6 +5,7 @@ import { t } from '../i18n/i18n.js';
 import { INVENTORY_CATEGORIES } from '../categoryMapper.js';
 import { getSystem } from "../gameState.js";
 import { getItemFillLevel } from "../fillLevel.js";
+import { selectable } from '../selectable.js';
 
 // ---------- CSS ISOLADO COM SHADOW DOM ----------
 const createInventoryUI = () => {
@@ -1014,6 +1015,9 @@ function renderInventory() {
     const slotEl = document.createElement('div');
     slotEl.className = `inv-slot ${selectedSlotIndex === index ? 'selected' : ''}${isEquipped ? ' inv-slot-equipped' : ''}`;
     slotEl.setAttribute('data-index', index);
+    // #264: a div is not focusable, so the controller could never land on an
+    // item. Making the slots focusable also lets the keyboard tab through them.
+    selectable(slotEl);
     
     // Ícone
     if (fullItem.icon) {

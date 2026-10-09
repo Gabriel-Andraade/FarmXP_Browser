@@ -190,6 +190,33 @@ globalThis.CustomEvent = class CustomEvent {
   preventDefault() { this.defaultPrevented = true; }
 };
 
+/**
+ * Observers, as no-ops.
+ *
+ * Nothing here watches the DOM, but several modules build one while they load —
+ * settingsUI does it to re-mount its sections — so without these the import
+ * throws and the test file reports one unnamed failure in place of all of its
+ * tests. They are stubs rather than implementations because no test asserts on
+ * a mutation; what matters is that constructing one is not an error.
+ */
+class NoopObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+}
+
+// In a browser these are globals as well as members of `window`, and code
+// written against that calls them bare. A module scheduling one on a timer then
+// threw inside whichever test happened to be running when the timer fired,
+// which is a confusing way to learn the stub was incomplete.
+globalThis.requestAnimationFrame ??= (cb) => globalThis.window.requestAnimationFrame(cb);
+globalThis.cancelAnimationFrame ??= (id) => globalThis.window.cancelAnimationFrame(id);
+
+globalThis.MutationObserver ??= NoopObserver;
+globalThis.ResizeObserver ??= NoopObserver;
+globalThis.IntersectionObserver ??= NoopObserver;
+
 globalThis.localStorage ??= {
   _data: {},
   getItem(key) { return this._data[key] ?? null; },

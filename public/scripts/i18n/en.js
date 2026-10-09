@@ -567,7 +567,35 @@ export default {
     languageChangeFailed: 'Failed to change language. Please try again.'
   },
 
+  // #264: the corner that names what each button does, per screen.
+  gamepadHints: {
+    interact: 'Interact',
+    useTool: 'Use tool',
+    inventory: 'Inventory',
+    build: 'Build',
+    pause: 'Pause',
+    buildPiece: 'Piece / rotate',
+    buildPlace: 'Place',
+    buildPick: 'Take back',
+    buildExit: 'Leave building',
+    navigate: 'Navigate',
+    confirm: 'Confirm',
+    back: 'Back',
+    cancel: 'Cancel',
+    category: 'Category',
+    amount: 'Amount',
+    amountOpen: 'Choose amount',
+    craft: 'Craft',
+    advance: 'Continue',
+    invPick: 'Pick item',
+    invBack: 'Back one step',
+    marketPanes: 'Your bags / the trader',
+    marketDirection: 'Sell / buy',
+    storagePanes: 'Take out / put in',
+    vetMenu: 'Menu / choices',
+  },
   // Settings
+
   settings: {
     title: '⚙️ Settings',
     language: 'Language',
@@ -601,6 +629,19 @@ export default {
       ambientVolumeHint: 'Environment sounds: stone, wood, construction, weather.',
       animalVolume: 'Animal Volume',
       animalVolumeHint: 'Animal sounds: mooing, clucking, etc.',
+    },
+    gamepad: {
+      title: 'Controller',
+      detected: 'Detected',
+      none: 'No controller detected — connect one and press a button.',
+      cursorScale: 'Reticle size',
+      aimSpeedX: 'Aim speed (horizontal)',
+      aimSpeedY: 'Aim speed (vertical)',
+      deadZone: 'Dead zone',
+      deadZoneHint: 'Raise this if the reticle drifts on its own.',
+      invertY: 'Invert Y axis',
+      acceleration: 'Aim acceleration',
+      accelerationHint: 'A gentle push aims precisely; a full push crosses the screen.',
     },
     display: {
       title: 'Display',
@@ -999,6 +1040,10 @@ export default {
     withdrawMode: 'withdraw',
     depositMode: 'deposit',
     withdrawBtn: 'withdraw ({qty})',
+
+    less: 'One fewer',
+
+    more: 'One more',
     depositBtn: 'deposit ({qty})',
     emptyCategory: 'No items in this category',
     all: 'All',
@@ -1035,6 +1080,10 @@ export default {
     noResults: 'No items match your search',
     all: 'All',
     takeBtn: 'take ({qty})',
+
+    less: 'One fewer',
+
+    more: 'One more',
     storeBtn: 'store ({qty})',
     tookQty: '{qty}x {name} taken from chest',
     storedQty: '{qty}x {name} stored in chest',
@@ -2784,7 +2833,15 @@ export default {
   // Shortcuts panel
   shortcutsPanel: {
     title: '⌨️ Keyboard Shortcuts',
+
+    titleGamepad: '🎮 Controller buttons',
+
+    noButton: 'No button on the controller',
     subtitle: 'Keys below reflect your current settings.',
+
+    subtitleGamepad: 'The buttons below are those of the connected controller.',
+
+    hintGamepad: 'Press B to close.',
     hintToggle: 'Press {key} to open/close.',
     unbound: 'Not set',
     sections: {

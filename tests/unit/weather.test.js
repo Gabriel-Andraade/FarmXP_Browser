@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { i18nModule } from './helpers/i18nMock.js';
 import "../setup.js";
 
 // Mock cameraSystem.js
@@ -18,8 +19,8 @@ mock.module('../../public/scripts/loadingScreen.js', () => ({
 }));
 
 // Mock i18n
-mock.module('../../public/scripts/i18n/i18n.js', () => ({
-  t: (key, params) => {
+mock.module('../../public/scripts/i18n/i18n.js', () => i18nModule(
+  (key, params) => {
     if (key === 'time.weekdays') return ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
     if (key === 'seasons.spring') return 'Primavera';
     if (key === 'seasons.summer') return 'Verão';
@@ -33,7 +34,7 @@ mock.module('../../public/scripts/i18n/i18n.js', () => ({
     if (key === 'time.sleepZzz') return 'Zzz...';
     return key;
   }
-}));
+));
 
 // Import REAL WeatherSystem from production code
 const { WeatherSystem } = await import('../../public/scripts/weather.js');

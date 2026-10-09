@@ -486,3 +486,47 @@ input:checked + .config-slider:before {
 #config-content {
     min-height: 0;
 }
+
+/* ===== #264: Controle =====
+   `config-range`, não `config-slider`: esse último é o botão do interruptor
+   liga/desliga mais acima, e reusar o nome fazia os deslizantes herdarem
+   posicionamento absoluto — escapavam do modal e desenhavam uma linha
+   atravessando a tela inteira. */
+
+#gamepad-status {
+    margin-bottom: 14px;
+    opacity: 0.85;
+}
+
+.config-range {
+    width: 150px;          /* same width as .config-select, so the column lines up */
+    vertical-align: middle;
+    accent-color: #c9a463;
+    cursor: pointer;
+}
+
+.config-range:focus-visible {
+    outline: 3px solid rgba(201, 164, 99, 0.75);
+    outline-offset: 3px;
+}
+
+.config-value {
+    display: inline-block;
+    min-width: 3.5em;      /* fixed so the row does not jump between 5% and 100% */
+    margin-left: 10px;
+    text-align: right;
+    color: #f5e9d3;
+    font-variant-numeric: tabular-nums;
+}
+
+.config-check {
+    width: 18px;
+    height: 18px;
+    accent-color: #c9a463;
+    cursor: pointer;
+}
+
+.config-check:focus-visible {
+    outline: 3px solid rgba(201, 164, 99, 0.75);
+    outline-offset: 3px;
+}
